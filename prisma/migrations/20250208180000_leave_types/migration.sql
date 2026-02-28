@@ -1,0 +1,5 @@
+-- AlterEnum: add new LeaveType values (Exhibition, Sick, OtherBranch, Emergency)
+ALTER TYPE "LeaveType" ADD VALUE IF NOT EXISTS 'EXHIBITION';
+ALTER TYPE "LeaveType" ADD VALUE IF NOT EXISTS 'SICK';
+ALTER TYPE "LeaveType" ADD VALUE IF NOT EXISTS 'OTHER_BRANCH';
+ALTER TYPE "LeaveType" ADD VALUE IF NOT EXISTS 'EMERGENCY';

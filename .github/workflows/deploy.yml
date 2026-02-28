@@ -1,0 +1,123 @@
+# Auto bump patch (1.2.x), deploy via SSH, register deploy (no admin session).
+# Triggers: push to main, or manual workflow_dispatch.
+# Repo secrets: SSH_HOST, SSH_USER, SSH_KEY, APP_DIR, DEPLOY_REGISTER_SECRET
+# Optional: SSH_PORT (default 22), DEPLOY_PUBLIC_BASEURL, HEALTHCHECK_URL
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+
+jobs:
+  bump_version:
+    name: Bump version
+    runs-on: ubuntu-latest
+    # Skip bump when this run was triggered by our own [skip ci] push
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]'))
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump patch and update VERSION
+        run: |
+          ./scripts/bump-version.sh patch
+          NEW=$(node -p "require('./package.json').version")
+          echo "Bumped to $NEW"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          NEW=$(node -p "require('./package.json').version")
+          git add package.json package-lock.json
+          [ -f VERSION ] && git add VERSION
+          git diff --staged --quiet || git commit -m "chore(release): v$NEW [skip ci]"
+          git push
+
+  deploy:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    needs: bump_version
+    # Run when bump ran and succeeded, or when bump was skipped (e.g. [skip ci] push)
+    if: always() && (needs.bump_version.result == 'success' || needs.bump_version.result == 'skipped')
+    env:
+      HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ env.SSH_PORT }}
+          envs: HEALTHCHECK_URL
+          script: |
+            set -e
+            cd ${{ secrets.APP_DIR }}
+            git pull
+            npm ci
+            npx prisma migrate deploy
+            export APP_VERSION=$(node -p "require('./package.json').version")
+            export GIT_HASH=$(git rev-parse --short HEAD)
+            export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            export NEXT_PUBLIC_APP_VERSION=$APP_VERSION
+            export NEXT_PUBLIC_GIT_HASH=$GIT_HASH
+            export NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE
+            npm run build
+            pm2 reload ecosystem.config.cjs --update-env
+            [ -n "$HEALTHCHECK_URL" ] && curl -sf "$HEALTHCHECK_URL" || true
+
+      - name: Register deploy
+        run: |
+          BASE="${{ secrets.DEPLOY_PUBLIC_BASEURL || 'https://dhtasks.com' }}"
+          echo "BASE=$BASE"
+          echo "=== HEAD $BASE ==="
+          curl -sI "$BASE" || true
+          echo "=== HEAD $BASE/login ==="
+          curl -sD- "$BASE/login" -o /dev/null || true
+          echo "=== HEAD $BASE/api/health ==="
+          curl -sD- "$BASE/api/health" -o /dev/null || true
+          HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health" || echo "000")
+          if [ "$HEALTH_CODE" != "200" ]; then
+            LOGIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/login" || echo "000")
+            echo "Smoke check failed: /api/health returned HTTP $HEALTH_CODE, /login returned HTTP $LOGIN_CODE"
+            exit 1
+          fi
+          echo "Smoke check passed: /api/health returned 200"
+          SECRET="${{ secrets.DEPLOY_REGISTER_SECRET }}"
+          REG_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE}/api/internal/deploy/register" \
+            -H "x-deploy-secret: ${SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{"notes":"CI deploy from GitHub Actions"}')
+          if [ "$REG_CODE" != "200" ] && [ "$REG_CODE" != "201" ]; then
+            echo "Register deploy failed: POST /api/internal/deploy/register returned HTTP $REG_CODE"
+            exit 1
+          fi
+          echo "Register deploy completed: HTTP $REG_CODE"

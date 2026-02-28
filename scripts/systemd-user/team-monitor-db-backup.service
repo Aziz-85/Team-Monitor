@@ -1,0 +1,8 @@
+[Unit]
+Description=Team-monitor DB backup (pg_dump)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/team-monitor
+ExecStart=/var/www/team-monitor/scripts/db-backup.sh

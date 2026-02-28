@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily team-monitor DB backup (00:15 UTC = 03:15 Asia/Riyadh)
+[Timer]
+# Daily at 00:15 UTC (03:15 Riyadh)
+OnCalendar=*-*-* 00:15:00
+Persistent=true
+[Install]
+WantedBy=timers.target

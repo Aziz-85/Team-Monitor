@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Leave" ADD COLUMN IF NOT EXISTS "notes" TEXT;

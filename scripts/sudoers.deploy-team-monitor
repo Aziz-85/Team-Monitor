@@ -1,0 +1,6 @@
+# Allow deploy to run pg_dump and psql as postgres without password.
+# Install as root: cp sudoers.deploy-team-monitor /etc/sudoers.d/deploy-team-monitor && chmod 440 /etc/sudoers.d/deploy-team-monitor
+# Validate: visudo -c -f /etc/sudoers.d/deploy-team-monitor
+
+deploy ALL=(postgres) NOPASSWD: /usr/bin/pg_dump
+deploy ALL=(postgres) NOPASSWD: /usr/bin/psql

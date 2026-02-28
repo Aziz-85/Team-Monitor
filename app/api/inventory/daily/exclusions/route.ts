@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth';
+import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import {
+  getExclusionsForDate,
+  addExclusion,
+  removeExclusion,
+} from '@/lib/services/inventoryDaily';
+import type { Role } from '@prisma/client';
+
+export async function GET(request: NextRequest) {
+  try {
+    await requireRole(['MANAGER', 'ADMIN'] as Role[]);
+  } catch (e) {
+    const err = e as { code?: string };
+    if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const scopeResult = await requireOperationalBoutique(request);
+  if (!scopeResult.ok) return scopeResult.res;
+  const { boutiqueId } = scopeResult;
+
+  const dateParam = request.nextUrl.searchParams.get('date');
+  if (!dateParam) {
+    return NextResponse.json({ error: 'date required (YYYY-MM-DD)' }, { status: 400 });
+  }
+  const date = new Date(dateParam + 'T00:00:00Z');
+  if (Number.isNaN(date.getTime())) {
+    return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+  }
+  const list = await getExclusionsForDate(boutiqueId, date);
+  return NextResponse.json({ date: dateParam, exclusions: list });
+}
+
+export async function POST(request: NextRequest) {
+  let user: Awaited<ReturnType<typeof requireRole>>;
+  try {
+    user = await requireRole(['MANAGER', 'ADMIN'] as Role[]);
+  } catch (e) {
+    const err = e as { code?: string };
+    if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const scopeResult = await requireOperationalBoutique(request);
+  if (!scopeResult.ok) return scopeResult.res;
+  const { boutiqueId } = scopeResult;
+
+  const body = await request.json().catch(() => ({}));
+  const dateParam = body.date as string | undefined;
+  const empId = body.empId as string | undefined;
+  if (!dateParam || !empId) {
+    return NextResponse.json({ error: 'date and empId required' }, { status: 400 });
+  }
+  const date = new Date(dateParam + 'T00:00:00Z');
+  if (Number.isNaN(date.getTime())) {
+    return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+  }
+
+  const userId = user.id;
+  const result = await addExclusion(boutiqueId, date, empId, body.reason ?? null, userId);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error ?? 'Failed' }, { status: 400 });
+  }
+  const list = await getExclusionsForDate(boutiqueId, date);
+  return NextResponse.json({ ok: true, exclusions: list });
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await requireRole(['MANAGER', 'ADMIN'] as Role[]);
+  } catch (e) {
+    const err = e as { code?: string };
+    if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const scopeResult = await requireOperationalBoutique(request);
+  if (!scopeResult.ok) return scopeResult.res;
+  const { boutiqueId } = scopeResult;
+
+  const dateParam = request.nextUrl.searchParams.get('date');
+  const empId = request.nextUrl.searchParams.get('empId');
+  if (!dateParam || !empId) {
+    return NextResponse.json({ error: 'date and empId required' }, { status: 400 });
+  }
+  const date = new Date(dateParam + 'T00:00:00Z');
+  if (Number.isNaN(date.getTime())) {
+    return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+  }
+  await removeExclusion(boutiqueId, date, empId);
+  const list = await getExclusionsForDate(boutiqueId, date);
+  return NextResponse.json({ ok: true, exclusions: list });
+}

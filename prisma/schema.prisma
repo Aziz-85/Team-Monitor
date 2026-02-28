@@ -1,0 +1,1229 @@
+// Team Monitor - Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  ASSISTANT_MANAGER
+  ADMIN
+  SUPER_ADMIN  // covers all boutiques (both branches)
+}
+
+enum DelegationGrantType {
+  ROLE_BOOST       // role overlay (e.g. act as MANAGER)
+  PERMISSION_FLAGS // specific flags overlay (fine-grained)
+}
+
+enum Team {
+  A
+  B
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeaveType {
+  ANNUAL
+  EXHIBITION
+  SICK
+  OTHER_BRANCH
+  EMERGENCY
+  OTHER
+}
+
+enum OverrideShift {
+  MORNING
+  EVENING
+  NONE
+  COVER_RASHID_AM
+  COVER_RASHID_PM
+}
+
+enum TaskScheduleType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum EmployeePosition {
+  BOUTIQUE_MANAGER
+  ASSISTANT_MANAGER
+  SENIOR_SALES
+  SALES
+}
+
+// Role used for target distribution weight (MSR template: Manager 0.5, Assistant Manager 0.75, etc.)
+enum SalesTargetRole {
+  MANAGER
+  ASSISTANT_MANAGER
+  HIGH_JEWELLERY_EXPERT
+  SENIOR_SALES_ADVISOR
+  SALES_ADVISOR
+}
+
+// --- Multi-Boutique Foundation (Phase 1) ---
+model Organization {
+  id       String   @id @default(cuid())
+  code     String   @unique
+  name     String
+  regions  Region[]
+}
+
+model Region {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  name           String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  boutiques      Boutique[]
+
+  @@index([organizationId])
+}
+
+model Boutique {
+  id                    String   @id @default(cuid())
+  code                  String   @unique
+  name                  String
+  regionId              String?
+  isActive              Boolean  @default(true) // soft disable; excluded from scope selector for non-admin
+  region                Region?  @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  groupMembers          BoutiqueGroupMember[]
+  userBoutiqueMemberships UserBoutiqueMembership[]
+  salesSummaries        BoutiqueSalesSummary[]
+  leaveRequests         LeaveRequest[]
+  kpiUploads            KpiUpload[]
+  employees             Employee[] // current assignment (Employee.boutiqueId)
+  sessionUsers          User[]   // users bound to this boutique (login scope)
+  employeeAssignments   EmployeeAssignment[]
+  salesLedgerBatches    SalesLedgerBatch[]
+  salesTransactions     SalesTransaction[]
+  delegationGrants      DelegationGrant[]
+
+  @@index([regionId])
+  @@index([isActive])
+}
+
+model BoutiqueGroup {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?  @unique // optional stable code
+  isActive  Boolean  @default(true)
+  members   BoutiqueGroupMember[]
+}
+
+model BoutiqueGroupMember {
+  id              String   @id @default(cuid())
+  boutiqueGroupId String
+  boutiqueId      String
+  group           BoutiqueGroup @relation(fields: [boutiqueGroupId], references: [id], onDelete: Cascade)
+  boutique        Boutique     @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([boutiqueGroupId, boutiqueId])
+  @@index([boutiqueId])
+}
+
+model UserBoutiqueMembership {
+  id               String   @id @default(cuid())
+  userId           String
+  boutiqueId       String
+  role             Role
+  canAccess        Boolean  @default(true) // when false, user cannot use this boutique in scope
+  canManageTasks   Boolean  @default(false) // MANAGER: create/edit tasks for this boutique
+  canManageLeaves  Boolean  @default(false) // MANAGER: approve/reject leave requests
+  canManageSales   Boolean  @default(false) // MANAGER: daily sales ledger for this boutique
+  canManageInventory Boolean @default(false) // MANAGER: inventory config (optional)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boutique         Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boutiqueId])
+  @@index([boutiqueId])
+}
+
+model SystemConfig {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  valueJson String? // JSON string for DEFAULT_BOUTIQUE_ID etc.
+}
+
+model ScopeSetting {
+  id              String   @id @default(cuid())
+  scopeId         String   @unique // boutiqueId
+  maxSalesGapDays Int      @default(7)
+  updatedAt       DateTime @updatedAt
+}
+
+model UserPreference {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  scopeJson              String?  // JSON: { scope, boutiqueId?, regionId?, groupId?, boutiqueIds? }
+  adminFilterJson        String?  // JSON: { kind: ALL|BOUTIQUE|REGION|GROUP, boutiqueId?, regionId?, groupId? } — ADMIN only
+  operationalBoutiqueId  String?  // Single boutique for operational pages (schedule, tasks, inventory, leaves, sales)
+  updatedAt              DateTime @updatedAt
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                String   @id @default(cuid())
+  empId             String   @unique
+  role              Role
+  passwordHash      String
+  mustChangePassword Boolean @default(false)
+  disabled          Boolean  @default(false)
+  canEditSchedule   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  boutiqueId        String   // session-bound boutique (no switching); backfilled in migration
+  lockedUntil       DateTime? // account lockout until this time (login abuse protection)
+  failedLoginAttempts Int    @default(0) // reset on successful login
+  boutique          Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
+  employee          Employee? @relation(fields: [empId], references: [empId])
+  sessions         Session[]
+  auditLogs         AuditLog[] @relation("ActorUser")
+  shiftOverridesCreated ShiftOverride[]
+  notifications     Notification[]
+  inventoryDailyExclusions InventoryDailyExclusion[]
+  inventoryAbsents         InventoryAbsent[]
+  employeeTeamHistoryCreated EmployeeTeamHistory[]
+  employeeTeamAssignmentsCreated EmployeeTeamAssignment[]
+  approvalRequestsRequested ApprovalRequest[] @relation("ApprovalRequestedBy")
+  approvalRequestsDecided  ApprovalRequest[] @relation("ApprovalDecidedBy")
+  taskCompletions          TaskCompletion[]
+  scheduleEditAudits       ScheduleEditAudit[]
+  authAuditLogs            AuthAuditLog[]
+  boutiqueTargetsCreated   BoutiqueMonthlyTarget[]
+  employeeMonthlyTargets   EmployeeMonthlyTarget[]
+  employeeTargetsGenerated EmployeeMonthlyTarget[] @relation("GeneratedTargets")
+  salesEntries             SalesEntry[]             @relation("SalesEntryUser")
+  salesEntriesCreated      SalesEntry[]             @relation("SalesEntryCreatedBy")
+  salesEditGrants          SalesEditGrant[]         @relation("SalesEditGrantUser")
+  boutiqueMemberships      UserBoutiqueMembership[]
+  scopePreference           UserPreference?
+  salesSummariesEntered    BoutiqueSalesSummary[]   @relation("SalesSummaryEnteredBy")
+  salesSummariesLocked     BoutiqueSalesSummary[]   @relation("SalesSummaryLockedBy")
+  salesImportBatches       SalesImportBatch[]
+  salesLedgerBatchesImported SalesLedgerBatch[]
+  leaveRequestsAsRequester LeaveRequest[]           @relation("LeaveRequestRequester")
+  leaveRequestsCreated    LeaveRequest[]           @relation("LeaveRequestCreatedBy")
+  leaveRequestsApproved   LeaveRequest[]           @relation("LeaveRequestApprovedBy")
+  leaveRequestsEscalated  LeaveRequest[]           @relation("LeaveRequestEscalatedBy")
+  kpiUploads             KpiUpload[]
+  mobileRefreshTokens    MobileRefreshToken[]
+  mobileDevicePushTokens MobileDevicePushToken[]
+  notificationPreference NotificationPreference?
+  releaseNotesCreated   ReleaseNote[]
+  deployRecordsCreated  DeployRecord[]
+  delegationGrantsAsTarget   DelegationGrant[] @relation("DelegationGrantTarget")
+  delegationGrantsGrantedBy  DelegationGrant[] @relation("DelegationGrantGrantedBy")
+  delegationGrantsRevokedBy  DelegationGrant[] @relation("DelegationGrantRevokedBy")
+
+  @@index([boutiqueId])
+}
+
+model MobileRefreshToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String
+  createdAt   DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt   DateTime?
+  deviceHint  String?
+  ip          String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model MobileDevicePushToken {
+  id            String    @id @default(cuid())
+  userId        String
+  expoPushToken String    @unique
+  platform      String    // "ios" | "android"
+  deviceHint    String?
+  appVersion    String?
+  lastSeenAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  revokedAt    DateTime?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  scheduleEnabled  Boolean  @default(true)
+  tasksEnabled     Boolean  @default(true)
+  quietHoursStart  String?  // e.g. "22:00"
+  quietHoursEnd    String?  // e.g. "08:00"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationEventLog {
+  id         String   @id @default(cuid())
+  eventKey   String   @unique
+  type       String   // SCHEDULE_PUBLISHED | SCHEDULE_CHANGED | TASK_ASSIGNED | TASK_DUE_SOON | TASK_OVERDUE
+  userId     String
+  boutiqueId String?
+  payload    Json
+  createdAt  DateTime @default(now())
+
+  @@index([userId, type, createdAt])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  token      String   @unique // cookie value; rotate on login
+  userId     String
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  id          String    @id @default(cuid())
+  key         String    @unique // e.g. "ip:1.2.3.4" or "email:user@example.com"
+  windowStart DateTime
+  count       Int       @default(0)
+  blockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+  @@index([key])
+}
+
+model AuthAuditLog {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  event           String   // LOGIN_SUCCESS | LOGIN_FAILED | LOGOUT | LOGIN_RATE_LIMITED | ACCOUNT_LOCKED | SECURITY_ALERT
+  userId          String?  // nullable when unknown user/email not found
+  emailAttempted  String?  // email/username attempted if present
+  ip              String?
+  userAgent       String?
+  deviceHint      String?
+  reason          String?  // e.g. INVALID_PASSWORD, USER_NOT_FOUND, BLOCKED, etc.
+  metadata        Json?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([createdAt])
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+  @@index([emailAttempted])
+}
+
+model ScheduleEditAudit {
+  id          String   @id @default(cuid())
+  boutiqueId String?
+  weekStart   DateTime @db.Date
+  editorId    String
+  editedAt    DateTime @default(now())
+  changesJson Json
+  source      String?
+  editor      User     @relation(fields: [editorId], references: [id], onDelete: Cascade)
+  @@index([boutiqueId])
+  @@index([weekStart, editedAt])
+  @@index([editorId, editedAt])
+}
+
+model Employee {
+  empId                    String            @id
+  boutiqueId               String           @default("bout_dhhrn_001") // current boutique assignment (canonical)
+  name                     String
+  email                    String?
+  phone                    String?
+  team                     Team              // denormalized "current" team; kept in sync when history is appended
+  weeklyOffDay             Int               // 0=Sun..6=Sat
+  position                 EmployeePosition? // job role: Boutique Manager, Assistant Manager, Senior Sales, Sales
+  active                   Boolean           @default(true)
+  isSystemOnly             Boolean           @default(false) // true = admin/system account, excluded from roster and all employee lists
+  isBoutiqueManager        Boolean           @default(false) // excluded from daily inventory rotation
+  excludeFromDailyInventory Boolean          @default(false)
+  language                 String            @default("en") // ar | en
+  notes                    String?
+  salesTargetRole          SalesTargetRole?  // for target weight; if null, derived from position
+  boutique                 Boutique          @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
+  user                     User?
+  leaves                   Leave[]
+  shiftOverrides           ShiftOverride[]
+  taskPlansPrimary         TaskPlan[]        @relation("Primary")
+  taskPlansBackup1         TaskPlan[]        @relation("Backup1")
+  taskPlansBackup2         TaskPlan[]        @relation("Backup2")
+  inventoryRotationMembers InventoryRotationMember[]
+  inventoryZoneAssignments InventoryZoneAssignment[]
+  teamHistory              EmployeeTeamHistory[]
+  teamAssignments          EmployeeTeamAssignment[]
+  inventoryDailyWaitingQueueEntries InventoryDailyWaitingQueue[]
+  employeeAssignments               EmployeeAssignment[]
+  salesTransactionsAsSeller         SalesTransaction[]
+
+  @@index([boutiqueId])
+  @@index([boutiqueId, active])
+}
+
+// Historical employee-boutique assignment for transfer history and import validation
+model EmployeeAssignment {
+  id         String    @id @default(cuid())
+  empId      String
+  boutiqueId String
+  fromDate   DateTime  @db.Date // inclusive
+  toDate     DateTime? @db.Date // null = current
+  createdAt  DateTime  @default(now())
+  createdByUserId String?
+  employee   Employee  @relation(fields: [empId], references: [empId], onDelete: Cascade)
+  boutique   Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  @@index([empId])
+  @@index([boutiqueId])
+  @@index([empId, fromDate, toDate])
+}
+
+model EmployeeTeamHistory {
+  id              String   @id @default(cuid())
+  empId           String
+  team            Team     // 'A' | 'B'
+  effectiveFrom   DateTime @db.Date // inclusive
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  employee        Employee @relation(fields: [empId], references: [empId], onDelete: Cascade)
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id])
+  @@index([empId, effectiveFrom])
+}
+
+// Effective-date team assignment; auditable, non-retroactive. Do not delete old records.
+model EmployeeTeamAssignment {
+  id              String   @id @default(cuid())
+  empId           String
+  team            Team     // 'A' | 'B'
+  effectiveFrom   DateTime @db.Date // inclusive
+  reason          String   // required
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  employee        Employee @relation(fields: [empId], references: [empId], onDelete: Cascade)
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id])
+  @@index([empId, effectiveFrom])
+}
+
+model Leave {
+  id        String      @id @default(cuid())
+  empId     String
+  type      LeaveType
+  status    LeaveStatus @default(APPROVED)
+  startDate DateTime    @db.Date
+  endDate   DateTime    @db.Date
+  notes     String?
+  createdAt DateTime    @default(now())
+  employee  Employee    @relation(fields: [empId], references: [empId], onDelete: Cascade)
+}
+
+// Boutique-scoped leave request with approval workflow + manager rules + admin escalation
+model LeaveRequest {
+  id              String    @id @default(cuid())
+  boutiqueId      String
+  userId          String    // employee requesting
+  startDate       DateTime  @db.Date
+  endDate         DateTime  @db.Date
+  type            LeaveType
+  status          String    @default("DRAFT") // DRAFT | SUBMITTED | APPROVED_MANAGER | APPROVED_ADMIN | REJECTED | CANCELLED
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String    // who submitted (usually same as userId)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  escalatedAt     DateTime? // when manager escalated to admin
+  escalatedById   String?
+  boutique        Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  user            User      @relation("LeaveRequestRequester", fields: [userId], references: [id], onDelete: Cascade)
+  createdByUser   User      @relation("LeaveRequestCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  approvedByUser  User?     @relation("LeaveRequestApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  escalatedByUser User?     @relation("LeaveRequestEscalatedBy", fields: [escalatedById], references: [id], onDelete: SetNull)
+
+  @@index([boutiqueId])
+  @@index([userId])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+model ShiftOverride {
+  id                String       @id @default(cuid())
+  boutiqueId        String?      // host boutique (where coverage is applied)
+  sourceBoutiqueId  String?      // employee's home boutique (for guest coverage display grouping)
+  empId             String
+  date              DateTime     @db.Date
+  overrideShift     OverrideShift
+  reason            String?
+  createdByUserId   String
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  employee          Employee     @relation(fields: [empId], references: [empId], onDelete: Cascade)
+  createdByUser     User         @relation(fields: [createdByUserId], references: [id])
+  @@unique([empId, date])
+  @@index([boutiqueId])
+  @@index([sourceBoutiqueId])
+}
+
+model CoverageRule {
+  id        String  @id @default(cuid())
+  boutiqueId String?
+  dayOfWeek Int     // 0..6
+  minAM     Int     @default(2)
+  minPM     Int     @default(0)
+  enabled   Boolean @default(true)
+  @@index([boutiqueId])
+}
+
+// --- Schedule governance (Sprint 1: Locking + RBAC) ---
+enum ScheduleLockScope {
+  DAY
+  WEEK
+}
+
+model ScheduleLock {
+  id             String           @id @default(cuid())
+  boutiqueId     String           // required; lock is per boutique
+  scopeType      ScheduleLockScope // DAY | WEEK
+  scopeValue     String           // date YYYY-MM-DD (DAY) or weekStart YYYY-MM-DD (WEEK)
+  lockedByUserId String
+  lockedAt       DateTime         @default(now())
+  reason         String?          // optional reason for locking
+  revokedByUserId String?         // user who revoked the lock
+  revokedAt      DateTime?        // when the lock was revoked
+  isActive       Boolean          @default(true) // active lock (false if revoked)
+  @@index([boutiqueId])
+  @@index([scopeType, scopeValue, isActive])
+}
+
+enum ScheduleWeekStatusEnum {
+  DRAFT
+  APPROVED
+}
+
+model ScheduleWeekStatus {
+  id               String                 @id @default(cuid())
+  boutiqueId       String                 // required; status is per boutique
+  weekStart        String                 // Saturday YYYY-MM-DD
+  status           ScheduleWeekStatusEnum @default(DRAFT)
+  approvedByUserId String?
+  approvedAt       DateTime?
+  updatedAt        DateTime               @updatedAt
+  @@unique([weekStart, boutiqueId])
+  @@index([boutiqueId])
+  @@index([weekStart])
+}
+
+model Task {
+  id                    String         @id @default(cuid())
+  boutiqueId            String?
+  name                  String
+  active                Boolean        @default(true)
+  taskKey               String?        @unique // stable external id for Planner matching
+  completionSource      String?        // "SITE" | "PLANNER_IMPORT" | "MANAGER_APPLY"
+  importedCompletionAt  DateTime?     // when we applied planner completion
+  taskPlans             TaskPlan[]
+  taskSchedules         TaskSchedule[]
+  completions           TaskCompletion[]
+  @@index([boutiqueId])
+}
+
+model PlannerImportBatch {
+  id               String   @id @default(cuid())
+  boutiqueId       String?
+  periodType       String   // "WEEK" | "MONTH"
+  periodKey        String   // e.g. "2026-W13" or "2026-02"
+  uploadedById     String
+  uploadedAt       DateTime @default(now())
+  plannerFileName  String?
+  totalsJson       Json     // counts summary
+  notes            String?
+  suspiciousCount  Int      @default(0)
+
+  rows PlannerImportRow[]
+
+  @@index([boutiqueId])
+  @@index([periodType, periodKey])
+}
+
+model PlannerImportRow {
+  id              String   @id @default(cuid())
+  batchId         String
+  boutiqueId      String?
+  taskKey         String?
+  title           String
+  assignee        String?
+  dueDate         DateTime?
+  status          String   // "DONE" | "NOT_DONE" | "UNKNOWN"
+  completedAtRaw  String?
+  flagsJson       Json?
+
+  batch           PlannerImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([boutiqueId])
+  @@index([taskKey])
+}
+
+model TaskPlan {
+  id            String   @id @default(cuid())
+  taskId        String
+  primaryEmpId  String
+  backup1EmpId  String
+  backup2EmpId  String
+  task          Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  primary       Employee @relation("Primary", fields: [primaryEmpId], references: [empId])
+  backup1       Employee @relation("Backup1", fields: [backup1EmpId], references: [empId])
+  backup2       Employee @relation("Backup2", fields: [backup2EmpId], references: [empId])
+}
+
+model TaskSchedule {
+  id          String           @id @default(cuid())
+  taskId      String
+  type        TaskScheduleType
+  weeklyDays  Int[]            // 0..6, nullable for non-WEEKLY
+  monthlyDay  Int?             // 1..31
+  isLastDay   Boolean          @default(false)
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+  completedAt DateTime
+  undoneAt    DateTime?
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  boutiqueId       String?
+  module           String?  // "SCHEDULE" | "INVENTORY" | "TEAM" | "LOCK" | "APPROVALS"
+  action           String   // actionType (e.g., OVERRIDE_CREATED, LOCK_DAY, INVENTORY_ZONE_COMPLETED)
+  actorUserId      String?  // nullable so user can be deleted (onDelete SetNull)
+  targetEmployeeId String?  // empId of affected employee
+  targetDate       DateTime? @db.Date // for day-based changes
+  weekStart        DateTime? @db.Date // for week-based changes
+  entityType       String   // legacy field, kept for compatibility
+  entityId         String?  // entityRef (e.g., overrideId, lockId, inventoryRecordId)
+  beforeJson       String?
+  afterJson        String?
+  reason           String?  // Sprint 2: mandatory for new entries, nullable for legacy
+  createdAt        DateTime @default(now())
+  actorUser        User?    @relation("ActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  @@index([boutiqueId])
+  @@index([createdAt])
+  @@index([module, createdAt])
+  @@index([targetDate, createdAt])
+  @@index([targetEmployeeId, createdAt])
+  @@index([weekStart, createdAt])
+}
+
+// --- Delegation overlay (temporary role/permission grants) ---
+model DelegationGrant {
+  id               String              @id @default(cuid())
+  boutiqueId       String
+  targetUserId     String
+  grantedByUserId  String
+  type             DelegationGrantType
+  roleBoost        Role?               // when type=ROLE_BOOST
+  flags            Json?               // when type=PERMISSION_FLAGS, e.g. { canApproveLeaveRequests: true }
+  startsAt         DateTime
+  endsAt           DateTime
+  reason           String
+  revokedAt        DateTime?
+  revokedByUserId  String?
+  revokeReason     String?
+  createdAt        DateTime            @default(now())
+
+  boutique         Boutique            @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  targetUser       User                @relation("DelegationGrantTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  grantedByUser    User                @relation("DelegationGrantGrantedBy", fields: [grantedByUserId], references: [id], onDelete: Restrict)
+  revokedByUser    User?               @relation("DelegationGrantRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([boutiqueId, targetUserId, startsAt, endsAt])
+  @@index([boutiqueId, endsAt])
+}
+
+model DelegationAuditLog {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  boutiqueId  String
+  actorUserId String
+  targetUserId String
+  action      String   // GRANT_CREATE | GRANT_REVOKE
+  metadata    Json
+  ip          String?
+  userAgent   String?
+
+  @@index([boutiqueId, createdAt])
+  @@index([targetUserId, createdAt])
+}
+
+// Sprint 2B: Approvals workflow. ASSISTANT_MANAGER => PENDING only; MANAGER/ADMIN => auto-apply.
+model ApprovalRequest {
+  id                String    @id @default(cuid())
+  boutiqueId        String?
+  module            String    // "SCHEDULE" | "TEAM" | "INVENTORY"
+  actionType        String    // e.g. OVERRIDE_CREATE, WEEK_SAVE, TEAM_CHANGE
+  payload           Json      // intended change (passed to apply functions)
+  status            String    @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  requestedByUserId String
+  requestedAt       DateTime  @default(now())
+  decidedByUserId  String?
+  decidedAt         DateTime?
+  decisionComment   String?
+  effectiveDate     DateTime? @db.Date
+  weekStart         DateTime? @db.Date
+  requestedByUser   User      @relation("ApprovalRequestedBy", fields: [requestedByUserId], references: [id])
+  decidedByUser     User?     @relation("ApprovalDecidedBy", fields: [decidedByUserId], references: [id])
+  @@index([boutiqueId])
+  @@index([status, requestedAt])
+  @@index([module, status])
+  @@index([effectiveDate])
+  @@index([weekStart])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String?
+  linkPath  String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- Inventory (Daily Rotation + Weekly Zones) ---
+enum InventoryDailyRunStatus {
+  PENDING
+  COMPLETED
+  UNASSIGNED
+}
+
+enum InventoryDailyRunSkipReason {
+  LEAVE
+  OFF
+  INACTIVE
+  EXCLUDED
+  EXCLUDED_TODAY
+  ABSENT
+}
+
+enum InventoryWeeklyZoneRunStatus {
+  PENDING
+  COMPLETED
+}
+
+model InventoryRotationConfig {
+  id                   String   @id @default(cuid())
+  boutiqueId           String   // required; operational scope
+  key                  String   // "DAILY_INVENTORY"
+  enabled              Boolean  @default(true)
+  monthRebalanceEnabled Boolean @default(true)
+  createdAt            DateTime @default(now())
+  members              InventoryRotationMember[]
+  @@unique([boutiqueId, key])
+  @@index([boutiqueId])
+}
+
+model InventoryRotationMember {
+  id             String   @id @default(cuid())
+  configId       String
+  empId          String
+  baseOrderIndex Int      // lower = earlier in rotation
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  config         InventoryRotationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  employee       Employee @relation(fields: [empId], references: [empId], onDelete: Cascade)
+  @@unique([configId, empId])
+}
+
+model InventoryDailyRun {
+  id              String                 @id @default(cuid())
+  boutiqueId      String                 // required; operational scope
+  date            DateTime               @db.Date
+  assignedEmpId   String?
+  status          InventoryDailyRunStatus @default(PENDING)
+  reason          String?                // e.g. why UNASSIGNED
+  completedByEmpId String?
+  completedAt     DateTime?
+  createdAt       DateTime               @default(now())
+  skips           InventoryDailyRunSkip[]
+  @@unique([boutiqueId, date])
+  @@index([boutiqueId])
+}
+
+model InventoryDailyExclusion {
+  id              String   @id @default(cuid())
+  boutiqueId      String   // required; operational scope
+  date            DateTime @db.Date
+  empId           String
+  reason          String?
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  @@unique([boutiqueId, date, empId])
+  @@index([boutiqueId])
+  @@index([boutiqueId, date])
+}
+
+model InventoryAbsent {
+  id              String   @id @default(cuid())
+  boutiqueId      String   // required; operational scope
+  date            DateTime @db.Date
+  empId           String
+  reason          String?
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  @@unique([boutiqueId, date, empId])
+  @@index([boutiqueId])
+  @@index([boutiqueId, date])
+}
+
+model InventoryDailyRunSkip {
+  id         String                    @id @default(cuid())
+  runId      String
+  empId      String
+  skipReason InventoryDailyRunSkipReason
+  createdAt  DateTime                  @default(now())
+  run        InventoryDailyRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model InventoryDailyWaitingQueue {
+  id              String   @id @default(cuid())
+  boutiqueId      String   // required; operational scope
+  empId           String
+  reason          String?
+  queuedAt        DateTime @default(now())
+  expiresAt       DateTime
+  lastSkippedDate DateTime @db.Date
+  employee        Employee @relation(fields: [empId], references: [empId], onDelete: Cascade)
+
+  @@index([boutiqueId])
+  @@index([boutiqueId, lastSkippedDate])
+  @@index([empId])
+  @@index([expiresAt])
+}
+
+model InventoryZone {
+  id           String   @id @default(cuid())
+  boutiqueId   String   // required; operational scope
+  code         String
+  name         String?
+  active       Boolean  @default(true)
+  assignments  InventoryZoneAssignment[]
+  weeklyRuns   InventoryWeeklyZoneRun[]
+  @@unique([boutiqueId, code])
+  @@index([boutiqueId])
+}
+
+model InventoryZoneAssignment {
+  id            String    @id @default(cuid())
+  zoneId        String
+  empId         String
+  active        Boolean   @default(true)
+  effectiveFrom DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+  zone          InventoryZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  employee      Employee   @relation(fields: [empId], references: [empId], onDelete: Cascade)
+}
+
+model InventoryWeeklyZoneRun {
+  id          String                      @id @default(cuid())
+  boutiqueId  String                      // required; matches zone.boutiqueId
+  weekStart   DateTime                    @db.Date
+  zoneId      String
+  empId       String
+  status      InventoryWeeklyZoneRunStatus @default(PENDING)
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime                    @default(now())
+  zone        InventoryZone               @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  @@unique([weekStart, zoneId])
+  @@index([boutiqueId])
+}
+
+// --- Sales targets (Boutique + Employee monthly targets + daily sales) ---
+model BoutiqueMonthlyTarget {
+  id            String   @id @default(cuid())
+  boutiqueId    String   // required (DB NOT NULL), default from migration backfill
+  month         String   // "YYYY-MM"
+  amount        Int      // SAR (integer)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  employeeTargets EmployeeMonthlyTarget[]
+
+  @@unique([boutiqueId, month])
+  @@index([boutiqueId])
+  @@index([month])
+}
+
+model EmployeeMonthlyTarget {
+  id                         String   @id @default(cuid())
+  boutiqueId                 String   // required (DB NOT NULL)
+  month                      String   // "YYYY-MM"
+  userId                     String
+  amount                     Int      // SAR (integer)
+  sourceBoutiqueTargetId      String?
+  generatedAt                DateTime?
+  generatedById               String?
+  roleAtGeneration           String?  // SalesTargetRole at snapshot time
+  weightAtGeneration         Float?   // role weight (e.g. 0.5, 1.0)
+  scheduledDaysInMonth       Int?     // snapshot: scheduled working days in month
+  leaveDaysInMonth           Int?     // snapshot: APPROVED leave days in month
+  presentDaysInMonth         Int?     // snapshot: scheduled - leave
+  presenceFactor             Float?   // snapshot: present / scheduled (0 if scheduled=0)
+  effectiveWeightAtGeneration Float?   // snapshot: roleWeight * presenceFactor
+  distributionMethod         String?  // e.g. ROLE_WEIGHTED_LEAVE_ADJUSTED_V1
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceBoutiqueTarget       BoutiqueMonthlyTarget? @relation(fields: [sourceBoutiqueTargetId], references: [id], onDelete: SetNull)
+  generatedBy                User?    @relation("GeneratedTargets", fields: [generatedById], references: [id], onDelete: SetNull)
+
+  @@unique([boutiqueId, month, userId])
+  @@index([boutiqueId])
+  @@index([month])
+  @@index([userId])
+  @@index([sourceBoutiqueTargetId])
+}
+
+model SalesTargetRoleWeight {
+  role   String @id // MANAGER | ASSISTANT_MANAGER | HIGH_JEWELLERY_EXPERT | SENIOR_SALES_ADVISOR | SALES_ADVISOR
+  weight Float
+}
+
+model SalesTargetAudit {
+  id           String   @id @default(cuid())
+  boutiqueId   String   // required (DB NOT NULL)
+  monthKey     String   // "YYYY-MM"
+  action       String   // GENERATE | REGENERATE | RESET | OVERRIDE_EMPLOYEE | SET_BOUTIQUE_TARGET | IMPORT_SALES
+  actorUserId  String
+  detailsJson  Json     // action-specific payload
+  createdAt    DateTime @default(now())
+
+  @@index([boutiqueId])
+  @@index([monthKey, createdAt])
+  @@index([action, createdAt])
+}
+
+model SalesEntry {
+  id          String   @id @default(cuid())
+  boutiqueId  String   // required (DB NOT NULL); set at creation from employee's boutique
+  date        DateTime @db.Date // normalized to date at 00:00 Riyadh (stored as date only)
+  dateKey     String   // "YYYY-MM-DD" Riyadh — canonical day key; avoids timezone bugs
+  month       String   // "YYYY-MM" Riyadh for quick filtering
+  userId      String
+  amount      Int      // SAR (integer)
+  source      String?  @default("LEDGER") // LEDGER | MANUAL | IMPORT; sync only touches LEDGER
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation("SalesEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("SalesEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([boutiqueId, dateKey, userId])
+  @@index([boutiqueId])
+  @@index([dateKey])
+  @@index([month])
+  @@index([userId])
+  @@index([source])
+}
+
+model SalesEditGrant {
+  id              String   @id @default(cuid())
+  boutiqueId      String?
+  userId          String
+  date            DateTime @db.Date
+  grantedByUserId String
+  grantedAt       DateTime @default(now())
+  expiresAt       DateTime
+  reason          String?
+
+  user User @relation("SalesEditGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([boutiqueId])
+  @@index([date])
+}
+
+// --- Daily Sales Ledger (Phase 2): manager summary + employee lines, SAR int only ---
+enum SalesEntryStatus {
+  DRAFT
+  LOCKED
+}
+
+enum SalesLineSource {
+  MANUAL
+  EXCEL_IMPORT
+  YEARLY_IMPORT
+}
+
+// --- Sales Ledger (row-level) + Returns/Exchanges + RBAC ---
+enum SalesTxnType {
+  SALE
+  RETURN
+  EXCHANGE
+}
+
+enum SalesTxnSource {
+  EXCEL_IMPORT
+  MANUAL
+}
+
+enum ImportIssueSeverity {
+  WARN
+  BLOCK
+}
+
+enum ImportIssueStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
+model BoutiqueSalesSummary {
+  id          String           @id @default(cuid())
+  boutiqueId  String
+  date        DateTime         @db.Date
+  totalSar    Int
+  status      SalesEntryStatus @default(DRAFT)
+  enteredById String
+  lockedById  String?
+  lockedAt    DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  boutique    Boutique         @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  enteredBy   User             @relation("SalesSummaryEnteredBy", fields: [enteredById], references: [id], onDelete: Restrict)
+  lockedBy    User?            @relation("SalesSummaryLockedBy", fields: [lockedById], references: [id], onDelete: SetNull)
+  lines       BoutiqueSalesLine[]
+  imports     SalesImportBatch[]
+  @@unique([boutiqueId, date])
+  @@index([boutiqueId, date])
+  @@index([date])
+}
+
+model BoutiqueSalesLine {
+  id             String         @id @default(cuid())
+  summaryId      String
+  employeeId     String         // empId
+  amountSar      Int
+  source         SalesLineSource @default(MANUAL)
+  importBatchId  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  summary        BoutiqueSalesSummary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  @@unique([summaryId, employeeId])
+  @@index([employeeId])
+  @@index([summaryId])
+}
+
+model SalesImportBatch {
+  id            String   @id @default(cuid())
+  summaryId     String
+  boutiqueId    String
+  date          DateTime @db.Date
+  fileName      String
+  importedById  String
+  totalsJson    Json     // { managerTotalSar, linesTotalSar, diffSar, rowCount }
+  createdAt     DateTime @default(now())
+  summary       BoutiqueSalesSummary @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  importedBy    User     @relation(fields: [importedById], references: [id], onDelete: Restrict)
+  @@index([boutiqueId, date])
+  @@index([summaryId])
+}
+
+model SalesLedgerAudit {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  boutiqueId String
+  date       DateTime @db.Date
+  actorId    String
+  action     String   // SUMMARY_CREATE, SUMMARY_UPDATE, LINE_UPSERT, LOCK, UNLOCK, IMPORT_APPLY, POST_LOCK_EDIT
+  reason     String?
+  metadata   Json?
+  @@index([boutiqueId, date])
+  @@index([createdAt])
+}
+
+// --- Sales Ledger (row-level) + Guest Coverage + Returns/Exchanges ---
+model SalesLedgerBatch {
+  id            String   @id @default(cuid())
+  boutiqueId    String
+  periodKey     String   // e.g. "2026-02" or "2026-W08"
+  fileName      String
+  fileHash      String?  // dedup: same hash + boutiqueId + periodKey = skip
+  importedById  String
+  createdAt     DateTime @default(now())
+  boutique      Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  importedBy    User     @relation(fields: [importedById], references: [id], onDelete: Restrict)
+  transactions  SalesTransaction[]
+  importIssues  ImportIssue[]
+  @@unique([boutiqueId, periodKey, fileHash])
+  @@index([boutiqueId, periodKey])
+  @@index([importedById])
+}
+
+model SalesTransaction {
+  id                    String         @id @default(cuid())
+  txnDate               DateTime       @db.Date
+  boutiqueId            String         // host boutique (where transaction occurred)
+  employeeId            String         // seller (Employee.empId)
+  type                  SalesTxnType   // SALE | RETURN | EXCHANGE
+  source                SalesTxnSource @default(EXCEL_IMPORT)
+  referenceNo           String?
+  lineNo                String?
+  grossAmount           Int            // halalas (SAR * 100)
+  netAmount             Int            // SALE +, RETURN -, EXCHANGE diff or 0 (halalas)
+  originalTxnId         String?        // link RETURN/EXCHANGE to original sale
+  importBatchId         String?
+  isGuestCoverage       Boolean        @default(false)
+  coverageSourceBoutiqueId String?
+  coverageShift         String?        // AM | PM
+  metadata              Json?         // assignmentVerified, parsing hints
+  createdAt             DateTime       @default(now())
+  boutique              Boutique       @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  employee              Employee      @relation(fields: [employeeId], references: [empId], onDelete: Restrict)
+  importBatch           SalesLedgerBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  @@index([boutiqueId])
+  @@index([employeeId])
+  @@index([txnDate])
+  @@index([boutiqueId, txnDate])
+  @@index([type])
+  @@index([importBatchId])
+}
+
+model ImportIssue {
+  id        String             @id @default(cuid())
+  batchId   String
+  severity  ImportIssueSeverity // WARN | BLOCK
+  status    ImportIssueStatus   @default(OPEN) // OPEN | RESOLVED | IGNORED
+  message   String
+  rowIndex  Int?               // 1-based row in file
+  metadata  Json?              // e.g. { empId, referenceNo, amount }
+  resolvedAt DateTime?
+  resolvedById String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  batch     SalesLedgerBatch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  @@index([batchId])
+  @@index([status])
+  @@index([batchId, status])
+}
+
+// --- KPI Appraisal Layer (Official template + uploads + snapshots) ---
+model KpiTemplate {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  version     String   @default("1")
+  isActive    Boolean  @default(true)
+  cellMapJson String   // JSON: { overallOutOf5: "B2", salesKpiOutOf5: "B3", ... }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  uploads     KpiUpload[]
+}
+
+model KpiUpload {
+  id           String   @id @default(cuid())
+  templateId   String
+  boutiqueId   String
+  empId        String
+  periodKey    String   // YYYY or YYYY-MM
+  fileName     String
+  fileHash     String?  // optional checksum for dedup
+  uploadedById String
+  status       String   // PARSED | FAILED
+  errorText    String?
+  createdAt    DateTime @default(now())
+  template     KpiTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  boutique     Boutique   @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  snapshot     EmployeeKpiSnapshot?
+  @@index([boutiqueId])
+  @@index([empId, periodKey])
+  @@index([uploadedById])
+  @@index([templateId])
+}
+
+model EmployeeKpiSnapshot {
+  id               String   @id @default(cuid())
+  uploadId         String   @unique
+  boutiqueId       String
+  empId            String
+  periodKey        String
+  overallOutOf5     Float
+  salesKpiOutOf5   Float
+  skillsOutOf5     Float
+  companyOutOf5    Float
+  sectionsJson     Json     // structured breakdown
+  rawJson          Json     // all extracted values
+  createdAt        DateTime @default(now())
+  upload           KpiUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  @@index([boutiqueId])
+  @@index([empId, periodKey])
+}
+
+model KpiAuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  actorId    String
+  action     String   // KPI_TEMPLATE_SEEDED, KPI_UPLOAD_CREATED, KPI_UPLOAD_PARSED, KPI_UPLOAD_FAILED, KPI_SNAPSHOT_VIEWED
+  boutiqueId String?
+  empId      String?
+  periodKey  String?
+  metadata   Json?
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+// --- Version & Deploy tracking (admin) ---
+model ReleaseNote {
+  id               String    @id @default(cuid())
+  version         String    @unique // e.g. "1.2.0"
+  title           String
+  notes           String    // markdown allowed
+  createdAt       DateTime  @default(now())
+  createdByUserId String?
+  createdByUser   User?     @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  isPublished    Boolean   @default(false)
+  @@index([version])
+  @@index([isPublished])
+}
+
+model DeployRecord {
+  id              String    @id @default(cuid())
+  createdAt       DateTime  @default(now())
+  appVersion     String    // e.g. "1.2.0"
+  gitHash        String
+  buildDate      DateTime
+  environment    String    // "production" | "staging" | "local"
+  serverHost     String?
+  serverIp       String?
+  deployedByUserId String?
+  deployedByUser  User?     @relation(fields: [deployedByUserId], references: [id], onDelete: SetNull)
+  deploySource   String    // "github" | "manual" | "local"
+  notes          String?
+  @@unique([appVersion, gitHash, environment])
+  @@index([createdAt])
+  @@index([environment])
+}

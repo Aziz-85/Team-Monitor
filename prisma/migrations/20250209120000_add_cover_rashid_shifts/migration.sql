@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "OverrideShift" ADD VALUE 'COVER_RASHID_AM';
+ALTER TYPE "OverrideShift" ADD VALUE 'COVER_RASHID_PM';
