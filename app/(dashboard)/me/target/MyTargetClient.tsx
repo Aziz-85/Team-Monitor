@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useI18n } from '@/app/providers';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { formatSarFromHalala } from '@/lib/utils/money';
+import { formatSarFromHalala, formatSarInt } from '@/lib/utils/money';
 
 function getNested(obj: Record<string, unknown>, path: string): unknown {
   return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
@@ -251,6 +251,8 @@ export function MyTargetClient() {
   };
 
   const formatMoney = (n: number) => (Number.isFinite(n) ? formatSarFromHalala(n) : '—');
+  /** مبالغ التقويم الشهري و إجمالي الشهر من /api/me/sales بالريال (SAR) — لا تقسيم على 100 */
+  const formatSar = (n: number) => (Number.isFinite(n) ? formatSarInt(n) : '—');
   const formatPct = (n: number) => (Number.isFinite(n) ? `${n.toFixed(1)}%` : '—');
 
   const progress = (pct: number) => Math.min(100, Math.max(0, pct));
@@ -516,7 +518,7 @@ export function MyTargetClient() {
                             >
                               <span className="block text-xs text-slate-500">{cell.day}</span>
                               {entry ? (
-                                <span className="block font-medium text-slate-800">{formatMoney(entry.amount)}</span>
+                                <span className="block font-medium text-slate-800">{formatSar(entry.amount)}</span>
                               ) : (
                                 <span className="block text-xs text-slate-400">—</span>
                               )}
@@ -536,7 +538,7 @@ export function MyTargetClient() {
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
             <span>{t('targets.enteredDays')}: {monthEntries.length} / {getDaysInMonth(month)}</span>
             <span>{t('targets.missingDays')}: {Math.max(0, getDaysInMonth(month) - monthEntries.length)}</span>
-            <span className="font-medium">{t('targets.monthTotal')}: {formatMoney(monthEntries.reduce((s, e) => s + e.amount, 0))}</span>
+            <span className="font-medium">{t('targets.monthTotal')}: {formatSar(monthEntries.reduce((s, e) => s + e.amount, 0))}</span>
           </div>
         </OpsCard>
 
@@ -592,7 +594,7 @@ export function MyTargetClient() {
                   title={!e.canEdit ? t('targets.salesEntryPolicyTooltip') : isCurrentMonth ? t('targets.cannotClearCurrentMonth') : undefined}
                 >
                   <span className={!e.canEdit ? 'text-slate-500' : ''}>
-                    {e.date} — {formatMoney(e.amount)}
+                    {e.date} — {formatSar(e.amount)}
                     {!e.canEdit && (
                       <span className="ml-1 text-xs text-slate-400" title={t('targets.salesEntryPolicyTooltip')}>
                         (read-only)

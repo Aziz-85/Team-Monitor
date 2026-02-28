@@ -19,7 +19,7 @@ async function main() {
   const targets = await prisma.employeeMonthlyTarget.findMany({
       where: { month: monthKey, boutiqueId: boutique.boutiqueId },
       include: {
-        user: { select: { empId: true }, include: { employee: { select: { name: true } } } },
+        user: { select: { empId: true, employee: { select: { name: true } } } },
       },
     });
 

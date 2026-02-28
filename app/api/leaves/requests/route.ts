@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const list = await prisma.leaveRequest.findMany({
     where,
     include: {
-      user: { select: { id: true, empId: true }, include: { employee: { select: { name: true } } } },
+      user: { select: { id: true, empId: true, employee: { select: { name: true } } } },
       boutique: { select: { id: true, code: true, name: true } },
       createdByUser: { select: { empId: true } },
       approvedByUser: { select: { empId: true } },
