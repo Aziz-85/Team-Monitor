@@ -542,6 +542,7 @@ export function MyTargetClient() {
           </div>
         </OpsCard>
 
+        {false && (
         <OpsCard title={t('targets.thisMonthEntries')}>
           {monthEntries.length > 0 && (() => {
             const isCurrentMonth = month === new Date().toISOString().slice(0, 7);
@@ -618,6 +619,7 @@ export function MyTargetClient() {
               })}
           </ul>
         </OpsCard>
+        )}
       </div>
     </div>
   );

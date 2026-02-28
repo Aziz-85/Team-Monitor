@@ -1,9 +1,9 @@
 /**
  * Executive Dashboard API — READ ONLY, presentation aggregation.
- * MANAGER + ADMIN only. Scope resolved server-side; data filtered by boutiqueIds.
+ * MANAGER + ADMIN + SUPER_ADMIN. Scope: same as dashboard (operational/session boutique when available).
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
@@ -16,6 +16,7 @@ import { rosterForDate } from '@/lib/services/roster';
 import { validateCoverage } from '@/lib/services/coverageValidation';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
+import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { resolveScopeForUser } from '@/lib/scope/resolveScope';
 import type { Role } from '@prisma/client';
 
@@ -93,16 +94,20 @@ function lastMonthKeys(today: Date, n: number): string[] {
   return keys;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN') {
+  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const scope = await resolveScopeForUser(user.id, role, null);
-  const boutiqueIds = scope.boutiqueIds;
+  // Use same scope as dashboard (operational/session boutique) when available, so sales match "working on".
+  const opScope = await getOperationalScope(request);
+  const boutiqueIds =
+    opScope?.boutiqueIds?.length
+      ? opScope.boutiqueIds
+      : (await resolveScopeForUser(user.id, role, null)).boutiqueIds;
   if (boutiqueIds.length === 0) {
     return NextResponse.json(
       { error: 'No boutiques in scope' },
