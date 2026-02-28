@@ -17,6 +17,30 @@ Error: Could not find a production build in the '.next' directory. Try building 
 
 the app is running `next start` but the production build was never created (or the `.next` folder was removed).
 
+## خطأ: `entryCSSFiles` أو `clientModules` undefined
+
+إذا ظهر في لوج PM2:
+
+```text
+TypeError: Cannot read properties of undefined (reading 'entryCSSFiles')
+TypeError: Cannot read properties of undefined (reading 'clientModules')
+```
+
+السبب: مجلد `.next` قديم أو ناقص أو غير متوافق مع نسخة Next (مثلاً بعد تحديث دون إعادة بناء كاملة).
+
+**الحل — إعادة بناء كاملة:**
+
+```bash
+cd /var/www/team-monitor
+pm2 stop team-monitor
+rm -rf .next node_modules/.cache
+npm ci
+npm run build
+pm2 restart team-monitor
+```
+
+ثم تحقق: `pm2 logs team-monitor --lines 20` و `curl -s http://127.0.0.1:3002/api/health`
+
 ## Fix: build on the server, then restart
 
 Run these on the server as the deploy user (e.g. `deploy`):

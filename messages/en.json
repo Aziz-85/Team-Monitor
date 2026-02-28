@@ -291,7 +291,7 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "morning": "Morning (AM)",
-    "evening": "Evening (PM)",
+    "evening": "Afternoon (PM)",
     "day": "Day",
     "editor": "Day Editor",
     "selectDate": "Select date",
@@ -310,7 +310,7 @@
       "amShort": "AM",
       "pmShort": "PM",
       "morning": "Morning (AM)",
-      "evening": "Evening (PM)",
+      "evening": "Afternoon (PM)",
       "rashidAm": "Rashid AM",
       "rashidPm": "Rashid PM",
       "none": "NONE"
@@ -1066,7 +1066,7 @@
     "scheduleExport": "Schedule shifts export",
     "filterBoutiqueOnly": "Boutique only",
     "filterRashidOnly": "Rashid coverage only",
-    "scheduleExportHint": "Task titles: [Boutique] Morning/Evening Shift – date, [Rashid] Morning/Evening Coverage – date.",
+    "scheduleExportHint": "Task titles: [Boutique] Morning/Afternoon Shift – date, [Rashid] Morning/Afternoon Coverage – date.",
     "taskTemplatePreview": "Task naming template"
   },
   "days": {

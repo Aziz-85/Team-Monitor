@@ -160,7 +160,7 @@ const SHIFT_LABEL_FALLBACKS: Record<string, string> = {
   amShort: 'AM',
   pmShort: 'PM',
   morning: 'Morning (AM)',
-  evening: 'Evening (PM)',
+  evening: 'Afternoon (PM)',
   rashidAm: 'Rashid AM',
   rashidPm: 'Rashid PM',
   none: 'NONE',
@@ -696,6 +696,30 @@ export function ScheduleEditClient({
     return computeCountsFromGridRows(gridData.rows, getDraftShift);
   }, [gridData, getDraftShift]);
 
+  /** Per-day guest (external coverage) counts so AM/PM columns include coverage from another branch. */
+  const guestCountsByDay = useMemo(() => {
+    const days = gridData?.days ?? [];
+    const byDay = days.map(() => ({ am: 0, pm: 0 }));
+    for (const g of externalGuests) {
+      const dateStr = typeof g.date === 'string' ? g.date.slice(0, 10) : '';
+      const i = days.findIndex((d) => d.date === dateStr);
+      if (i >= 0) {
+        if (g.shift === 'MORNING') byDay[i].am += 1;
+        else if (g.shift === 'EVENING') byDay[i].pm += 1;
+      }
+    }
+    return byDay;
+  }, [externalGuests, gridData?.days]);
+
+  /** Counts shown in grid/excel: when using draft, add guest counts; otherwise API counts already include guests. */
+  const displayCounts = useMemo(() => {
+    if (!draftCounts.length) return gridData?.counts ?? [];
+    return draftCounts.map((c, i) => ({
+      amCount: (c.amCount ?? 0) + (guestCountsByDay[i]?.am ?? 0),
+      pmCount: (c.pmCount ?? 0) + (guestCountsByDay[i]?.pm ?? 0),
+    }));
+  }, [draftCounts, gridData?.counts, guestCountsByDay]);
+
   const getRowAndCell = useCallback(
     (empId: string, date: string): { row: GridRow; cell: GridCell } | null => {
       if (!gridData) return null;
@@ -716,7 +740,7 @@ export function ScheduleEditClient({
   const validationsByDay = useMemo(
     (): Array<{ date: string; validations: ValidationResult[] }> =>
       gridData?.days.map((day, i) => {
-        const count = draftCounts[i] ?? gridData.counts[i];
+        const count = displayCounts[i] ?? gridData.counts[i];
         const am = count?.amCount ?? 0;
         const pm = count?.pmCount ?? 0;
         const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
@@ -728,7 +752,7 @@ export function ScheduleEditClient({
         if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: (t('schedule.warningMinPm') as string) || `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
         return { date: day.date, validations };
       }) ?? [],
-    [gridData, draftCounts, t]
+    [gridData, displayCounts, t]
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
 
@@ -1552,7 +1576,7 @@ export function ScheduleEditClient({
                       })}
                       <tr className="bg-slate-50 font-medium">
                         <LuxuryTd className="sticky left-0 z-10 bg-slate-100">AM</LuxuryTd>
-                        {(draftCounts.length ? draftCounts : gridData.counts).map((c, i) => {
+                        {displayCounts.map((c, i) => {
                           const day = gridData.days[i];
                           const am = c.amCount;
                           const pm = c.pmCount;
@@ -1571,7 +1595,7 @@ export function ScheduleEditClient({
                       </tr>
                       <tr className="bg-slate-50 font-medium">
                         <LuxuryTd className="sticky left-0 z-10 bg-slate-100">PM</LuxuryTd>
-                        {(draftCounts.length ? draftCounts : gridData.counts).map((c, i) => {
+                        {displayCounts.map((c, i) => {
                           const am = c.amCount;
                           const pm = c.pmCount;
                           const amGtPm = am > pm;
@@ -1597,7 +1621,7 @@ export function ScheduleEditClient({
                   gridData={{
                     days: gridData.days,
                     rows: gridData.rows,
-                    counts: draftCounts.length ? draftCounts : gridData.counts,
+                    counts: displayCounts,
                   }}
                   weekGuests={externalGuests}
                   coverageHeaderLabel={coverageHeaderLabel}
@@ -2043,7 +2067,7 @@ export function ScheduleEditClient({
                     disabled={guestSubmitting}
                   >
                     <option value="MORNING">{t('schedule.morning') ?? 'Morning'}</option>
-                    <option value="EVENING">{t('schedule.evening') ?? 'Evening'}</option>
+                    <option value="EVENING">{t('schedule.evening') ?? 'Afternoon'}</option>
                   </select>
                 </div>
                 <div>

@@ -291,7 +291,7 @@
     "previousMonth": "الشهر السابق",
     "nextMonth": "الشهر التالي",
     "morning": "الصباح",
-    "evening": "المساء",
+    "evening": "بعد الظهر (PM)",
     "day": "اليوم",
     "editor": "محرر اليوم",
     "selectDate": "اختر التاريخ",
@@ -310,7 +310,7 @@
       "amShort": "AM",
       "pmShort": "PM",
       "morning": "صباح (AM)",
-      "evening": "مساء (PM)",
+      "evening": "بعد الظهر (PM)",
       "rashidAm": "تغطية الراشد AM",
       "rashidPm": "تغطية الراشد PM",
       "none": "بدون"
