@@ -1,6 +1,6 @@
 {
   "name": "dhahran-team",
-  "version": "1.2.27",
+  "version": "1.2.28",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-with-lan-url.js",
