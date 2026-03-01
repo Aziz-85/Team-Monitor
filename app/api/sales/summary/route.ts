@@ -1,8 +1,7 @@
 /**
  * GET /api/sales/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&boutiqueId= (optional, ADMIN only)
  * Source of truth: SalesEntry (LEDGER, IMPORT, MANUAL). Strict boutique scoping.
- * SalesEntry.amount is stored as SAR; we convert to halalas for API so UI can use formatSarFromHalala.
- * Response: netSalesTotal, grossSalesTotal, returnsTotal, breakdownByEmployee (all amounts in halalas).
+ * All amounts SAR_INT (integer riyals). Branch totals by SalesEntry.boutiqueId; employee totals by SalesEntry.userId across all boutiques.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,12 +11,6 @@ import { parseDateRiyadh, formatDateRiyadh } from '@/lib/sales/normalizeDateRiya
 
 const DEFAULT_DAYS = 31;
 const SALES_ENTRY_SOURCES = ['LEDGER', 'IMPORT', 'MANUAL'];
-
-/** SalesEntry.amount is SAR (from ledger sync). Convert to halalas for API/UI. */
-const SAR_TO_HALALAS = 100;
-function salesEntrySarToHalalas(sar: number): number {
-  return Math.round(Number(sar) * SAR_TO_HALALAS);
-}
 
 export async function GET(request: NextRequest) {
   const boutiqueIdParam = request.nextUrl.searchParams.get('boutiqueId')?.trim();
@@ -57,9 +50,8 @@ export async function GET(request: NextRequest) {
 
   if (scope.employeeOnly) {
     whereBase.userId = scope.userId;
-  }
-
-  if (scope.allowedBoutiqueIds.length > 0) {
+    // Do not add boutiqueId: employee sees total across ALL boutiques.
+  } else if (scope.allowedBoutiqueIds.length > 0) {
     whereBase.boutiqueId = scope.effectiveBoutiqueId;
   }
 
@@ -76,8 +68,8 @@ export async function GET(request: NextRequest) {
   ]);
 
   const rawNetSales = aggregateResult._sum.amount ?? 0;
-  const netSalesTotal = salesEntrySarToHalalas(rawNetSales);
-  const grossSalesTotal = netSalesTotal;
+  const netSalesTotal = rawNetSales;
+  const grossSalesTotal = rawNetSales;
   const returnsTotal = 0;
   const exchangesTotal = 0;
   const guestCoverageNetSales = 0;
@@ -102,7 +94,7 @@ export async function GET(request: NextRequest) {
     return {
       employeeId: u?.empId ?? row.userId,
       employeeName,
-      netSales: salesEntrySarToHalalas(row._sum.amount ?? 0),
+      netSales: row._sum.amount ?? 0,
       guestCoverageNetSales: 0,
       guestCoverageSources: [] as Array<{ sourceBoutiqueId: string; sourceBoutiqueName?: string; netSales: number }>,
     };

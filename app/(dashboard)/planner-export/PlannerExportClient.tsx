@@ -2,17 +2,12 @@
 
 import { useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type PlannerRow = { Title: string; AssignedTo: string; 'Start Date': string; 'Due Date': string; Notes: string };
 
 export function PlannerExportClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
@@ -137,7 +132,7 @@ export function PlannerExportClient() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-4">
               <div>
-                <label className="mr-2 text-base font-medium">{t('common.from')}</label>
+                <label className="me-2 text-base font-medium">{t('common.from')}</label>
                 <input
                   type="date"
                   value={from}
@@ -146,7 +141,7 @@ export function PlannerExportClient() {
                 />
               </div>
               <div>
-                <label className="mr-2 text-base font-medium">{t('common.to')}</label>
+                <label className="me-2 text-base font-medium">{t('common.to')}</label>
                 <input
                   type="date"
                   value={to}
@@ -180,7 +175,7 @@ export function PlannerExportClient() {
             </ul>
             <div className="flex flex-wrap items-center gap-4">
               <div>
-                <label className="mr-2 text-base font-medium">{t('common.from')}</label>
+                <label className="me-2 text-base font-medium">{t('common.from')}</label>
                 <input
                   type="date"
                   value={scheduleFrom}
@@ -189,7 +184,7 @@ export function PlannerExportClient() {
                 />
               </div>
               <div>
-                <label className="mr-2 text-base font-medium">{t('common.to')}</label>
+                <label className="me-2 text-base font-medium">{t('common.to')}</label>
                 <input
                   type="date"
                   value={scheduleTo}
@@ -281,10 +276,10 @@ export function PlannerExportClient() {
                 <table className="w-full min-w-[500px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Title</th>
-                      <th className="px-2 py-2 text-left font-semibold text-slate-700">AssignedTo</th>
-                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Start / Due</th>
-                      <th className="px-2 py-2 text-left font-semibold text-slate-700">Notes</th>
+                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Title</th>
+                      <th className="px-2 py-2 text-start font-semibold text-slate-700">AssignedTo</th>
+                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Start / Due</th>
+                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Notes</th>
                     </tr>
                   </thead>
                   <tbody>

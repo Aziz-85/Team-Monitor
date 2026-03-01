@@ -22,7 +22,7 @@ import {
   volatilityIndex,
 } from '@/lib/executive/metrics';
 import { fetchWeekMetrics, fetchDailyRevenueForWeek } from '@/lib/executive/aggregation';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
@@ -33,11 +33,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const scope = await resolveScopeForUser(user.id, role, null);
-  const boutiqueIds = scope.boutiqueIds;
-  if (boutiqueIds.length === 0) {
-    return NextResponse.json({ error: 'No boutiques in scope' }, { status: 403 });
-  }
+  const scopeResult = await resolveOperationalBoutiqueOnly(request, user);
+  if (!scopeResult.ok) return scopeResult.res;
+  const boutiqueIds = scopeResult.scope.boutiqueIds;
 
   const now = getRiyadhNow();
   const todayStr = toRiyadhDateString(now);

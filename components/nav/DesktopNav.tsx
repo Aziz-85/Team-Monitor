@@ -2,18 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
 import { getNavLinksForRole } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
-
 export function DesktopNav({ role, name }: { role: Role; name?: string }) {
   const pathname = usePathname();
-  const { messages, locale, setLocale } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t, locale } = useT();
+  const { setLocale } = useI18n();
 
   const links = getNavLinksForRole(role).filter((item) => item.href !== '/change-password');
 
@@ -22,7 +19,7 @@ export function DesktopNav({ role, name }: { role: Role; name?: string }) {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold text-slate-900">
-            Team Monitor
+            {t('nav.appTitle')}
           </Link>
           {links.map((item) => (
             <Link

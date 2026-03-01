@@ -24,7 +24,7 @@ export async function rosterForDate(
   const boutiqueIds = options.boutiqueIds ?? [];
   const employees = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(boutiqueIds),
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, boutiqueId: true },
     orderBy: employeeOrderByStable,
   });
 
@@ -34,12 +34,12 @@ export async function rosterForDate(
   const leaveEmployees: RosterEmployee[] = [];
 
   for (const emp of employees) {
-    const availability = await availabilityFor(emp.empId, d);
+    const availability = await availabilityFor(emp.empId, d, emp.boutiqueId);
     if (availability === 'LEAVE') {
       leaveEmployees.push(emp);
       continue;
     }
-    if (availability === 'OFF') {
+    if (availability === 'OFF' || availability === 'HOLIDAY') {
       offEmployees.push(emp);
       continue;
     }

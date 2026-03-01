@@ -11,6 +11,7 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { getMonthRange } from '@/lib/time';
 import { formatDateRiyadh } from '@/lib/time';
+import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
 
@@ -63,11 +64,41 @@ export async function GET(request: NextRequest) {
   });
   const maxSalesGapDays = setting?.maxSalesGapDays ?? 7;
 
+  const dateKeysInMonth: string[] = [];
+  const cur = new Date(monthStart);
+  while (cur.getTime() < endExclusive.getTime()) {
+    dateKeysInMonth.push(formatDateRiyadh(cur));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
   const employees = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational([scopeId]),
-    select: { empId: true, name: true, weeklyOffDay: true },
+    select: { empId: true, name: true, weeklyOffDay: true, weeklyOffOverrideDay: true },
     orderBy: employeeOrderByStable,
   });
+
+  const [closedHolidays, eventPeriods] = await Promise.all([
+    prisma.officialHoliday.findMany({
+      where: { boutiqueId: scopeId, date: { in: dateKeysInMonth }, isClosed: true },
+      select: { date: true },
+    }),
+    prisma.eventPeriod.findMany({
+      where: {
+        boutiqueId: scopeId,
+        startDate: { lte: dateKeysInMonth[dateKeysInMonth.length - 1] ?? '' },
+        endDate: { gte: dateKeysInMonth[0] ?? '' },
+        OR: [{ suspendWeeklyOff: true }, { forceWork: true }],
+      },
+      select: { startDate: true, endDate: true },
+    }),
+  ]);
+  const closedHolidaySet = new Set(closedHolidays.map((h) => h.date));
+  const suspensionSet = new Set<string>();
+  for (const p of eventPeriods) {
+    for (const dateKey of dateKeysInMonth) {
+      if (dateKey >= p.startDate && dateKey <= p.endDate) suspensionSet.add(dateKey);
+    }
+  }
 
   const leaveRecords = await prisma.leave.findMany({
     where: {
@@ -87,28 +118,23 @@ export async function GET(request: NextRequest) {
     cur.setUTCHours(0, 0, 0, 0);
     const endTime = end.getTime();
     while (cur.getTime() <= endTime) {
-      leaveSet.add(`${lv.empId}_${cur.toISOString().slice(0, 10)}`);
+      leaveSet.add(`${lv.empId}_${formatDateRiyadh(cur)}`);
       cur.setUTCDate(cur.getUTCDate() + 1);
     }
   }
 
-  const dateKeysInMonth: string[] = [];
-  const cur = new Date(monthStart);
-  while (cur.getTime() < endExclusive.getTime()) {
-    dateKeysInMonth.push(formatDateRiyadh(cur));
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-
   const expectedByEmp = new Map<string, string[]>();
   for (const emp of employees) {
+    const effectiveOff = getEffectiveWeeklyOffDay(emp.weeklyOffDay, emp.weeklyOffOverrideDay);
     const expected: string[] = [];
     for (const dateKey of dateKeysInMonth) {
-      const d = new Date(dateKey + 'T00:00:00Z');
-      const dayOfWeek = d.getUTCDay();
-          if (dayOfWeek === emp.weeklyOffDay) continue;
-          if (leaveSet.has(`${emp.empId}_${dateKey}`)) continue;
-          expected.push(dateKey);
-        }
+      if (closedHolidaySet.has(dateKey)) continue;
+      const dayOfWeekRiyadh = getDowRiyadhFromYmd(dateKey);
+      const inSuspension = suspensionSet.has(dateKey);
+      if (effectiveOff !== 'NONE' && !inSuspension && dayOfWeekRiyadh === effectiveOff) continue;
+      if (leaveSet.has(`${emp.empId}_${dateKey}`)) continue;
+      expected.push(dateKey);
+    }
     expectedByEmp.set(emp.empId, expected);
   }
 

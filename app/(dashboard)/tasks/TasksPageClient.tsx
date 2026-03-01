@@ -2,13 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getFirstName } from '@/lib/name';
 import type { Role } from '@prisma/client';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type TaskListRow = {
   taskId: string;
@@ -27,8 +23,7 @@ function formatDDMM(dateStr: string): string {
 }
 
 export function TasksPageClient({ role }: { role: Role }) {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [period, setPeriod] = useState<'today' | 'week' | 'overdue' | 'all'>('today');
   const [status, setStatus] = useState<'open' | 'done' | 'all'>('all');
@@ -222,19 +217,19 @@ export function TasksPageClient({ role }: { role: Role }) {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-100">
-                <th className="border border-slate-200 px-2 py-2 text-left font-semibold text-slate-800">
+                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
                   {t('tasks.colStatus')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-left font-semibold text-slate-800">
+                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
                   {t('tasks.colTitle')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-left font-semibold text-slate-800">
+                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
                   {t('tasks.colAssignee')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-left font-semibold text-slate-800">
+                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
                   {t('tasks.colDueDate')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-left font-semibold text-slate-800">
+                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
                   {t('tasks.colActions')}
                 </th>
               </tr>

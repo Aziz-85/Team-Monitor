@@ -5,24 +5,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { requireBoutiqueScope } from '@/lib/scope/ssot';
 import { logKpiAudit } from '@/lib/kpi/audit';
-import type { Role } from '@prisma/client';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const resolved = await resolveScopeForUser(user.id, user.role as Role, null);
+  const scopeResult = await requireBoutiqueScope(request, {
+    allowGlobal: false,
+    modeName: 'KpiUploads',
+  });
+  if (scopeResult.res) return scopeResult.res;
+  const boutiqueIds = scopeResult.scope.boutiqueIds;
   const upload = await prisma.kpiUpload.findUnique({
     where: { id },
     include: { snapshot: true },
   });
   if (!upload) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (!resolved.boutiqueIds.includes(upload.boutiqueId)) {
+  if (!boutiqueIds.includes(upload.boutiqueId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   return NextResponse.json({ upload });

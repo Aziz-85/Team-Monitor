@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { resolveBoutiqueIdsForRequest } from '@/lib/scope/ssot';
 import { canManageInBoutique } from '@/lib/membershipPermissions';
 import type { Role } from '@prisma/client';
 
-async function assertTaskPermission(userId: string, userRole: Role, taskId: string) {
+async function assertTaskPermission(userId: string, userRole: Role, taskId: string, request: NextRequest | null) {
   const task = await prisma.task.findUnique({ where: { id: taskId }, select: { boutiqueId: true } });
   if (!task) return { ok: false as const, status: 404 as const };
   const boutiqueId = task.boutiqueId;
   if (!boutiqueId) return { ok: false as const, status: 403 as const, message: 'Task has no boutique' };
-  const resolved = await resolveScopeForUser(userId, userRole, null);
-  if (!resolved.boutiqueIds.includes(boutiqueId)) return { ok: false as const, status: 403 as const, message: 'Boutique not in scope' };
+  const scope = await resolveBoutiqueIdsForRequest(request, { allowGlobal: false, modeName: 'TasksSetupTask' });
+  if (!scope?.boutiqueIds.includes(boutiqueId)) return { ok: false as const, status: 403 as const, message: 'Boutique not in scope' };
   const canManage = await canManageInBoutique(userId, userRole, boutiqueId, 'canManageTasks');
   if (!canManage) return { ok: false as const, status: 403 as const, message: 'No permission to manage tasks for this boutique' };
   return { ok: true as const };
@@ -28,7 +28,7 @@ export async function PATCH(
   }
 
   const { taskId } = await params;
-  const check = await assertTaskPermission(user.id, user.role as Role, taskId);
+  const check = await assertTaskPermission(user.id, user.role as Role, taskId, request);
   if (!check.ok) {
     if (check.status === 404) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     return NextResponse.json({ error: check.message }, { status: check.status });
@@ -67,7 +67,7 @@ export async function DELETE(
   }
 
   const { taskId } = await params;
-  const check = await assertTaskPermission(user.id, user.role as Role, taskId);
+  const check = await assertTaskPermission(user.id, user.role as Role, taskId, _request);
   if (!check.ok) {
     if (check.status === 404) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     return NextResponse.json({ error: check.message }, { status: check.status });

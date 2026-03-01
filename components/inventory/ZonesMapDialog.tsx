@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useI18n } from '@/app/providers';
-
-type Messages = Record<string, unknown>;
+import { useT } from '@/lib/i18n/useT';
 
 type ZoneKey = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
@@ -41,17 +39,7 @@ type ZonesMapDialogProps = {
 
 export function ZonesMapDialog(props: ZonesMapDialogProps) {
   const { selectedZoneKey, onSelectedZoneChange } = props;
-  const { messages } = useI18n();
-  const t = (key: string) => {
-    const root = messages as Messages;
-    const v = key.split('.').reduce<unknown>((o, k) => {
-      if (o && typeof o === 'object' && k in o) {
-        return (o as Record<string, unknown>)[k];
-      }
-      return undefined;
-    }, root);
-    return (typeof v === 'string' ? v : undefined) ?? key;
-  };
+  const { t } = useT();
 
   const [internalActiveZone, setInternalActiveZone] = useState<ZoneKey | null>(null);
   const activeZone = selectedZoneKey ?? internalActiveZone;

@@ -84,7 +84,7 @@ export function ScheduleExcelViewClient({
   const eveningCell = `${SCHEDULE_UI.pmCell} text-center overflow-hidden`;
   const eveningFirst = `${eveningCell} border-l-2 border-amber-300`;
   const eveningLast = `${eveningCell} border-r-2 border-amber-300`;
-  const rashidCell = `${SCHEDULE_UI.coverageCell} ${SCHEDULE_UI.borderL2} text-left`;
+  const rashidCell = `${SCHEDULE_UI.coverageCell} ${SCHEDULE_UI.borderL2} text-start`;
   const amCountCell = `${SCHEDULE_UI.amCountCell} ${SCHEDULE_UI.borderL2}`;
   const pmCountCell = `${SCHEDULE_UI.pmCountCell} ${SCHEDULE_UI.borderL2}`;
 
@@ -205,12 +205,12 @@ export function ScheduleExcelViewClient({
                 </td>
                 {Array.from({ length: visibleSlots }, (_, i) => (
                   <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={morning[i] && morning[i].trim() ? morning[i] : undefined}>
-                    <span className="block truncate text-left">{morning[i] && morning[i].trim() ? morning[i] : '—'}</span>
+                    <span className="block truncate text-start">{morning[i] && morning[i].trim() ? morning[i] : '—'}</span>
                   </td>
                 ))}
                 {Array.from({ length: visibleSlots }, (_, i) => (
                   <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={evening[i] && evening[i].trim() ? evening[i] : undefined}>
-                    <span className="block truncate text-left">{evening[i] && evening[i].trim() ? evening[i] : '—'}</span>
+                    <span className="block truncate text-start">{evening[i] && evening[i].trim() ? evening[i] : '—'}</span>
                   </td>
                 ))}
                 <td className={rashidCell}>

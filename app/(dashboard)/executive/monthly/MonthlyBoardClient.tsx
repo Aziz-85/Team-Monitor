@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { addMonths, getCurrentMonthKeyRiyadh, parseMonthKey } from '@/lib/time';
+import { useT } from '@/lib/i18n/useT';
 
 type BoutiqueScore = {
   score: number;
@@ -68,26 +71,56 @@ function Card({
   );
 }
 
+function isValidMonthKey(value: string): boolean {
+  return parseMonthKey(value) !== null;
+}
+
 export function MonthlyBoardClient() {
+  const { t } = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<MonthlyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [month, setMonth] = useState(() =>
-    new Date().toISOString().slice(0, 7)
+
+  const monthFromUrl = searchParams.get('month') ?? '';
+  const monthKey = isValidMonthKey(monthFromUrl)
+    ? monthFromUrl
+    : getCurrentMonthKeyRiyadh();
+
+  const setMonthInUrl = useCallback(
+    (newMonth: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('month', newMonth);
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams]
   );
+
+  useEffect(() => {
+    if (!isValidMonthKey(monthFromUrl)) {
+      setMonthInUrl(monthKey);
+    }
+  }, [monthFromUrl, monthKey, setMonthInUrl]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/executive/monthly?month=${month}`)
+    fetch(`/api/executive/monthly?month=${encodeURIComponent(monthKey)}`)
       .then((r) => {
         if (!r.ok) throw new Error('Failed to load');
         return r.json();
       })
       .then(setData)
-      .catch(() => setError('Failed to load monthly report'))
+      .catch(() => setError(t('executive.monthly.failedToLoad')))
       .finally(() => setLoading(false));
-  }, [month]);
+  }, [monthKey]);
+
+  const goPrev = () => setMonthInUrl(addMonths(monthKey, -1));
+  const goNext = () => setMonthInUrl(addMonths(monthKey, 1));
+  const goThisMonth = () => setMonthInUrl(getCurrentMonthKeyRiyadh());
 
   if (error) {
     return (
@@ -102,7 +135,7 @@ export function MonthlyBoardClient() {
   if (loading && !data) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-gray-500">{t('executive.monthly.loading')}</p>
       </div>
     );
   }
@@ -113,84 +146,117 @@ export function MonthlyBoardClient() {
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-xl font-semibold text-gray-800">
-          Monthly Board Report
+          {t('executive.monthly.title')}
         </h1>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Month</label>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded border border-[#E8DFC8] bg-white px-2 py-1.5 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded border border-[#E8DFC8] bg-white">
+            <button
+              type="button"
+              onClick={goPrev}
+              className="rounded-s border-e border-[#E8DFC8] px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              title={t('executive.monthly.previousMonth')}
+              aria-label={t('executive.monthly.previousMonth')}
+            >
+              ◀ {t('executive.monthly.prev')}
+            </button>
+            <label className="sr-only" htmlFor="exec-month-picker">
+              {t('executive.monthly.monthPickerLabel')}
+            </label>
+            <input
+              id="exec-month-picker"
+              type="month"
+              value={monthKey}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (isValidMonthKey(v)) setMonthInUrl(v);
+              }}
+              className="border-0 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C6A756]"
+            />
+            <button
+              type="button"
+              onClick={goNext}
+              className="rounded-e border-s border-[#E8DFC8] px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              title={t('executive.monthly.nextMonth')}
+              aria-label={t('executive.monthly.nextMonth')}
+            >
+              {t('executive.monthly.next')} ▶
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={goThisMonth}
+            className="rounded border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            {t('executive.monthly.thisMonth')}
+          </button>
         </div>
       </div>
 
       {data.dataScope && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-          <strong>Data scope:</strong>{' '}
-          Boutique: {data.dataScope.boutiqueName ?? data.dataScope.boutiqueId}
+          <strong>{t('executive.monthly.dataScope')}:</strong>{' '}
+          {t('executive.monthly.boutiqueLabel')}: {data.dataScope.boutiqueName ?? data.dataScope.boutiqueId}
           {data.dataScope.boutiqueCode != null && ` (${data.dataScope.boutiqueCode})`}
           {' · '}
-          Month: {data.dataScope.monthKey}
+          {t('executive.monthly.monthLabel')}: {data.dataScope.monthKey}
           {' · '}
-          Sales entries: {data.dataScope.salesEntryCount}
+          {t('executive.monthly.salesEntries')}: {data.dataScope.salesEntryCount}
           {' · '}
-          Ledger lines: {data.dataScope.ledgerLineCount ?? '—'}
+          {t('executive.monthly.ledgerLines')}: {data.dataScope.ledgerLineCount ?? '—'}
         </div>
       )}
 
       {/* Boutique Performance Score */}
       <div className="rounded-2xl border-2 border-[#E8DFC8] bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-sm font-medium text-gray-500">
-          Boutique Performance Score
+          {t('executive.monthly.boutiquePerformanceScore')}
         </h2>
         <p className="text-3xl font-semibold text-[#C6A756]">
           {data.boutiqueScore.score}
-          <span className="ml-2 text-lg font-normal text-gray-600">
+          <span className="ms-2 text-lg font-normal text-gray-600">
             ({data.boutiqueScore.classification})
           </span>
         </p>
         {data.boutiqueScore.components && (
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
-            <span>Sales: {data.boutiqueScore.components.revenue}</span>
-            <span>Tasks: {data.boutiqueScore.components.tasks}</span>
-            <span>Schedule: {data.boutiqueScore.components.schedule}</span>
-            <span>Zone: {data.boutiqueScore.components.zone}</span>
-            <span>Discipline: {data.boutiqueScore.components.discipline}</span>
+            <span>{t('executive.monthly.sales')}: {data.boutiqueScore.components.revenue}</span>
+            <span>{t('executive.monthly.tasks')}: {data.boutiqueScore.components.tasks}</span>
+            <span>{t('executive.monthly.schedule')}: {data.boutiqueScore.components.schedule}</span>
+            <span>{t('executive.monthly.zone')}: {data.boutiqueScore.components.zone}</span>
+            <span>{t('executive.monthly.discipline')}: {data.boutiqueScore.components.discipline}</span>
           </div>
         )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card title="Sales Intelligence">
+        <Card title={t('executive.monthly.salesIntelligence')}>
           <ul className="space-y-1 text-sm">
-            <li>Sales (SAR): <strong>{data.salesIntelligence.revenue.toLocaleString()}</strong></li>
-            <li>Target: <strong>{data.salesIntelligence.target.toLocaleString()}</strong></li>
-            <li>Achievement: <strong className="text-[#C6A756]">{data.salesIntelligence.achievementPct}%</strong></li>
-            <li>Employee targets: {data.salesIntelligence.totalEmployeeTarget}</li>
-            <li>Sales entries: {data.salesIntelligence.entryCount}</li>
+            <li>{t('executive.monthly.salesSar')}: <strong>{data.salesIntelligence.revenue.toLocaleString()}</strong></li>
+            <li>{t('executive.monthly.target')}: <strong>{data.salesIntelligence.target.toLocaleString()}</strong></li>
+            <li>{t('executive.monthly.achievement')}: <strong className="text-[#C6A756]">{data.salesIntelligence.achievementPct}%</strong></li>
+            <li>{t('executive.monthly.employeeTargets')}: {data.salesIntelligence.totalEmployeeTarget}</li>
+            <li>{t('executive.monthly.salesEntriesCount')}: {data.salesIntelligence.entryCount}</li>
           </ul>
         </Card>
 
-        <Card title="Workforce Stability">
+        <Card title={t('executive.monthly.workforceStability')}>
           <ul className="space-y-1 text-sm">
-            <li>Pending leaves: <strong>{data.workforceStability.pendingLeaves}</strong></li>
-            <li>Approved leaves (in period): {data.workforceStability.approvedLeavesInPeriod}</li>
-            <li>Employees with target: {data.workforceStability.employeeTargetCount}</li>
+            <li>{t('executive.monthly.pendingLeaves')}: <strong>{data.workforceStability.pendingLeaves}</strong></li>
+            <li>{t('executive.monthly.approvedLeavesInPeriod')}: {data.workforceStability.approvedLeavesInPeriod}</li>
+            <li>{t('executive.monthly.employeesWithTarget')}: {data.workforceStability.employeeTargetCount}</li>
           </ul>
         </Card>
 
-        <Card title="Operational Discipline">
+        <Card title={t('executive.monthly.operationalDiscipline')}>
           <ul className="space-y-1 text-sm">
-            <li>Task completions: <strong>{data.operationalDiscipline.taskCompletionsInMonth}</strong></li>
-            <li>Schedule edits: {data.operationalDiscipline.scheduleEditsInMonth}</li>
-            <li>Zone runs: {data.operationalDiscipline.zoneRunsTotal}</li>
-            <li>Zone compliance: <strong className="text-[#C6A756]">{data.operationalDiscipline.zoneCompliancePct}%</strong></li>
+            <li>{t('executive.monthly.taskCompletions')}: <strong>{data.operationalDiscipline.taskCompletionsInMonth}</strong></li>
+            <li>{t('executive.monthly.scheduleEdits')}: {data.operationalDiscipline.scheduleEditsInMonth}</li>
+            <li>{t('executive.monthly.zoneRuns')}: {data.operationalDiscipline.zoneRunsTotal}</li>
+            <li>{t('executive.monthly.zoneCompliance')}: <strong className="text-[#C6A756]">{data.operationalDiscipline.zoneCompliancePct}%</strong></li>
           </ul>
         </Card>
 
-        <Card title="Risk Score">
+        <Card title={t('executive.monthly.riskScore')}>
           <p className="text-2xl font-semibold text-[#C6A756]">
             {data.riskScore.score}
           </p>

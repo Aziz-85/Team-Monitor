@@ -1,12 +1,12 @@
 /**
  * REQUIRE OPERATIONAL BOUTIQUE — Session-bound only (no switching)
  * ----------------------------------------------------------------
- * Delegates to requireOperationalScope(request). For SUPER_ADMIN, pass request so ?b= is respected.
+ * Delegates to SSOT requireBoutiqueScope. For SUPER_ADMIN, pass request so ?b= is respected.
  */
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { requireOperationalScope } from '@/lib/scope/operationalScope';
+import { requireBoutiqueScope } from '@/lib/scope/ssot';
 
 export type RequireOperationalBoutiqueResult = {
   boutiqueId: string;
@@ -18,9 +18,13 @@ export type RequireOperationalBoutiqueReturn =
   | { ok: false; res: NextResponse };
 
 export async function requireOperationalBoutique(request?: NextRequest | null): Promise<RequireOperationalBoutiqueReturn> {
-  const { scope, res } = await requireOperationalScope(request);
-  if (res) return { ok: false, res };
-  if (!scope!.boutiqueId) {
+  const result = await requireBoutiqueScope(request ?? null, {
+    allowGlobal: false,
+    modeName: 'RequireOperationalBoutique',
+  });
+  if (result.res) return { ok: false, res: result.res };
+  const scope = result.scope;
+  if (!scope.boutiqueId) {
     return {
       ok: false,
       res: NextResponse.json(
@@ -31,7 +35,7 @@ export async function requireOperationalBoutique(request?: NextRequest | null): 
   }
   return {
     ok: true,
-    boutiqueId: scope!.boutiqueId,
-    boutiqueLabel: scope!.label,
+    boutiqueId: scope.boutiqueId,
+    boutiqueLabel: scope.label,
   };
 }

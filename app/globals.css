@@ -3,15 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  /* Corporate executive theme tokens */
-  --app-bg: #f1f5f9;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
-  --accent: #2563eb;
+  /* Light Corporate Luxury */
+  --background: #F8F8F6;
+  --foreground: #1E1E1E;
+  --app-bg: #F8F8F6;
+  --surface: #FFFFFF;
+  --border: #E8E6E3;
+  --text: #1E1E1E;
+  --muted: #6B7280;
+  --accent: #C6A75E;
+  --primary: #1E1E1E;
+  --success: #4A7C59;
+  --error: #B85450;
+  --radius-card: 12px;
+  --radius-button: 8px;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
 }
 
 body {
@@ -43,4 +49,9 @@ body {
 /* Focus rings for accessibility */
 *:focus-visible {
   @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* RTL: flip chevrons/arrows */
+[dir="rtl"] .rtl-flip {
+  transform: rotate(180deg);
 }

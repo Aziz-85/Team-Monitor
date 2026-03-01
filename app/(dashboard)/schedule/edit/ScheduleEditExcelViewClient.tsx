@@ -172,7 +172,7 @@ export function ScheduleEditExcelViewClient({
   const eveningCell = `${SCHEDULE_UI.pmCell} text-center overflow-hidden`;
   const eveningFirst = `${eveningCell} border-l-2 border-amber-300`;
   const eveningLast = `${eveningCell} border-r-2 border-amber-300`;
-  const rashidCell = `${SCHEDULE_UI.coverageCell} ${SCHEDULE_UI.borderL2} text-left`;
+  const rashidCell = `${SCHEDULE_UI.coverageCell} ${SCHEDULE_UI.borderL2} text-start`;
   const amCountCell = `${SCHEDULE_UI.amCountCell} ${SCHEDULE_UI.borderL2}`;
   const pmCountCell = `${SCHEDULE_UI.pmCountCell} ${SCHEDULE_UI.borderL2}`;
 

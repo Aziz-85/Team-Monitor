@@ -1,17 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 import type { AdminFilterJson } from '@/lib/scope/adminFilter';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type User = {
   id: string;
@@ -26,8 +22,7 @@ type User = {
 };
 
 export function AdminUsersClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<User[]>([]);
   const [adminFilter, setAdminFilter] = useState<AdminFilterJson | null>(null);
 

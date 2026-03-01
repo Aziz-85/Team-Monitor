@@ -3,16 +3,12 @@
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { InventoryWeeklyClient } from './weekly/InventoryWeeklyClient';
 import { InventoryZonesClient } from './InventoryZonesClient';
 
 /** Canonical Zone Inventory component path (for Manager/Admin debug). */
 const ZONE_INVENTORY_COMPONENT_PATH = 'app/(dashboard)/inventory/zones/InventoryZonesPageClient.tsx';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Tab = 'weekly' | 'assignments';
 
@@ -24,8 +20,7 @@ export function InventoryZonesPageClient({
   isAdmin: boolean;
 }) {
   const pathname = usePathname();
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [tab, setTab] = useState<Tab>('weekly');
   const [mapImageKey, setMapImageKey] = useState<number | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
@@ -111,7 +106,7 @@ export function InventoryZonesPageClient({
                 accept="image/png"
                 onChange={handleUploadMap}
                 disabled={uploading || deletingMap}
-                className="text-sm text-slate-700 file:mr-2 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white file:hover:bg-blue-700"
+                className="text-sm text-slate-700 file:me-2 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white file:hover:bg-blue-700"
                 aria-label={t('inventory.uploadZonesMap')}
               />
               <button

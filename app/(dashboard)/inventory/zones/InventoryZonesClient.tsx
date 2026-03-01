@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type AssignmentRow = {
   zoneId: string;
@@ -20,8 +16,7 @@ type AssignmentRow = {
 type EmployeeOption = { empId: string; name: string };
 
 export function InventoryZonesClient({ embedded }: { embedded?: boolean } = {}) {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [newCode, setNewCode] = useState('');

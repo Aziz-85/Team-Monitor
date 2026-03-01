@@ -3,12 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { ShiftCard } from '@/components/ui/ShiftCard';
-import { useI18n } from '@/app/providers';
-import { formatSarFromHalala } from '@/lib/utils/money';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
+import { formatSarInt } from '@/lib/utils/money';
 
 type EmployeeHomeData = {
   date: string;
@@ -18,8 +14,7 @@ type EmployeeHomeData = {
 };
 
 export function EmployeeHomeClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [data, setData] = useState<EmployeeHomeData | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [targetsData, setTargetsData] = useState<{
@@ -123,7 +118,7 @@ export function EmployeeHomeClient() {
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-4">
-          <label className="mr-2 text-base font-medium text-slate-700">{t('common.date')}</label>
+          <label className="me-2 text-base font-medium text-slate-700">{t('common.date')}</label>
           <input
             type="date"
             value={date}
@@ -136,7 +131,7 @@ export function EmployeeHomeClient() {
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-slate-600">
-                {t('home.target')}: {formatSarFromHalala(targetsData.todayTarget)} · {t('home.sales')}: {formatSarFromHalala(targetsData.todaySales)}
+                {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                 <div
@@ -148,7 +143,7 @@ export function EmployeeHomeClient() {
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
               <p className="text-sm text-slate-600">
-                {t('home.target')}: {formatSarFromHalala(targetsData.monthlyTarget)} · MTD: {formatSarFromHalala(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarFromHalala(targetsData.remaining)}
+                {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarInt(targetsData.remaining)}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                 <div
@@ -165,7 +160,7 @@ export function EmployeeHomeClient() {
           <p className="mb-2 text-sm text-slate-600">Enter daily sales (SAR). Zero is valid.</p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mr-1 text-xs text-slate-500">Date</label>
+              <label className="me-1 text-xs text-slate-500">Date</label>
               <input
                 type="date"
                 value={salesEntryDate}
@@ -174,7 +169,7 @@ export function EmployeeHomeClient() {
               />
             </div>
             <div>
-              <label className="mr-1 text-xs text-slate-500">Amount (SAR)</label>
+              <label className="me-1 text-xs text-slate-500">Amount (SAR)</label>
               <input
                 type="number"
                 min={0}
@@ -199,7 +194,7 @@ export function EmployeeHomeClient() {
           <ul className="mt-1 list-inside list-disc text-sm text-slate-700">
             {lastEntries.length === 0 && <li>—</li>}
             {lastEntries.map((e) => (
-              <li key={e.id}>{e.date}: {formatSarFromHalala(e.amount)}</li>
+              <li key={e.id}>{e.date}: {formatSarInt(e.amount)}</li>
             ))}
           </ul>
         </OpsCard>

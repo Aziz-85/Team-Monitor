@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import { OpsCard } from '@/components/ui/OpsCard';
@@ -10,10 +10,6 @@ import { Modal } from '@/components/admin/Modal';
 import { MembershipEditor, type MembershipFormValues } from '@/components/admin/MembershipEditor';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 import type { AdminFilterJson } from '@/lib/scope/adminFilter';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type User = { id: string; empId: string; employee?: { name: string } | null };
 type Boutique = { id: string; code: string; name: string };
@@ -32,8 +28,7 @@ type MembershipRow = {
 };
 
 export function AdminMembershipsClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<MembershipRow[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);

@@ -1,18 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Template = { id: string; code: string; name: string; version: string; updatedAt: string };
 
 export function AdminKpiTemplatesClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);

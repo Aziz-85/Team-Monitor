@@ -773,18 +773,18 @@ export function ExecutiveSinglePageClient() {
                   <table className="w-full min-w-0 table-fixed border-collapse text-[11px]">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className="py-2 px-3 text-left font-medium text-slate-500">Component</th>
-                        <th className="py-2 px-3 text-right font-medium text-slate-500">Weight</th>
-                        <th className="py-2 px-3 text-right font-medium text-slate-500">Contribution</th>
+                        <th className="py-2 px-3 text-start font-medium text-slate-500">Component</th>
+                        <th className="py-2 px-3 text-end font-medium text-slate-500">Weight</th>
+                        <th className="py-2 px-3 text-end font-medium text-slate-500">Contribution</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Achievement</td><td className="py-2 px-3 text-right text-slate-500">25%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Forecast</td><td className="py-2 px-3 text-right text-slate-500">20%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Trend</td><td className="py-2 px-3 text-right text-slate-500">15%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">YoY</td><td className="py-2 px-3 text-right text-slate-500">10%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Pace pressure</td><td className="py-2 px-3 text-right text-slate-500">15%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Concentration</td><td className="py-2 px-3 text-right text-slate-500">15%</td><td className="py-2 px-3 text-right tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Achievement</td><td className="py-2 px-3 text-end text-slate-500">25%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Forecast</td><td className="py-2 px-3 text-end text-slate-500">20%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Trend</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">YoY</td><td className="py-2 px-3 text-end text-slate-500">10%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Pace pressure</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Concentration</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1086,28 +1086,28 @@ export function ExecutiveSinglePageClient() {
                   <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">% Target</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">% Target</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((row) => (
                         <tr key={row.key} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                           <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{row.name}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{typeof row.salesSar === 'number' ? `${Math.round(row.salesSar).toLocaleString()} SAR` : row.salesSar}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{row.targetPct}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{row.contribution.toFixed(1)}%</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{typeof row.invoices === 'number' ? row.invoices.toLocaleString() : row.invoices}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{typeof row.avgTicket === 'number' ? `${Math.round(row.avgTicket).toLocaleString()} SAR` : row.avgTicket}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{typeof row.upt === 'number' ? row.upt.toFixed(2) : row.upt}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{row.gap}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.salesSar === 'number' ? `${Math.round(row.salesSar).toLocaleString()} SAR` : row.salesSar}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.targetPct}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.contribution.toFixed(1)}%</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.invoices === 'number' ? row.invoices.toLocaleString() : row.invoices}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.avgTicket === 'number' ? `${Math.round(row.avgTicket).toLocaleString()} SAR` : row.avgTicket}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.upt === 'number' ? row.upt.toFixed(2) : row.upt}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.gap}</td>
                           <td className="max-w-0 py-3 px-3 truncate">
                             <span
                               className={
@@ -1297,17 +1297,17 @@ export function ExecutiveSinglePageClient() {
                       <table className="w-full min-w-0 table-fixed border-collapse text-[11px]">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50">
-                            <th className="py-1.5 px-2 text-left font-medium text-slate-500">Component</th>
-                            <th className="py-1.5 px-2 text-right font-medium text-slate-500">Weight</th>
+                            <th className="py-1.5 px-2 text-start font-medium text-slate-500">Component</th>
+                            <th className="py-1.5 px-2 text-end font-medium text-slate-500">Weight</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Achievement</td><td className="py-1.5 px-2 text-right text-slate-500">25%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Forecast</td><td className="py-1.5 px-2 text-right text-slate-500">20%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Trend</td><td className="py-1.5 px-2 text-right text-slate-500">15%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">YoY</td><td className="py-1.5 px-2 text-right text-slate-500">10%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Pace pressure</td><td className="py-1.5 px-2 text-right text-slate-500">15%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Concentration</td><td className="py-1.5 px-2 text-right text-slate-500">15%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Achievement</td><td className="py-1.5 px-2 text-end text-slate-500">25%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Forecast</td><td className="py-1.5 px-2 text-end text-slate-500">20%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Trend</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">YoY</td><td className="py-1.5 px-2 text-end text-slate-500">10%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Pace pressure</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
+                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Concentration</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
                         </tbody>
                       </table>
                     </div>
@@ -1389,19 +1389,19 @@ export function ExecutiveSinglePageClient() {
                       <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                         <thead>
                           <tr className="bg-slate-50">
-                            <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Branch</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Revenue</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach %</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Branch</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Revenue</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach %</th>
                           </tr>
                         </thead>
                         <tbody>
                           {compareBoutiques.map((b) => (
                             <tr key={b.boutiqueId} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                               <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{b.name || b.code}</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{Math.round(b.sales).toLocaleString()} SAR</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{Math.round(b.target).toLocaleString()} SAR</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(b.sales).toLocaleString()} SAR</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(b.target).toLocaleString()} SAR</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</td>
                             </tr>
                           ))}
                         </tbody>

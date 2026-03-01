@@ -1,14 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type DetailData = {
   year: string;
@@ -28,8 +24,7 @@ function formatSar(n: number) {
 }
 
 export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
 
   const [role, setRole] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'scope' | 'global'>(() => {

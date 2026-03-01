@@ -219,7 +219,7 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
               <p className="text-sm text-slate-700">
                 <span className="font-medium">{status.exists ? 'Present' : 'Missing'}</span>
                 {status.path && (
-                  <span className="ml-2 text-slate-500" dir="ltr" title={status.path}>
+                  <span className="ms-2 text-slate-500" dir="ltr" title={status.path}>
                     <span className="inline-block max-w-[180px] truncate align-bottom" dir="ltr">
                       ({status.path})
                     </span>
@@ -276,9 +276,9 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
               <table className="w-full min-w-0 border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="py-2 px-2 text-left font-medium text-slate-600">Code</th>
-                    <th className="py-2 px-2 text-left font-medium text-slate-600">Message</th>
-                    <th className="py-2 px-2 text-left font-medium text-slate-600">Location</th>
+                    <th className="py-2 px-2 text-start font-medium text-slate-600">Code</th>
+                    <th className="py-2 px-2 text-start font-medium text-slate-600">Message</th>
+                    <th className="py-2 px-2 text-start font-medium text-slate-600">Location</th>
                   </tr>
                 </thead>
                 <tbody>

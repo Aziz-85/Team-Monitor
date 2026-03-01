@@ -86,7 +86,7 @@ export function ScopeSelector({ role }: { role: Role }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex min-w-0 max-w-full items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-left text-xs text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        className="flex min-w-0 max-w-full items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-start text-xs text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
         title={label}
       >
         <span className="min-w-0 truncate">{label}</span>
@@ -102,7 +102,7 @@ export function ScopeSelector({ role }: { role: Role }) {
             aria-hidden
             onClick={() => setOpen(false)}
           />
-          <div className="absolute top-full left-0 z-20 mt-1 w-56 rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="absolute top-full start-0 z-20 mt-1 w-56 rounded-lg border border-slate-200 bg-white shadow-lg">
             <div className="max-h-64 overflow-y-auto p-2">
               <p className="mb-2 text-xs font-medium text-slate-500">Scope</p>
               {boutiques.boutiques.length <= 1 ? (
@@ -112,7 +112,7 @@ export function ScopeSelector({ role }: { role: Role }) {
                     boutiques.boutiques[0] &&
                     apply({ scope: 'BOUTIQUE', boutiqueId: boutiques.boutiques[0].id })
                   }
-                  className="w-full rounded px-2 py-1.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                  className="w-full rounded px-2 py-1.5 text-start text-sm text-slate-800 hover:bg-slate-100"
                 >
                   {boutiques.boutiques[0]?.name ?? '—'}
                 </button>
@@ -124,7 +124,7 @@ export function ScopeSelector({ role }: { role: Role }) {
                       key={b.id}
                       type="button"
                       onClick={() => apply({ scope: 'BOUTIQUE', boutiqueId: b.id })}
-                      className="w-full rounded px-2 py-1.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                      className="w-full rounded px-2 py-1.5 text-start text-sm text-slate-800 hover:bg-slate-100"
                     >
                       {b.name} ({b.code})
                     </button>
@@ -137,7 +137,7 @@ export function ScopeSelector({ role }: { role: Role }) {
                           key={r.id}
                           type="button"
                           onClick={() => apply({ scope: 'REGION', regionId: r.id })}
-                          className="w-full rounded px-2 py-1.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                          className="w-full rounded px-2 py-1.5 text-start text-sm text-slate-800 hover:bg-slate-100"
                         >
                           {r.name}
                         </button>
@@ -152,7 +152,7 @@ export function ScopeSelector({ role }: { role: Role }) {
                           key={g.id}
                           type="button"
                           onClick={() => apply({ scope: 'GROUP', groupId: g.id })}
-                          className="w-full rounded px-2 py-1.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                          className="w-full rounded px-2 py-1.5 text-start text-sm text-slate-800 hover:bg-slate-100"
                         >
                           {g.name}
                         </button>

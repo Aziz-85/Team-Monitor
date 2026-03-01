@@ -4,15 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { ScheduleExcelViewClient } from '@/app/(dashboard)/schedule/excel/ScheduleExcelViewClient';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getFirstName } from '@/lib/name';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 function formatDDMM(d: string): string {
   const [, m, day] = d.split('-');
@@ -114,10 +110,9 @@ const DEFAULT_REASON = 'Schedule adjustment';
 const SAVE_CONCURRENCY = 5;
 
 export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
-  const { messages, locale } = useI18n();
+  const { t, locale } = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
   const [tab, setTab] = useState<'week' | 'month'>('week');
   const [weekStart, setWeekStart] = useState(() => parseWeekStartFromUrl(searchParams.get('weekStart')));
   const [month, setMonth] = useState(() => parseMonthFromUrl(searchParams.get('month')));
@@ -608,10 +603,12 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                               {locked ? (
                                 <div className="flex h-full min-h-[44px] items-center justify-center bg-slate-100 px-2 text-center text-xs text-slate-500">
                                   {cell.availability === 'LEAVE'
-                                    ? t('leaves.title')
+                                    ? 'Leave'
+                                    : cell.availability === 'HOLIDAY'
+                                    ? 'Holiday'
                                     : cell.availability === 'OFF'
-                                      ? t('common.offDay')
-                                      : t('inventory.absent')}
+                                      ? 'Off day'
+                                      : 'Absent'}
                                 </div>
                               ) : canEdit ? (
                                 <div className="relative flex h-full min-h-[44px] items-center justify-center px-1">
@@ -707,7 +704,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                           <button
                             type="button"
                             onClick={() => focusDay(date)}
-                            className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-left text-sm text-amber-900 hover:bg-amber-100"
+                            className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-start text-sm text-amber-900 hover:bg-amber-100"
                           >
                             {formatDDMM(date)} {getDayName(date, locale)}
                             <div className="mt-0.5 flex flex-wrap gap-1">

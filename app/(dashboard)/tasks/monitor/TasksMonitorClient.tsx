@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import {
   LuxuryTable,
@@ -11,10 +11,6 @@ import {
   LuxuryTd,
 } from '@/components/ui/LuxuryTable';
 import { formatDateTimeDisplayRiyadh } from '@/lib/time';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type TaskMonitorRow = {
   taskId: string;
@@ -67,8 +63,8 @@ type MonitorData = {
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 
 export function TasksMonitorClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, `tasks.${key}`) as string) || getNested(messages, key) as string || key;
+  const { t: tBase } = useT();
+  const t = (key: string) => tBase(`tasks.${key}`) || tBase(key);
 
   const [data, setData] = useState<MonitorData | null>(null);
   const [loading, setLoading] = useState(true);

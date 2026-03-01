@@ -8,7 +8,7 @@ import { ScheduleExcelViewClient } from '@/app/(dashboard)/schedule/excel/Schedu
 import { ScheduleMonthExcelViewClient } from '@/app/(dashboard)/schedule/excel/ScheduleMonthExcelViewClient';
 import { ScheduleMobileView } from '@/components/schedule/ScheduleMobileView';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
@@ -17,10 +17,6 @@ import { normShift } from '@/lib/shiftNorm';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 function formatDDMM(d: string): string {
   const [, m, day] = d.split('-');
@@ -146,8 +142,7 @@ export function ScheduleViewClient({
   fullGrid: boolean;
   ramadanRange?: { start: string; end: string } | null;
 }) {
-  const { messages, locale } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t, locale } = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
@@ -845,7 +840,7 @@ export function ScheduleViewClient({
         {timeScope === 'week' && fullGrid && gridData?.integrityWarnings && gridData.integrityWarnings.length > 0 && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
             <span className="font-medium">{t('schedule.fridayPmOnly')}</span>
-            <span className="ml-1">— {gridData.integrityWarnings.join('; ')}</span>
+            <span className="ms-1">— {gridData.integrityWarnings.join('; ')}</span>
           </div>
         )}
 
@@ -877,7 +872,7 @@ export function ScheduleViewClient({
             </span>
             {fullGrid && (
               <>
-                <span className="ml-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
+                <span className="ms-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
                 <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{t('governance.draft')}</span>
                 <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">{t('governance.approved')}</span>
                 <span className="rounded-full border border-red-200 bg-red-100 px-2 py-0.5 font-medium text-red-900">🔒 {t('governance.locked')}</span>
@@ -997,14 +992,14 @@ function ScheduleGridView({
                 className={`rounded-lg border px-3 py-1.5 text-sm ${hasWarning ? 'border-amber-200 bg-amber-100 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
               >
                 <span className="font-semibold">{formatDDMM(day.date)}</span>
-                <span className="ml-2">
+                <span className="ms-2">
                   AM: {am} / PM: {pm}
                 </span>
                 {amGtPm && (
-                  <span className="ml-1.5 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-900">AM&gt;PM</span>
+                  <span className="ms-1.5 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-900">AM&gt;PM</span>
                 )}
                 {amLtMin && !amGtPm && (
-                  <span className="ml-1.5 inline-flex items-center rounded-full border border-amber-200 bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900">AM&lt;Min</span>
+                  <span className="ms-1.5 inline-flex items-center rounded-full border border-amber-200 bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900">AM&lt;Min</span>
                 )}
               </div>
             );
@@ -1026,7 +1021,7 @@ function ScheduleGridView({
                 </LuxuryTh>
               ))}
             </tr>
-            <tr className={`${SCHEDULE_UI.headerRow} text-left`}>
+            <tr className={`${SCHEDULE_UI.headerRow} text-start`}>
               {fullGrid && (
                 <LuxuryTh className="sticky left-0 z-10 w-12 bg-slate-100 text-center border-r border-slate-200">
                   {t('schedule.team') ?? 'Team'}
@@ -1067,10 +1062,12 @@ function ScheduleGridView({
                       {locked ? (
                         <div className={`flex h-9 items-center justify-center bg-slate-100 px-2 text-center ${SCHEDULE_UI.guestLine} text-slate-500`}>
                           {cell.availability === 'LEAVE'
-                            ? t('leaves.title')
+                            ? 'Leave'
+                            : cell.availability === 'HOLIDAY'
+                            ? 'Holiday'
                             : cell.availability === 'OFF'
-                              ? t('common.offDay')
-                              : t('inventory.absent')}
+                            ? 'Off day'
+                            : 'Absent'}
                         </div>
                       ) : (
                         <div className="flex h-9 items-center justify-center px-2 text-sm">
@@ -1111,7 +1108,7 @@ function ScheduleGridView({
                           {guests.map((g) => (
                             <div key={g.id} className="rounded border border-slate-200 bg-white px-2 py-1 text-xs">
                               <span className="font-medium text-slate-800">{g.employee.name}</span>
-                              <span className="ml-1 font-medium text-slate-700">
+                              <span className="ms-1 font-medium text-slate-700">
                                 {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
                               </span>
                             </div>
@@ -1142,7 +1139,7 @@ function ScheduleGridView({
                     <button
                       type="button"
                       onClick={() => focusDay(date)}
-                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-left text-sm text-amber-900 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-start text-sm text-amber-900 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                     >
                       <span className="font-medium">{formatDDMM(date)} {getDayName(date)}:</span>{' '}
                       {validations.map((v) => v.message).join('; ')}

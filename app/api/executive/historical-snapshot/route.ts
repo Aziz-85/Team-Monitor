@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
-import { resolveOperationalBoutiqueId } from '@/lib/boutique/resolveOperationalBoutique';
+import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { readSnapshot } from '@/lib/historical-snapshots/storage';
 import type { Role } from '@prisma/client';
 
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     }
     boutiqueId = boutiqueIdParam;
   } else {
-    const resolved = await resolveOperationalBoutiqueId(user.id, role, null);
-    boutiqueId = resolved.boutiqueId;
+    const opScope = await getOperationalScope(request);
+    boutiqueId = opScope?.boutiqueId ?? '';
     if (!boutiqueId) {
       return NextResponse.json({ error: 'No operational boutique' }, { status: 403 });
     }

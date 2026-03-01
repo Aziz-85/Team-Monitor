@@ -1,13 +1,13 @@
 /**
  * Resolve boutique IDs for executive APIs. Server-side only.
- * - MANAGER / non-ADMIN: single operational boutique (effectiveBoutiqueId).
+ * Delegates to ssotScope.resolveBoutiqueIdsWithOptionalGlobal for consistency.
+ * - MANAGER / non-ADMIN: single operational boutique (session).
  * - ADMIN: if global=true param, use all active boutiques and audit; else single operational boutique.
  * Never trust query param alone: global is only applied when role === 'ADMIN' or 'SUPER_ADMIN'.
  */
 
-import { prisma } from '@/lib/db';
-import { resolveOperationalBoutiqueId } from '@/lib/boutique/resolveOperationalBoutique';
-import { writeAdminAudit } from '@/lib/admin/audit';
+import type { NextRequest } from 'next/server';
+import { resolveBoutiqueIdsWithOptionalGlobal } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
 export type ExecutiveScopeResult = {
@@ -17,42 +17,19 @@ export type ExecutiveScopeResult = {
 
 /**
  * Returns boutique IDs for executive compare/employees APIs.
- * globalParam: from query (e.g. searchParams.get('global') === 'true').
- * Only ADMIN can use global; otherwise single operational boutique is used (no REGION/GROUP).
+ * Uses SSOT: operational boutique only unless global=true (ADMIN/SUPER_ADMIN).
  */
 export async function resolveExecutiveBoutiqueIds(
   userId: string,
   role: Role,
   globalParam: string | null,
-  module: 'EXECUTIVE_COMPARE' | 'EXECUTIVE_EMPLOYEES'
+  module: 'EXECUTIVE_COMPARE' | 'EXECUTIVE_EMPLOYEES',
+  request: NextRequest | null,
+  user: { id: string; role: string } | null
 ): Promise<ExecutiveScopeResult> {
-  const useGlobal = (role === 'ADMIN' || role === 'SUPER_ADMIN') && globalParam === 'true';
-
-  if (!useGlobal) {
-    const { boutiqueId } = await resolveOperationalBoutiqueId(userId, role, null);
-    const boutiqueIds = boutiqueId ? [boutiqueId] : [];
-    return { boutiqueIds, isGlobal: false };
+  const result = await resolveBoutiqueIdsWithOptionalGlobal(request, user, module);
+  if (!result.ok) {
+    return { boutiqueIds: [], isGlobal: false };
   }
-
-  const all = await prisma.boutique.findMany({
-    where: { isActive: true },
-    select: { id: true },
-    orderBy: { code: 'asc' },
-  });
-  const boutiqueIds = all.map((b) => b.id);
-
-  await writeAdminAudit({
-    actorUserId: userId,
-    action: 'EXECUTIVE_GLOBAL_VIEW_ACCESSED',
-    entityType: module,
-    entityId: null,
-    afterJson: JSON.stringify({
-      module,
-      actorId: userId,
-      timestamp: new Date().toISOString(),
-    }),
-    boutiqueId: boutiqueIds[0] ?? undefined,
-  });
-
-  return { boutiqueIds, isGlobal: true };
+  return { boutiqueIds: result.scope.boutiqueIds, isGlobal: result.scope.global };
 }

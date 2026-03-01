@@ -81,7 +81,7 @@ export function NameChip({
       </span>
       {popoverOpen && (empId || name) && (
         <span
-          className="absolute left-0 top-full z-50 mt-1 min-w-[120px] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-slate-800 shadow-lg"
+          className="absolute start-0 top-full z-50 mt-1 min-w-[120px] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-start text-xs font-medium text-slate-800 shadow-lg"
           role="tooltip"
         >
           {name}

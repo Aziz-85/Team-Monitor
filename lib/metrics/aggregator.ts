@@ -1,8 +1,7 @@
 /**
  * Metrics aggregator — single source of truth for sales and target KPIs.
  * All dates in Asia/Riyadh. Use with resolveMetricsScope for RBAC-consistent scope.
- * Money: SalesEntry.amount is stored as SAR (from ledger sync: amountSar). We convert to halalas at read.
- * Target tables store SAR (int); we convert to halalas at read.
+ * Money: SAR_INT only (SalesEntry.amount and target tables store integer riyals).
  */
 
 import { prisma } from '@/lib/db';
@@ -18,15 +17,9 @@ import {
 } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
 
-/** Target tables store SAR (integer). SalesEntry.amount is SAR (from sync). Convert to halalas at read. */
-const SAR_TO_HALALAS = 100;
-
-function salesEntrySarToHalalas(sar: number): number {
-  return Math.round(Number(sar) * SAR_TO_HALALAS);
-}
-
 export type SalesMetricsInput = {
-  boutiqueId: string;
+  /** When null/undefined and userId set: employee totals across ALL boutiques. */
+  boutiqueId?: string | null;
   userId?: string | null;
   from: Date;
   toExclusive: Date;
@@ -39,17 +32,22 @@ export type SalesMetricsResult = {
   byDateKey: Record<string, number>;
 };
 
+const SALES_SOURCES: string[] = ['LEDGER', 'IMPORT', 'MANUAL'];
+
 export async function getSalesMetrics(input: SalesMetricsInput): Promise<SalesMetricsResult> {
+  if (!input.boutiqueId && !input.userId) {
+    throw new Error('getSalesMetrics requires boutiqueId or userId');
+  }
   const where: {
-    boutiqueId: string;
+    boutiqueId?: string;
     userId?: string;
     date: { gte: Date; lt: Date };
     source: { in: string[] };
   } = {
-    boutiqueId: input.boutiqueId,
     date: { gte: input.from, lt: input.toExclusive },
-    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
+    source: { in: SALES_SOURCES },
   };
+  if (input.boutiqueId) where.boutiqueId = input.boutiqueId;
   if (input.userId) where.userId = input.userId;
 
   const [agg, byDate] = await Promise.all([
@@ -67,13 +65,12 @@ export async function getSalesMetrics(input: SalesMetricsInput): Promise<SalesMe
 
   const byDateKey: Record<string, number> = {};
   for (const row of byDate) {
-    byDateKey[row.dateKey] = salesEntrySarToHalalas(row._sum.amount ?? 0);
+    byDateKey[row.dateKey] = row._sum?.amount ?? 0;
   }
 
-  const netSalesTotal = salesEntrySarToHalalas(agg._sum.amount ?? 0);
   return {
-    netSalesTotal,
-    entriesCount: agg._count.id,
+    netSalesTotal: agg._sum?.amount ?? 0,
+    entriesCount: typeof agg._count === 'object' && agg._count && 'id' in agg._count ? agg._count.id : 0,
     byDateKey,
   };
 }
@@ -82,6 +79,8 @@ export type TargetMetricsInput = {
   boutiqueId: string;
   userId: string;
   monthKey: string;
+  /** When true, employee achieved (mtdSales, todaySales, weekSales) is across ALL boutiques; target is sum of all boutiques. */
+  employeeCrossBoutique?: boolean;
 };
 
 export type TargetMetricsResult = {
@@ -124,25 +123,40 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
       ? `${toRiyadhDateString(startSat)} – ${toRiyadhDateString(fridayDate)}`
       : '';
 
-  const [boutiqueTarget, employeeTarget, salesInMonth, todayEntry, weekEntries] = await Promise.all([
+  const salesWhereBase = {
+    userId: input.userId,
+    month: monthKey,
+    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] as string[] },
+  };
+  const salesWhereBoutique = input.employeeCrossBoutique
+    ? salesWhereBase
+    : { ...salesWhereBase, boutiqueId: input.boutiqueId };
+
+  const [boutiqueTarget, employeeTargetResult, salesInMonth, todayEntry, weekEntries] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { boutiqueId: input.boutiqueId, month: monthKey },
     }),
-    prisma.employeeMonthlyTarget.findFirst({
-      where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
-    }),
+    input.employeeCrossBoutique
+      ? prisma.employeeMonthlyTarget.findMany({
+          where: { userId: input.userId, month: monthKey },
+          select: { amount: true },
+        })
+      : prisma.employeeMonthlyTarget.findFirst({
+          where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
+          select: { amount: true, leaveDaysInMonth: true, presenceFactor: true, scheduledDaysInMonth: true },
+        }),
     prisma.salesEntry.findMany({
-      where: { boutiqueId: input.boutiqueId, userId: input.userId, month: monthKey },
+      where: { ...salesWhereBoutique, dateKey: { lte: todayStr } },
       select: { amount: true },
     }),
     prisma.salesEntry.findFirst({
-      where: { boutiqueId: input.boutiqueId, userId: input.userId, dateKey: todayStr },
+      where: { ...salesWhereBoutique, dateKey: todayStr },
+      select: { amount: true },
     }),
     weekInMonth
       ? prisma.salesEntry.findMany({
           where: {
-            boutiqueId: input.boutiqueId,
-            userId: input.userId,
+            ...salesWhereBoutique,
             date: { gte: weekInMonth.start, lt: weekInMonth.end },
           },
           select: { amount: true },
@@ -150,11 +164,13 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
       : Promise.resolve([]),
   ]);
 
-  const monthTargetSar = employeeTarget?.amount ?? 0;
-  const monthTarget = Math.round(monthTargetSar * SAR_TO_HALALAS);
-  const mtdSales = salesEntrySarToHalalas(salesInMonth.reduce((s, e) => s + e.amount, 0));
-  const todaySales = salesEntrySarToHalalas(todayInSelectedMonth ? (todayEntry?.amount ?? 0) : 0);
-  const weekSales = salesEntrySarToHalalas(weekEntries.reduce((s, e) => s + e.amount, 0));
+  const monthTargetSar = input.employeeCrossBoutique
+    ? (Array.isArray(employeeTargetResult) ? employeeTargetResult : []).reduce((s, r) => s + r.amount, 0)
+    : (employeeTargetResult && !Array.isArray(employeeTargetResult) ? employeeTargetResult.amount : 0) ?? 0;
+  const monthTarget = monthTargetSar;
+  const mtdSales = salesInMonth.reduce((s, e) => s + e.amount, 0);
+  const todaySales = todayInSelectedMonth ? (todayEntry?.amount ?? 0) : 0;
+  const weekSales = weekEntries.reduce((s, e) => s + e.amount, 0);
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
   const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
@@ -176,12 +192,16 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
   const pctMonth = monthTarget > 0 ? (mtdSales / monthTarget) * 100 : 0;
 
   const boutiqueTargetSar = boutiqueTarget?.amount ?? null;
-  const boutiqueTargetHalalas = boutiqueTargetSar != null ? Math.round(boutiqueTargetSar * SAR_TO_HALALAS) : null;
+
+  const firstTarget =
+    !input.employeeCrossBoutique && employeeTargetResult && !Array.isArray(employeeTargetResult)
+      ? employeeTargetResult
+      : null;
 
   return {
     monthKey,
     monthTarget,
-    boutiqueTarget: boutiqueTargetHalalas,
+    boutiqueTarget: boutiqueTargetSar,
     mtdSales,
     todaySales,
     weekSales,
@@ -195,9 +215,9 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     todayInSelectedMonth,
     weekRangeLabel,
     daysInMonth,
-    leaveDaysInMonth: employeeTarget?.leaveDaysInMonth ?? null,
-    presenceFactor: employeeTarget?.presenceFactor ?? null,
-    scheduledDaysInMonth: employeeTarget?.scheduledDaysInMonth ?? null,
+    leaveDaysInMonth: firstTarget?.leaveDaysInMonth ?? null,
+    presenceFactor: firstTarget?.presenceFactor ?? null,
+    scheduledDaysInMonth: firstTarget?.scheduledDaysInMonth ?? null,
   };
 }
 
@@ -248,13 +268,13 @@ export async function getDashboardSalesMetrics(
   ]);
 
   const targetSar = boutiqueTarget?.amount ?? 0;
-  const currentMonthTarget = Math.round(targetSar * SAR_TO_HALALAS);
+  const currentMonthTarget = targetSar;
   const byUserId: Record<string, number> = {};
   let currentMonthActual = 0;
   for (const row of salesAgg) {
-    const sumHalalas = salesEntrySarToHalalas(row._sum.amount ?? 0);
-    byUserId[row.userId] = sumHalalas;
-    currentMonthActual += sumHalalas;
+    const sumSar = row._sum.amount ?? 0;
+    byUserId[row.userId] = sumSar;
+    currentMonthActual += sumSar;
   }
 
   const completionPct = currentMonthTarget > 0 ? Math.round((currentMonthActual / currentMonthTarget) * 100) : 0;

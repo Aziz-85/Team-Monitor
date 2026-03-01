@@ -1,5 +1,14 @@
-import type { Role } from '@prisma/client';
 import { FEATURES } from '@/lib/featureFlags';
+
+/** Matches Prisma schema enum Role — use this type to avoid depending on Prisma client export. */
+export type Role =
+  | 'EMPLOYEE'
+  | 'MANAGER'
+  | 'ASSISTANT_MANAGER'
+  | 'ADMIN'
+  | 'AREA_MANAGER'
+  | 'SUPER_ADMIN'
+  | 'DEMO_VIEWER';
 
 /** Roles that can edit schedule (batch save) and access /schedule/edit */
 export const SCHEDULE_EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
@@ -179,6 +188,25 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/about',
     '/change-password',
   ],
+  AREA_MANAGER: [
+    '/dashboard',
+    '/area/employees',
+    '/area/targets',
+    '/about',
+    '/change-password',
+  ],
+  DEMO_VIEWER: [
+    '/dashboard',
+    '/executive',
+    '/executive/monthly',
+    '/executive/insights',
+    '/executive/compare',
+    '/executive/employees',
+    '/schedule/view',
+    '/kpi/upload',
+    '/about',
+    '/change-password',
+  ],
   SUPER_ADMIN: [
     '/',
     '/dashboard',
@@ -223,6 +251,8 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/system',
     '/admin/system/version',
     '/admin/system-audit',
+    '/area/employees',
+    '/area/targets',
     '/sales/daily',
     '/sales/summary',
     '/sales/returns',
@@ -246,5 +276,10 @@ export function canAccessRoute(role: Role, pathname: string): boolean {
   const effective = FEATURES.EXECUTIVE ? allowed : allowed.filter((r) => !r.startsWith('/executive'));
   if (effective.includes(pathname)) return true;
   return effective.some((route) => pathname === route || pathname.startsWith(route + '/'));
+}
+
+/** True if role is read-only demo (no edits, no admin, no export). */
+export function isDemoViewer(role: Role): boolean {
+  return role === 'DEMO_VIEWER';
 }
 

@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server';
 import { FEATURES } from '@/lib/featureFlags';
 
 const publicPaths = ['/login'];
+const MUTATION_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const DEMO_LOGOUT_PATH = '/api/auth/logout';
 
 function isPublic(pathname: string): boolean {
   return publicPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
@@ -13,7 +15,7 @@ function isAuthRequired(pathname: string): boolean {
   if (pathname.startsWith('/api')) return false;
   return pathname === '/' || pathname.startsWith('/employee') || pathname.startsWith('/schedule')
     || pathname.startsWith('/tasks') || pathname.startsWith('/planner-export') || pathname.startsWith('/change-password')
-    || pathname.startsWith('/admin');
+    || pathname.startsWith('/admin') || pathname.startsWith('/area');
 }
 
 /** Paths that must never run auth logic (Next internals + static assets). */
@@ -78,6 +80,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // DEMO_VIEWER global write-block: block all mutations except logout
+  if (pathname.startsWith('/api/') && MUTATION_METHODS.includes(request.method?.toUpperCase() ?? 'GET')) {
+    if (pathname !== DEMO_LOGOUT_PATH) {
+      try {
+        const base = request.nextUrl.origin;
+        const res = await fetch(`${base}/api/internal/session-role`, {
+          headers: { Cookie: request.headers.get('cookie') ?? '' },
+          cache: 'no-store',
+        });
+        const data = (await res.json()) as { role?: string };
+        if (data.role === 'DEMO_VIEWER') {
+          return NextResponse.json(
+            { error: 'Demo mode: read-only. This action is not allowed.' },
+            { status: 403 }
+          );
+        }
+      } catch {
+        // On error, allow through; route handler will enforce auth
+      }
+    }
+  }
+
   if (!FEATURES.EXECUTIVE) {
     if (pathname.startsWith('/api/executive')) {
       return NextResponse.json({ error: 'Not Found' }, { status: 404 });
@@ -102,7 +126,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Run middleware on page routes (auth, redirects). Include /app/:path* and /(dashboard)/:path* for wrong-path redirects.
+// Run middleware on page routes (auth, redirects). Include /api/:path* for DEMO_VIEWER guard.
 export const config = {
   matcher: [
     '/',
@@ -120,9 +144,10 @@ export const config = {
     '/sync/:path*',
     '/executive',
     '/executive/:path*',
+    '/area',
+    '/area/:path*',
     '/app/:path*',
     '/(dashboard)/:path*',
-    '/api/executive',
-    '/api/executive/:path*',
+    '/api/:path*',
   ],
 };

@@ -1,10 +1,12 @@
 /**
  * Sales target presence: scheduled days and APPROVED leave days in a month.
- * Used for leave-adjusted target distribution. Reads schedule (overrides, team) and Leave only.
+ * Respects: Riyadh DoW, closed official holidays (excluded), event periods (weekly off suspended).
  */
 
 import { prisma } from '@/lib/db';
 import { getMonthRange } from '@/lib/time';
+import { toYmdRiyadh } from '@/lib/time/weekly';
+import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
 import type { LeaveStatus } from '@prisma/client';
 
 const APPROVED_LEAVE_STATUS: LeaveStatus = 'APPROVED';
@@ -43,15 +45,17 @@ export async function getPresenceForMonth(
   const d = new Date(monthStart);
   const endMs = monthEnd.getTime();
   while (d.getTime() < endMs) {
-    dateStrs.push(d.toISOString().slice(0, 10));
+    dateStrs.push(toYmdRiyadh(d));
     d.setUTCDate(d.getUTCDate() + 1);
   }
 
-  const [employees, overrides, leaves] = await Promise.all([
-    prisma.employee.findMany({
-      where: { empId: { in: empIds } },
-      select: { empId: true, weeklyOffDay: true },
-    }),
+  const employees = await prisma.employee.findMany({
+    where: { empId: { in: empIds } },
+    select: { empId: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true },
+  });
+  const boutiqueIds = Array.from(new Set(employees.map((e) => e.boutiqueId)));
+
+  const [overrides, leaves, closedHolidays, eventPeriods] = await Promise.all([
     prisma.shiftOverride.findMany({
       where: {
         empId: { in: empIds },
@@ -69,6 +73,23 @@ export async function getPresenceForMonth(
       },
       select: { empId: true, startDate: true, endDate: true },
     }),
+    boutiqueIds.length > 0
+      ? prisma.officialHoliday.findMany({
+          where: { date: { in: dateStrs }, isClosed: true, boutiqueId: { in: boutiqueIds } },
+          select: { boutiqueId: true, date: true },
+        })
+      : Promise.resolve([]),
+    boutiqueIds.length > 0
+      ? prisma.eventPeriod.findMany({
+          where: {
+            boutiqueId: { in: boutiqueIds },
+            startDate: { lte: dateStrs[dateStrs.length - 1] ?? '' },
+            endDate: { gte: dateStrs[0] ?? '' },
+            OR: [{ suspendWeeklyOff: true }, { forceWork: true }],
+          },
+          select: { boutiqueId: true, startDate: true, endDate: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const empByEmpId = new Map(employees.map((e) => [e.empId, e]));
@@ -83,23 +104,35 @@ export async function getPresenceForMonth(
     list.push({ start: l.startDate, end: l.endDate });
     leaveRangesByEmp.set(l.empId, list);
   }
+  const holidayClosedSet = new Set(closedHolidays.map((h) => `${h.boutiqueId}_${h.date}`));
+  const suspensionSet = new Set<string>();
+  for (const p of eventPeriods) {
+    for (const ymd of dateStrs) {
+      if (ymd >= p.startDate && ymd <= p.endDate) suspensionSet.add(`${p.boutiqueId}_${ymd}`);
+    }
+  }
 
   for (const empId of empIds) {
     const emp = empByEmpId.get(empId);
-    const weeklyOffDay = emp?.weeklyOffDay ?? 0;
+    const effectiveOff = emp
+      ? getEffectiveWeeklyOffDay(emp.weeklyOffDay, emp.weeklyOffOverrideDay)
+      : 0;
+    const boutiqueId = emp?.boutiqueId ?? '';
     let scheduled = 0;
     let leaveDays = 0;
 
     for (const dateStr of dateStrs) {
-      const date = new Date(dateStr + 'T00:00:00Z');
-      const dayOfWeek = date.getUTCDay();
-      const isOff = dayOfWeek === weeklyOffDay;
+      if (boutiqueId && holidayClosedSet.has(`${boutiqueId}_${dateStr}`)) continue;
+      const dayOfWeekRiyadh = getDowRiyadhFromYmd(dateStr);
+      const inSuspension = boutiqueId ? suspensionSet.has(`${boutiqueId}_${dateStr}`) : false;
+      const isOff = effectiveOff !== 'NONE' && !inSuspension && dayOfWeekRiyadh === effectiveOff;
       const overrideShift = overrideByKey.get(`${empId}_${dateStr}`);
       if (overrideShift === 'NONE') continue;
-      if (isOff && !overrideShift) continue; // weekly off, no override
+      if (isOff && !overrideShift) continue;
       scheduled++;
 
       const leaveRanges = leaveRangesByEmp.get(empId) ?? [];
+      const date = new Date(dateStr + 'T00:00:00Z');
       const onLeave = leaveRanges.some((r) => {
         const dayMs = date.getTime();
         const startMs = new Date(r.start).setUTCHours(0, 0, 0, 0);

@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   if (!user) {
     redirect('/login');
   }
-  if (!user.boutiqueId && (user.role as string) !== 'SUPER_ADMIN') {
+  if (!user.boutiqueId && (user.role as string) !== 'SUPER_ADMIN' && (user.role as string) !== 'DEMO_VIEWER') {
     redirect('/login?error=no_boutique');
   }
 
@@ -30,9 +30,10 @@ export default async function DashboardLayout({
         boutiqueId
       )
     : null;
-  const navRole = (user.role as string) === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (access?.effectiveRole ?? user.role);
-  const canEditSchedule = (user.role as string) === 'SUPER_ADMIN' ? true : (access?.effectiveFlags.canEditSchedule ?? false);
-  const canApproveWeek = (user.role as string) === 'SUPER_ADMIN' ? true : (access?.effectiveFlags.canApproveWeek ?? false);
+  const navRole = (user.role as string) === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (user.role as string) === 'DEMO_VIEWER' ? 'DEMO_VIEWER' : (access?.effectiveRole ?? user.role);
+  const canEditSchedule = (user.role as string) === 'SUPER_ADMIN' ? true : (user.role as string) === 'DEMO_VIEWER' ? false : (access?.effectiveFlags.canEditSchedule ?? false);
+  const canApproveWeek = (user.role as string) === 'SUPER_ADMIN' ? true : (user.role as string) === 'DEMO_VIEWER' ? false : (access?.effectiveFlags.canApproveWeek ?? false);
+  const isDemoMode = (user.role as string) === 'DEMO_VIEWER';
 
   return (
     <div className="flex min-h-screen min-w-0 overflow-x-hidden" style={{ background: 'var(--app-bg)' }}>
@@ -45,6 +46,11 @@ export default async function DashboardLayout({
         canApproveWeek={canApproveWeek}
       />
       <div className="flex flex-1 min-w-0 flex-col">
+        {isDemoMode && (
+          <div className="shrink-0 bg-amber-100 border-b border-amber-300 px-3 py-2 text-center text-sm font-semibold text-amber-900">
+            DEMO MODE — READ ONLY
+          </div>
+        )}
         <MobileTopBar
           role={navRole}
           name={user.employee?.name ?? undefined}

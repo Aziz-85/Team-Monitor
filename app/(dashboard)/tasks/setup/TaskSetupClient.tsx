@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { EmployeeSelect, type EmployeeOption } from '@/components/EmployeeSelect';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type TaskScheduleRow = {
   id: string;
@@ -33,8 +29,7 @@ type Task = {
 const WEEKLY_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const; // 0=Sun .. 6=Sat
 
 export function TaskSetupClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);

@@ -1,13 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type LeaveRequestRow = {
   id: string;
@@ -28,8 +24,7 @@ type Boutique = { id: string; code: string; name: string };
 const LEAVE_TYPES = ['ANNUAL', 'EXHIBITION', 'SICK', 'OTHER_BRANCH', 'EMERGENCY', 'OTHER'] as const;
 
 export function LeaveRequestsClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<LeaveRequestRow[]>([]);
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [modal, setModal] = useState(false);

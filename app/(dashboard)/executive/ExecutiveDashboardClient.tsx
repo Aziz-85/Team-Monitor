@@ -147,7 +147,7 @@ export function ExecutiveDashboardClient() {
           <p className="text-sm text-gray-500">Boutique Performance Score</p>
           <p className="text-2xl font-semibold text-[#C6A756]">
             {data.boutiqueScore.score}
-            <span className="ml-2 text-base font-normal text-gray-600">
+            <span className="ms-2 text-base font-normal text-gray-600">
               ({data.boutiqueScore.classification})
             </span>
           </p>

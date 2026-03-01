@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { requireBoutiqueScope } from '@/lib/scope/ssot';
 import { logKpiAudit } from '@/lib/kpi/audit';
 import type { Role } from '@prisma/client';
 
@@ -21,13 +21,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'empId and periodKey required' }, { status: 400 });
   }
 
-  const resolved = await resolveScopeForUser(user.id, role, null);
+  const scopeResult = await requireBoutiqueScope(request, {
+    allowGlobal: false,
+    modeName: 'KpiEmployee',
+  });
+  if (scopeResult.res) return scopeResult.res;
+  const boutiqueIds = scopeResult.scope.boutiqueIds;
   const isOwn = (await prisma.user.findUnique({ where: { id: user.id }, select: { empId: true } }))?.empId === empId;
 
   if (role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER') {
     if (!isOwn) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   } else if (role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
-    if (role === 'MANAGER' && !resolved.boutiqueIds.length) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (role === 'MANAGER' && !boutiqueIds.length) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   } else {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest) {
     where: {
       empId,
       periodKey,
-      ...(role === 'MANAGER' ? { boutiqueId: { in: resolved.boutiqueIds } } : {}),
+      ...(role === 'MANAGER' ? { boutiqueId: { in: boutiqueIds } } : {}),
     },
     include: { upload: { select: { fileName: true, createdAt: true } } },
     orderBy: { createdAt: 'desc' },

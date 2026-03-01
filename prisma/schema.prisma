@@ -13,7 +13,9 @@ enum Role {
   MANAGER
   ASSISTANT_MANAGER
   ADMIN
+  AREA_MANAGER
   SUPER_ADMIN  // covers all boutiques (both branches)
+  DEMO_VIEWER  // read-only for client presentations; no edit/sales/targets/leaves/admin
 }
 
 enum DelegationGrantType {
@@ -47,6 +49,16 @@ enum OverrideShift {
   NONE
   COVER_RASHID_AM
   COVER_RASHID_PM
+}
+
+enum DayOverrideMode {
+  FORCE_WORK  // employee treated as WORKABLE (even if weekly off or holiday)
+  FORCE_OFF   // employee is OFF on this date (even if normally working)
+}
+
+enum CompDayType {
+  CREDIT  // earned by working on weekly off (or holiday)
+  DEBIT   // used when taking compensatory off day
 }
 
 enum TaskScheduleType {
@@ -108,6 +120,11 @@ model Boutique {
   salesLedgerBatches    SalesLedgerBatch[]
   salesTransactions     SalesTransaction[]
   delegationGrants      DelegationGrant[]
+  officialHolidays      OfficialHoliday[]
+  weeklyOffSuspensionPeriods WeeklyOffSuspensionPeriod[]
+  eventPeriods         EventPeriod[]
+  employeeDayOverrides  EmployeeDayOverride[]
+  compDayLedgers        CompDayLedger[]
 
   @@index([regionId])
   @@index([isActive])
@@ -224,6 +241,8 @@ model User {
   delegationGrantsAsTarget   DelegationGrant[] @relation("DelegationGrantTarget")
   delegationGrantsGrantedBy  DelegationGrant[] @relation("DelegationGrantGrantedBy")
   delegationGrantsRevokedBy  DelegationGrant[] @relation("DelegationGrantRevokedBy")
+  employeeTransferAudits     EmployeeTransferAudit[] @relation("EmployeeTransferAuditActor")
+  targetChangeAudits         TargetChangeAudit[]     @relation("TargetChangeAuditActor")
 
   @@index([boutiqueId])
 }
@@ -344,6 +363,7 @@ model Employee {
   phone                    String?
   team                     Team              // denormalized "current" team; kept in sync when history is appended
   weeklyOffDay             Int               // 0=Sun..6=Sat
+  weeklyOffOverrideDay     Int?              // null = use weeklyOffDay; -1 = no weekly off ("بدون"); 0..6 = override day
   position                 EmployeePosition? // job role: Boutique Manager, Assistant Manager, Senior Sales, Sales
   active                   Boolean           @default(true)
   isSystemOnly             Boolean           @default(false) // true = admin/system account, excluded from roster and all employee lists
@@ -366,6 +386,9 @@ model Employee {
   inventoryDailyWaitingQueueEntries InventoryDailyWaitingQueue[]
   employeeAssignments               EmployeeAssignment[]
   salesTransactionsAsSeller         SalesTransaction[]
+  dayOverrides          EmployeeDayOverride[]
+  compDayLedger         CompDayLedger[]
+  transferAudits        EmployeeTransferAudit[]
 
   @@index([boutiqueId])
   @@index([boutiqueId, active])
@@ -423,6 +446,82 @@ model Leave {
   notes     String?
   createdAt DateTime    @default(now())
   employee  Employee    @relation(fields: [empId], references: [empId], onDelete: Cascade)
+}
+
+// Per-date manual control: force WORK (e.g. Ramadan coverage) or force OFF (e.g. comp day)
+model EmployeeDayOverride {
+  id          String          @id @default(cuid())
+  boutiqueId  String
+  employeeId  String          // Employee.empId
+  date        String          // "YYYY-MM-DD" (Riyadh calendar day)
+  mode        DayOverrideMode
+  reason      String?
+  createdAt   DateTime        @default(now())
+  boutique    Boutique        @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  employee    Employee        @relation(fields: [employeeId], references: [empId], onDelete: Cascade)
+
+  @@unique([boutiqueId, employeeId, date])
+  @@index([boutiqueId, date])
+  @@index([employeeId, date])
+}
+
+// Compensatory off credits (work on weekly off) and debits (take comp day)
+model CompDayLedger {
+  id          String      @id @default(cuid())
+  boutiqueId  String
+  employeeId  String      // Employee.empId
+  date        String      // "YYYY-MM-DD" event date
+  type        CompDayType
+  units       Int         // 1 = one full day (no half day)
+  note        String?
+  createdAt   DateTime    @default(now())
+  boutique    Boutique    @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  employee    Employee    @relation(fields: [employeeId], references: [empId], onDelete: Cascade)
+
+  @@index([boutiqueId, employeeId, date])
+}
+
+// Eid / official holiday dates: closed = non-working; isClosed=false = open (normal rules)
+model OfficialHoliday {
+  id         String   @id @default(cuid())
+  boutiqueId String
+  date       String   // "YYYY-MM-DD" Riyadh calendar day
+  name       String   // e.g. Eid AlFitr Day 1
+  isClosed   Boolean  @default(true) // true = boutique closed (no work), false = open (holiday but working)
+  createdAt  DateTime @default(now())
+  boutique   Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([boutiqueId, date])
+  @@index([boutiqueId, date])
+}
+
+// Ramadan last 10 days etc.: weekly off rule suspended in range
+model WeeklyOffSuspensionPeriod {
+  id         String   @id @default(cuid())
+  boutiqueId String
+  name       String
+  startDate  String   // "YYYY-MM-DD" inclusive
+  endDate    String   // "YYYY-MM-DD" inclusive
+  createdAt  DateTime @default(now())
+  boutique   Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId])
+  @@index([boutiqueId, startDate, endDate])
+}
+
+// Event periods: suspend weekly off and/or force work (e.g. Bridal Week, Ramadan Peak)
+model EventPeriod {
+  id                String   @id @default(cuid())
+  boutiqueId        String
+  name              String   // e.g. "Bridal Week", "Ramadan Peak"
+  startDate         String   // "YYYY-MM-DD" inclusive
+  endDate           String   // "YYYY-MM-DD" inclusive
+  suspendWeeklyOff  Boolean  // true = weekly off disabled in this period
+  forceWork         Boolean  // true = treat every day as WORKABLE (weekly off disabled)
+  createdAt         DateTime @default(now())
+  boutique         Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId, startDate, endDate])
 }
 
 // Boutique-scoped leave request with approval workflow + manager rules + admin escalation
@@ -907,6 +1006,46 @@ model EmployeeMonthlyTarget {
   @@index([sourceBoutiqueTargetId])
 }
 
+enum TargetAuditScope {
+  BOUTIQUE_MONTHLY
+  EMPLOYEE_MONTHLY
+}
+
+model EmployeeTransferAudit {
+  id             String   @id @default(cuid())
+  actorUserId    String
+  employeeId     String   // Employee.empId
+  fromBoutiqueId String
+  toBoutiqueId   String
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  actor  User     @relation("EmployeeTransferAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  employee Employee @relation(fields: [employeeId], references: [empId], onDelete: Restrict)
+
+  @@index([employeeId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model TargetChangeAudit {
+  id             String   @id @default(cuid())
+  actorUserId    String
+  boutiqueId     String
+  employeeId     String?  // null for boutique-level; User.id for employee-level
+  month          String   // "YYYY-MM"
+  scope          TargetAuditScope
+  fromAmount     Int
+  toAmount       Int
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  actor User @relation("TargetChangeAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([boutiqueId, month, createdAt])
+  @@index([employeeId, month, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
 model SalesTargetRoleWeight {
   role   String @id // MANAGER | ASSISTANT_MANAGER | HIGH_JEWELLERY_EXPERT | SENIOR_SALES_ADVISOR | SALES_ADVISOR
   weight Float
@@ -928,11 +1067,11 @@ model SalesTargetAudit {
 
 model SalesEntry {
   id          String   @id @default(cuid())
-  boutiqueId  String   // required (DB NOT NULL); set at creation from employee's boutique
+  boutiqueId  String   // sale location (where the sale happened); set at creation from operational/summary boutique
   date        DateTime @db.Date // normalized to date at 00:00 Riyadh (stored as date only)
   dateKey     String   // "YYYY-MM-DD" Riyadh — canonical day key; avoids timezone bugs
   month       String   // "YYYY-MM" Riyadh for quick filtering
-  userId      String
+  userId      String   // seller (user who made the sale); employee totals use this across all boutiques
   amount      Int      // SAR (integer)
   source      String?  @default("LEDGER") // LEDGER | MANUAL | IMPORT; sync only touches LEDGER
   createdById String
@@ -943,9 +1082,11 @@ model SalesEntry {
 
   @@unique([boutiqueId, dateKey, userId])
   @@index([boutiqueId])
+  @@index([boutiqueId, dateKey])
   @@index([dateKey])
   @@index([month])
   @@index([userId])
+  @@index([userId, dateKey])
   @@index([source])
 }
 

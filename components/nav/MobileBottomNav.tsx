@@ -3,19 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getNavLinksForRole } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
-
 export function MobileBottomNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const { messages } = useI18n();
+  const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
-  const t = (key: string) => (getNested(messages, key) as string) || key;
 
   const allLinks = getNavLinksForRole(role);
   const mainLinks = allLinks.filter((l) => !l.href.startsWith('/admin') && l.href !== '/change-password').slice(0, 4);
@@ -23,7 +18,7 @@ export function MobileBottomNav({ role }: { role: Role }) {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white py-2 md:hidden">
+      <nav className="fixed bottom-0 start-0 end-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white py-2 md:hidden">
         {mainLinks.slice(0, 4).map((l) => (
           <Link
             key={l.href}
@@ -50,7 +45,7 @@ export function MobileBottomNav({ role }: { role: Role }) {
         />
       )}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] overflow-auto rounded-t-xl border border-slate-200 bg-white shadow-lg transition-transform md:hidden ${moreOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed bottom-0 start-0 end-0 z-50 max-h-[70vh] overflow-auto rounded-t-xl border border-slate-200 bg-white shadow-lg transition-transform md:hidden ${moreOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="sticky top-0 border-b border-slate-200 bg-white px-4 py-3 font-semibold">
           {t('nav.more')}

@@ -484,9 +484,9 @@ export function NetworkExecutiveClient() {
         {BOUTIQUES.map((r) => (
           <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
             <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">Boutique {r.boutique}</td>
-            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.netSales.toLocaleString()} SAR</td>
-            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.achPct}%</td>
-            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.gap >= 0 ? '+' : ''}{r.gap.toLocaleString()} SAR</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.netSales.toLocaleString()} SAR</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.achPct}%</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.gap >= 0 ? '+' : ''}{r.gap.toLocaleString()} SAR</td>
           </tr>
         ))}
       </ExecSimpleTable>
@@ -499,22 +499,22 @@ export function NetworkExecutiveClient() {
         <table className="w-full min-w-0 table-fixed border-collapse text-sm">
           <thead>
             <tr className="bg-slate-50">
-              <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-              <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Base Forecast</th>
-              <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Low</th>
-              <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">High</th>
-              <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Forecast Ach%</th>
-              <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Risk note</th>
+              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Base Forecast</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Low</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">High</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Forecast Ach%</th>
+              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Risk note</th>
             </tr>
           </thead>
           <tbody>
             {forecastRows.map((r) => (
               <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                 <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{r.boutique}</td>
-                <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{Math.round(r.base).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{Math.round(r.low).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{Math.round(r.high).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.forecastAchPct.toFixed(1)}%</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.base).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.low).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.high).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.forecastAchPct.toFixed(1)}%</td>
                 <td className="max-w-0 py-3 px-3 truncate">
                   <ExecBadge status={forecastAchStatus(r.forecastAchPct)} />
                 </td>
@@ -641,20 +641,20 @@ export function NetworkExecutiveClient() {
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Current MTD</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Same Month LY</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">YoY %</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Current MTD</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Same Month LY</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">YoY %</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {yoyRowsForPanel.map((r) => (
                       <tr key={r.boutique + (r.boutiqueId ?? '')} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                         <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.currentMTD.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.sameMonthLY.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{(r.yoyPct >= 0 ? '+' : '') + r.yoyPct.toFixed(1)}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.currentMTD.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.sameMonthLY.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{(r.yoyPct >= 0 ? '+' : '') + r.yoyPct.toFixed(1)}%</td>
                         <td className="max-w-0 py-3 px-3 truncate">
                           <ExecBadge status={yoyStatus(r.yoyPct)} />
                         </td>
@@ -676,10 +676,10 @@ export function NetworkExecutiveClient() {
                   <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket (SAR)</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">AIV (SAR)</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket (SAR)</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AIV (SAR)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -693,9 +693,9 @@ export function NetworkExecutiveClient() {
                         return (
                           <tr key={b.id} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                             <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{b.name || b.code}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{avgTicket.toFixed(2)}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{upt.toFixed(2)}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{aiv.toFixed(2)}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{avgTicket.toFixed(2)}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{upt.toFixed(2)}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{aiv.toFixed(2)}</td>
                           </tr>
                         );
                       })}
@@ -712,34 +712,34 @@ export function NetworkExecutiveClient() {
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Return %</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Return %</th>
                     </tr>
                   </thead>
                   <tbody>
                     {BOUTIQUES.map((r) => (
                       <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                         <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">Boutique {r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right">
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end">
                           <span className="tabular-nums text-slate-600">{(r.wowTxnGrowth >= 0 ? '+' : '') + r.wowTxnGrowth}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={wowStatus(r.wowTxnGrowth)} /></span>
                         </td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right">
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end">
                           <span className="tabular-nums text-slate-600">{(r.wowAvgTicketGrowth >= 0 ? '+' : '') + r.wowAvgTicketGrowth}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={wowStatus(r.wowAvgTicketGrowth)} /></span>
                         </td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right">
+                        <td className="max-w-0 py-3 px-3 truncate text-end">
                           <span className="tabular-nums text-slate-900">{r.salesPerStaff.toLocaleString()}</span>
                           <span className="ms-1 inline-block"><ExecBadge status={r.boutique === 'A' ? salesPerStaffStatusA : salesPerStaffStatusB} /></span>
                         </td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{MOCK_RETURN_RATE[r.boutique as 'A' | 'B']}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{MOCK_RETURN_RATE[r.boutique as 'A' | 'B']}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -816,21 +816,21 @@ export function NetworkExecutiveClient() {
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="py-3 px-3 text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket MTD</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Txn Growth</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Avg Ticket</th>
+                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket MTD</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Txn Growth</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Avg Ticket</th>
                     </tr>
                   </thead>
                   <tbody>
                     {BOUTIQUES.map((r) => (
                       <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                         <td className="max-w-0 py-3 px-3 font-medium text-slate-900">Boutique {r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.wowTxnGrowth >= 0 ? '+' : ''}{r.wowTxnGrowth}%</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{r.wowAvgTicketGrowth >= 0 ? '+' : ''}{r.wowAvgTicketGrowth}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.wowTxnGrowth >= 0 ? '+' : ''}{r.wowTxnGrowth}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.wowAvgTicketGrowth >= 0 ? '+' : ''}{r.wowAvgTicketGrowth}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -879,16 +879,16 @@ export function NetworkExecutiveClient() {
                   </colgroup>
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="py-3 px-3 text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach%</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW%</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Compliance%</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Backlog</th>
-                      <th className="py-3 px-3 text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Age</th>
+                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Compliance%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Backlog</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Age</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -897,7 +897,7 @@ export function NetworkExecutiveClient() {
                         key={row.boutique}
                         className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50"
                       >
-                        <td className="max-w-0 py-3 px-3 text-left font-medium text-slate-900">
+                        <td className="max-w-0 py-3 px-3 text-start font-medium text-slate-900">
                           <span className="min-w-0 truncate">Boutique {row.boutique}</span>
                         </td>
                         <ExecDataCell value={`${row.target.toLocaleString()} SAR`} align="right" />
@@ -964,14 +964,14 @@ export function NetworkExecutiveClient() {
               <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="max-w-0 py-3 px-3 truncate text-left text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Pieces</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution%</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-right text-[11px] font-medium uppercase tracking-wide text-slate-500">Achievement%</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Pieces</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution%</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Achievement%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -980,13 +980,13 @@ export function NetworkExecutiveClient() {
                     return (
                       <tr key={srow.employee} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                         <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{srow.employee}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{srow.netSales.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{srow.txnCount}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{srow.pieces}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{srow.avgTicket} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{upt.toFixed(2)}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{srow.contributionPct.toFixed(1)}%</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-right">
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.netSales.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.txnCount}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.pieces}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.avgTicket} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{upt.toFixed(2)}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.contributionPct.toFixed(1)}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end">
                           <span className="tabular-nums text-slate-900">{srow.achievementPct.toFixed(1)}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={srow.status} /></span>
                         </td>
@@ -1030,10 +1030,10 @@ export function NetworkExecutiveClient() {
               {staff.map((s) => (
                 <tr key={s.employee} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
                   <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{s.employee}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{s.netSales.toLocaleString()} SAR</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{s.txnCount.toLocaleString()}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-right tabular-nums text-slate-900">{s.avgTicket} SAR</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-right">
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.netSales.toLocaleString()} SAR</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.txnCount.toLocaleString()}</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.avgTicket} SAR</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end">
                     <span className="tabular-nums text-slate-900">{s.contributionPct.toFixed(1)}%</span>
                     {s.status !== 'ok' && <span className="ms-1 inline-block"><ExecBadge status={s.status} /></span>}
                   </td>

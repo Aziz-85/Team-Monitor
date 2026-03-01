@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type Stats = {
   byEmployee: Array<{ empId: string; name: string; completed: number }>;
@@ -16,8 +12,7 @@ type Stats = {
 };
 
 export function InventoryHistoryClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [stats, setStats] = useState<Stats | null>(null);
   const [rebalancing, setRebalancing] = useState(false);

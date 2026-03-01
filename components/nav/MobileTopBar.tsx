@@ -3,16 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
 import { getNavLinksForUser } from '@/lib/permissions';
 import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBoutiqueSelector';
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 export function MobileTopBar({
   role,
@@ -28,12 +25,11 @@ export function MobileTopBar({
   canApproveWeek: boolean;
 }) {
   const pathname = usePathname();
-  const { messages, locale, setLocale } = useI18n();
+  const { t, locale, isRtl } = useT();
+  const { setLocale } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const t = (key: string) => (getNested(messages, key) as string) || key;
 
   const allLinks = getNavLinksForUser({ role, canEditSchedule, canApproveWeek });
-  const isRtl = locale === 'ar';
 
   return (
     <>
@@ -83,7 +79,7 @@ export function MobileTopBar({
       {/* Drawer */}
       <div
         className={`fixed top-0 z-50 h-full w-64 bg-white shadow-lg transition-transform md:hidden ${
-          isRtl ? 'right-0' : 'left-0'
+          isRtl ? 'end-0' : 'start-0'
         } ${drawerOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'}`}
       >
         <div className="flex h-full flex-col">
@@ -94,7 +90,7 @@ export function MobileTopBar({
               onClick={() => setDrawerOpen(false)}
               className="text-lg font-semibold text-slate-900"
             >
-              Team Monitor
+              {t('nav.appTitle')}
             </Link>
             <button
               type="button"
@@ -154,7 +150,7 @@ export function MobileTopBar({
                   await fetch('/api/auth/logout', { method: 'POST' });
                   window.location.href = '/login';
                 }}
-                className="w-full text-left h-9 rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50"
+                className="w-full text-start h-9 rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50"
               >
                 {t('common.logout')}
               </button>

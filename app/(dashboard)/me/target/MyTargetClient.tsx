@@ -1,13 +1,9 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarFromHalala, formatSarInt } from '@/lib/utils/money';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 /** Add delta months to YYYY-MM. Returns YYYY-MM. */
 function addMonths(monthKey: string, delta: number): string {
@@ -82,8 +78,7 @@ type SalesEntry = { id: string; date: string; amount: number; canEdit: boolean }
 const WEEKDAY_LABELS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 export function MyTargetClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<TargetsData | null>(null);
   const [monthEntries, setMonthEntries] = useState<SalesEntry[]>([]);
@@ -351,9 +346,9 @@ export function MyTargetClient() {
             )}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-right font-medium">{formatMoney(d.dailyTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-right font-medium">{formatMoney(d.todaySales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-right font-medium">{formatPct(d.pctDaily)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.dailyTarget)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.todaySales)}</td></tr>
+                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctDaily)}</td></tr>
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
@@ -365,9 +360,9 @@ export function MyTargetClient() {
             {d.weekRangeLabel && <p className="mb-2 text-xs text-slate-500">{d.weekRangeLabel}</p>}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-right font-medium">{formatMoney(d.weekTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-right font-medium">{formatMoney(d.weekSales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-right font-medium">{formatPct(d.pctWeek)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekTarget)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekSales)}</td></tr>
+                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctWeek)}</td></tr>
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
@@ -378,10 +373,10 @@ export function MyTargetClient() {
           <OpsCard title={t('targets.monthProgress')}>
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-right font-medium">{formatMoney(d.monthTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">MTD</td><td className="p-1 text-right font-medium">{formatMoney(d.mtdSales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-right font-medium">{formatPct(d.pctMonth)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.remaining')}</td><td className="p-1 text-right font-medium">{formatMoney(d.remaining)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.monthTarget)}</td></tr>
+                <tr><td className="p-1 text-slate-600">MTD</td><td className="p-1 text-end font-medium">{formatMoney(d.mtdSales)}</td></tr>
+                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctMonth)}</td></tr>
+                <tr><td className="p-1 text-slate-600">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatMoney(d.remaining)}</td></tr>
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
@@ -508,7 +503,7 @@ export function MyTargetClient() {
                             <button
                               type="button"
                               onClick={() => selectDay(cell.dateStr)}
-                              className={`min-h-[2.5rem] w-full rounded border text-left transition ${
+                              className={`min-h-[2.5rem] w-full rounded border text-start transition ${
                                 isSelected
                                   ? 'border-sky-500 bg-sky-50 font-medium'
                                   : isToday
@@ -597,7 +592,7 @@ export function MyTargetClient() {
                   <span className={!e.canEdit ? 'text-slate-500' : ''}>
                     {e.date} — {formatSar(e.amount)}
                     {!e.canEdit && (
-                      <span className="ml-1 text-xs text-slate-400" title={t('targets.salesEntryPolicyTooltip')}>
+                      <span className="ms-1 text-xs text-slate-400" title={t('targets.salesEntryPolicyTooltip')}>
                         (read-only)
                       </span>
                     )}

@@ -1,15 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 import { Modal } from '@/components/admin/Modal';
 import { RegionForm, type RegionFormValues } from '@/components/admin/RegionForm';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type RegionRow = {
   id: string;
@@ -21,8 +17,7 @@ type RegionRow = {
 };
 
 export function AdminRegionsClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<RegionRow[]>([]);
   const [modal, setModal] = useState<'add' | 'edit' | null>(null);
   const [editing, setEditing] = useState<RegionRow | null>(null);

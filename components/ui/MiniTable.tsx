@@ -21,7 +21,7 @@ export function MiniTable({ columns, data }: MiniTableProps) {
               <th
                 key={col.key}
                 className={`py-2 text-[11px] font-medium uppercase tracking-wide text-slate-500 ${
-                  col.align === 'right' ? 'text-right' : 'text-left'
+                  col.align === 'right' ? 'text-end' : 'text-start'
                 }`}
               >
                 {col.label}
@@ -39,7 +39,7 @@ export function MiniTable({ columns, data }: MiniTableProps) {
                 <td
                   key={col.key}
                   className={`py-2 text-slate-900 ${
-                    col.align === 'right' ? 'text-right tabular-nums' : 'text-left'
+                    col.align === 'right' ? 'text-end tabular-nums' : 'text-start'
                   }`}
                 >
                   {row[col.key] != null ? String(row[col.key]) : '—'}

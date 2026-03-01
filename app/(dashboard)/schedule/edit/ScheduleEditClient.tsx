@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getFirstName } from '@/lib/name';
 import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
@@ -21,10 +21,6 @@ import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import type { Role } from '@prisma/client';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 function formatDDMM(d: string): string {
   const [, m, day] = d.split('-');
@@ -205,6 +201,8 @@ type GridData = {
   counts: Array<{ amCount: number; pmCount: number; rashidAmCount?: number; rashidPmCount?: number }>;
   integrityWarnings?: string[];
   suggestions?: ScheduleSuggestion[];
+  /** Admin only: comp day balance per empId */
+  compBalanceByEmpId?: Record<string, number>;
 };
 
 type MonthData = {
@@ -266,10 +264,9 @@ export function ScheduleEditClient({
   initialRole: Role;
   ramadanRange?: { start: string; end: string } | null;
 }) {
-  const { messages, locale } = useI18n();
+  const { t, locale } = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
   const [tab, setTab] = useState<'week' | 'month'>('week');
   const [weekStart, setWeekStart] = useState(() => parseWeekStartFromUrl(searchParams.get('weekStart')));
   const [month, setMonth] = useState(() => parseMonthFromUrl(searchParams.get('month')));
@@ -758,6 +755,7 @@ export function ScheduleEditClient({
 
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
+      if (cell.availability === 'LEAVE') return;
       const key = editKey(empId, date);
       if (newShift === cell.effectiveShift) {
         setPendingEdits((m) => {
@@ -870,6 +868,21 @@ export function ScheduleEditClient({
   const applyBatch = useCallback(async () => {
     const entries = Array.from(pendingEdits.entries());
     if (entries.length === 0) return;
+    if (gridData?.rows) {
+      const leaveSet = new Set<string>();
+      for (const row of gridData.rows) {
+        for (const cell of row.cells) {
+          if (cell.availability === 'LEAVE') leaveSet.add(editKey(row.empId, cell.date));
+        }
+      }
+      for (const [key] of entries) {
+        if (leaveSet.has(key)) {
+          setToast('Cannot save: one or more changes are on a leave day. Remove those changes or save only non-leave cells.');
+          setTimeout(() => setToast(null), 6000);
+          return;
+        }
+      }
+    }
     setSaving(true);
     setSaveProgress({ done: 0, total: entries.length });
     const reason = globalReason.trim() || DEFAULT_REASON;
@@ -916,7 +929,7 @@ export function ScheduleEditClient({
     } finally {
       setSaving(false);
     }
-  }, [pendingEdits, globalReason, fetchGrid, fetchWeekGovernance, t, locale]);
+  }, [pendingEdits, globalReason, fetchGrid, fetchWeekGovernance, t, locale, gridData]);
 
   useEffect(() => {
     if (pendingCount === 0) return;
@@ -1281,7 +1294,7 @@ export function ScheduleEditClient({
         {tab === 'week' && gridData?.integrityWarnings && gridData.integrityWarnings.length > 0 && (
           <div className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
             <span className="font-medium">{t('schedule.fridayPmOnly')}</span>
-            <span className="ml-1">— {gridData.integrityWarnings.join('; ')}</span>
+            <span className="ms-1">— {gridData.integrityWarnings.join('; ')}</span>
           </div>
         )}
 
@@ -1334,7 +1347,7 @@ export function ScheduleEditClient({
                   <span className="font-medium text-slate-500">{t('schedule.coverage') ?? 'Shifts'}:</span>
                   <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-sky-800">{t('schedule.morning')}</span>
                   <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 font-medium text-amber-900">{t('schedule.evening')}</span>
-                  <span className="ml-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
+                  <span className="ms-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
                   <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{t('governance.draft')}</span>
                   <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">{t('governance.approved')}</span>
                   <span className="rounded-full border border-red-200 bg-red-100 px-2 py-0.5 font-medium text-red-900">🔒 {t('governance.locked')}</span>
@@ -1417,6 +1430,14 @@ export function ScheduleEditClient({
                                                 <span className="whitespace-nowrap">
                                   {getFirstName(row.name)}
                                 </span>
+                                {gridData.compBalanceByEmpId && (gridData.compBalanceByEmpId[row.empId] ?? 0) !== 0 && (
+                                  <span
+                                    className="inline-flex h-5 items-center rounded bg-emerald-100 px-1.5 text-[10px] font-medium text-emerald-800"
+                                    title={t('schedule.compBalance') ?? 'Comp day balance'}
+                                  >
+                                    Comp: {gridData.compBalanceByEmpId[row.empId]}
+                                  </span>
+                                )}
                               </span>
                             </LuxuryTd>
                             {row.cells.map((cell) => {
@@ -1440,12 +1461,72 @@ export function ScheduleEditClient({
                               return (
                                 <LuxuryTd key={cell.date} className={cellClass}>
                                   {locked ? (
-                                    <div className={`flex h-9 items-center justify-center bg-slate-100 px-2 text-center ${SCHEDULE_UI.guestLine} text-slate-500`}>
-                                      {cell.availability === 'LEAVE'
-                                        ? t('leaves.title')
-                                        : cell.availability === 'OFF'
-                                        ? t('common.offDay')
-                                        : t('inventory.absent')}
+                                    <div className={`flex h-9 flex-col items-center justify-center bg-slate-100 px-2 text-center ${SCHEDULE_UI.guestLine} text-slate-500`}>
+                                      <span>
+                                        {cell.availability === 'LEAVE'
+                                          ? 'Leave'
+                                          : cell.availability === 'HOLIDAY'
+                                          ? 'Holiday'
+                                          : cell.availability === 'OFF'
+                                          ? 'Off day'
+                                          : 'Absent'}
+                                      </span>
+                                      {gridData.compBalanceByEmpId && (
+                                        <details className="mt-0.5 w-full text-center">
+                                          <summary className="cursor-pointer text-[10px] text-slate-500 hover:text-slate-700">
+                                            {t('schedule.advanced') ?? 'Advanced'}
+                                          </summary>
+                                          <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1 text-[10px]">
+                                            <button
+                                              type="button"
+                                              className="rounded bg-slate-200 px-1 py-0.5 text-slate-700 hover:bg-slate-300"
+                                              onClick={async () => {
+                                                const res = await fetch('/api/admin/employees/day-override', {
+                                                  method: 'POST',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_WORK', reason: 'Schedule editor' }),
+                                                });
+                                                if (res.ok) fetchGrid();
+                                                else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                              }}
+                                            >
+                                              {t('schedule.forceWork') ?? 'Force Work'}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="rounded bg-slate-200 px-1 py-0.5 text-slate-700 hover:bg-slate-300"
+                                              onClick={async () => {
+                                                const res = await fetch('/api/admin/employees/day-override', {
+                                                  method: 'POST',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_OFF', reason: 'Schedule editor' }),
+                                                });
+                                                if (res.ok) fetchGrid();
+                                                else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                              }}
+                                            >
+                                              {t('schedule.forceOff') ?? 'Force Off'}
+                                            </button>
+                                            {(gridData.compBalanceByEmpId[row.empId] ?? 0) > 0 && (
+                                              <button
+                                                type="button"
+                                                className="rounded bg-emerald-200 px-1 py-0.5 text-emerald-800 hover:bg-emerald-300"
+                                                onClick={async () => {
+                                                  const res = await fetch('/api/admin/employees/comp-days', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ employeeId: row.empId, date: cell.date, action: 'USE_COMP_DAY', note: 'Comp day' }),
+                                                  });
+                                                  if (res.ok) fetchGrid();
+                                                  else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                                }}
+                                              >
+                                                {t('schedule.useCompDay') ?? 'Use Comp Day'}
+                                              </button>
+                                            )}
+                                          </div>
+                                        </details>
+                                      )}
                                     </div>
                                   ) : canEdit && !lockedDaySet.has(cell.date) ? (
                                     <div
@@ -1687,7 +1768,7 @@ export function ScheduleEditClient({
                     .map((s) => (
                       <li key={s.id} className="rounded border border-slate-100 bg-slate-50 p-2 text-xs">
                         <span className="font-medium text-slate-700">{formatDDMM(s.date)}</span>
-                        <span className="ml-1 rounded bg-slate-200 px-1 py-0.5">{t(SUGGESTION_TYPE_KEYS[s.type] ?? '') || s.type}</span>
+                        <span className="ms-1 rounded bg-slate-200 px-1 py-0.5">{t(SUGGESTION_TYPE_KEYS[s.type] ?? '') || s.type}</span>
                         <p className="mt-1 text-slate-600">{s.reason}</p>
                         <div className="mt-2 flex flex-wrap gap-1">
                           <button
@@ -1735,7 +1816,7 @@ export function ScheduleEditClient({
                       >
                         <button
                           type="button"
-                          className="w-full text-left"
+                          className="w-full text-start"
                           onClick={() =>
                             setAuditExpanded((s) => {
                               const next = new Set(s);
@@ -1748,13 +1829,13 @@ export function ScheduleEditClient({
                           <span className="font-medium text-slate-800">
                             {t(AUDIT_ACTION_KEYS[item.action] ?? '') || item.action}
                           </span>
-                          <span className="ml-1 text-slate-400">
+                          <span className="ms-1 text-slate-400">
                             {new Date(item.createdAt).toLocaleString(undefined, {
                               dateStyle: 'short',
                               timeStyle: 'short',
                             })}
                           </span>
-                          <span className="ml-1 text-slate-500">{expanded ? '▼' : '▶'}</span>
+                          <span className="ms-1 text-slate-500">{expanded ? '▼' : '▶'}</span>
                         </button>
                         {expanded && (
                           <div className="mt-1.5 space-y-0.5 border-l-2 border-slate-200 pl-1">
@@ -1804,7 +1885,7 @@ export function ScheduleEditClient({
                         <button
                           type="button"
                           onClick={() => focusDay(date)}
-                          className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-left text-sm text-amber-900 hover:bg-amber-100"
+                          className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-start text-sm text-amber-900 hover:bg-amber-100"
                         >
                           {formatDDMM(date)} {getDayName(date, locale)}
                           <div className="mt-0.5 flex flex-wrap gap-1">

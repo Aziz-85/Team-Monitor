@@ -28,7 +28,7 @@ export function ExecSimpleTable({
               <th
                 key={col.key}
                 className={`max-w-0 py-3 px-3 text-[11px] font-medium uppercase tracking-wide text-slate-500 truncate ${
-                  col.align === 'right' ? 'text-right' : 'text-left'
+                  col.align === 'right' ? 'text-end' : 'text-start'
                 }`}
               >
                 {col.label}

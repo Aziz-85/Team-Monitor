@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useT } from '@/lib/i18n/useT';
 
 const DEFAULT_IDLE_MINUTES = 30;
 const DEFAULT_WARNING_MINUTES = 28;
 
 export function IdleDetector() {
+  const { t } = useT();
   const [warning, setWarning] = useState(false);
   const [idleMinutes, setIdleMinutes] = useState(DEFAULT_IDLE_MINUTES);
   const [warningMinutes, setWarningMinutes] = useState(DEFAULT_WARNING_MINUTES);
@@ -73,9 +75,9 @@ export function IdleDetector() {
   return (
     <div
       role="alert"
-      className="fixed bottom-4 left-4 right-4 z-[100] rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-900 shadow-lg md:left-1/2 md:right-auto md:w-full md:max-w-md md:-translate-x-1/2"
+      className="fixed bottom-4 start-4 end-4 z-[100] rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-medium text-amber-900 shadow-lg md:start-1/2 md:end-auto md:w-full md:max-w-md md:-translate-x-1/2"
     >
-      You&apos;ll be signed out soon due to inactivity. Move the mouse or press a key to stay signed in.
+      {t('idle.warning')}
     </div>
   );
 }

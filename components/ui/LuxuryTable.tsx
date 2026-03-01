@@ -24,7 +24,7 @@ export function LuxuryTable({
 export function LuxuryTableHead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-700">
+      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
         {children}
       </tr>
     </thead>

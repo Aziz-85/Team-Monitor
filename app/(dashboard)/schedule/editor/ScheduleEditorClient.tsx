@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type Roster = {
   amEmployees: Array<{ empId: string; name: string }>;
@@ -23,8 +19,7 @@ type CoverageSuggestion = {
 };
 
 export function ScheduleEditorClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [roster, setRoster] = useState<Roster | null>(null);
   const [coverageSuggestion, setCoverageSuggestion] = useState<CoverageSuggestion | null>(null);
@@ -60,7 +55,7 @@ export function ScheduleEditorClient() {
           ← {t('common.back')}
         </Link>
         <div className="mb-4">
-          <label className="mr-2 text-base font-medium">{t('schedule.selectDate')}</label>
+          <label className="me-2 text-base font-medium">{t('schedule.selectDate')}</label>
           <input
             type="date"
             value={date}

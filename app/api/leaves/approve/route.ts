@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
+import { getDemoGuardResponse } from '@/lib/demoGuard';
 import { prisma } from '@/lib/db';
 import { canManageLeavesInBoutique } from '@/lib/membershipPermissions';
 import { getEffectiveAccess } from '@/lib/rbac/effectiveAccess';
@@ -15,6 +16,8 @@ import type { Role } from '@prisma/client';
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const demoGuard = getDemoGuardResponse(request, user);
+  if (demoGuard) return demoGuard;
 
   const body = await request.json().catch(() => ({}));
   const id = body.id ? String(body.id).trim() : '';

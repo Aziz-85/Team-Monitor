@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
-import { canManageTasksInAny, canManageInBoutique } from '@/lib/membershipPermissions';
+import { requireBoutiqueScope } from '@/lib/scope/ssot';
+import { canManageInBoutique } from '@/lib/membershipPermissions';
 import type { Role } from '@prisma/client';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!['MANAGER', 'ADMIN'].includes(user.role)) {
@@ -13,16 +13,21 @@ export async function GET() {
   }
 
   try {
-    const resolved = await resolveScopeForUser(user.id, user.role as Role, null);
-    if (resolved.boutiqueIds.length === 0) {
+    const scopeResult = await requireBoutiqueScope(request, {
+      allowGlobal: false,
+      modeName: 'TasksSetup',
+    });
+    if (scopeResult.res) return scopeResult.res;
+    const boutiqueIds = scopeResult.scope.boutiqueIds;
+    if (boutiqueIds.length === 0) {
       return NextResponse.json([]);
     }
-    const canManage = await canManageTasksInAny(user.id, user.role as Role, resolved.boutiqueIds);
+    const canManage = await canManageInBoutique(user.id, user.role as Role, boutiqueIds[0]!, 'canManageTasks');
     if (!canManage) {
-      return NextResponse.json({ error: 'You do not have permission to manage tasks in any of your boutiques' }, { status: 403 });
+      return NextResponse.json({ error: 'You do not have permission to manage tasks in this boutique' }, { status: 403 });
     }
     const tasks = await prisma.task.findMany({
-      where: { active: true, boutiqueId: { in: resolved.boutiqueIds } },
+      where: { active: true, boutiqueId: { in: boutiqueIds } },
       include: {
         taskPlans: {
           include: {
@@ -53,11 +58,16 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const name = String(body.name ?? '').trim();
-  const boutiqueId = body.boutiqueId ? String(body.boutiqueId).trim() : null;
+  const boutiqueIdParam = body.boutiqueId ? String(body.boutiqueId).trim() : null;
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 
-  const resolved = await resolveScopeForUser(user.id, user.role as Role, null);
-  const effectiveBoutiqueId = boutiqueId && resolved.boutiqueIds.includes(boutiqueId) ? boutiqueId : (resolved.boutiqueIds[0] ?? null);
+  const scopeResult = await requireBoutiqueScope(request, {
+    allowGlobal: false,
+    modeName: 'TasksSetup',
+  });
+  if (scopeResult.res) return scopeResult.res;
+  const boutiqueIds = scopeResult.scope.boutiqueIds;
+  const effectiveBoutiqueId = boutiqueIdParam && boutiqueIds.includes(boutiqueIdParam) ? boutiqueIdParam : (boutiqueIds[0] ?? null);
   if (!effectiveBoutiqueId) {
     return NextResponse.json({ error: 'No boutique in scope' }, { status: 403 });
   }

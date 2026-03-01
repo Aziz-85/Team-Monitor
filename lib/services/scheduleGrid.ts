@@ -16,8 +16,10 @@ import { getWeekIndexInYear, FRIDAY_DAY_OF_WEEK } from './shift';
 import type { ShiftType } from './shift';
 import { getEmployeeTeamsForDateRange } from './employeeTeam';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
+import { toRiyadhDateString } from '@/lib/time';
 
-export type AvailabilityStatus = 'LEAVE' | 'OFF' | 'WORK' | 'ABSENT';
+export type AvailabilityStatus = 'LEAVE' | 'OFF' | 'WORK' | 'ABSENT' | 'HOLIDAY';
 
 export type GridCell = {
   date: string;
@@ -160,7 +162,7 @@ export async function getScheduleGridForWeek(
   // Option 1: Base roster only (Employee.boutiqueId = host). Guest coverage shown separately per day via External Coverage.
   const employees = await prisma.employee.findMany({
     where: empWhere,
-    select: { empId: true, name: true, team: true, weeklyOffDay: true },
+    select: { empId: true, name: true, team: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true },
     orderBy: employeeOrderByStable,
   });
 
@@ -263,6 +265,49 @@ export async function getScheduleGridForWeek(
   const absentSet = new Set(absents.map((a) => `${a.empId}_${a.date.toISOString().slice(0, 10)}`));
   const ruleByDay = new Map(coverageRules.map((r) => [r.dayOfWeek, r]));
 
+  const dateStrsRiyadh = dateStrs.map((s) => toRiyadhDateString(new Date(s + 'T12:00:00.000Z')));
+  const minYmd = dateStrsRiyadh.slice().sort()[0];
+  const maxYmd = dateStrsRiyadh.slice().sort().pop() ?? minYmd;
+
+  const [dayOverrides, holidays, eventPeriods] =
+    boutiqueIds.length > 0
+      ? await Promise.all([
+          prisma.employeeDayOverride.findMany({
+            where: {
+              boutiqueId: { in: boutiqueIds },
+              employeeId: { in: empIds },
+              date: { in: dateStrsRiyadh },
+            },
+            select: { boutiqueId: true, employeeId: true, date: true, mode: true },
+          }),
+          prisma.officialHoliday.findMany({
+            where: { boutiqueId: { in: boutiqueIds }, date: { in: dateStrsRiyadh }, isClosed: true },
+            select: { boutiqueId: true, date: true },
+          }),
+          prisma.eventPeriod.findMany({
+            where: {
+              boutiqueId: { in: boutiqueIds },
+              startDate: { lte: maxYmd },
+              endDate: { gte: minYmd },
+              OR: [{ suspendWeeklyOff: true }, { forceWork: true }],
+            },
+            select: { boutiqueId: true, startDate: true, endDate: true },
+          }),
+        ])
+      : [[], [], []];
+
+  const dayOverrideByKey = new Map<string, 'FORCE_WORK' | 'FORCE_OFF'>();
+  for (const o of dayOverrides) {
+    dayOverrideByKey.set(`${o.boutiqueId}_${o.employeeId}_${o.date}`, o.mode);
+  }
+  const holidaySet = new Set(holidays.map((h) => `${h.boutiqueId}_${h.date}`));
+  const suspensionSet = new Set<string>();
+  for (const p of eventPeriods) {
+    for (const ymd of dateStrsRiyadh) {
+      if (ymd >= p.startDate && ymd <= p.endDate) suspensionSet.add(`${p.boutiqueId}_${ymd}`);
+    }
+  }
+
   const teamByEmpAndDate = await getEmployeeTeamsForDateRange(empIds, firstDate, lastDate);
 
   const rows: GridRow[] = [];
@@ -270,10 +315,12 @@ export async function getScheduleGridForWeek(
   for (const emp of employees) {
     const empTeams = teamByEmpAndDate.get(emp.empId);
     const baseByDay: ShiftType[] = [];
+    const boutiqueId = emp.boutiqueId;
     for (let i = 0; i < 7; i++) {
       const d = weekDates[i];
       const dateStr = dateStrs[i];
-      const dayOfWeek = d.getUTCDay();
+      const ymdRiyadh = dateStrsRiyadh[i];
+      const dayOfWeekRiyadh = getDowRiyadhFromYmd(ymdRiyadh);
       const absentKey = `${emp.empId}_${dateStr}`;
       const isAbsent = absentSet.has(absentKey);
       const leaveRanges = leaveRangesByEmp.get(emp.empId) ?? [];
@@ -285,15 +332,22 @@ export async function getScheduleGridForWeek(
         end.setUTCHours(23, 59, 59, 999);
         return dd >= start.getTime() && dd <= end.getTime();
       });
-      const isOff = dayOfWeek === emp.weeklyOffDay;
-      const availability: AvailabilityStatus = onLeave
-        ? 'LEAVE'
-        : isOff
-          ? 'OFF'
-          : isAbsent
-            ? 'ABSENT'
-            : 'WORK';
+      const overrideMode = boutiqueId ? dayOverrideByKey.get(`${boutiqueId}_${emp.empId}_${ymdRiyadh}`) : null;
+      const isHoliday = boutiqueId ? holidaySet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
+      const inSuspension = boutiqueId ? suspensionSet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
+      const effectiveOff = getEffectiveWeeklyOffDay(emp.weeklyOffDay, emp.weeklyOffOverrideDay);
+      const isOffByWeekly = !inSuspension && effectiveOff !== 'NONE' && dayOfWeekRiyadh === effectiveOff;
 
+      let availability: AvailabilityStatus;
+      if (onLeave) availability = 'LEAVE';
+      else if (overrideMode === 'FORCE_OFF') availability = 'OFF';
+      else if (overrideMode === 'FORCE_WORK') availability = isAbsent ? 'ABSENT' : 'WORK';
+      else if (isHoliday) availability = 'HOLIDAY';
+      else if (isOffByWeekly) availability = 'OFF';
+      else if (isAbsent) availability = 'ABSENT';
+      else availability = 'WORK';
+
+      const dayOfWeek = d.getUTCDay();
       const teamOnDay = empTeams?.get(dateStr) ?? emp.team;
       const weekIndexOnDay = getWeekIndexInYear(d);
       const isEvenWeekOnDay = weekIndexOnDay % 2 === 0;
@@ -316,7 +370,8 @@ export async function getScheduleGridForWeek(
 
     const cells: GridCell[] = dateStrs.map((dateStr, i) => {
       const d = weekDates[i];
-      const dayOfWeek = d.getUTCDay();
+      const ymdRiyadh = dateStrsRiyadh[i];
+      const dayOfWeekRiyadh = getDowRiyadhFromYmd(ymdRiyadh);
       const override = overrideByKey.get(`${emp.empId}_${dateStr}`);
       const absentKey = `${emp.empId}_${dateStr}`;
       const isAbsent = absentSet.has(absentKey);
@@ -329,14 +384,20 @@ export async function getScheduleGridForWeek(
         end.setUTCHours(23, 59, 59, 999);
         return dd >= start.getTime() && dd <= end.getTime();
       });
-      const isOff = dayOfWeek === emp.weeklyOffDay;
-      const availability: AvailabilityStatus = onLeave
-        ? 'LEAVE'
-        : isOff
-          ? 'OFF'
-          : isAbsent
-            ? 'ABSENT'
-            : 'WORK';
+      const overrideMode = boutiqueId ? dayOverrideByKey.get(`${boutiqueId}_${emp.empId}_${ymdRiyadh}`) : null;
+      const isHoliday = boutiqueId ? holidaySet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
+      const inSuspension = boutiqueId ? suspensionSet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
+      const effectiveOff = getEffectiveWeeklyOffDay(emp.weeklyOffDay, emp.weeklyOffOverrideDay);
+      const isOffByWeekly = !inSuspension && effectiveOff !== 'NONE' && dayOfWeekRiyadh === effectiveOff;
+
+      let availability: AvailabilityStatus;
+      if (onLeave) availability = 'LEAVE';
+      else if (overrideMode === 'FORCE_OFF') availability = 'OFF';
+      else if (overrideMode === 'FORCE_WORK') availability = isAbsent ? 'ABSENT' : 'WORK';
+      else if (isHoliday) availability = 'HOLIDAY';
+      else if (isOffByWeekly) availability = 'OFF';
+      else if (isAbsent) availability = 'ABSENT';
+      else availability = 'WORK';
 
       const baseShift = baseByDay[i];
       const effectiveShift: ShiftType = override

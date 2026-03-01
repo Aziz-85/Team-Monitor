@@ -25,14 +25,14 @@ export function TeamTableSection({ rows }: { rows: Row[] }) {
         <table className="w-full min-w-0 border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Employee</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Role</th>
-              <th className="px-3 py-2 text-right font-semibold text-slate-700">Target</th>
-              <th className="px-3 py-2 text-right font-semibold text-slate-700">Actual</th>
-              <th className="px-3 py-2 text-right font-semibold text-slate-700">%</th>
-              <th className="px-3 py-2 text-right font-semibold text-slate-700">Tasks</th>
-              <th className="px-3 py-2 text-right font-semibold text-slate-700">Late</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Zone</th>
+              <th className="px-3 py-2 text-start font-semibold text-slate-700">Employee</th>
+              <th className="px-3 py-2 text-start font-semibold text-slate-700">Role</th>
+              <th className="px-3 py-2 text-end font-semibold text-slate-700">Target</th>
+              <th className="px-3 py-2 text-end font-semibold text-slate-700">Actual</th>
+              <th className="px-3 py-2 text-end font-semibold text-slate-700">%</th>
+              <th className="px-3 py-2 text-end font-semibold text-slate-700">Tasks</th>
+              <th className="px-3 py-2 text-end font-semibold text-slate-700">Late</th>
+              <th className="px-3 py-2 text-start font-semibold text-slate-700">Zone</th>
             </tr>
           </thead>
           <tbody>
@@ -44,17 +44,17 @@ export function TeamTableSection({ rows }: { rows: Row[] }) {
                     {r.roleLabel ?? r.role}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right text-slate-700">{formatSarFromHalala(r.target)}</td>
-                <td className="px-3 py-2 text-right text-slate-700">{formatSarFromHalala(r.actual)}</td>
+                <td className="px-3 py-2 text-end text-slate-700">{formatSarFromHalala(r.target)}</td>
+                <td className="px-3 py-2 text-end text-slate-700">{formatSarFromHalala(r.actual)}</td>
                 <td
-                  className={`px-3 py-2 text-right font-medium ${
+                  className={`px-3 py-2 text-end font-medium ${
                     r.pct >= 60 ? 'text-slate-900' : r.pct >= 40 ? 'text-amber-600' : 'text-red-600'
                   }`}
                 >
                   {r.pct}%
                 </td>
-                <td className="px-3 py-2 text-right text-slate-700">{r.tasksDone}</td>
-                <td className="px-3 py-2 text-right text-slate-700">{r.late}</td>
+                <td className="px-3 py-2 text-end text-slate-700">{r.tasksDone}</td>
+                <td className="px-3 py-2 text-end text-slate-700">{r.late}</td>
                 <td className="px-3 py-2 text-slate-600">{r.zone ?? '—'}</td>
               </tr>
             ))}

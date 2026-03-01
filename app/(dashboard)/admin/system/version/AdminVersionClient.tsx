@@ -1,13 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 function formatRiyadh(iso: string): string {
   try {
@@ -47,8 +43,7 @@ type ReleaseRow = {
 const PAGE_SIZE = 20;
 
 export function AdminVersionClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
 
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [deploys, setDeploys] = useState<{ items: DeployRow[]; total: number; page: number }>({
@@ -334,14 +329,14 @@ export function AdminVersionClient() {
                   <button
                     type="button"
                     onClick={() => handlePublishToggle(r.id)}
-                    className="mr-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+                    className="me-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
                   >
                     {r.isPublished ? 'Unpublish' : 'Publish'}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setReleaseModal({ id: r.id }); setReleaseForm({ version: r.version, title: r.title, notes: r.notes }); }}
-                    className="mr-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+                    className="me-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
                   >
                     Edit
                   </button>

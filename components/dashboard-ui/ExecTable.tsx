@@ -22,7 +22,7 @@ export function ExecTable({ columns, data, className = '' }: ExecTableProps) {
               <th
                 key={col.key}
                 className={`py-3 px-3 text-[11px] font-medium uppercase tracking-wide text-slate-500 ${
-                  col.align === 'right' ? 'text-right' : 'text-left'
+                  col.align === 'right' ? 'text-end' : 'text-start'
                 }`}
               >
                 {col.label}
@@ -40,7 +40,7 @@ export function ExecTable({ columns, data, className = '' }: ExecTableProps) {
                 <td
                   key={col.key}
                   className={`max-w-0 py-3 px-3 truncate ${
-                    col.align === 'right' ? 'text-right tabular-nums' : 'text-left'
+                    col.align === 'right' ? 'text-end tabular-nums' : 'text-start'
                   } text-slate-900`}
                   title={row[col.key] != null ? String(row[col.key]) : undefined}
                 >

@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { ShiftCard } from '@/components/ui/ShiftCard';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { ZonesMapDialog } from '@/components/inventory/ZonesMapDialog';
 import { getZoneBadgeClasses } from '@/lib/zones';
-import { formatSarFromHalala } from '@/lib/utils/money';
+import { formatSarInt } from '@/lib/utils/money';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -17,10 +17,6 @@ function weekStartFor(dateStr: string): string {
   const m = String(start.getMonth() + 1).padStart(2, '0');
   const day = String(start.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
 }
 
 type ValidationResult = {
@@ -75,8 +71,7 @@ type HomePageClientProps = {
 };
 
 export function HomePageClient({ myZone }: HomePageClientProps) {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [data, setData] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -308,7 +303,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-slate-600">
-                {t('home.target')}: {formatSarFromHalala(targetsData.todayTarget)} · {t('home.sales')}: {formatSarFromHalala(targetsData.todaySales)}
+                {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                 <div
@@ -320,7 +315,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
               <p className="text-sm text-slate-600">
-                {t('home.target')}: {formatSarFromHalala(targetsData.monthlyTarget)} · MTD: {formatSarFromHalala(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarFromHalala(targetsData.remaining)}
+                {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarInt(targetsData.remaining)}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                 <div
@@ -392,7 +387,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                       <span className="font-medium">{d.dayName} {d.date.slice(8)}/{d.date.slice(5, 7)}:</span>{' '}
                       {d.messages.join('; ')}
                       {d.suggestion && (
-                        <span className="ml-1 text-slate-700">
+                        <span className="ms-1 text-slate-700">
                           — {(t('coverage.moveSuggestion') as string).replace('{name}', d.suggestion.employeeName)}
                         </span>
                       )}

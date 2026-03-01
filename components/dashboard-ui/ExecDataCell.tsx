@@ -18,7 +18,7 @@ export function ExecDataCell({
   bullet,
 }: ExecDataCellProps) {
   const displayValue = value != null && value !== '' ? String(value) : '—';
-  const alignClass = align === 'right' ? 'text-right tabular-nums' : 'text-left';
+  const alignClass = align === 'right' ? 'text-end tabular-nums' : 'text-start';
 
   return (
     <td className={`max-w-0 py-3 px-3 text-slate-900 ${alignClass}`}>

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   const globalParam = request.nextUrl.searchParams.get('global');
-  const { boutiqueIds } = await resolveExecutiveBoutiqueIds(user.id, role, globalParam, 'EXECUTIVE_EMPLOYEES');
+  const { boutiqueIds } = await resolveExecutiveBoutiqueIds(user.id, role, globalParam, 'EXECUTIVE_EMPLOYEES', request, user);
   if (boutiqueIds.length === 0) {
     return NextResponse.json({ error: 'No boutiques in scope' }, { status: 403 });
   }

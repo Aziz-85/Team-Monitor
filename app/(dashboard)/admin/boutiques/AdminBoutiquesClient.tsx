@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 import { Modal } from '@/components/admin/Modal';
 import { BoutiqueForm, type BoutiqueFormValues } from '@/components/admin/BoutiqueForm';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Region = { id: string; code: string; name: string };
 type BoutiqueRow = {
@@ -24,8 +20,7 @@ type BoutiqueRow = {
 };
 
 export function AdminBoutiquesClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<BoutiqueRow[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [filterRegion, setFilterRegion] = useState<string>('');

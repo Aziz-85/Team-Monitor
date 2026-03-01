@@ -160,7 +160,7 @@ export function SalesImportClient() {
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mr-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
@@ -207,7 +207,7 @@ export function SalesImportClient() {
               {importFile ? importFile.name : 'Choose .xlsx file'}
             </button>
             <div>
-              <label className="mr-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
@@ -263,7 +263,7 @@ export function SalesImportClient() {
                   <div className="max-h-48 overflow-auto rounded border border-red-200 bg-red-50 p-2">
                     <table className="w-full border-collapse text-xs text-red-800">
                       <thead>
-                        <tr className="text-left">
+                        <tr className="text-start">
                           <th className="pr-2">Row</th>
                           <th className="pr-2">Col</th>
                           <th className="pr-2">Type</th>
@@ -312,7 +312,7 @@ export function SalesImportClient() {
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mr-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"

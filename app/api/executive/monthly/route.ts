@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getMonthRange, normalizeMonthKey } from '@/lib/time';
+import { getMonthRange, normalizeMonthKey, getCurrentMonthKeyRiyadh } from '@/lib/time';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import type { Role } from '@prisma/client';
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN') {
+  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
 
   const monthParam = request.nextUrl.searchParams.get('month');
   const monthKey =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam)
+    monthParam && /^\d{4}-\d{2}$/.test(normalizeMonthKey(monthParam))
       ? normalizeMonthKey(monthParam)
-      : new Date().toISOString().slice(0, 7);
+      : getCurrentMonthKeyRiyadh();
 
   const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
 
@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
         status: 'PENDING',
         startDate: { lt: monthEnd },
         endDate: { gte: monthStart },
+        employee: { boutiqueId: operationalBoutiqueId },
       },
     }),
     prisma.leave.count({
@@ -104,6 +105,7 @@ export async function GET(request: NextRequest) {
         status: 'APPROVED',
         startDate: { lt: monthEnd },
         endDate: { gte: monthStart },
+        employee: { boutiqueId: operationalBoutiqueId },
       },
     }),
     prisma.scheduleEditAudit.count({
@@ -116,6 +118,7 @@ export async function GET(request: NextRequest) {
       where: {
         undoneAt: null,
         completedAt: { gte: monthStart, lt: monthEnd },
+        task: { boutiqueId: operationalBoutiqueId },
       },
     }),
     zoneIds.length > 0
@@ -152,6 +155,16 @@ export async function GET(request: NextRequest) {
       : 100;
 
   const salesEntryCount = salesAgg._count.id;
+
+  // Guard rail: never return data that could include another boutique
+  const badSample = salesSample.some((r) => r.boutiqueId !== operationalBoutiqueId);
+  if (badSample) {
+    console.error('[executive/monthly] Scope leak: sales sample contained wrong boutiqueId', {
+      operationalBoutiqueId,
+      sampleBoutiqueIds: salesSample.map((r) => r.boutiqueId),
+    });
+    return NextResponse.json({ error: 'Data scope error' }, { status: 403 });
+  }
 
   return NextResponse.json({
     monthKey,

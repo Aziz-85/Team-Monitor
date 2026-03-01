@@ -41,10 +41,9 @@ export async function GET(request: NextRequest) {
   const normMonth = normalizeMonthKey(monthKey);
   const daysRemaining = getDaysRemainingInMonthIncluding(normMonth, dateStr);
 
-  const [targetRow, salesInMonth] = await Promise.all([
-    prisma.employeeMonthlyTarget.findFirst({
+  const [targetRows, salesInMonth] = await Promise.all([
+    prisma.employeeMonthlyTarget.findMany({
       where: {
-        boutiqueId: scope.effectiveBoutiqueId,
         userId: scope.userId,
         month: normMonth,
       },
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
     }),
     prisma.salesEntry.findMany({
       where: {
-        boutiqueId: scope.effectiveBoutiqueId,
         userId: scope.userId,
         month: normMonth,
         dateKey: { lte: dateStr },
@@ -62,7 +60,7 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const monthTargetSar = targetRow?.amount ?? 0;
+  const monthTargetSar = targetRows.reduce((s, r) => s + r.amount, 0);
   const achievedToDateSar = salesInMonth.reduce((s, e) => s + e.amount, 0);
   const remainingSar = Math.max(monthTargetSar - achievedToDateSar, 0);
   const dailyRequiredSar =

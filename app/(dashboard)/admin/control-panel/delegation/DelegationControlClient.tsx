@@ -103,7 +103,7 @@ export function DelegationControlClient({
       <div className="flex flex-wrap gap-4">
         {isAdmin && (
           <label>
-            <span className="mr-2 text-sm">Boutique</span>
+            <span className="me-2 text-sm">Boutique</span>
             <select
               value={boutiqueId}
               onChange={(e) => setBoutiqueId(e.target.value)}
@@ -119,7 +119,7 @@ export function DelegationControlClient({
           </label>
         )}
         <label>
-          <span className="mr-2 text-sm">Status</span>
+          <span className="me-2 text-sm">Status</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
@@ -146,14 +146,14 @@ export function DelegationControlClient({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-slate-50">
-              <th className="p-2 text-left">Target</th>
-              <th className="p-2 text-left">Type</th>
-              <th className="p-2 text-left">Role / Flags</th>
-              <th className="p-2 text-left">Start</th>
-              <th className="p-2 text-left">End</th>
-              <th className="p-2 text-left">By</th>
-              <th className="p-2 text-left">Status</th>
-              <th className="p-2 text-left">Actions</th>
+              <th className="p-2 text-start">Target</th>
+              <th className="p-2 text-start">Type</th>
+              <th className="p-2 text-start">Role / Flags</th>
+              <th className="p-2 text-start">Start</th>
+              <th className="p-2 text-start">End</th>
+              <th className="p-2 text-start">By</th>
+              <th className="p-2 text-start">Status</th>
+              <th className="p-2 text-start">Actions</th>
             </tr>
           </thead>
           <tbody>

@@ -9,6 +9,7 @@ import { clearCoverageValidationCache } from '@/lib/services/coverageValidation'
 import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { getWeekStart } from '@/lib/services/scheduleLock';
+import { toYmdRiyadh, ensureForceWorkAndCompCredit, getEffectiveWeeklyOffDay, getDowRiyadhFromYmd } from '@/lib/schedule/dayOverride';
 
 const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE', 'COVER_RASHID_AM', 'COVER_RASHID_PM'] as const;
 
@@ -132,12 +133,16 @@ export async function applyScheduleGridSave(
   const empIdsInChanges = Array.from(new Set(changes.map((c) => c.empId).filter(Boolean)));
   const sessionBoutiqueId = options.boutiqueId ?? options.boutiqueIds?.[0];
   let empBoutiqueMap = new Map<string, string>();
+  let empWeeklyOffMap = new Map<string, number | 'NONE'>();
   if (options.boutiqueIds?.length && empIdsInChanges.length > 0) {
     const employees = await prisma.employee.findMany({
       where: { empId: { in: empIdsInChanges }, boutiqueId: { in: options.boutiqueIds } },
-      select: { empId: true, boutiqueId: true },
+      select: { empId: true, boutiqueId: true, weeklyOffDay: true, weeklyOffOverrideDay: true },
     });
     empBoutiqueMap = new Map(employees.map((e) => [e.empId, e.boutiqueId]));
+    empWeeklyOffMap = new Map(
+      employees.map((e) => [e.empId, getEffectiveWeeklyOffDay(e.weeklyOffDay, e.weeklyOffOverrideDay)])
+    );
   }
 
   let applied = 0;
@@ -173,6 +178,19 @@ export async function applyScheduleGridSave(
           },
         });
         applied++;
+        if ((shift === 'MORNING' || shift === 'EVENING') && overrideBoutiqueId) {
+          const ymdRiyadh = toYmdRiyadh(dateObj);
+          const effectiveOff = empWeeklyOffMap.get(empId);
+          if (effectiveOff !== undefined && effectiveOff !== 'NONE' && getDowRiyadhFromYmd(ymdRiyadh) === effectiveOff) {
+            await ensureForceWorkAndCompCredit(
+              overrideBoutiqueId,
+              empId,
+              ymdRiyadh,
+              effectiveOff,
+              reason
+            );
+          }
+        }
       } else {
         await prisma.shiftOverride.upsert({
           where: { empId_date: { empId, date: dateObj } },
@@ -192,6 +210,19 @@ export async function applyScheduleGridSave(
           },
         });
         applied++;
+        if ((shift === 'MORNING' || shift === 'EVENING') && overrideBoutiqueId) {
+          const ymdRiyadh = toYmdRiyadh(dateObj);
+          const effectiveOff = empWeeklyOffMap.get(empId);
+          if (effectiveOff !== undefined && effectiveOff !== 'NONE' && getDowRiyadhFromYmd(ymdRiyadh) === effectiveOff) {
+            await ensureForceWorkAndCompCredit(
+              overrideBoutiqueId,
+              empId,
+              ymdRiyadh,
+              effectiveOff,
+              reason
+            );
+          }
+        }
       }
     } catch {
       // skip failed row

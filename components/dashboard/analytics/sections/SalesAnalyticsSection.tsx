@@ -50,18 +50,18 @@ export function SalesAnalyticsSection({ data, t }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-0 text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-600">
+                <tr className="border-b border-slate-200 text-start text-slate-600">
                   <th className="py-2 pr-2">{t('common.name')}</th>
-                  <th className="py-2 text-right">Actual</th>
-                  <th className="py-2 text-right">%</th>
+                  <th className="py-2 text-end">Actual</th>
+                  <th className="py-2 text-end">%</th>
                 </tr>
               </thead>
               <tbody>
                 {data.byRole.map((r) => (
                   <tr key={r.role} className="border-b border-slate-100">
                     <td className="py-1.5 pr-2">{getRoleDisplayLabel(r.role as Role, null, t)}</td>
-                    <td className="text-right">{r.actual.toLocaleString()}</td>
-                    <td className="text-right">{r.pct}%</td>
+                    <td className="text-end">{r.actual.toLocaleString()}</td>
+                    <td className="text-end">{r.pct}%</td>
                   </tr>
                 ))}
               </tbody>

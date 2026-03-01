@@ -1,19 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { DefaultBoutiquePicker } from '@/components/admin/DefaultBoutiquePicker';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Boutique = { id: string; code: string; name: string };
 
 export function AdminSystemClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [current, setCurrent] = useState<{ defaultBoutiqueId: string | null; boutique: Boutique | null }>({
     defaultBoutiqueId: null,
     boutique: null,

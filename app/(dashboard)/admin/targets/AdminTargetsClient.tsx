@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { SALES_TARGET_ROLE_LABELS, type SalesTargetRole } from '@/lib/sales-target-weights';
 
@@ -12,10 +12,6 @@ const ROLE_KEYS: SalesTargetRole[] = [
   'SENIOR_SALES_ADVISOR',
   'SALES_ADVISOR',
 ];
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type EmployeeRow = {
   id: string;
@@ -76,8 +72,7 @@ type ImportResult = {
 };
 
 export function AdminTargetsClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [boutiqueAmount, setBoutiqueAmount] = useState('');
   const [data, setData] = useState<AdminTargetsData | null>(null);
@@ -398,7 +393,7 @@ export function AdminTargetsClient() {
             <OpsCard title={t('targets.weightedExplanation')} className="mt-2 border-sky-100 bg-sky-50/50">
               <p className="text-sm text-slate-700">{t('targets.weightedLeaveAdjusted')}</p>
               <div className="mt-3 overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
+                <table className="w-full border-collapse text-start text-sm">
                   <thead>
                     <tr className="border-b border-slate-200">
                       <th className="p-2 font-medium text-slate-700">{t('targets.role')}</th>
@@ -676,7 +671,7 @@ export function AdminTargetsClient() {
             <p className="text-slate-500">{t('targets.noEmployees')}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-sm">
+              <table className="w-full border-collapse text-start text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="p-2 font-medium text-slate-700">{t('targets.empId')}</th>
@@ -781,7 +776,7 @@ export function AdminTargetsClient() {
                               setEditReason('');
                               setTargetEditError(null);
                             }}
-                            className="text-left underline hover:no-underline"
+                            className="text-start underline hover:no-underline"
                           >
                             {formatNum(row.monthlyTarget)}
                           </button>

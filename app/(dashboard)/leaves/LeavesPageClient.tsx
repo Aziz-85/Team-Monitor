@@ -3,12 +3,8 @@
 import { useEffect, useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { formatDateDisplayRiyadh } from '@/lib/time';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type LeaveRow = {
   id: string;
@@ -41,8 +37,7 @@ function daysBetween(start: string, end: string): number {
 }
 
 export function LeavesPageClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [list, setList] = useState<LeaveRow[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
@@ -264,7 +259,7 @@ export function LeavesPageClient() {
                   <button
                     type="button"
                     onClick={() => setEditLeave(row)}
-                    className="mr-2 text-sky-600 hover:underline"
+                    className="me-2 text-sky-600 hover:underline"
                   >
                     {t('common.edit')}
                   </button>

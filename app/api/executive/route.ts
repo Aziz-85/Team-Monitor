@@ -16,8 +16,7 @@ import { rosterForDate } from '@/lib/services/roster';
 import { validateCoverage } from '@/lib/services/coverageValidation';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
-import { getOperationalScope } from '@/lib/scope/operationalScope';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
 const BURST_WINDOW_MS = 3 * 60 * 1000;
@@ -102,18 +101,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Use same scope as dashboard (operational/session boutique) when available, so sales match "working on".
-  const opScope = await getOperationalScope(request);
-  const boutiqueIds =
-    opScope?.boutiqueIds?.length
-      ? opScope.boutiqueIds
-      : (await resolveScopeForUser(user.id, role, null)).boutiqueIds;
-  if (boutiqueIds.length === 0) {
-    return NextResponse.json(
-      { error: 'No boutiques in scope' },
-      { status: 403 }
-    );
-  }
+  // SSOT: operational boutique only. No fallback to stored scope. 403 if missing.
+  const scopeResult = await resolveOperationalBoutiqueOnly(request, user);
+  if (!scopeResult.ok) return scopeResult.res;
+  const scope = scopeResult.scope;
+  const boutiqueIds = scope.boutiqueIds;
 
   const now = getRiyadhNow();
   const todayStr = toRiyadhDateString(now);
@@ -376,6 +368,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
+    scopeUsed: { boutiqueIds: scope.boutiqueIds, global: false },
     kpis: {
       revenue,
       target,

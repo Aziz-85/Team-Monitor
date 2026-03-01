@@ -5,8 +5,9 @@
  * UserBoutiqueMembership = LOGIN ACCESS only. Roster membership = Employee.boutiqueId + Employee.active.
  */
 
+import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { resolveBoutiqueIdsForRequest } from '@/lib/scope/ssot';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import type { ScopeSelectionJson } from '@/lib/scope/types';
 import type { Employee, Prisma, Role } from '@prisma/client';
@@ -17,19 +18,22 @@ export type ResolveOperationalResult = {
 };
 
 /**
- * Resolve operational boutique scope for a user.
- * Uses stored preference + role; never trust client-provided scope for filtering.
+ * Resolve operational boutique scope. Delegates to SSOT.
+ * Default: single operational boutique (session). Ignores requestedScope for consistency.
+ * Pass request when available so SUPER_ADMIN ?b= is respected.
  */
 export async function resolveOperationalBoutiqueIds(
-  userId: string,
-  role: Role,
-  requestedScope?: ScopeSelectionJson | null
+  _userId: string,
+  _role: Role,
+  _requestedScope?: ScopeSelectionJson | null,
+  request?: NextRequest | null
 ): Promise<ResolveOperationalResult> {
-  const resolved = await resolveScopeForUser(userId, role, requestedScope ?? null);
-  return {
-    boutiqueIds: resolved.boutiqueIds,
-    label: resolved.label,
-  };
+  const scope = await resolveBoutiqueIdsForRequest(request ?? null, {
+    allowGlobal: false,
+    modeName: 'OperationalRoster',
+  });
+  if (!scope) return { boutiqueIds: [], label: '—' };
+  return { boutiqueIds: scope.boutiqueIds, label: scope.label };
 }
 
 export type GetOperationalEmployeesOptions = {

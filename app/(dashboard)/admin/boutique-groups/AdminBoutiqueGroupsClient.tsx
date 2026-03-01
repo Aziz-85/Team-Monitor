@@ -1,15 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 import { Modal } from '@/components/admin/Modal';
 import { GroupForm, type GroupFormValues } from '@/components/admin/GroupForm';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type GroupRow = {
   id: string;
@@ -23,8 +19,7 @@ type GroupRow = {
 type Boutique = { id: string; code: string; name: string };
 
 export function AdminBoutiqueGroupsClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [list, setList] = useState<GroupRow[]>([]);
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [modal, setModal] = useState<'add' | 'edit' | 'members' | null>(null);
@@ -194,7 +189,7 @@ export function AdminBoutiqueGroupsClient() {
                   <button
                     type="button"
                     onClick={() => setMembersAddRemove((prev) => ({ ...prev, remove: [...prev.remove, m.boutiqueId] }))}
-                    className="ml-2 text-red-600 hover:underline"
+                    className="ms-2 text-red-600 hover:underline"
                   >
                     {t('common.delete')}
                   </button>

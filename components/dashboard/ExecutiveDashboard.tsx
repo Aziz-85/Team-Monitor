@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useEffect, useMemo, useState } from 'react';
+import { useT } from '@/lib/i18n/useT';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import type { Role } from '@prisma/client';
 import type { EmployeePosition } from '@prisma/client';
@@ -75,13 +75,8 @@ type DashboardData = {
   };
 };
 
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
-
 export function ExecutiveDashboard() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

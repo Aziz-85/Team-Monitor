@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { formatSarFromHalala } from '@/lib/utils/money';
+import { useT } from '@/lib/i18n/useT';
 
 type ReturnItem = {
   id: string;
@@ -19,6 +20,7 @@ type ReturnItem = {
 type EmployeeOption = { empId: string; name: string };
 
 export function SalesReturnsClient() {
+  const { t } = useT();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [items, setItems] = useState<ReturnItem[]>([]);
@@ -56,7 +58,7 @@ export function SalesReturnsClient() {
       );
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setError(j.error ?? 'Failed to load');
+        setError(j.error ?? t('sales.returns.failedToLoad'));
         return;
       }
       const data = await res.json();
@@ -83,7 +85,7 @@ export function SalesReturnsClient() {
     e.preventDefault();
     const amount = parseFloat(formAmount);
     if (!formDate || !formEmployeeId || !Number.isFinite(amount) || amount <= 0) {
-      setSubmitError('Please fill date, employee, and a positive amount.');
+      setSubmitError(t('sales.returns.pleaseFillDateEmployeeAmount'));
       return;
     }
     setSubmitLoading(true);
@@ -103,7 +105,7 @@ export function SalesReturnsClient() {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSubmitError(j.error ?? 'Failed to add');
+        setSubmitError(j.error ?? t('sales.returns.failedToAdd'));
         return;
       }
       setFormAmount('');
@@ -117,25 +119,25 @@ export function SalesReturnsClient() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="text-xl font-semibold">Returns / Exchanges</h1>
+      <h1 className="text-xl font-semibold">{t('sales.returns.title')}</h1>
 
       {canAdd && (
         <section className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-medium text-slate-700">Add return or exchange</h2>
+          <h2 className="mb-3 text-sm font-medium text-slate-700">{t('sales.returns.addReturnOrExchange')}</h2>
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Type</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.type')}</span>
               <select
                 value={formType}
                 onChange={(e) => setFormType(e.target.value as 'RETURN' | 'EXCHANGE')}
                 className="rounded border border-slate-300 px-2 py-1.5 text-sm"
               >
-                <option value="RETURN">Return</option>
-                <option value="EXCHANGE">Exchange</option>
+                <option value="RETURN">{t('sales.returns.return')}</option>
+                <option value="EXCHANGE">{t('sales.returns.exchange')}</option>
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Date</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.date')}</span>
               <input
                 type="date"
                 value={formDate}
@@ -145,14 +147,14 @@ export function SalesReturnsClient() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Employee</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.employee')}</span>
               <select
                 value={formEmployeeId}
                 onChange={(e) => setFormEmployeeId(e.target.value)}
                 className="min-w-[140px] rounded border border-slate-300 px-2 py-1.5 text-sm"
                 required
               >
-                <option value="">Select…</option>
+                <option value="">{t('sales.returns.selectPlaceholder')}</option>
                 {employees.map((emp) => (
                   <option key={emp.empId} value={emp.empId}>
                     {emp.name}
@@ -161,7 +163,7 @@ export function SalesReturnsClient() {
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Amount (SAR)</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.amountSar')}</span>
               <input
                 type="number"
                 min="0"
@@ -174,7 +176,7 @@ export function SalesReturnsClient() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Reference (optional)</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.referenceOptional')}</span>
               <input
                 type="text"
                 value={formReferenceNo}
@@ -183,7 +185,7 @@ export function SalesReturnsClient() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">Original txn ID (optional)</span>
+              <span className="text-xs text-slate-500">{t('sales.returns.originalTxnIdOptional')}</span>
               <input
                 type="text"
                 value={formOriginalTxnId}
@@ -196,7 +198,7 @@ export function SalesReturnsClient() {
               disabled={submitLoading}
               className="rounded bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-800 disabled:opacity-50"
             >
-              {submitLoading ? 'Adding…' : 'Add'}
+              {submitLoading ? t('sales.returns.adding') : t('sales.returns.add')}
             </button>
           </form>
           {submitError && <p className="mt-2 text-sm text-red-600">{submitError}</p>}
@@ -222,7 +224,7 @@ export function SalesReturnsClient() {
           disabled={loading}
           className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
         >
-          {loading ? 'Loading…' : 'Apply'}
+          {loading ? t('sales.returns.loading') : t('sales.returns.apply')}
         </button>
       </div>
       {error && <p className="text-red-600">{error}</p>}
@@ -230,12 +232,12 @@ export function SalesReturnsClient() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-slate-50">
-              <th className="text-left p-2">Date</th>
-              <th className="text-left p-2">Employee</th>
-              <th className="text-left p-2">Type</th>
-              <th className="text-left p-2">Reference</th>
-              <th className="text-right p-2">Net (SAR)</th>
-              <th className="text-left p-2">Original txn</th>
+              <th className="p-2 text-start">{t('sales.returns.dateCol')}</th>
+              <th className="p-2 text-start">{t('sales.returns.employeeCol')}</th>
+              <th className="p-2 text-start">{t('sales.returns.typeCol')}</th>
+              <th className="p-2 text-start">{t('sales.returns.referenceCol')}</th>
+              <th className="p-2 text-end">{t('sales.returns.netSarCol')}</th>
+              <th className="p-2 text-start">{t('sales.returns.originalTxnCol')}</th>
             </tr>
           </thead>
           <tbody>
@@ -245,14 +247,14 @@ export function SalesReturnsClient() {
                 <td className="p-2">{r.employeeName}</td>
                 <td className="p-2">{r.type}</td>
                 <td className="p-2">{r.referenceNo ?? '—'}</td>
-                <td className="text-right p-2">{formatSarFromHalala(r.netAmount)}</td>
-                <td className="p-2">{r.originalTxnId ? 'Linked' : '—'}</td>
+                <td className="text-end p-2">{formatSarFromHalala(r.netAmount)}</td>
+                <td className="p-2">{r.originalTxnId ? t('sales.returns.linked') : '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {items.length === 0 && !loading && (
-          <p className="p-4 text-slate-500">No returns/exchanges in this period.</p>
+          <p className="p-4 text-slate-500">{t('sales.returns.noReturnsInPeriod')}</p>
         )}
       </div>
     </div>

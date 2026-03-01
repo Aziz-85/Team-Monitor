@@ -1,11 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 function currentMonthKey(): string {
   const d = new Date();
@@ -44,8 +40,7 @@ type MatrixData = {
 const DAYS_WINDOW_SIZE = 7;
 
 export function MonthlySalesMatrixClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [monthKey, setMonthKey] = useState(() => currentMonthKey());
   const [data, setData] = useState<MatrixData | null>(null);
@@ -192,7 +187,7 @@ export function MonthlySalesMatrixClient() {
             <table className="w-full min-w-0 border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="sticky left-0 z-10 min-w-[140px] border-r border-slate-200 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700">
+                  <th className="sticky left-0 z-10 min-w-[140px] border-r border-slate-200 bg-slate-50 px-3 py-2 text-start font-semibold text-slate-700">
                     {t('sales.monthlyMatrix.employee') ?? 'Employee'}
                   </th>
                   {windowDays.map((dateStr) => (
@@ -203,7 +198,7 @@ export function MonthlySalesMatrixClient() {
                       {dateStr.slice(8, 10)}
                     </th>
                   ))}
-                  <th className="sticky right-0 z-10 min-w-[80px] border-l border-slate-200 bg-slate-50 px-3 py-2 text-right font-semibold text-slate-700">
+                  <th className="sticky right-0 z-10 min-w-[80px] border-l border-slate-200 bg-slate-50 px-3 py-2 text-end font-semibold text-slate-700">
                     {t('sales.monthlyMatrix.total') ?? 'Total'}
                   </th>
                 </tr>
@@ -217,12 +212,12 @@ export function MonthlySalesMatrixClient() {
                     {windowDays.map((dateStr) => (
                       <td
                         key={dateStr}
-                        className="w-14 border-r border-slate-100 px-2 py-1.5 text-right tabular-nums text-slate-700 last:border-r-0"
+                        className="w-14 border-r border-slate-100 px-2 py-1.5 text-end tabular-nums text-slate-700 last:border-r-0"
                       >
                         {cellDisplay(dateStr, emp.employeeId)}
                       </td>
                     ))}
-                    <td className="sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-2 text-right font-medium tabular-nums text-slate-800">
+                    <td className="sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-2 text-end font-medium tabular-nums text-slate-800">
                       {(rowTotalByEmpId.get(emp.employeeId) ?? 0).toLocaleString('en-SA')}
                     </td>
                   </tr>
@@ -230,18 +225,18 @@ export function MonthlySalesMatrixClient() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-300 bg-slate-100 font-semibold">
-                  <td className="sticky left-0 z-10 border-r border-slate-200 bg-slate-100 px-3 py-2 text-left text-slate-800">
+                  <td className="sticky left-0 z-10 border-r border-slate-200 bg-slate-100 px-3 py-2 text-start text-slate-800">
                     {t('sales.monthlyMatrix.dayTotal') ?? 'Day total'}
                   </td>
                   {windowDays.map((dateStr) => (
                     <td
                       key={dateStr}
-                      className="w-14 border-r border-slate-200 px-2 py-2 text-right tabular-nums text-slate-800 last:border-r-0"
+                      className="w-14 border-r border-slate-200 px-2 py-2 text-end tabular-nums text-slate-800 last:border-r-0"
                     >
                       {(colTotalByDate.get(dateStr) ?? 0).toLocaleString('en-SA')}
                     </td>
                   ))}
-                  <td className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-2 text-right tabular-nums text-slate-900">
+                  <td className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-2 text-end tabular-nums text-slate-900">
                     {data.grandTotalSar.toLocaleString('en-SA')}
                   </td>
                 </tr>

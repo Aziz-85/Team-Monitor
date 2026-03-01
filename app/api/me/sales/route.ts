@@ -10,10 +10,9 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const scope = await resolveMetricsScope(request);
-  const boutiqueId = scope?.effectiveBoutiqueId ?? (user as { boutiqueId?: string }).boutiqueId ?? null;
-  const whereBase = boutiqueId
-    ? { userId: user.id, boutiqueId }
-    : { userId: user.id };
+  // Employee totals: always across ALL boutiques (SalesEntry.userId only). Do not filter by boutiqueId.
+  void scope; // scope kept for consistent API; filtering is by userId only
+  const whereBase = { userId: user.id };
 
   const rawMonth = request.nextUrl.searchParams.get('month')?.trim();
   const monthKey = rawMonth ? normalizeMonthKey(rawMonth) : '';
@@ -162,10 +161,9 @@ export async function DELETE(request: NextRequest) {
   }
 
   const scope = await resolveMetricsScope(request);
-  const boutiqueId = scope?.effectiveBoutiqueId ?? (user as { boutiqueId?: string }).boutiqueId ?? null;
-  const whereDelete = boutiqueId
-    ? { userId: user.id, month, boutiqueId }
-    : { userId: user.id, month };
+  void scope; // scope kept for consistent API; delete is by userId only
+  // Delete my sales for the month across all boutiques (consistent with GET showing all boutiques).
+  const whereDelete = { userId: user.id, month };
 
   const result = await prisma.salesEntry.deleteMany({
     where: whereDelete,

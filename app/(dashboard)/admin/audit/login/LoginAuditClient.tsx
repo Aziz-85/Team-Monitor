@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { formatDateTimeEn } from '@/lib/formatDateTimeEn';
@@ -23,10 +23,6 @@ const DATE_RANGE_OPTIONS = [
   { value: '90', label: 'Last 90 days' },
 ] as const;
 
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
-
 type AuditRow = {
   id: string;
   createdAt: string;
@@ -43,8 +39,7 @@ type AuditRow = {
 };
 
 export function LoginAuditClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [list, setList] = useState<AuditRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -232,7 +227,7 @@ export function LoginAuditClient() {
               {topEmails.slice(0, 10).map((row, i) => (
                 <li key={i}>
                   <span className="font-mono">{row.emailAttempted ?? '—'}</span>
-                  <span className="text-slate-500 ml-2">({row.count})</span>
+                  <span className="text-slate-500 ms-2">({row.count})</span>
                 </li>
               ))}
             </ul>

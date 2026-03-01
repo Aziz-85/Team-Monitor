@@ -135,7 +135,7 @@ export function HistoricalImportClient() {
               type="file"
               accept=".xlsx,.xlsm,.xls,.csv,.txt"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="mt-1 w-full min-w-0 text-sm text-slate-700 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
+              className="mt-1 w-full min-w-0 text-sm text-slate-700 file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-sm"
             />
           </div>
         </div>
@@ -178,19 +178,19 @@ export function HistoricalImportClient() {
               <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="max-w-0 py-2 px-2 text-left text-[10px] font-medium uppercase text-slate-500">Date</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Net sales (SAR)</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Invoices</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Pieces</th>
+                    <th className="max-w-0 py-2 px-2 text-start text-[10px] font-medium uppercase text-slate-500">Date</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Net sales (SAR)</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Invoices</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Pieces</th>
                   </tr>
                 </thead>
                 <tbody>
                   {dailyPreview.map((r) => (
                     <tr key={r.date} className="border-b border-slate-100">
                       <td className="max-w-0 truncate py-2 px-2 text-slate-900">{r.date}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{halalasToSar(r.netSales)}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{r.invoices}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{r.pieces}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{halalasToSar(r.netSales)}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{r.invoices}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{r.pieces}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -206,12 +206,12 @@ export function HistoricalImportClient() {
               <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="max-w-0 py-2 px-2 text-left text-[10px] font-medium uppercase text-slate-500">Date</th>
-                    <th className="max-w-0 py-2 px-2 text-left text-[10px] font-medium uppercase text-slate-500">Emp / Name</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Net sales (SAR)</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Invoices</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Pieces</th>
-                    <th className="max-w-0 py-2 px-2 text-right text-[10px] font-medium uppercase text-slate-500">Ach%</th>
+                    <th className="max-w-0 py-2 px-2 text-start text-[10px] font-medium uppercase text-slate-500">Date</th>
+                    <th className="max-w-0 py-2 px-2 text-start text-[10px] font-medium uppercase text-slate-500">Emp / Name</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Net sales (SAR)</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Invoices</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Pieces</th>
+                    <th className="max-w-0 py-2 px-2 text-end text-[10px] font-medium uppercase text-slate-500">Ach%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -219,10 +219,10 @@ export function HistoricalImportClient() {
                     <tr key={`${r.date}-${r.empId}-${i}`} className="border-b border-slate-100">
                       <td className="max-w-0 truncate py-2 px-2 text-slate-900">{r.date}</td>
                       <td className="max-w-0 truncate py-2 px-2 text-slate-900">{r.name || r.empId}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{halalasToSar(r.netSales)}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{r.invoices}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{r.pieces}</td>
-                      <td className="max-w-0 truncate py-2 px-2 text-right tabular-nums text-slate-900">{r.achievementPct.toFixed(1)}%</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{halalasToSar(r.netSales)}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{r.invoices}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{r.pieces}</td>
+                      <td className="max-w-0 truncate py-2 px-2 text-end tabular-nums text-slate-900">{r.achievementPct.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>

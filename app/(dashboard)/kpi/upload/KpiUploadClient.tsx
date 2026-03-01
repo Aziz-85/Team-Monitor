@@ -1,12 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Boutique = { id: string; code: string; name: string };
 type Employee = { empId: string; name: string };
@@ -23,8 +19,7 @@ type UploadRow = {
 };
 
 export function KpiUploadClient() {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [uploads, setUploads] = useState<UploadRow[]>([]);

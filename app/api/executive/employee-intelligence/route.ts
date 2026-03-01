@@ -17,7 +17,7 @@ import {
   type ERSLevel,
 } from '@/lib/executive/metrics';
 import { getRevenueFromSalesLinesByEmpId } from '@/lib/executive/salesLineRevenue';
-import { resolveScopeForUser } from '@/lib/scope/resolveScope';
+import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
 export type EmployeeIntelligenceRow = {
@@ -42,11 +42,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const scope = await resolveScopeForUser(user.id, role, null);
-  const boutiqueIds = scope.boutiqueIds;
-  if (boutiqueIds.length === 0) {
-    return NextResponse.json({ error: 'No boutiques in scope' }, { status: 403 });
-  }
+  const scopeResult = await resolveOperationalBoutiqueOnly(request, user);
+  if (!scopeResult.ok) return scopeResult.res;
+  const boutiqueIds = scopeResult.scope.boutiqueIds;
 
   const boutiqueFilter = { boutiqueId: { in: boutiqueIds } };
   const now = getRiyadhNow();

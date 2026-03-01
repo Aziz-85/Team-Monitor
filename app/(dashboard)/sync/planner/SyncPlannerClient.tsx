@@ -1,12 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getWeekNumber, getWeekStartSaturday, getWeekEndFriday } from '@/lib/utils/week';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type CompareRow = {
   taskKey: string | null;
@@ -38,8 +34,7 @@ const TABS = [
 ] as const;
 
 export function SyncPlannerClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [periodType, setPeriodType] = useState<'WEEK' | 'MONTH'>('WEEK');
   const [referenceDate, setReferenceDate] = useState<string>('');
@@ -311,7 +306,7 @@ export function SyncPlannerClient() {
             type="file"
             accept=".xlsx,.csv"
             onChange={handleFileChange}
-            className="block w-full max-w-md text-sm text-slate-600 file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm"
+            className="block w-full max-w-md text-sm text-slate-600 file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm"
           />
           <button
             type="button"
@@ -356,7 +351,7 @@ export function SyncPlannerClient() {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-700">
+                      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
                         <th className="px-2 py-2 text-xs font-semibold">{t('sync.matchStatus')}</th>
                         <th className="px-2 py-2 text-xs font-semibold">taskKey</th>
                         <th className="px-2 py-2 text-xs font-semibold">{t('tasks.colTitle')}</th>

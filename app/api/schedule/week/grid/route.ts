@@ -7,6 +7,7 @@ import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { buildScheduleSuggestions } from '@/lib/services/scheduleSuggestions';
 import { canViewFullSchedule, canEditSchedule } from '@/lib/permissions';
 import { prisma } from '@/lib/db';
+import { compDayBalanceForBoutique } from '@/lib/schedule/dayOverride';
 import type { Role } from '@prisma/client';
 
 /** Week range (Sat..Fri) for guest shift filter. hostBoutiqueId = scope; date in [first, last]. */
@@ -248,6 +249,18 @@ export async function GET(request: NextRequest) {
     };
   });
   (grid as Record<string, unknown>).pendingGuestShifts = pendingGuestShifts;
+
+  if ((user!.role as Role) === 'ADMIN' || (user!.role as string) === 'SUPER_ADMIN') {
+    const boutiqueId = scheduleScope.boutiqueIds[0];
+    if (boutiqueId && Array.isArray((grid as { rows?: { empId: string }[] }).rows)) {
+      const empIds = (grid as { rows: { empId: string }[] }).rows.map((r) => r.empId);
+      const compBalanceByEmpId: Record<string, number> = {};
+      for (const empId of empIds) {
+        compBalanceByEmpId[empId] = await compDayBalanceForBoutique(boutiqueId, empId);
+      }
+      (grid as Record<string, unknown>).compBalanceByEmpId = compBalanceByEmpId;
+    }
+  }
 
   return NextResponse.json(grid);
 }

@@ -1,13 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type AuditItem = {
   id: string;
@@ -106,8 +102,7 @@ function formatBeforeAfterSummary(before: string | null, after: string | null): 
 }
 
 export function ScheduleAuditClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [items, setItems] = useState<AuditItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -252,13 +247,13 @@ export function ScheduleAuditClient() {
             <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Time</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Module</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Action</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Target</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Time</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Module</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Action</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Target</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
                 </tr>
               </thead>
               <tbody className="bg-white">

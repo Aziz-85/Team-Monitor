@@ -73,4 +73,6 @@ export const MOBILE_PERMISSIONS_BY_ROLE: Record<Role, string[]> = {
     'admin:import',
     'admin:audit',
   ],
+  AREA_MANAGER: ['schedule:view', 'target:manage', 'area:employees', 'area:targets'],
+  DEMO_VIEWER: ['schedule:view'],
 };

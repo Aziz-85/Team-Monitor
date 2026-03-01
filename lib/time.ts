@@ -143,6 +143,54 @@ export function normalizeMonthKey(monthKey: string): string {
 }
 
 /**
+ * Parse "YYYY-MM" into { y, m }. Returns null if invalid.
+ */
+export function parseMonthKey(monthKey: string): { y: number; m: number } | null {
+  const normalized = normalizeMonthKey(monthKey.trim());
+  const match = /^(\d{4})-(\d{2})$/.exec(normalized);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return null;
+  return { y, m };
+}
+
+/**
+ * Add delta months to "YYYY-MM". Handles year boundaries (e.g. Dec + 1 = next Jan).
+ */
+export function addMonths(monthKey: string, delta: number): string {
+  const parsed = parseMonthKey(monthKey);
+  if (!parsed) return monthKey;
+  let { y, m } = parsed;
+  m += delta;
+  while (m > 12) {
+    m -= 12;
+    y += 1;
+  }
+  while (m < 1) {
+    m += 12;
+    y -= 1;
+  }
+  const mm = String(m).padStart(2, '0');
+  return `${y}-${mm}`;
+}
+
+/** Current month in Asia/Riyadh as "YYYY-MM". */
+export function getCurrentMonthKeyRiyadh(): string {
+  return formatMonthKey(getRiyadhNow());
+}
+
+/**
+ * Number of calendar days in a month (for daily target = monthlyTarget / daysInMonth).
+ */
+export function getDaysInMonth(monthKey: string): number {
+  const normalized = normalizeMonthKey(monthKey);
+  const [y, m] = normalized.split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0));
+  return last.getUTCDate();
+}
+
+/**
  * Start (inclusive) and end (exclusive) of month in Riyadh.
  * start: first day 00:00, endExclusive: first day of next month 00:00 (for range queries).
  */
@@ -186,16 +234,6 @@ export function intersectRanges(
   const end = new Date(Math.min(aEnd.getTime(), bEnd.getTime()));
   if (start.getTime() >= end.getTime()) return null;
   return { start, end };
-}
-
-/**
- * Number of calendar days in a month (for daily target = monthlyTarget / daysInMonth).
- */
-export function getDaysInMonth(monthKey: string): number {
-  const normalized = normalizeMonthKey(monthKey);
-  const [y, m] = normalized.split('-').map(Number);
-  const last = new Date(Date.UTC(y, m, 0));
-  return last.getUTCDate();
 }
 
 /**

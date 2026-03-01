@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type BoutiqueDetail = {
   id: string;
@@ -32,8 +28,7 @@ type MembershipRow = {
 };
 
 export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }) {
-  const { messages } = useI18n();
-  const t = useCallback((key: string) => (getNested(messages, key) as string) || key, [messages]);
+  const { t } = useT();
   const [boutique, setBoutique] = useState<BoutiqueDetail | null>(null);
   const [memberships, setMemberships] = useState<MembershipRow[]>([]);
   const [tab, setTab] = useState<'info' | 'memberships'>('info');

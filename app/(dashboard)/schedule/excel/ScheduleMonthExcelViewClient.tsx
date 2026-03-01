@@ -160,7 +160,7 @@ export function ScheduleMonthExcelViewClient({
                           <>
                             {getFirstName(rashidFirst.name)}
                             <span
-                              className={`ml-1 rounded px-1 py-0.5 text-[10px] leading-4 ${
+                              className={`ms-1 rounded px-1 py-0.5 text-[10px] leading-4 ${
                                 rashidFirst.shift === 'AM' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
                               }`}
                               dir="ltr"

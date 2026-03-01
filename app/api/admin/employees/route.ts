@@ -101,6 +101,11 @@ export async function POST(request: NextRequest) {
   const name = String(body.name ?? '').trim();
   const team = String(body.team ?? 'A').toUpperCase() as Team;
   const weeklyOffDay = Number(body.weeklyOffDay ?? 5);
+  const weeklyOffOverrideDay = body.weeklyOffOverrideDay === undefined
+    ? undefined
+    : body.weeklyOffOverrideDay === null
+      ? null
+      : Number(body.weeklyOffOverrideDay);
   const position = body.position != null && VALID_POSITIONS.includes(body.position as EmployeePosition)
     ? (body.position as EmployeePosition)
     : undefined;
@@ -116,6 +121,12 @@ export async function POST(request: NextRequest) {
   }
   if (weeklyOffDay < 0 || weeklyOffDay > 6) {
     return NextResponse.json({ error: 'weeklyOffDay must be 0-6' }, { status: 400 });
+  }
+  if (weeklyOffOverrideDay !== undefined && weeklyOffOverrideDay !== null) {
+    const n = Number(weeklyOffOverrideDay);
+    if (n !== -1 && (n < 0 || n > 6)) {
+      return NextResponse.json({ error: 'weeklyOffOverrideDay must be null, -1, or 0-6' }, { status: 400 });
+    }
   }
 
   const existing = await prisma.employee.findUnique({
@@ -136,6 +147,7 @@ export async function POST(request: NextRequest) {
         name,
         team,
         weeklyOffDay,
+        ...(weeklyOffOverrideDay !== undefined && { weeklyOffOverrideDay: weeklyOffOverrideDay === null ? null : weeklyOffOverrideDay }),
         position,
         email,
         phone,
@@ -191,6 +203,7 @@ export async function PATCH(request: NextRequest) {
     email?: string | null;
     phone?: string | null;
     weeklyOffDay?: number;
+    weeklyOffOverrideDay?: number | null;
     position?: EmployeePosition | null;
     language?: string;
     active?: boolean;
@@ -210,6 +223,16 @@ export async function PATCH(request: NextRequest) {
     const n = Number(body.weeklyOffDay);
     if (n < 0 || n > 6) return NextResponse.json({ error: 'weeklyOffDay must be 0-6' }, { status: 400 });
     update.weeklyOffDay = n;
+  }
+  if (body.weeklyOffOverrideDay !== undefined) {
+    const raw = body.weeklyOffOverrideDay;
+    if (raw === null) {
+      update.weeklyOffOverrideDay = null;
+    } else {
+      const n = Number(raw);
+      if (n !== -1 && (n < 0 || n > 6)) return NextResponse.json({ error: 'weeklyOffOverrideDay must be null, -1, or 0-6' }, { status: 400 });
+      update.weeklyOffOverrideDay = n;
+    }
   }
   if (body.position !== undefined) {
     update.position = body.position == null || body.position === ''

@@ -180,16 +180,16 @@ export function ImportMatrixClient() {
                 <div className="max-h-48 overflow-auto">
                   <table className="w-full min-w-0 border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left">
+                      <tr className="border-b border-slate-200 text-start">
                         <th className="p-1 font-medium">Emp ID</th>
-                        <th className="p-1 font-medium text-right">Sum (SAR)</th>
+                        <th className="p-1 font-medium text-end">Sum (SAR)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {previewData.totalsByEmp.map((r, i) => (
                         <tr key={i} className="border-b border-slate-100">
                           <td className="p-1">{r.empId}</td>
-                          <td className="p-1 text-right">{r.amountSum.toLocaleString()}</td>
+                          <td className="p-1 text-end">{r.amountSum.toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -204,10 +204,10 @@ export function ImportMatrixClient() {
                 <div className="max-h-40 overflow-auto">
                   <table className="w-full min-w-0 border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left">
+                      <tr className="border-b border-slate-200 text-start">
                         <th className="p-1 font-medium">Date</th>
                         <th className="p-1 font-medium">Emp ID</th>
-                        <th className="p-1 font-medium text-right">Amount</th>
+                        <th className="p-1 font-medium text-end">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -215,7 +215,7 @@ export function ImportMatrixClient() {
                         <tr key={i} className="border-b border-slate-100">
                           <td className="p-1">{s.dateKey}</td>
                           <td className="p-1">{s.empId}</td>
-                          <td className="p-1 text-right">{s.amount}</td>
+                          <td className="p-1 text-end">{s.amount}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -241,7 +241,7 @@ export function ImportMatrixClient() {
             <div className="max-h-64 overflow-auto">
               <table className="w-full min-w-0 border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left">
+                  <tr className="border-b border-slate-200 text-start">
                     <th className="p-1 font-medium">Code</th>
                     <th className="p-1 font-medium">Message</th>
                     <th className="p-1 font-medium">Row</th>

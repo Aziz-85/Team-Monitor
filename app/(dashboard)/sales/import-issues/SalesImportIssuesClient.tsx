@@ -89,9 +89,9 @@ export function SalesImportIssuesClient({ canResolve }: { canResolve: boolean })
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <span className="mr-2 font-medium">{iss.severity}</span>
+                <span className="me-2 font-medium">{iss.severity}</span>
                 <span className="text-slate-600">{iss.status}</span>
-                {iss.rowIndex != null && <span className="ml-2 text-slate-500">Row {iss.rowIndex}</span>}
+                {iss.rowIndex != null && <span className="ms-2 text-slate-500">Row {iss.rowIndex}</span>}
                 <p className="mt-1 text-sm">{iss.message}</p>
                 {iss.metadata != null && (
                   <pre className="mt-1 text-xs text-slate-500">

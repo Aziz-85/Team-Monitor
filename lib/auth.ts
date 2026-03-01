@@ -89,14 +89,14 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const now = new Date();
 
     if (session.expiresAt < now) {
-      await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+      await prisma.session.deleteMany({ where: { id: session.id } }).catch(() => {});
       safeSetCookie(cookieStore, clearSessionCookie());
       return null;
     }
 
     const idleElapsed = now.getTime() - session.lastSeenAt.getTime();
     if (idleElapsed > IDLE_MS) {
-      await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+      await prisma.session.deleteMany({ where: { id: session.id } }).catch(() => {});
       safeSetCookie(cookieStore, clearSessionCookie());
       return null;
     }
@@ -115,7 +115,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
     const raw = user as { boutiqueId?: string; role?: string };
     if (!raw.boutiqueId || raw.boutiqueId === '') {
-      if (raw.role !== 'SUPER_ADMIN') return null;
+      if (raw.role !== 'SUPER_ADMIN' && raw.role !== 'DEMO_VIEWER') return null;
     }
 
     return user as SessionUser;
@@ -173,11 +173,13 @@ export async function invalidateAllSessionsForUser(userId: string): Promise<void
   await prisma.session.deleteMany({ where: { userId } }).catch(() => {});
 }
 
-export function setSessionCookie(sessionToken: string) {
+export function setSessionCookie(sessionToken: string, options?: { secure?: boolean }) {
+  const secure = options?.secure ?? process.env.NODE_ENV === 'production';
   return {
     name: SESSION_COOKIE,
     value: sessionToken,
     ...COOKIE_OPTIONS,
+    secure,
   };
 }
 

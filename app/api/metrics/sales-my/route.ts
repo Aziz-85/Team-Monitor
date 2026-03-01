@@ -1,8 +1,7 @@
 /**
  * GET /api/metrics/sales-my?from=YYYY-MM-DD&to=YYYY-MM-DD
  * Canonical sales metrics for /sales/my. Uses resolveMetricsScope + getSalesMetrics.
- * Default: from = start of current month (Riyadh), to = today (Riyadh).
- * When employee: also returns monthlyBreakdown (target, actual, pct per month) and cumulative.
+ * When employee: totals across ALL boutiques (SalesEntry.userId only). SAR_INT.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,17 +12,12 @@ import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { getSalesMetrics } from '@/lib/metrics/aggregator';
 import { prisma } from '@/lib/db';
 
-const SAR_TO_HALALAS = 100;
-function salesEntrySarToHalalas(sar: number): number {
-  return Math.round(Number(sar) * SAR_TO_HALALAS);
-}
-
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const scope = await resolveMetricsScope(request);
   if (!scope) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!scope.effectiveBoutiqueId) {
+  if (!scope.effectiveBoutiqueId && !scope.employeeOnly) {
     return NextResponse.json({ error: 'No boutique scope for metrics' }, { status: 403 });
   }
 
@@ -56,8 +50,8 @@ export async function GET(request: NextRequest) {
   const toExclusive = addDays(toDate, 1);
 
   const metrics = await getSalesMetrics({
-    boutiqueId: scope.effectiveBoutiqueId,
-    userId: scope.employeeOnly ? scope.userId : null,
+    boutiqueId: scope.employeeOnly ? undefined : scope.effectiveBoutiqueId ?? undefined,
+    userId: scope.employeeOnly ? scope.userId : undefined,
     from: fromDate,
     toExclusive,
   });
@@ -102,7 +96,6 @@ export async function GET(request: NextRequest) {
     const [targets, salesByMonth] = await Promise.all([
       prisma.employeeMonthlyTarget.findMany({
         where: {
-          boutiqueId: scope.effectiveBoutiqueId,
           userId: scope.userId,
           month: { in: monthKeys },
         },
@@ -111,7 +104,6 @@ export async function GET(request: NextRequest) {
       prisma.salesEntry.groupBy({
         by: ['month'],
         where: {
-          boutiqueId: scope.effectiveBoutiqueId,
           userId: scope.userId,
           month: { in: monthKeys },
           source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
@@ -120,7 +112,10 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const targetByMonth = new Map(targets.map((t) => [t.month, t.amount]));
+    const targetByMonth = new Map<string, number>();
+    for (const t of targets) {
+      targetByMonth.set(t.month, (targetByMonth.get(t.month) ?? 0) + t.amount);
+    }
     const actualByMonth = new Map(salesByMonth.map((r) => [r.month, r._sum.amount ?? 0]));
 
     const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -128,8 +123,8 @@ export async function GET(request: NextRequest) {
     let cumActual = 0;
     monthlyBreakdown = monthKeys.map((monthKey) => {
       const targetSar = targetByMonth.get(monthKey) ?? 0;
-      const target = Math.round(targetSar * SAR_TO_HALALAS);
-      const actual = salesEntrySarToHalalas(actualByMonth.get(monthKey) ?? 0);
+      const target = targetSar;
+      const actual = actualByMonth.get(monthKey) ?? 0;
       const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
       cumTarget += target;
       cumActual += actual;

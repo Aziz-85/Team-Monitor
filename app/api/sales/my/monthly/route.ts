@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
   const [targets, salesByMonth] = await Promise.all([
     prisma.employeeMonthlyTarget.findMany({
       where: {
-        boutiqueId: scope.effectiveBoutiqueId,
         userId: scope.userId,
         month: { in: monthKeys },
       },
@@ -73,7 +72,6 @@ export async function GET(request: NextRequest) {
     prisma.salesEntry.groupBy({
       by: ['month'],
       where: {
-        boutiqueId: scope.effectiveBoutiqueId,
         userId: scope.userId,
         month: { in: monthKeys },
         source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
@@ -82,7 +80,10 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const targetByMonth = new Map(targets.map((t) => [t.month, t.amount]));
+  const targetByMonth = new Map<string, number>();
+  for (const t of targets) {
+    targetByMonth.set(t.month, (targetByMonth.get(t.month) ?? 0) + t.amount);
+  }
   const achievedByMonth = new Map(salesByMonth.map((r) => [r.month, r._sum.amount ?? 0]));
 
   const months = monthKeys.map((month) => {

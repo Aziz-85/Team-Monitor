@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     boutiqueId,
     userId,
     monthKey,
+    employeeCrossBoutique: true,
   });
 
   return NextResponse.json({

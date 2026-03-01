@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type Rule = { id: string; dayOfWeek: number; minAM: number; minPM: number; enabled: boolean };
 
@@ -16,8 +12,7 @@ type Rule = { id: string; dayOfWeek: number; minAM: number; minPM: number; enabl
 const DAY_KEYS = ['days.sun', 'days.mon', 'days.tue', 'days.wed', 'days.thu', 'days.fri', 'days.sat'] as const;
 
 export function AdminCoverageClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [list, setList] = useState<Rule[]>([]);
 
   // Ordered indices for week: Saturday → Friday

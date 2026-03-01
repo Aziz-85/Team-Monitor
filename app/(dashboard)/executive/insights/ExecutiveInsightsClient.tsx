@@ -2,12 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type Risk = { score: number; level: string; reasons: string[] };
 type Narrative = { whatChanged: string[]; why: string[]; nextActions: string[] };
@@ -108,8 +104,7 @@ function getSaturday(dateStr: string): string {
 }
 
 export function ExecutiveInsightsClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [trends, setTrends] = useState<TrendPoint[]>([]);
@@ -314,7 +309,7 @@ export function ExecutiveInsightsClient() {
             ) : (
               <table className="w-full min-w-[640px] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#E8DFC8] text-left text-gray-600">
+                  <tr className="border-b border-[#E8DFC8] text-start text-gray-600">
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.name')}</th>
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.revenueMTD')}</th>
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.target')}</th>
@@ -349,7 +344,7 @@ export function ExecutiveInsightsClient() {
                           <button
                             type="button"
                             onClick={() => toggleReasons(row.userId)}
-                            className="text-[#C6A756] hover:underline text-left"
+                            className="text-[#C6A756] hover:underline text-start"
                           >
                             {expanded ? '▼' : '▶'} {expanded ? t('executive.insights.hide') : t('executive.insights.show')}
                           </button>

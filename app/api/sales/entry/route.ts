@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
+import { getDemoGuardResponse } from '@/lib/demoGuard';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
 import { buildEmployeeWhereForOperational } from '@/lib/employee/employeeQuery';
@@ -14,9 +15,12 @@ import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 
 export async function POST(request: NextRequest) {
-  let user: Awaited<ReturnType<typeof getSessionUser>>;
+  const user = await getSessionUser();
+  const demoGuard = user ? getDemoGuardResponse(request, user) : null;
+  if (demoGuard) return demoGuard;
+  let roleUser: Awaited<ReturnType<typeof getSessionUser>>;
   try {
-    user = await requireRole(['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'EMPLOYEE']);
+    roleUser = await requireRole(['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'EMPLOYEE']);
   } catch (e) {
     const err = e as { code?: string };
     if (err?.code === 'UNAUTHORIZED') {
@@ -50,13 +54,13 @@ export async function POST(request: NextRequest) {
   }
   const salesSar = body.salesSar;
 
-  const employeeId = ((body.employeeId ?? '').trim() || (user.empId ?? ''));
+  const employeeId = ((body.employeeId ?? '').trim() || (roleUser.empId ?? ''));
   if (!employeeId) {
     return NextResponse.json({ error: 'employeeId required (or login as user with empId)' }, { status: 400 });
   }
 
-  if (user.role === 'EMPLOYEE') {
-    if (employeeId !== (user.empId ?? '')) {
+  if (roleUser.role === 'EMPLOYEE') {
+    if (employeeId !== (roleUser.empId ?? '')) {
       return NextResponse.json({ error: 'Employees can only enter sales for themselves' }, { status: 403 });
     }
   } else {
@@ -84,14 +88,14 @@ export async function POST(request: NextRequest) {
         date,
         totalSar: 0,
         status: 'DRAFT',
-        enteredById: user.id,
+        enteredById: roleUser.id,
       },
       include: { lines: true },
     });
     await recordSalesLedgerAudit({
       boutiqueId: scopeId,
       date,
-      actorId: user.id,
+      actorId: roleUser.id,
       action: 'SUMMARY_CREATE',
       reason: 'Manual entry',
     });
@@ -117,7 +121,7 @@ export async function POST(request: NextRequest) {
   await recordSalesLedgerAudit({
     boutiqueId: scopeId,
     date,
-    actorId: user.id,
+    actorId: roleUser.id,
     action: 'LINE_UPSERT',
     metadata: { employeeId, salesSar, manualEntry: true },
   });
@@ -135,7 +139,7 @@ export async function POST(request: NextRequest) {
   await syncDailyLedgerToSalesEntry({
     boutiqueId: scopeId,
     date,
-    actorUserId: user.id,
+    actorUserId: roleUser.id,
   });
 
   return NextResponse.json({

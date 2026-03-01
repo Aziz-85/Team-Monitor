@@ -2,11 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 function toLocalDateString(d: Date): string {
   const y = d.getFullYear();
@@ -42,8 +38,7 @@ type DailyData = {
 };
 
 export function SalesDailyClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -324,7 +319,7 @@ export function SalesDailyClient() {
               {yearlyFile ? yearlyFile.name : 'Choose file'}
             </button>
             <div>
-              <label className="mr-1 text-xs text-slate-500">Month (optional)</label>
+              <label className="me-1 text-xs text-slate-500">Month (optional)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
@@ -384,14 +379,14 @@ export function SalesDailyClient() {
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-0 border-collapse text-xs text-slate-800">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left font-medium text-slate-600">
+                      <tr className="border-b border-slate-200 text-start font-medium text-slate-600">
                         <th className="py-1.5 pr-2">Date</th>
-                        <th className="py-1.5 pr-2 text-right">Inserted</th>
-                        <th className="py-1.5 pr-2 text-right">Updated</th>
-                        <th className="py-1.5 pr-2 text-right">Skipped</th>
-                        <th className="py-1.5 pr-2 text-right">Lines total</th>
-                        <th className="py-1.5 pr-2 text-right">Manager total</th>
-                        <th className="py-1.5 pr-2 text-right">Diff</th>
+                        <th className="py-1.5 pr-2 text-end">Inserted</th>
+                        <th className="py-1.5 pr-2 text-end">Updated</th>
+                        <th className="py-1.5 pr-2 text-end">Skipped</th>
+                        <th className="py-1.5 pr-2 text-end">Lines total</th>
+                        <th className="py-1.5 pr-2 text-end">Manager total</th>
+                        <th className="py-1.5 pr-2 text-end">Diff</th>
                         <th className="py-1.5 w-0" />
                       </tr>
                     </thead>
@@ -399,12 +394,12 @@ export function SalesDailyClient() {
                       {yearlyResult.perDateSummary.map((row) => (
                         <tr key={row.date} className="border-b border-slate-100">
                           <td className="py-1.5 pr-2 font-mono">{row.date}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.insertedLinesCount}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.updatedLinesCount}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.skippedEmptyCount}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.linesTotalSar.toLocaleString('en-SA')}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.managerTotalSar.toLocaleString('en-SA')}</td>
-                          <td className="py-1.5 pr-2 text-right font-mono">{row.diffSar.toLocaleString('en-SA')}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.insertedLinesCount}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.updatedLinesCount}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.skippedEmptyCount}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.linesTotalSar.toLocaleString('en-SA')}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.managerTotalSar.toLocaleString('en-SA')}</td>
+                          <td className="py-1.5 pr-2 text-end font-mono">{row.diffSar.toLocaleString('en-SA')}</td>
                           <td className="py-1.5">
                             <button
                               type="button"
@@ -432,7 +427,7 @@ export function SalesDailyClient() {
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mr-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
@@ -463,22 +458,22 @@ export function SalesDailyClient() {
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-0 table-auto border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-slate-200 text-left text-slate-600">
+                        <tr className="border-b border-slate-200 text-start text-slate-600">
                           <th className="py-1.5 pr-2">Employee</th>
-                          <th className="py-1.5 pr-2 text-right">Expected</th>
-                          <th className="py-1.5 pr-2 text-right">Recorded</th>
-                          <th className="py-1.5 pr-2 text-right">Missing</th>
-                          <th className="py-1.5 pr-2 text-right">Flagged gaps</th>
+                          <th className="py-1.5 pr-2 text-end">Expected</th>
+                          <th className="py-1.5 pr-2 text-end">Recorded</th>
+                          <th className="py-1.5 pr-2 text-end">Missing</th>
+                          <th className="py-1.5 pr-2 text-end">Flagged gaps</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(coverageResult.byEmployee ?? []).map((e) => (
                           <tr key={e.employeeId} className="border-b border-slate-100">
                             <td className="py-1.5 pr-2 font-medium">{e.name}</td>
-                            <td className="py-1.5 pr-2 text-right">{e.expectedDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-right">{e.recordedDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-right">{e.missingDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-right">{e.flaggedGapsCount ?? 0}</td>
+                            <td className="py-1.5 pr-2 text-end">{e.expectedDaysCount ?? 0}</td>
+                            <td className="py-1.5 pr-2 text-end">{e.recordedDaysCount ?? 0}</td>
+                            <td className="py-1.5 pr-2 text-end">{e.missingDaysCount ?? 0}</td>
+                            <td className="py-1.5 pr-2 text-end">{e.flaggedGapsCount ?? 0}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -557,7 +552,7 @@ export function SalesDailyClient() {
                 <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
                   <table className="w-full min-w-0 table-auto border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left text-slate-600">
+                      <tr className="border-b border-slate-200 text-start text-slate-600">
                         <th className="py-2 pr-2">Employee ID</th>
                         <th className="py-2 pr-2">Amount (SAR)</th>
                         <th className="w-0" />

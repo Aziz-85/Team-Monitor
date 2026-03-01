@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatBusinessDate } from '@/lib/utils/formatBusinessDate';
-import { useI18n } from '@/app/providers';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
+import { useT } from '@/lib/i18n/useT';
 
 type DailyRun = {
   date: string;
@@ -61,8 +57,7 @@ const SKIP_LABELS: Record<string, string> = {
 };
 
 export function InventoryDailyClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [run, setRun] = useState<DailyRun | null>(null);
   const [loading, setLoading] = useState(true);
@@ -262,7 +257,7 @@ export function InventoryDailyClient() {
                 <dd className="text-slate-900">
                   {run.assigneeName ?? '—'}
                   {run.isMe && run.assignedEmpId && (
-                    <span className="ml-2 text-sm text-sky-600">({t('inventory.isMe')})</span>
+                    <span className="ms-2 text-sm text-sky-600">({t('inventory.isMe')})</span>
                   )}
                 </dd>
               </div>
@@ -353,7 +348,7 @@ export function InventoryDailyClient() {
                                 <span className="font-medium text-slate-800">
                                   {s.employeeName ?? s.empId}
                                 </span>
-                                <span className="ml-1 text-slate-500">
+                                <span className="ms-1 text-slate-500">
                                   – {t(SKIP_LABELS[s.skipReason])}
                                 </span>
                               </li>
@@ -372,11 +367,11 @@ export function InventoryDailyClient() {
                                 <span className="font-medium text-slate-800">
                                   {s.employeeName ?? s.empId}
                                 </span>
-                                <span className="ml-1 text-slate-500">
+                                <span className="ms-1 text-slate-500">
                                   – {t(SKIP_LABELS[s.skipReason])}
                                 </span>
                                 {s.expectedReturnDate && (
-                                  <span className="ml-2 text-xs text-slate-500">
+                                  <span className="ms-2 text-xs text-slate-500">
                                     ({t('inventory.expectedReturn')} {s.expectedReturnDate})
                                   </span>
                                 )}
@@ -537,7 +532,7 @@ export function InventoryDailyClient() {
                 <div className="overflow-x-auto">
                   <table className="min-w-full table-auto text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-700">
+                      <tr className="border-b border-slate-200 bg-slate-50 text-start text-xs font-semibold text-slate-700">
                         <th className="px-2 py-1.5">{t('common.name')}</th>
                         <th className="px-2 py-1.5">{t('common.reason')}</th>
                         <th className="px-2 py-1.5">{t('inventory.queueSince')}</th>

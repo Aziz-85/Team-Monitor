@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db';
 import { canEditSchedule, canApproveWeek } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
-const ROLE_ORDER: Role[] = ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+const ROLE_ORDER: Role[] = ['DEMO_VIEWER', 'EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'AREA_MANAGER', 'SUPER_ADMIN'];
 function roleLevel(r: Role): number {
   const i = ROLE_ORDER.indexOf(r);
   return i >= 0 ? i : -1;
@@ -39,6 +39,14 @@ export type UserLike = { id: string; role: Role; canEditSchedule?: boolean };
  */
 function baselineFlags(user: UserLike): EffectiveFlags {
   const role = user.role;
+  if (role === 'DEMO_VIEWER') {
+    return {
+      canEditSchedule: false,
+      canApproveWeek: false,
+      canApproveLeaveRequests: false,
+      canApproveRequests: false,
+    };
+  }
   const canEdit = user.canEditSchedule ?? canEditSchedule(role);
   const canApprove = canApproveWeek(role);
   const canApproveLeave = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';

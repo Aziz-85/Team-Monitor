@@ -4,12 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday, getWeekNumber, getWeekEndFriday } from '@/lib/utils/week';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 /** Week start = Saturday (local). Returns YYYY-MM-DD of the Saturday that starts the week containing the given date */
 function weekStartFor(date: Date): string {
@@ -63,8 +59,7 @@ export function InventoryWeeklyClient({
   embedded,
   mapImageKey,
 }: { embedded?: boolean; mapImageKey?: number } = {}) {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const mapSrc = mapImageKey != null
     ? `/zones/dhahran-zones-map.png?t=${mapImageKey}`
     : '/zones/dhahran-zones-map.png';
@@ -185,7 +180,7 @@ export function InventoryWeeklyClient({
           type="button"
           onClick={() => handleMarkComplete(z.zoneId)}
           disabled={completing === z.zoneId}
-          className="ml-auto h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="ms-auto h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           {completing === z.zoneId ? '…' : t('inventory.markZoneCompleted')}
         </button>

@@ -167,7 +167,8 @@ export async function POST(request: NextRequest) {
 
     const token = await createSession(user.id);
     const cookieStore = await cookies();
-    cookieStore.set(setSessionCookie(token));
+    const isHttps = new URL(request.url).protocol === 'https:';
+    cookieStore.set(setSessionCookie(token, { secure: isHttps }));
 
     return NextResponse.json({
       ok: true,

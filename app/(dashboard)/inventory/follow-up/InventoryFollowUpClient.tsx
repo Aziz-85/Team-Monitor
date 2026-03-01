@@ -3,14 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import { getWeekStartSaturday } from '@/lib/utils/week';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 function weekStartFor(date: Date): string {
   const start = getWeekStartSaturday(date);
@@ -91,8 +87,7 @@ function StatusPill({ status, effectiveStatus, label }: { status: string; effect
 }
 
 export function InventoryFollowUpClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const defaultFrom = (() => {
@@ -254,7 +249,7 @@ export function InventoryFollowUpClient() {
                     <span className="text-sm text-slate-600">
                       {t('inventory.followUpCompletedBy')}: {dailyData.today.completedByName}
                       {dailyData.today.completedAt && (
-                        <span className="ml-1">
+                        <span className="ms-1">
                           {new Date(dailyData.today.completedAt).toLocaleString()}
                         </span>
                       )}
@@ -407,7 +402,7 @@ export function InventoryFollowUpClient() {
                         <div className="mt-1 text-sm text-slate-600">
                           {emp.completed} / {emp.total} completed
                           {emp.pendingZoneCodes.length > 0 && (
-                            <span className="ml-2">
+                            <span className="ms-2">
                               Pending: {emp.pendingZoneCodes.join(', ')}
                             </span>
                           )}
@@ -430,11 +425,11 @@ export function InventoryFollowUpClient() {
                         >
                           <span className="text-lg font-semibold text-slate-900">{z.zoneCode}</span>
                           {z.zoneName && (
-                            <span className="ml-1 text-sm text-slate-600">({z.zoneName})</span>
+                            <span className="ms-1 text-sm text-slate-600">({z.zoneName})</span>
                           )}
-                          <span className="ml-2 text-sm font-medium leading-6 text-slate-700">→ {z.name}</span>
+                          <span className="ms-2 text-sm font-medium leading-6 text-slate-700">→ {z.name}</span>
                           {z.effectiveStatus === 'LATE' && (
-                            <span className="ml-2 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-xs font-medium text-red-900">
+                            <span className="ms-2 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-xs font-medium text-red-900">
                               {t('inventory.late')}
                             </span>
                           )}
@@ -601,12 +596,12 @@ function InventoryAuditTab({ t }: { t: (key: string) => string }) {
           <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Time</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Action</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Target</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Time</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Action</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Target</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
               </tr>
             </thead>
             <tbody className="bg-white">

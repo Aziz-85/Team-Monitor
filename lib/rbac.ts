@@ -60,3 +60,14 @@ export async function assertCanLockUnlockDay(): Promise<SessionUser> {
 export async function assertCanLockUnlockWeek(): Promise<SessionUser> {
   return requireRole(['ADMIN']);
 }
+
+/** Roles that can access Area Manager features (global employees, transfers, cross-boutique targets). */
+export const AREA_MANAGER_ROLES: Role[] = ['AREA_MANAGER', 'SUPER_ADMIN'];
+
+/**
+ * Assert user can access Area Manager APIs (global employees, transfer, targets).
+ * Throws AuthError if not authorized.
+ */
+export async function assertAreaManagerOrSuperAdmin(): Promise<SessionUser> {
+  return requireRole(AREA_MANAGER_ROLES);
+}

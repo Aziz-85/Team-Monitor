@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { formatSarInt, formatSarFromHalala } from '@/lib/utils/money';
+import { formatSarInt } from '@/lib/utils/money';
 
 // --- Riyadh date for defaults (YYYY-MM-DD, YYYY-MM) ---
 function getRiyadhToday(): string {
@@ -61,6 +61,13 @@ type BoutiqueDailyTarget = {
   dailyRequiredSar: number;
   todayAchievedSar: number;
   todayPct: number;
+};
+
+type BoutiqueBreakdown = {
+  from: string;
+  to: string;
+  totalSar: number;
+  byBoutique: Array<{ boutiqueId: string; boutiqueCode: string; boutiqueName?: string | null; amountSar: number }>;
 };
 
 // --- Legacy summary (sales-my) ---
@@ -125,6 +132,10 @@ export function SalesMyClient() {
   const [boutiqueDaily, setBoutiqueDaily] = useState<BoutiqueDailyTarget | null>(null);
   const [boutiqueDailyLoading, setBoutiqueDailyLoading] = useState(false);
   const [boutiqueDailyError, setBoutiqueDailyError] = useState<string | null>(null);
+
+  const [breakdown, setBreakdown] = useState<BoutiqueBreakdown | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [breakdownError, setBreakdownError] = useState<string | null>(null);
 
   useEffect(() => {
     const { from: f, to: t } = getStartOfMonthAndToday();
@@ -257,6 +268,30 @@ export function SalesMyClient() {
     }
   }, [activeTab, dailyMonth, dailyDate, scopeRole, loadBoutiqueDaily]);
 
+  const loadBreakdown = useCallback(async () => {
+    if (!from || !to) return;
+    setBreakdownLoading(true);
+    setBreakdownError(null);
+    try {
+      const params = new URLSearchParams({ from, to });
+      const res = await fetch(`/api/sales/my/boutique-breakdown?${params}`, { cache: 'no-store' });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setBreakdownError(j.error ?? 'Failed to load breakdown');
+        setBreakdown(null);
+        return;
+      }
+      const data = await res.json();
+      setBreakdown(data);
+    } finally {
+      setBreakdownLoading(false);
+    }
+  }, [from, to]);
+
+  useEffect(() => {
+    if (from && to) loadBreakdown();
+  }, [from, to, loadBreakdown]);
+
   const showBoutiqueTab = scopeRole && BOUTIQUE_TAB_ROLES.includes(scopeRole);
 
   return (
@@ -288,7 +323,7 @@ export function SalesMyClient() {
           {/* Legacy date range + net sales summary */}
           <div className="flex flex-wrap items-center gap-2">
             <label>
-              <span className="mr-1 text-sm">From</span>
+              <span className="me-1 text-sm">From</span>
               <input
                 type="date"
                 value={from}
@@ -297,7 +332,7 @@ export function SalesMyClient() {
               />
             </label>
             <label>
-              <span className="mr-1 text-sm">To</span>
+              <span className="me-1 text-sm">To</span>
               <input
                 type="date"
                 value={to}
@@ -323,34 +358,71 @@ export function SalesMyClient() {
               <div className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <span>Net sales</span>
-                  <span className="font-medium">{formatSarFromHalala(summary.netSalesTotal)}</span>
+                  <span className="font-medium">{formatSarInt(summary.netSalesTotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Guest coverage net sales</span>
-                  <span>{formatSarFromHalala(summary.guestCoverageNetSales)}</span>
+                  <span>{formatSarInt(summary.guestCoverageNetSales)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Returns</span>
-                  <span>{formatSarFromHalala(summary.returnsTotal)}</span>
+                  <span>{formatSarInt(summary.returnsTotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Exchanges</span>
-                  <span>{formatSarFromHalala(summary.exchangesTotal)}</span>
+                  <span>{formatSarInt(summary.exchangesTotal)}</span>
                 </div>
               </div>
               {summary.breakdownByEmployee.length > 0 && (
                 <div>
                   <p className="mb-1 text-sm font-medium">My totals</p>
                   <p className="text-sm">
-                    {summary.breakdownByEmployee[0].employeeName}: {formatSarFromHalala(summary.breakdownByEmployee[0].netSales)} net
+                    {summary.breakdownByEmployee[0].employeeName}: {formatSarInt(summary.breakdownByEmployee[0].netSales)} net
                     {summary.breakdownByEmployee[0].guestCoverageNetSales !== 0 && (
-                      <span> ({formatSarFromHalala(summary.breakdownByEmployee[0].guestCoverageNetSales)} guest coverage)</span>
+                      <span> ({formatSarInt(summary.breakdownByEmployee[0].guestCoverageNetSales)} guest coverage)</span>
                     )}
                   </p>
                 </div>
               )}
             </div>
           )}
+
+          {/* My Sales by Boutique (breakdown by sale location) */}
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-slate-800">My Sales by Boutique</h2>
+            <p className="mb-2 text-xs text-slate-500">Total sales across all boutiques, broken down by sale location.</p>
+            {breakdownLoading && !breakdown && <p className="text-sm text-slate-500">Loading…</p>}
+            {breakdownError && <p className="mb-2 text-sm text-red-600">{breakdownError}</p>}
+            {breakdown && (
+              <>
+                <div className="mb-3 flex justify-between text-sm">
+                  <span className="text-slate-600">{breakdown.from} – {breakdown.to}</span>
+                  <span className="font-medium">Total: {formatSarInt(breakdown.totalSar)}</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-start">
+                        <th className="py-1.5 pr-2 font-semibold text-slate-700">Boutique</th>
+                        <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {breakdown.byBoutique.map((row) => (
+                        <tr key={row.boutiqueId} className="border-b border-slate-100">
+                          <td className="py-1.5 pr-2">{row.boutiqueName ?? row.boutiqueCode ?? row.boutiqueId}</td>
+                          <td className="py-1.5 pr-2 text-end">{formatSarInt(row.amountSar)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {breakdown.byBoutique.length === 0 && (
+                  <p className="text-sm text-slate-500">No sales in this period.</p>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Section 1 — Monthly table (from /api/sales/my/monthly) */}
           <div className="rounded-lg border bg-white p-4">
@@ -362,7 +434,7 @@ export function SalesMyClient() {
                   type="month"
                   value={fromMonth}
                   onChange={(e) => setFromMonth(e.target.value)}
-                  className="ml-1 rounded border px-2 py-1"
+                  className="ms-1 rounded border px-2 py-1"
                 />
               </label>
               <label className="text-sm">
@@ -371,7 +443,7 @@ export function SalesMyClient() {
                   type="month"
                   value={toMonth}
                   onChange={(e) => setToMonth(e.target.value)}
-                  className="ml-1 rounded border px-2 py-1"
+                  className="ms-1 rounded border px-2 py-1"
                 />
               </label>
               <button
@@ -388,22 +460,22 @@ export function SalesMyClient() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left">
+                    <tr className="border-b border-slate-200 text-start">
                       <th className="py-1.5 pr-2 font-semibold text-slate-700">Month</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold text-slate-700">Target</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold text-slate-700">Achieved</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold text-slate-700">Remaining</th>
-                      <th className="py-1.5 pr-2 text-right font-semibold text-slate-700">%</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Target</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Achieved</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Remaining</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {monthlySummary.months.map((row) => (
                       <tr key={row.month} className="border-b border-slate-100">
                         <td className="py-1.5 pr-2">{row.month}</td>
-                        <td className="py-1.5 pr-2 text-right">{formatSarInt(row.targetSar)}</td>
-                        <td className="py-1.5 pr-2 text-right">{formatSarInt(row.achievedSar)}</td>
-                        <td className="py-1.5 pr-2 text-right">{formatSarInt(row.remainingSar)}</td>
-                        <td className="py-1.5 pr-2 text-right font-medium">{row.pct}%</td>
+                        <td className="py-1.5 pr-2 text-end">{formatSarInt(row.targetSar)}</td>
+                        <td className="py-1.5 pr-2 text-end">{formatSarInt(row.achievedSar)}</td>
+                        <td className="py-1.5 pr-2 text-end">{formatSarInt(row.remainingSar)}</td>
+                        <td className="py-1.5 pr-2 text-end font-medium">{row.pct}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -442,7 +514,7 @@ export function SalesMyClient() {
                   type="month"
                   value={dailyMonth}
                   onChange={(e) => setDailyMonth(e.target.value)}
-                  className="ml-1 rounded border px-2 py-1"
+                  className="ms-1 rounded border px-2 py-1"
                 />
               </label>
               <label className="text-sm">
@@ -451,7 +523,7 @@ export function SalesMyClient() {
                   type="date"
                   value={dailyDate}
                   onChange={(e) => setDailyDate(e.target.value)}
-                  className="ml-1 rounded border px-2 py-1"
+                  className="ms-1 rounded border px-2 py-1"
                 />
               </label>
               <button
@@ -502,7 +574,7 @@ export function SalesMyClient() {
                 type="month"
                 value={dailyMonth}
                 onChange={(e) => setDailyMonth(e.target.value)}
-                className="ml-1 rounded border px-2 py-1"
+                className="ms-1 rounded border px-2 py-1"
               />
             </label>
             <label className="text-sm">
@@ -511,7 +583,7 @@ export function SalesMyClient() {
                 type="date"
                 value={dailyDate}
                 onChange={(e) => setDailyDate(e.target.value)}
-                className="ml-1 rounded border px-2 py-1"
+                className="ms-1 rounded border px-2 py-1"
               />
             </label>
             <button

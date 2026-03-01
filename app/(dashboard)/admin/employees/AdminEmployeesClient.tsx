@@ -3,15 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
-import { useI18n } from '@/app/providers';
+import { useT } from '@/lib/i18n/useT';
 import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 import type { AdminFilterJson } from '@/lib/scope/adminFilter';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-
-function getNested(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((o: unknown, k) => (o as Record<string, unknown>)?.[k], obj);
-}
 
 type EmployeePosition = 'BOUTIQUE_MANAGER' | 'ASSISTANT_MANAGER' | 'SENIOR_SALES' | 'SALES';
 
@@ -25,6 +21,7 @@ type Employee = {
   team: string;
   currentTeam?: string;
   weeklyOffDay: number;
+  weeklyOffOverrideDay?: number | null;
   position: EmployeePosition | null;
   active: boolean;
   language: string;
@@ -35,6 +32,17 @@ type Employee = {
 const ROLES: Role[] = ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN'];
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+/** Single "Weekly Off (Effective)" dropdown: Sat→Fri then None. Value 6,0,1,2,3,4,5,-1. */
+const WEEKLY_OFF_EFFECTIVE_OPTIONS: { value: number | -1; label: string }[] = [
+  { value: 6, label: 'Saturday' },
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: -1, label: 'None (no automatic weekly off)' },
+];
 const POSITIONS: EmployeePosition[] = ['BOUTIQUE_MANAGER', 'ASSISTANT_MANAGER', 'SENIOR_SALES', 'SALES'];
 
 type TeamPreview = {
@@ -47,8 +55,7 @@ type TeamPreview = {
 };
 
 export function AdminEmployeesClient() {
-  const { messages } = useI18n();
-  const t = (key: string) => (getNested(messages, key) as string) || key;
+  const { t } = useT();
   const [list, setList] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,7 +69,7 @@ export function AdminEmployeesClient() {
     email: '',
     phone: '',
     team: 'A' as 'A' | 'B',
-    weeklyOffDay: 5,
+    weeklyOffEffective: 5 as number | -1,
     position: '' as EmployeePosition | '',
     language: 'en' as 'en' | 'ar',
     boutiqueId: '',
@@ -75,7 +82,7 @@ export function AdminEmployeesClient() {
     email: '',
     phone: '',
     team: 'A' as 'A' | 'B',
-    weeklyOffDay: 5,
+    weeklyOffEffective: 5 as number | -1,
     position: '' as EmployeePosition | '',
     language: 'en' as 'en' | 'ar',
     boutiqueId: '',
@@ -215,7 +222,8 @@ export function AdminEmployeesClient() {
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
           team: form.team,
-          weeklyOffDay: form.weeklyOffDay,
+          weeklyOffDay: 5,
+          weeklyOffOverrideDay: form.weeklyOffEffective === -1 ? -1 : (form.weeklyOffEffective === 5 ? null : form.weeklyOffEffective),
           position: form.position || undefined,
           language: form.language,
           ...(boutiqueId ? { boutiqueId } : {}),
@@ -232,7 +240,7 @@ export function AdminEmployeesClient() {
         email: '',
         phone: '',
         team: 'A',
-        weeklyOffDay: 5,
+        weeklyOffEffective: 5,
         position: '',
         language: 'en',
         boutiqueId: '',
@@ -307,12 +315,13 @@ export function AdminEmployeesClient() {
   const openEditEmployee = (emp: Employee) => {
     setEditEmployeeModal(emp);
     const displayTeam = (emp.currentTeam ?? emp.team) as 'A' | 'B';
+    const eff: number | -1 = emp.weeklyOffOverrideDay === -1 ? -1 : (emp.weeklyOffOverrideDay ?? emp.weeklyOffDay);
     setEditEmployeeForm({
       name: emp.name,
       email: emp.email ?? '',
       phone: emp.phone ?? '',
       team: displayTeam,
-      weeklyOffDay: emp.weeklyOffDay,
+      weeklyOffEffective: eff,
       position: (emp.position ?? '') as EmployeePosition | '',
       language: emp.language as 'en' | 'ar',
       boutiqueId: emp.boutique?.id ?? '',
@@ -333,7 +342,12 @@ export function AdminEmployeesClient() {
           name: editEmployeeForm.name.trim(),
           email: editEmployeeForm.email.trim() || null,
           phone: editEmployeeForm.phone.trim() || null,
-          weeklyOffDay: editEmployeeForm.weeklyOffDay,
+          weeklyOffOverrideDay: (() => {
+            const sel = editEmployeeForm.weeklyOffEffective;
+            if (sel === -1) return -1;
+            if (sel === editEmployeeModal.weeklyOffDay) return null;
+            return sel;
+          })(),
           position: editEmployeeForm.position || null,
           language: editEmployeeForm.language,
           ...(editEmployeeForm.boutiqueId.trim() ? { boutiqueId: editEmployeeForm.boutiqueId.trim() } : {}),
@@ -394,6 +408,17 @@ export function AdminEmployeesClient() {
   };
 
   const dayName = (dayNum: number) => t(`days.${DAY_KEYS[dayNum] ?? 'sun'}`);
+  /** Effective weekly off for display: -1 => None, 0..6 => day name. */
+  const effectiveWeeklyOff = (emp: Employee): number | -1 => {
+    if (emp.weeklyOffOverrideDay === -1) return -1;
+    if (emp.weeklyOffOverrideDay != null && emp.weeklyOffOverrideDay >= 0 && emp.weeklyOffOverrideDay <= 6) return emp.weeklyOffOverrideDay;
+    return emp.weeklyOffDay;
+  };
+  const effectiveOffLabel = (emp: Employee) => {
+    const eff = effectiveWeeklyOff(emp);
+    if (eff === -1) return 'None';
+    return dayName(eff);
+  };
   const positionLabel = (p: EmployeePosition | null) => {
     if (!p) return '—';
     if (p === 'BOUTIQUE_MANAGER') return t('adminEmp.positionBoutiqueManager');
@@ -458,13 +483,14 @@ export function AdminEmployeesClient() {
             ))}
           </select>
           <select
-            value={form.weeklyOffDay}
-            onChange={(e) => setForm((f) => ({ ...f, weeklyOffDay: Number(e.target.value) }))}
+            value={String(form.weeklyOffEffective)}
+            onChange={(e) => setForm((f) => ({ ...f, weeklyOffEffective: e.target.value === '-1' ? -1 : Number(e.target.value) }))}
             className="rounded border border-slate-300 px-3 py-2 text-base"
+            title="Weekly Off (Effective)"
           >
-            {DAY_KEYS.map((key, i) => (
-              <option key={key} value={i}>
-                {t('common.offDay')}: {t(`days.${key}`)}
+            {WEEKLY_OFF_EFFECTIVE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                Weekly Off (Effective): {opt.label}
               </option>
             ))}
           </select>
@@ -517,7 +543,7 @@ export function AdminEmployeesClient() {
             <LuxuryTh>{t('admin.boutiques.boutique')}</LuxuryTh>
             <LuxuryTh>{t('common.email')}</LuxuryTh>
             <LuxuryTh>{t('common.team')}</LuxuryTh>
-            <LuxuryTh>{t('common.offDay')}</LuxuryTh>
+            <LuxuryTh>Weekly off</LuxuryTh>
             <LuxuryTh>{t('adminEmp.position')}</LuxuryTh>
             <LuxuryTh>{t('adminEmp.active')}</LuxuryTh>
             <LuxuryTh>{t('common.role')}</LuxuryTh>
@@ -540,14 +566,14 @@ export function AdminEmployeesClient() {
                         .then((data) => setBoutiquesForSelect(Array.isArray(data) ? data : []))
                         .catch(() => setBoutiquesForSelect([]));
                     }}
-                    className="ml-1 text-xs text-sky-600 hover:underline"
+                    className="ms-1 text-xs text-sky-600 hover:underline"
                   >
                     {t('admin.changeBoutique')}
                   </button>
                 </LuxuryTd>
                 <LuxuryTd>{e.email ?? '—'}</LuxuryTd>
                 <LuxuryTd>{e.currentTeam ?? e.team}</LuxuryTd>
-                <LuxuryTd>{dayName(e.weeklyOffDay)}</LuxuryTd>
+                <LuxuryTd>{effectiveOffLabel(e)}</LuxuryTd>
                 <LuxuryTd>{positionLabel(e.position ?? null)}</LuxuryTd>
                 <LuxuryTd>
                   <button
@@ -728,21 +754,21 @@ export function AdminEmployeesClient() {
                 <label className="block text-sm font-medium">{t('common.team')}</label>
                 <p className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-700">
                   {editEmployeeForm.team}
-                  <span className="ml-2 text-xs text-slate-500">
+                  <span className="ms-2 text-xs text-slate-500">
                     ({t('adminEmp.changeTeam')} for future-dated change)
                   </span>
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium">{t('common.offDay')}</label>
+                <label className="block text-sm font-medium">Weekly Off (Effective)</label>
                 <select
-                  value={editEmployeeForm.weeklyOffDay}
-                  onChange={(e) => setEditEmployeeForm((f) => ({ ...f, weeklyOffDay: Number(e.target.value) }))}
+                  value={String(editEmployeeForm.weeklyOffEffective)}
+                  onChange={(e) => setEditEmployeeForm((f) => ({ ...f, weeklyOffEffective: e.target.value === '-1' ? -1 : Number(e.target.value) }))}
                   className="w-full rounded border border-slate-300 px-3 py-2 text-base"
                 >
-                  {DAY_KEYS.map((key, i) => (
-                    <option key={key} value={i}>
-                      {t(`days.${key}`)}
+                  {WEEKLY_OFF_EFFECTIVE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>

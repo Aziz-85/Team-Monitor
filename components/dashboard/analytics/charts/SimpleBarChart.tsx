@@ -15,7 +15,7 @@ export function SimpleBarChart({ data, height = 140, valueFormat = (n) => String
           <div className="flex-1 rounded bg-slate-200" style={{ height: 20 }}>
             <div className="h-full rounded bg-slate-600" style={{ width: `${(d.value / max) * 100}%` }} />
           </div>
-          <span className="w-16 text-right text-slate-700">{valueFormat(d.value)}</span>
+          <span className="w-16 text-end text-slate-700">{valueFormat(d.value)}</span>
         </div>
       ))}
     </div>

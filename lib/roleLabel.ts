@@ -15,7 +15,9 @@ const ROLE_KEYS: Record<Role, string> = {
   ASSISTANT_MANAGER: 'adminEmp.roleAssistantManager',
   MANAGER: 'adminEmp.roleManager',
   ADMIN: 'adminEmp.roleAdmin',
+  AREA_MANAGER: 'adminEmp.roleAreaManager',
   SUPER_ADMIN: 'adminEmp.roleSuperAdmin',
+  DEMO_VIEWER: 'adminEmp.roleDemoViewer',
 };
 
 const POSITION_KEYS: Record<EmployeePosition, string> = {
