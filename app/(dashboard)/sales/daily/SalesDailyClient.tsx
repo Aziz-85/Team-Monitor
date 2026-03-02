@@ -41,6 +41,8 @@ export function SalesDailyClient() {
   const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingSummary, setSavingSummary] = useState<string | null>(null);
   const [savingLine, setSavingLine] = useState<string | null>(null);
@@ -119,33 +121,61 @@ export function SalesDailyClient() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     fetch(`/api/sales/daily?date=${date}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) setData(null);
-        else setData(d);
+        if (d.error) {
+          setData(null);
+          setLoadError(d.error ?? 'Failed to load');
+        } else {
+          setData(d);
+          setLoadError(null);
+        }
       })
-      .catch(() => setData(null))
+      .catch(() => {
+        setData(null);
+        setLoadError('Request failed');
+      })
       .finally(() => setLoading(false));
   }, [date]);
 
   const refetch = () => {
     setLoading(true);
+    setLoadError(null);
     fetch(`/api/sales/daily?date=${date}`, { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => (d.error ? null : setData(d)))
+      .then((d) => {
+        if (d.error) {
+          setData(null);
+          setLoadError(d.error ?? 'Failed to load');
+        } else {
+          setData(d);
+          setLoadError(null);
+        }
+      })
+      .catch(() => {
+        setData(null);
+        setLoadError('Request failed');
+      })
       .finally(() => setLoading(false));
   };
 
   const setManagerTotal = async (boutiqueId: string, totalSar: number) => {
     setSavingSummary(boutiqueId);
+    setActionError(null);
     try {
       const res = await fetch('/api/sales/daily/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ boutiqueId, date, totalSar }),
       });
-      if (res.ok) refetch();
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        refetch();
+      } else {
+        setActionError((j as { error?: string }).error ?? 'Failed to save manager total');
+      }
     } finally {
       setSavingSummary(null);
     }
@@ -153,13 +183,19 @@ export function SalesDailyClient() {
 
   const upsertLine = async (boutiqueId: string, employeeId: string, amountSar: number) => {
     setSavingLine(`${boutiqueId}-${employeeId}`);
+    setActionError(null);
     try {
       const res = await fetch('/api/sales/daily/lines', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ boutiqueId, date, employeeId, amountSar }),
       });
-      if (res.ok) refetch();
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        refetch();
+      } else {
+        setActionError((j as { error?: string }).error ?? 'Failed to save line');
+      }
     } finally {
       setSavingLine(null);
     }
@@ -167,13 +203,19 @@ export function SalesDailyClient() {
 
   const lock = async (boutiqueId: string) => {
     setLocking(boutiqueId);
+    setActionError(null);
     try {
       const res = await fetch('/api/sales/daily/lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ boutiqueId, date }),
       });
-      if (res.ok) refetch();
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        refetch();
+      } else {
+        setActionError((j as { error?: string }).error ?? 'Failed to lock');
+      }
     } finally {
       setLocking(null);
     }
@@ -294,6 +336,23 @@ export function SalesDailyClient() {
             </span>
           )}
         </div>
+        {loadError && !loading && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {loadError}
+          </div>
+        )}
+        {actionError && (
+          <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="shrink-0 rounded border border-amber-300 bg-white px-2 py-1 text-xs text-amber-800 hover:bg-amber-100"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         <OpsCard className="mb-6">
           <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">
             Yearly Excel Import (Import_2026)
