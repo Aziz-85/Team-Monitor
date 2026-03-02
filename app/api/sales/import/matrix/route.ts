@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
 import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { normalizeDateOnlyRiyadh } from '@/lib/time';
 import {
@@ -19,7 +20,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 type ApplyIssue = MatrixParseIssue & { existingAmount?: number };
 
-async function checkAuth(boutiqueId: string) {
+async function checkAuth(boutiqueId: string, request: NextRequest) {
   const user = await getSessionUser();
   if (!user) {
     return { allowed: false as const, status: 401 as const, error: 'Unauthorized' };
@@ -28,7 +29,11 @@ async function checkAuth(boutiqueId: string) {
     return { allowed: true as const, user };
   }
   if (user.role === 'MANAGER') {
-    const can = await canManageSalesInBoutique(user.id, user.role, boutiqueId);
+    const trustedId = await getTrustedOperationalBoutiqueId(user, request);
+    if (!trustedId || boutiqueId !== trustedId) {
+      return { allowed: false as const, status: 403 as const, error: 'Boutique not in your operational scope' };
+    }
+    const can = await canManageSalesInBoutique(user.id, user.role, boutiqueId, trustedId);
     if (can) return { allowed: true as const, user };
   }
   return { allowed: false as const, status: 403 as const, error: 'Forbidden' };
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
   if (!scopeResult.ok) return scopeResult.res;
   const boutiqueId = scopeResult.boutiqueId;
 
-  const auth = await checkAuth(boutiqueId);
+  const auth = await checkAuth(boutiqueId, request);
   if (!auth.allowed) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

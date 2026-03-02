@@ -10,10 +10,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
+import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { parseYearlyImportExcel } from '@/lib/sales/parseYearlyImportExcel';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { formatMonthKey, normalizeMonthKey } from '@/lib/time';
+import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
 const ALLOWED_EXTENSIONS = ['.xlsx', '.xlsm'];
@@ -33,6 +36,15 @@ export async function POST(request: NextRequest) {
     return scopeResult.res;
   }
   const { boutiqueId } = scopeResult;
+
+  const trustedId = await getTrustedOperationalBoutiqueId(user, request);
+  if (!trustedId || boutiqueId !== trustedId) {
+    return NextResponse.json({ error: 'Boutique not in your operational scope' }, { status: 403 });
+  }
+  const canManage = await canManageSalesInBoutique(user.id, user.role as Role, boutiqueId, trustedId);
+  if (!canManage) {
+    return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
+  }
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

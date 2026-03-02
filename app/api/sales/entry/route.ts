@@ -9,6 +9,8 @@ import { requireRole, getSessionUser } from '@/lib/auth';
 import { getDemoGuardResponse } from '@/lib/demoGuard';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
+import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { buildEmployeeWhereForOperational } from '@/lib/employee/employeeQuery';
 import { normalizeDateOnlyRiyadh, formatDateRiyadh } from '@/lib/time';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
@@ -32,6 +34,24 @@ export async function POST(request: NextRequest) {
   const scopeResult = await requireOperationalBoutique(request);
   if (!scopeResult.ok) return scopeResult.res;
   const scopeId = scopeResult.boutiqueId;
+
+  if (roleUser.role === 'MANAGER' || roleUser.role === 'ADMIN') {
+    const trustedId = await getTrustedOperationalBoutiqueId(roleUser, request);
+    if (!trustedId || scopeId !== trustedId) {
+      return NextResponse.json({ error: 'Boutique not in your operational scope' }, { status: 403 });
+    }
+    if (roleUser.role === 'MANAGER') {
+      const canManage = await canManageSalesInBoutique(
+        roleUser.id,
+        roleUser.role as import('@prisma/client').Role,
+        scopeId,
+        trustedId
+      );
+      if (!canManage) {
+        return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
+      }
+    }
+  }
 
   let body: { scopeId?: string; date?: string; salesSar?: number; employeeId?: string };
   try {

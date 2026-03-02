@@ -57,7 +57,15 @@ export async function canManageLeavesInBoutique(
 export async function canManageSalesInBoutique(
   userId: string,
   userRole: Role,
-  boutiqueId: string
+  boutiqueId: string,
+  /** For MANAGER: must match session operational boutique (from getTrustedOperationalBoutiqueId). Not from preference/scope UI. */
+  trustedOperationalBoutiqueId?: string | null
 ): Promise<boolean> {
+  if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return true;
+  if (userRole === 'MANAGER') {
+    if (trustedOperationalBoutiqueId == null || trustedOperationalBoutiqueId === '') return false;
+    if (trustedOperationalBoutiqueId !== boutiqueId) return false;
+    return true;
+  }
   return canManageInBoutique(userId, userRole, boutiqueId, 'canManageSales');
 }

@@ -4,6 +4,7 @@
  */
 
 import { validateSarInteger, computeDiff } from '@/lib/sales/reconcile';
+import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 
 describe('validateSarInteger', () => {
   it('accepts non-negative integer number', () => {
@@ -59,5 +60,27 @@ describe('Sales daily API contract', () => {
 
   it('Scope: user can only access boutiques in resolved scope (membership)', () => {
     expect(true).toBe(true); // Contract: resolveScope filters by UserBoutiqueMembership; 403 if boutique not in scope
+  });
+});
+
+describe('canManageSalesInBoutique (trusted operational boutique)', () => {
+  it('MANAGER with trustedOperationalBoutiqueId = S02 allows target S02', async () => {
+    const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', 'S02');
+    expect(result).toBe(true);
+  });
+
+  it('MANAGER with trustedOperationalBoutiqueId = S02 denies target S01', async () => {
+    const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S01', 'S02');
+    expect(result).toBe(false);
+  });
+
+  it('MANAGER with trustedOperationalBoutiqueId missing (null) denies', async () => {
+    const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', null);
+    expect(result).toBe(false);
+  });
+
+  it('MANAGER with trustedOperationalBoutiqueId empty string denies', async () => {
+    const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', '');
+    expect(result).toBe(false);
   });
 });

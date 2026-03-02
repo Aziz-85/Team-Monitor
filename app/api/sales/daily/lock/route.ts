@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getOperationalScope } from '@/lib/scope/operationalScope';
+import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
 import { assertOperationalBoutiqueId } from '@/lib/guards/assertOperationalBoutique';
 import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
   }
 
   const date = parseDateRiyadh(dateParam);
-  const scope = await getOperationalScope(request);
-  assertOperationalBoutiqueId(scope?.boutiqueId);
-  if (!scope?.boutiqueId || scope.boutiqueId !== boutiqueId) {
+  const trustedId = await getTrustedOperationalBoutiqueId(user, request);
+  assertOperationalBoutiqueId(trustedId ?? undefined);
+  if (!trustedId || boutiqueId !== trustedId) {
     return NextResponse.json({ error: 'Boutique not in your operational scope' }, { status: 403 });
   }
-  const canManage = await canManageSalesInBoutique(user.id, user.role as Role, boutiqueId);
+  const canManage = await canManageSalesInBoutique(user.id, user.role as Role, boutiqueId, trustedId);
   if (!canManage) {
     return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
   }

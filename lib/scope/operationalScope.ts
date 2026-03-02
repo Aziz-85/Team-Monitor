@@ -10,6 +10,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { resolveEffectiveBoutiqueId } from '@/lib/scope/scopeContext';
 import type { Role } from '@prisma/client';
+import type { SessionUser } from '@/lib/auth';
 
 export type OperationalScopeResult = {
   userId: string;
@@ -19,6 +20,27 @@ export type OperationalScopeResult = {
   boutiqueIds: string[];
   label: string;
 };
+
+/**
+ * Trusted operational boutique ID for authorization (sales write, etc.).
+ * Does NOT read user preference, stored scope, or any client-controlled scope.
+ * - MANAGER / ADMIN: strictly session user.boutiqueId.
+ * - SUPER_ADMIN with request: may use ?b= / X-Boutique-Code (validated by membership).
+ * Use this for canManageSalesInBoutique and any write authorization.
+ */
+export async function getTrustedOperationalBoutiqueId(
+  user: SessionUser | null,
+  request?: NextRequest | null
+): Promise<string | null> {
+  if (!user?.id) return null;
+  const role = user.role as Role;
+  if (role === 'MANAGER' || role === 'ADMIN') return user.boutiqueId ?? null;
+  if (role === 'SUPER_ADMIN' && request) {
+    const scope = await getOperationalScope(request);
+    return scope?.boutiqueId ?? null;
+  }
+  return user.boutiqueId ?? null;
+}
 
 /**
  * Get operational scope from session. When request is provided and user is SUPER_ADMIN,
