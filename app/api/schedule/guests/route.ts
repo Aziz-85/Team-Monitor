@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth';
+import { requireRole, getSessionUser } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { applyOverrideChange } from '@/lib/services/scheduleApply';
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(created);
 }
 
-/** DELETE /api/schedule/guests?id=... — remove guest shift (deactivate override) */
+/** DELETE /api/schedule/guests?id=... — remove guest shift (deactivate override) or cancel pending guest (id=pending-<requestId>) */
 export async function DELETE(request: NextRequest) {
   try {
     await requireRole(GUEST_ROLES);
@@ -254,6 +254,38 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   if (!id) {
     return NextResponse.json({ error: 'id required' }, { status: 400 });
+  }
+
+  // Pending guest: id is "pending-<approvalRequestId>"
+  if (id.startsWith('pending-')) {
+    const requestId = id.slice(8);
+    if (!requestId) {
+      return NextResponse.json({ error: 'Invalid pending guest id' }, { status: 400 });
+    }
+    const approval = await prisma.approvalRequest.findFirst({
+      where: {
+        id: requestId,
+        status: 'PENDING',
+        module: 'SCHEDULE',
+        actionType: 'OVERRIDE_CREATE',
+        boutiqueId: { in: scope.boutiqueIds },
+      },
+      select: { id: true },
+    });
+    if (!approval) {
+      return NextResponse.json({ error: 'Guest shift not found' }, { status: 404 });
+    }
+    const currentUser = await getSessionUser();
+    await prisma.approvalRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'CANCELLED',
+        decidedByUserId: currentUser?.id ?? undefined,
+        decidedAt: new Date(),
+        decisionComment: 'Cancelled by user',
+      },
+    });
+    return NextResponse.json({ ok: true, id });
   }
 
   const override = await prisma.shiftOverride.findFirst({
