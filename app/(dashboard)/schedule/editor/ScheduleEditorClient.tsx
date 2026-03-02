@@ -42,11 +42,21 @@ export function ScheduleEditorClient() {
   }, [date]);
 
   useEffect(() => {
-    fetch(`/api/suggestions/coverage?date=${date}`)
+    fetch(`/api/suggestions/coverage?date=${date}`, { cache: 'no-store' })
       .then((r) => r.json().catch(() => null))
       .then((data: { suggestion?: CoverageSuggestion | null }) => setCoverageSuggestion(data?.suggestion ?? null))
       .catch(() => setCoverageSuggestion(null));
   }, [date]);
+
+  // Gate suggestion by displayed AM/PM so warning reflects same counts as the roster lists
+  const displayedAmCount = roster?.amEmployees.length ?? 0;
+  const displayedPmCount = roster?.pmEmployees.length ?? 0;
+  const dayOfWeek = new Date(date + 'T12:00:00Z').getUTCDay();
+  const isFriday = dayOfWeek === 5;
+  const stillViolates =
+    roster &&
+    ((isFriday && displayedAmCount >= 1) || (!isFriday && displayedAmCount > displayedPmCount));
+  const showSuggestion = stillViolates && coverageSuggestion;
 
   return (
     <div className="p-4 md:p-6">
@@ -64,7 +74,7 @@ export function ScheduleEditorClient() {
           />
         </div>
 
-        {coverageSuggestion && (
+        {showSuggestion && (
           <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
             <span className="text-base font-medium text-amber-900">
               {(t('coverage.moveSuggestion') as string).replace('{name}', coverageSuggestion.employeeName)}
@@ -88,10 +98,15 @@ export function ScheduleEditorClient() {
                     const mon = new Date(d);
                     mon.setUTCDate(diff);
                     const weekStart = mon.toISOString().slice(0, 10);
-                    const weekRes = await fetch(`/api/schedule/week?weekStart=${weekStart}`, { cache: 'no-store' });
+                    const [weekRes, suggestionRes] = await Promise.all([
+                      fetch(`/api/schedule/week?weekStart=${weekStart}`, { cache: 'no-store' }),
+                      fetch(`/api/suggestions/coverage?date=${date}`, { cache: 'no-store' }),
+                    ]);
                     const data = await weekRes.json().catch(() => ({}));
                     const dayData = data.days?.find((dd: { date: string }) => dd.date === date);
                     setRoster((dayData?.roster as Roster | undefined) ?? null);
+                    const suggestionData = await suggestionRes.json().catch(() => ({}));
+                    setCoverageSuggestion((suggestionData.suggestion ?? null) as CoverageSuggestion | null);
                   }
                 } finally {
                   setApplying(false);

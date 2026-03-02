@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
@@ -157,8 +157,6 @@ const SHIFT_LABEL_FALLBACKS: Record<string, string> = {
   pmShort: 'PM',
   morning: 'Morning (AM)',
   evening: 'Afternoon (PM)',
-  rashidAm: 'Rashid AM',
-  rashidPm: 'Rashid PM',
   none: 'NONE',
 };
 
@@ -267,6 +265,7 @@ export function ScheduleEditClient({
   const { t, locale } = useT();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [tab, setTab] = useState<'week' | 'month'>('week');
   const [weekStart, setWeekStart] = useState(() => parseWeekStartFromUrl(searchParams.get('weekStart')));
   const [month, setMonth] = useState(() => parseMonthFromUrl(searchParams.get('month')));
@@ -426,15 +425,6 @@ export function ScheduleEditClient({
     return Array.from(bySource.entries()).sort((a, b) => a[1].sourceBoutiqueName.localeCompare(b[1].sourceBoutiqueName));
   }, [externalGuests]);
 
-  const coverageHeaderLabel = useMemo(
-    () =>
-      getCoverageHeaderLabel(externalGuests, {
-        rashidLabel: t('schedule.rashidCoverage') ?? 'Rashid Coverage',
-        externalLabel: t('schedule.externalCoverage') ?? 'External Coverage',
-      }),
-    [externalGuests, t]
-  );
-
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('schedule_editor_month_view') : null;
     if (saved === 'summary' || saved === 'excel') setMonthModeState(saved as MonthMode);
@@ -451,6 +441,14 @@ export function ScheduleEditClient({
   }, []);
   const [teamFilterExcel, setTeamFilterExcel] = useState<'all' | 'A' | 'B'>('all');
   const [scopeLabel, setScopeLabel] = useState<string | null>(null);
+  const coverageHeaderLabel = useMemo(
+    () =>
+      getCoverageHeaderLabel(externalGuests, {
+        hostBoutique: scopeLabel ? { name: scopeLabel } : undefined,
+        externalLabel: t('schedule.externalCoverage') ?? 'External Coverage',
+      }),
+    [externalGuests, scopeLabel, t]
+  );
   const dayRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const isWeekLocked = !!(weekGovernance?.weekLock);
 
@@ -717,6 +715,41 @@ export function ScheduleEditClient({
     }));
   }, [draftCounts, gridData?.counts, guestCountsByDay]);
 
+  /** Only show suggestions for days that still have the violation per displayCounts (avoids stale warning after local edits). */
+  const effectiveSuggestions = useMemo(() => {
+    const raw = gridData?.suggestions ?? [];
+    const days = gridData?.days ?? [];
+    if (!raw.length || !displayCounts.length) return raw;
+    const filtered = raw.filter((s) => {
+      const i = s.dayIndex;
+      const dc = displayCounts[i];
+      if (!dc) return true;
+      const am = dc.amCount ?? 0;
+      const pm = dc.pmCount ?? 0;
+      const day = days[i];
+      const isFriday = day?.dayOfWeek === 5;
+      const effectiveMinPm = isFriday ? (day?.minPm ?? 0) : Math.max(day?.minPm ?? 0, 2);
+      if (s.type === 'MOVE') {
+        if (isFriday) return am >= 1;
+        return am > pm;
+      }
+      if (s.type === 'REMOVE_COVER') return pm < effectiveMinPm || pm < am;
+      return true;
+    });
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_DEBUG_SCHEDULE_SUGGESTIONS === '1') {
+      const serverCounts = gridData?.counts ?? [];
+      // eslint-disable-next-line no-console
+      console.log('[ScheduleEditClient.effectiveSuggestions]', {
+        weekStart: gridData?.weekStart,
+        displayCountsByDay: displayCounts.map((c, i) => ({ dayIndex: i, am: c.amCount, pm: c.pmCount })),
+        serverCountsByDay: serverCounts.map((c, i) => ({ dayIndex: i, am: c.amCount, pm: c.pmCount })),
+        rawSuggestionsCount: raw.length,
+        filteredSuggestionsCount: filtered.length,
+      });
+    }
+    return filtered;
+  }, [gridData?.suggestions, gridData?.days, gridData?.counts, gridData?.weekStart, displayCounts]);
+
   const getRowAndCell = useCallback(
     (empId: string, date: string): { row: GridRow; cell: GridCell } | null => {
       if (!gridData) return null;
@@ -856,13 +889,14 @@ export function ScheduleEditClient({
         setSuggestionConfirm(null);
         setDismissedSuggestionIds((prev) => new Set(Array.from(prev).concat(s.id)));
         fetchGrid();
+        router.refresh();
         setToast(applied ? (t('schedule.savedChanges') as string)?.replace?.('{n}', '1') ?? 'Saved 1 change' : 'No change applied');
         setTimeout(() => setToast(null), 3000);
       } finally {
         setSaving(false);
       }
     },
-    [gridData, fetchGrid, fetchWeekGovernance, t, locale]
+    [gridData, fetchGrid, fetchWeekGovernance, t, locale, router]
   );
 
   const applyBatch = useCallback(async () => {
@@ -921,6 +955,7 @@ export function ScheduleEditClient({
       setSaveModalOpen(false);
       setGlobalReason(DEFAULT_REASON);
       fetchGrid();
+      router.refresh();
       fetchWeekGovernance();
       let msg = (t('schedule.savedChanges') as string)?.replace?.('{n}', String(applied)) ?? `Saved ${applied} changes`;
       if (skipped > 0) msg += `. ${skipped} skipped (${t('schedule.fridayPmOnly')})`;
@@ -929,7 +964,7 @@ export function ScheduleEditClient({
     } finally {
       setSaving(false);
     }
-  }, [pendingEdits, globalReason, fetchGrid, fetchWeekGovernance, t, locale, gridData]);
+  }, [pendingEdits, globalReason, fetchGrid, fetchWeekGovernance, t, locale, gridData, router]);
 
   useEffect(() => {
     if (pendingCount === 0) return;
@@ -1541,14 +1576,11 @@ export function ScheduleEditClient({
                                             friday && !ramadanDay
                                               ? [
                                                   { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
-                                                  { value: 'COVER_RASHID_PM', label: shiftLabel(t, 'rashidPm') },
                                                   { value: 'NONE', label: shiftLabel(t, 'none') },
                                                 ]
                                               : [
                                                   { value: 'MORNING', label: shiftLabel(t, 'amShort') },
                                                   { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
-                                                  { value: 'COVER_RASHID_AM', label: shiftLabel(t, 'rashidAm') },
-                                                  { value: 'COVER_RASHID_PM', label: shiftLabel(t, 'rashidPm') },
                                                   { value: 'NONE', label: shiftLabel(t, 'none') },
                                                 ];
                                           if (isEdited || hasOverride) {
@@ -1597,8 +1629,6 @@ export function ScheduleEditClient({
                                         ? t('schedule.morning')
                                         : draftShift === 'EVENING'
                                         ? t('schedule.evening')
-                                        : draftShift === 'COVER_RASHID_AM' || draftShift === 'COVER_RASHID_PM'
-                                        ? (t('schedule.rashidCoverage') ?? t('schedule.coverRashidAm'))
                                         : '—'}
                                     </div>
                                   )}
@@ -1725,18 +1755,18 @@ export function ScheduleEditClient({
 
         {tab === 'week' && gridData && (
           <div className="mt-4 space-y-4">
-            {canEdit && gridData?.suggestions && gridData.suggestions.length > 0 && (
+            {canEdit && effectiveSuggestions.length > 0 && (
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <h3 className="mb-2 text-sm font-semibold text-slate-800">
                   {t('schedule.suggestions') ?? 'Suggestions'}
                 </h3>
                 <div className="mb-2 flex flex-wrap gap-1">
-                  {gridData.suggestions.some((s) => s.type === 'MOVE' && !dismissedSuggestionIds.has(s.id)) && (
+                  {effectiveSuggestions.some((s) => s.type === 'MOVE' && !dismissedSuggestionIds.has(s.id)) && (
                     <button
                       type="button"
                       onClick={() =>
                         setSuggestionConfirm(
-                          gridData.suggestions!.find(
+                          effectiveSuggestions.find(
                             (s) => s.type === 'MOVE' && !dismissedSuggestionIds.has(s.id)
                           )!
                         )
@@ -1746,12 +1776,12 @@ export function ScheduleEditClient({
                       {t('schedule.quickFixMoveAmPm') ?? 'Move 1 from AM → PM'}
                     </button>
                   )}
-                  {gridData.suggestions.some((s) => s.type === 'REMOVE_COVER' && !dismissedSuggestionIds.has(s.id)) && (
+                  {effectiveSuggestions.some((s) => s.type === 'REMOVE_COVER' && !dismissedSuggestionIds.has(s.id)) && (
                     <button
                       type="button"
                       onClick={() =>
                         setSuggestionConfirm(
-                          gridData.suggestions!.find(
+                          effectiveSuggestions.find(
                             (s) => s.type === 'REMOVE_COVER' && !dismissedSuggestionIds.has(s.id)
                           )!
                         )
@@ -1763,7 +1793,7 @@ export function ScheduleEditClient({
                   )}
                 </div>
                 <ul className="space-y-2">
-                  {gridData.suggestions
+                  {effectiveSuggestions
                     .filter((s) => !dismissedSuggestionIds.has(s.id))
                     .map((s) => (
                       <li key={s.id} className="rounded border border-slate-100 bg-slate-50 p-2 text-xs">
@@ -2026,21 +2056,17 @@ export function ScheduleEditClient({
                     ? 'AM'
                     : edit.originalEffectiveShift === 'EVENING'
                       ? 'PM'
-                      : edit.originalEffectiveShift === 'COVER_RASHID_AM'
-                        ? 'Rashid AM'
-                        : edit.originalEffectiveShift === 'COVER_RASHID_PM'
-                          ? 'Rashid PM'
-                          : 'NONE';
+                      : edit.originalEffectiveShift === 'COVER_RASHID_AM' || edit.originalEffectiveShift === 'COVER_RASHID_PM'
+                        ? (t('schedule.externalCoverage') ?? 'External')
+                        : 'NONE';
                 const to =
                   edit.newShift === 'MORNING'
                     ? 'AM'
                     : edit.newShift === 'EVENING'
                       ? 'PM'
-                      : edit.newShift === 'COVER_RASHID_AM'
-                        ? 'Rashid AM'
-                        : edit.newShift === 'COVER_RASHID_PM'
-                          ? 'Rashid PM'
-                          : 'NONE';
+                      : edit.newShift === 'COVER_RASHID_AM' || edit.newShift === 'COVER_RASHID_PM'
+                        ? (t('schedule.externalCoverage') ?? 'External')
+                        : 'NONE';
                 return (
                   <li key={key} className="flex justify-between gap-2 py-0.5">
                     <span className="text-slate-800">{formatDDMM(date)} {edit.employeeName}</span>

@@ -482,10 +482,10 @@ export function ScheduleViewClient({
   const coverageHeaderLabel = useMemo(
     () =>
       getCoverageHeaderLabel(externalGuests, {
-        rashidLabel: t('schedule.rashidCoverage') ?? 'Rashid Coverage',
+        hostBoutique: scopeLabel ? { name: scopeLabel } : undefined,
         externalLabel: t('schedule.externalCoverage') ?? 'External Coverage',
       }),
-    [externalGuests, t]
+    [externalGuests, scopeLabel, t]
   );
 
   /** External coverage by day (YYYY-MM-DD). Only external guests. */
@@ -1075,11 +1075,9 @@ function ScheduleGridView({
                             ? t('schedule.morning')
                             : cell.effectiveShift === 'EVENING'
                               ? t('schedule.evening')
-                              : cell.effectiveShift === 'COVER_RASHID_AM'
-                                ? t('schedule.coverRashidAm')
-                                : cell.effectiveShift === 'COVER_RASHID_PM'
-                                  ? t('schedule.coverRashidPm')
-                                  : '—'}
+                              : cell.effectiveShift === 'COVER_RASHID_AM' || cell.effectiveShift === 'COVER_RASHID_PM'
+                                ? (t('schedule.externalCoverage') ?? 'External')
+                                : '—'}
                         </div>
                       )}
                     </LuxuryTd>

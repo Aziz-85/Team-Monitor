@@ -13,7 +13,8 @@ import { prisma } from '@/lib/db';
 import { emitEventAsync } from '@/lib/notify/emitEvent';
 import type { Role } from '@prisma/client';
 
-const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE', 'COVER_RASHID_AM', 'COVER_RASHID_PM'] as const;
+/** Legacy COVER_RASHID_* removed; only MORNING, EVENING, NONE accepted for new overrides. */
+const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE'] as const;
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;

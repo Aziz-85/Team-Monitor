@@ -76,7 +76,7 @@ export function ScheduleMobileView({
             {(card.rashidAm.length > 0 || card.rashidPm.length > 0) && (
               <div>
                 <div className="mb-1 text-xs font-medium text-slate-500">
-                  {t('schedule.rashidCoverage')}
+                  {t('schedule.externalCoverage')}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {card.rashidAm.map((name) => (

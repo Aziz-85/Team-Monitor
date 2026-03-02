@@ -341,6 +341,7 @@
     "rashidAm": "Rashid AM",
     "rashidPm": "Rashid PM",
     "rashidCoverage": "Rashid Coverage",
+    "externalCoverage": "External Coverage",
     "rashid": {
       "amShort": "AM",
       "pmShort": "PM"

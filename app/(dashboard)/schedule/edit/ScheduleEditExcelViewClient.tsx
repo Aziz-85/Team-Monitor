@@ -66,19 +66,17 @@ export function ScheduleEditExcelViewClient({
     }
     return m;
   }, [weekGuests]);
-  const coverageLabel = coverageHeaderLabel ?? (t('schedule.rashidCoverage') ?? 'Rashid Coverage');
+  const coverageLabel = coverageHeaderLabel ?? (t('schedule.externalCoverage') ?? 'External Coverage');
 
-  const { morningByDay, eveningByDay, rashidByDay, eligibleByDay } = useMemo(() => {
+  const { morningByDay, eveningByDay, eligibleByDay } = useMemo(() => {
     const morningByDay: string[][] = [];
     const eveningByDay: string[][] = [];
-    const rashidByDay: string[] = [];
     const eligibleByDay: GridRow[][] = [];
     for (let dayIdx = 0; dayIdx < days.length; dayIdx++) {
       const date = days[dayIdx].date;
       const isFriday = days[dayIdx].dayOfWeek === FRIDAY_DAY_OF_WEEK;
       const morning: string[] = [];
       const evening: string[] = [];
-      let rashidEmpId: string | null = null;
       const eligible: GridRow[] = [];
       for (const row of rows) {
         const cell = row.cells[dayIdx];
@@ -91,14 +89,12 @@ export function ScheduleEditExcelViewClient({
           if (shift === 'MORNING') morning.push(row.empId);
           if (shift === 'EVENING') evening.push(row.empId);
         }
-        if ((shift === 'COVER_RASHID_AM' || shift === 'COVER_RASHID_PM') && rashidEmpId == null) rashidEmpId = row.empId;
       }
       morningByDay.push(morning);
       eveningByDay.push(evening);
-      rashidByDay.push(rashidEmpId ?? '');
       eligibleByDay.push(eligible);
     }
-    return { morningByDay, eveningByDay, rashidByDay, eligibleByDay };
+    return { morningByDay, eveningByDay, eligibleByDay };
   }, [days, rows, getDraftShift]);
 
   const { visibleSlots, maxPerCell } = useMemo(
@@ -134,25 +130,6 @@ export function ScheduleEditExcelViewClient({
       }
       const rc = getRowAndCell(newEmpId, date);
       if (rc) addPendingEdit(newEmpId, date, shift, rc.row, rc.cell);
-    },
-    [getRowAndCell, addPendingEdit]
-  );
-
-  const handleRashidChange = useCallback(
-    (date: string, newEmpId: string, currentEmpId: string | null) => {
-      if (newEmpId === '' || newEmpId === '—') {
-        if (currentEmpId) {
-          const rc = getRowAndCell(currentEmpId, date);
-          if (rc) addPendingEdit(currentEmpId, date, 'NONE', rc.row, rc.cell);
-        }
-        return;
-      }
-      if (currentEmpId && currentEmpId !== newEmpId) {
-        const rcPrev = getRowAndCell(currentEmpId, date);
-        if (rcPrev) addPendingEdit(currentEmpId, date, 'NONE', rcPrev.row, rcPrev.cell);
-      }
-      const rc = getRowAndCell(newEmpId, date);
-      if (rc) addPendingEdit(newEmpId, date, 'COVER_RASHID_AM', rc.row, rc.cell);
     },
     [getRowAndCell, addPendingEdit]
   );
@@ -230,7 +207,6 @@ export function ScheduleEditExcelViewClient({
             const isFriday = day.dayOfWeek === FRIDAY_DAY_OF_WEEK;
             const morning = morningByDay[dayIdx] ?? [];
             const evening = eveningByDay[dayIdx] ?? [];
-            const rashidEmpId = rashidByDay[dayIdx] ?? '';
             const eligible = eligibleByDay[dayIdx] ?? [];
             const amCount = counts[dayIdx]?.amCount ?? 0;
             const pmCount = counts[dayIdx]?.pmCount ?? 0;
@@ -292,17 +268,6 @@ export function ScheduleEditExcelViewClient({
                 })}
                 <td className={rashidCell}>
                   <div className="space-y-1">
-                    {editable ? (
-                      <ScheduleCellSelect
-                        compact
-                        value={rashidEmpId}
-                        options={[{ value: '', label: '—' }, ...eligible.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
-                        onChange={(v) => handleRashidChange(date, v, rashidEmpId || null)}
-                        aria-label={coverageLabel}
-                      />
-                    ) : (
-                      rashidEmpId ? getFirstName(rows.find((r) => r.empId === rashidEmpId)?.name ?? '') : '—'
-                    )}
                     {(guestsByDate.get(date) ?? []).length === 0 ? (
                       <div className="h-[10px] w-[60px] border-b border-slate-200 opacity-70" aria-hidden="true" />
                     ) : (

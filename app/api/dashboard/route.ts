@@ -451,10 +451,23 @@ export async function GET(request: NextRequest) {
     };
   }
 
+  const amCountToday = rosterToday.amEmployees.length;
+  const pmCountToday = rosterToday.pmEmployees.length;
+  if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
+    // eslint-disable-next-line no-console
+    console.log('[dashboard.scheduleOverview]', {
+      boutiqueId: boutiqueId ?? null,
+      date: now.toISOString().slice(0, 10),
+      amCount: amCountToday,
+      pmCount: pmCountToday,
+      imbalanceHighlight: amCountToday > pmCountToday,
+      daysOverloaded: coverageResults.map((v) => v.message),
+    });
+  }
   result.scheduleOverview = {
-    amPmBalanceSummary: `AM ${rosterToday.amEmployees.length} / PM ${rosterToday.pmEmployees.length}`,
+    amPmBalanceSummary: `AM ${amCountToday} / PM ${pmCountToday}`,
     daysOverloaded: coverageResults.map((v) => v.message),
-    imbalanceHighlight: rosterToday.amEmployees.length > rosterToday.pmEmployees.length,
+    imbalanceHighlight: amCountToday > pmCountToday,
   };
 
   const employeesForTable = await prisma.employee.findMany({

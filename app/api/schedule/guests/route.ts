@@ -9,6 +9,7 @@ import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { applyOverrideChange } from '@/lib/services/scheduleApply';
 import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
+import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 
@@ -304,5 +305,6 @@ export async function DELETE(request: NextRequest) {
     where: { id },
     data: { isActive: false },
   });
+  clearCoverageValidationCache();
   return NextResponse.json({ ok: true, id });
 }

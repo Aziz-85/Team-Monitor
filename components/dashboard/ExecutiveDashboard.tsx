@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import type { Role } from '@prisma/client';
@@ -89,8 +89,8 @@ export function ExecutiveDashboard() {
     }));
   }, [data?.teamTable?.rows, t]);
 
-  useEffect(() => {
-    fetch('/api/dashboard')
+  const fetchDashboard = useCallback(() => {
+    fetch('/api/dashboard', { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load dashboard');
         return res.json();
@@ -99,6 +99,21 @@ export function ExecutiveDashboard() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Error'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  // Refetch when user returns to tab so Schedule Overview reflects latest roster after edits
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') fetchDashboard();
+    };
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', onVisible);
+      return () => document.removeEventListener('visibilitychange', onVisible);
+    }
+  }, [fetchDashboard]);
 
   if (loading) {
     return (

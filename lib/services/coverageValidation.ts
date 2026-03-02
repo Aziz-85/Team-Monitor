@@ -59,6 +59,17 @@ export async function validateCoverage(
   const dayOfWeek = new Date(dateKey + 'T12:00:00Z').getUTCDay();
   const isFriday = dayOfWeek === FRIDAY_DAY_OF_WEEK;
 
+  if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
+    // eslint-disable-next-line no-console
+    console.log('[coverageValidation.validateCoverage]', {
+      dateKey,
+      boutiqueIds: options.boutiqueIds,
+      amCount,
+      pmCount,
+      isFriday,
+    });
+  }
+
   const rule = await prisma.coverageRule.findFirst({
     where: { dayOfWeek, enabled: true },
     select: { minAM: true, minPM: true },

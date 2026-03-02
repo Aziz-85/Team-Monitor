@@ -1,41 +1,49 @@
 /**
  * Shared coverage header label for schedule view/edit.
- * Single source for "Rashid Coverage" | "${BoutiqueName} Coverage" | "External Coverage".
+ * Dynamic by host boutique: never "Rashid Coverage" when host is AlRashid; use "External Coverage" (or "Coverage from X" when showing a specific source).
  */
 
 export type GuestForCoverageLabel = {
-  sourceBoutique?: { name: string } | null;
+  sourceBoutique?: { name: string; id?: string } | null;
   employee: { homeBoutiqueName?: string };
 };
 
-const DEFAULT_RASHID = 'Rashid Coverage';
+export type GetCoverageColumnLabelOptions = {
+  /** Current host / "Working on" boutique (schedule scope) */
+  hostBoutique?: { id?: string; name?: string } | null;
+  /** i18n or fallback for generic external coverage */
+  externalLabel?: string;
+};
+
 const DEFAULT_EXTERNAL = 'External Coverage';
 
 /**
- * Compute the coverage column header label from external guest list.
- * - No guests → "Rashid Coverage"
- * - One source boutique → "${name} Coverage"
- * - Multiple sources → "External Coverage"
+ * Compute the coverage column header label.
+ * - No guests → externalLabel (default "External Coverage"); never "Rashid Coverage" so label is correct when host is AlRashid.
+ * - One source boutique (and source !== host) → "Coverage from {name}" or "{name} Coverage"
+ * - Multiple sources or source === host → externalLabel
  */
 export function getCoverageHeaderLabel(
   externalGuests: GuestForCoverageLabel[],
-  options: {
-    rashidLabel?: string;
-    externalLabel?: string;
-  } = {}
+  options: GetCoverageColumnLabelOptions & { externalLabel?: string } = {}
 ): string {
-  const rashidLabel = options.rashidLabel ?? DEFAULT_RASHID;
   const externalLabel = options.externalLabel ?? DEFAULT_EXTERNAL;
+  const hostBoutique = options.hostBoutique;
 
-  if (externalGuests.length === 0) return rashidLabel;
+  if (externalGuests.length === 0) return externalLabel;
 
-  const uniqueNames = Array.from(
+  const uniqueSources = Array.from(
     new Set(
       externalGuests.map(
         (g) => g.sourceBoutique?.name ?? g.employee.homeBoutiqueName ?? 'External'
       )
     )
   ) as string[];
-  if (uniqueNames.length === 1) return `${uniqueNames[0]} Coverage`;
+  if (uniqueSources.length === 1) {
+    const name = uniqueSources[0];
+    const hostName = hostBoutique?.name?.trim();
+    if (hostName && name === hostName) return externalLabel;
+    return `${name} Coverage`;
+  }
   return externalLabel;
 }

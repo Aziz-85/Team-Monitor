@@ -49,6 +49,18 @@ export async function rosterForDate(
     else offEmployees.push(emp);
   }
 
+  if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
+    // eslint-disable-next-line no-console
+    console.log('[roster.rosterForDate]', {
+      date: d.toISOString().slice(0, 10),
+      boutiqueIds: options.boutiqueIds,
+      amCount: amEmployees.length,
+      pmCount: pmEmployees.length,
+      amEmpIds: amEmployees.map((e) => e.empId),
+      pmEmpIds: pmEmployees.map((e) => e.empId),
+    });
+  }
+
   const warnings: RosterWarnings = [];
   const dayOfWeek = d.getUTCDay();
   const isFriday = dayOfWeek === 5;

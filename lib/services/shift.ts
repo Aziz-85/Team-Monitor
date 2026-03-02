@@ -44,7 +44,10 @@ export async function effectiveShiftFor(empId: string, date: Date): Promise<Shif
     },
   });
   if (override) {
-    return override.overrideShift as ShiftType;
+    const raw = override.overrideShift as ShiftType;
+    // Legacy: treat persisted COVER_RASHID_AM/PM as NONE (replaced by External Coverage / Guest Shift system)
+    if (raw === 'COVER_RASHID_AM' || raw === 'COVER_RASHID_PM') return 'NONE';
+    return raw;
   }
 
   return computeShiftByLaw(empId, date);

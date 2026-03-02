@@ -17,7 +17,7 @@ export const SCHEDULE_VALIDATION = {
 /** API-facing message when Friday AM shift is submitted (EN; API may not have locale). */
 export const API_ERROR_MESSAGES = {
   FRIDAY_PM_ONLY: 'Friday is PM-only. AM is not allowed.',
-  OVERRIDE_SHIFT_INVALID: 'overrideShift must be MORNING, EVENING, NONE, COVER_RASHID_AM, or COVER_RASHID_PM',
+  OVERRIDE_SHIFT_INVALID: 'overrideShift must be MORNING, EVENING, or NONE',
   EMPID_DATE_REQUIRED: 'empId and date required',
   WEEK_START_REQUIRED: 'weekStart required (YYYY-MM-DD)',
   MONTH_REQUIRED: 'month required (YYYY-MM)',

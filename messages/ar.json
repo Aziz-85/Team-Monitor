@@ -340,6 +340,7 @@
     "rashidAm": "راشد AM",
     "rashidPm": "راشد PM",
     "rashidCoverage": "تغطية راشد",
+    "externalCoverage": "التغطيات الخارجية",
     "rashid": {
       "amShort": "AM",
       "pmShort": "PM"

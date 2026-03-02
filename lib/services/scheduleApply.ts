@@ -11,7 +11,8 @@ import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/schedu
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { toYmdRiyadh, ensureForceWorkAndCompCredit, getEffectiveWeeklyOffDay, getDowRiyadhFromYmd } from '@/lib/schedule/dayOverride';
 
-const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE', 'COVER_RASHID_AM', 'COVER_RASHID_PM'] as const;
+/** Legacy COVER_RASHID_* removed from UI; only MORNING, EVENING, NONE accepted for new overrides. */
+const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE'] as const;
 
 export type OverridePayload = {
   empId: string;

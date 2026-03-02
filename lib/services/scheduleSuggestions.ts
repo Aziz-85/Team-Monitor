@@ -46,6 +46,19 @@ export function buildScheduleSuggestions(grid: ScheduleGridResult): ScheduleSugg
     const rashidPm = c.rashidPmCount ?? 0;
     const effectiveMinPm = isFriday ? (day.minPm ?? 0) : Math.max(day.minPm ?? 0, 2);
 
+    if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
+      // eslint-disable-next-line no-console
+      console.log('[scheduleSuggestions.buildScheduleSuggestions] day', {
+        date,
+        dayIndex,
+        isFriday,
+        am,
+        pm,
+        effectiveMinPm,
+        rule: !isFriday && am > pm ? 'AM>PM' : isFriday && am >= 1 ? 'Friday AM' : '',
+      });
+    }
+
     // 1) Sat–Thu: AM > PM → MOVE one AM → PM if after move PM ≥ AM and PM ≥ 2
     if (!isFriday && am > pm && am >= 1) {
       const afterAm = am - 1;
