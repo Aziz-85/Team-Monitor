@@ -38,6 +38,16 @@
   - `You do not have permission to manage sales for this boutique` — المستخدم لا يملك صلاحية إدارة المبيعات لهذا البوتيك.
   - `Boutique not in your operational scope` — البوتيك المطلوب خارج النطاق التشغيلي للمستخدم.
 
+**حل رسالة "You do not have permission to manage sales for this boutique":**  
+الصلاحية تتحكم بها **عضويات البوتيك** (UserBoutiqueMembership). للمدير (MANAGER) يجب تفعيل علم **Sales** للبوتيك المعروض في النطاق (مثلاً AlRashid S02).
+
+1. دخول حساب **ADMIN** (أو SUPER_ADMIN) على السيرفر.
+2. من القائمة: **Admin** → **Memberships** (أو **Administration** → **Access** الذي يحوّل إلى نفس الصفحة).
+3. البحث عن العضوية الخاصة بالمستخدم المعني + البوتيك (مثلاً AlRashid S02).
+4. الضغط **Edit** ثم تفعيل خيار **Sales** (canManageSales) ثم **Save**.
+
+إن لم توجد عضوية للمستخدم مع هذا البوتيك، من نفس الصفحة يمكن **Add** عضوية جديدة واختيار المستخدم والبوتيك وتفعيل **canAccess** و **Sales** (والصلاحيات الأخرى إن لزم).
+
 **ما الذي تتحقق منه على السيرفر:**
 1. أن المستخدم ليس DEMO_VIEWER إذا كان يجب عليه إدخال المبيعات.
 2. أن للمستخدم دور ADMIN أو MANAGER وأنه مرتبط بالبوتيك الصحيح (في الجلسة/قاعدة البيانات).
