@@ -190,6 +190,8 @@ export async function GET(request: NextRequest) {
     const myTarget = salesMetrics.currentMonthTarget;
     const myActual = salesMetrics.currentMonthActual;
     const completionPct = salesMetrics.completionPct;
+    const myTargetHalalas = Math.round(myTarget * SAR_TO_HALALAS);
+    const myActualHalalas = Math.round(myActual * SAR_TO_HALALAS);
 
     const todayTasks: { done: number; total: number } = { done: 0, total: 0 };
     const completionsToday = await prisma.taskCompletion.findMany({
@@ -245,7 +247,7 @@ export async function GET(request: NextRequest) {
       },
     };
     result.salesBreakdown = [
-      { empId, name: user.employee?.name ?? empId, target: myTarget, actual: myActual, pct: completionPct },
+      { empId, name: user.employee?.name ?? empId, target: myTargetHalalas, actual: myActualHalalas, pct: completionPct },
     ];
     const myZoneCode = myZoneRuns.length > 0 ? myZoneRuns[0].zone?.code ?? null : null;
     result.teamTable = {
@@ -255,8 +257,8 @@ export async function GET(request: NextRequest) {
           employee: user.employee?.name ?? empId,
           role: role,
           position: user.employee?.position ?? null,
-          target: myTarget,
-          actual: myActual,
+          target: myTargetHalalas,
+          actual: myActualHalalas,
           pct: completionPct,
           tasksDone: todayTasks.done,
           late: 0,
@@ -333,14 +335,16 @@ export async function GET(request: NextRequest) {
 
   const salesByUser = salesMetrics.byUserId;
   result.salesBreakdown = empTargetsWithUser.map((et) => {
-    const actual = salesByUser[et.userId] ?? 0;
+    const actualSar = salesByUser[et.userId] ?? 0;
     const targetHalalas = Math.round((et.amount ?? 0) * SAR_TO_HALALAS);
-    const pct = targetHalalas > 0 ? Math.round((actual / targetHalalas) * 100) : 0;
+    const actualHalalas = Math.round(actualSar * SAR_TO_HALALAS);
+    const targetSar = et.amount ?? 0;
+    const pct = targetSar > 0 ? Math.round((actualSar / targetSar) * 100) : 0;
     return {
       empId: et.user.empId,
       name: et.user.employee?.name ?? et.user.empId,
       target: targetHalalas,
-      actual,
+      actual: actualHalalas,
       pct,
     };
   });
@@ -494,15 +498,16 @@ export async function GET(request: NextRequest) {
         const uid = e.user!.id;
         const targetSar = empTargetMap.get(uid) ?? 0;
         const targetHalalas = Math.round(targetSar * SAR_TO_HALALAS);
-        const actual = empSalesMap[uid] ?? 0;
-        const pct = targetHalalas > 0 ? Math.round((actual / targetHalalas) * 100) : 0;
+        const actualSar = empSalesMap[uid] ?? 0;
+        const actualHalalas = Math.round(actualSar * SAR_TO_HALALAS);
+        const pct = targetSar > 0 ? Math.round((actualSar / targetSar) * 100) : 0;
         return {
           empId: e.empId,
           employee: e.name,
           role: e.user!.role,
           position: e.position ?? null,
           target: targetHalalas,
-          actual,
+          actual: actualHalalas,
           pct,
           tasksDone: completionsByUser.get(uid) ?? 0,
           late: lateByUser.get(uid) ?? 0,
