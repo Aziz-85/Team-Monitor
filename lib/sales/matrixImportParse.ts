@@ -154,17 +154,6 @@ export async function parseMatrixBuffer(
 ): Promise<ParseResult> {
   const { scopeId, month, includePreviousMonth } = opts;
   const [year, monthNum] = month.split('-').map(Number);
-  const monthStart = new Date(Date.UTC(year, monthNum - 1, 1));
-  const monthEnd = new Date(Date.UTC(year, monthNum, 0));
-  let rangeStart = monthStart;
-  const rangeEnd = monthEnd;
-  if (includePreviousMonth) {
-    const prev = previousMonthKey(month);
-    if (prev) {
-      const [py, pm] = prev.split('-').map(Number);
-      rangeStart = new Date(Date.UTC(py, pm - 1, 1));
-    }
-  }
 
   let wb: XLSX.WorkBook;
   try {

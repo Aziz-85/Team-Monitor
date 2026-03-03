@@ -76,6 +76,12 @@ export async function POST(request: NextRequest) {
   }
   const salesSar = Math.round(rawSar);
   const hadDecimals = rawSar !== salesSar;
+
+  const employeeId = ((body.employeeId ?? '').trim() || (roleUser.empId ?? ''));
+  if (!employeeId) {
+    return NextResponse.json({ error: 'employeeId required (or login as user with empId)' }, { status: 400 });
+  }
+
   if (hadDecimals) {
     await logAudit(
       roleUser.id,
@@ -94,11 +100,6 @@ export async function POST(request: NextRequest) {
       'Sales amount rounded to integer',
       { boutiqueId: scopeId }
     );
-  }
-
-  const employeeId = ((body.employeeId ?? '').trim() || (roleUser.empId ?? ''));
-  if (!employeeId) {
-    return NextResponse.json({ error: 'employeeId required (or login as user with empId)' }, { status: 400 });
   }
 
   if (roleUser.role === 'EMPLOYEE') {
