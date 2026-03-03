@@ -8,31 +8,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
-import { normalizeMonthKey } from '@/lib/time';
+import { normalizeMonthKey, getMonthRangeDayKeys, addMonths } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
 const SALES_ENTRY_SOURCES_ALL = ['LEDGER', 'IMPORT', 'MANUAL'];
 
+/** Build day keys for matrix: Riyadh calendar month(s). Jan 2026 = 2026-01-01 .. 2026-01-31 only. */
 function buildDays(monthKey: string, includePreviousMonth: boolean): string[] {
-  const months: string[] = [];
-  months.push(monthKey);
+  const keys: string[] = [];
   if (includePreviousMonth) {
-    const [y, m] = monthKey.split('-').map(Number);
-    const prev = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
-    months.unshift(prev);
+    const prev = addMonths(monthKey, -1);
+    keys.push(...getMonthRangeDayKeys(prev).keys);
   }
-  const days: string[] = [];
-  for (const mk of months) {
-    const [y, m] = mk.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-      const day = String(d).padStart(2, '0');
-      days.push(`${mk}-${day}`);
-    }
-  }
-  return days;
+  keys.push(...getMonthRangeDayKeys(monthKey).keys);
+  return keys;
 }
 
 export async function GET(request: NextRequest) {

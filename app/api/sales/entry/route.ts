@@ -15,6 +15,7 @@ import { buildEmployeeWhereForOperational } from '@/lib/employee/employeeQuery';
 import { normalizeDateOnlyRiyadh, formatDateRiyadh } from '@/lib/time';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
+import { logAudit } from '@/lib/audit';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -69,10 +70,31 @@ export async function POST(request: NextRequest) {
   if (body.salesSar === undefined || body.salesSar === null) {
     return NextResponse.json({ error: 'salesSar is required' }, { status: 400 });
   }
-  if (typeof body.salesSar !== 'number' || !Number.isInteger(body.salesSar) || body.salesSar < 0) {
-    return NextResponse.json({ error: 'salesSar must be a non-negative integer' }, { status: 400 });
+  const rawSar = Number(body.salesSar);
+  if (!Number.isFinite(rawSar) || rawSar < 0) {
+    return NextResponse.json({ error: 'salesSar must be a non-negative number' }, { status: 400 });
   }
-  const salesSar = body.salesSar;
+  const salesSar = Math.round(rawSar);
+  const hadDecimals = rawSar !== salesSar;
+  if (hadDecimals) {
+    await logAudit(
+      roleUser.id,
+      'SALES_AMOUNT_ROUNDED',
+      'SalesEntry',
+      null,
+      null,
+      JSON.stringify({
+        original: rawSar,
+        rounded: salesSar,
+        dateKey: dateRaw,
+        employeeId,
+        boutiqueId: scopeId,
+        source: 'daily_entry',
+      }),
+      'Sales amount rounded to integer',
+      { boutiqueId: scopeId }
+    );
+  }
 
   const employeeId = ((body.employeeId ?? '').trim() || (roleUser.empId ?? ''));
   if (!employeeId) {

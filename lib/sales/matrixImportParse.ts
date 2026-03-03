@@ -6,6 +6,7 @@
 import * as XLSX from 'xlsx';
 import type { PrismaClient } from '@prisma/client';
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
+import { toRiyadhDayKey, getMonthRangeDayKeys } from '@/lib/time';
 
 const SHEET_NAME = 'DATA_MATRIX';
 const HEADER_ROW_INDEX = 0;
@@ -29,8 +30,8 @@ export type ParseResult = {
   sheetName: string;
   header: string[];
   employeeColumns: { colIndex: number; headerRaw: string }[];
-  rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number }[]; skippedEmpty: number }[];
-  queue: { dateKey: string; date: Date; employeeId: string; amountSar: number }[];
+  rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number; roundedFrom?: number }[]; skippedEmpty: number }[];
+  queue: { dateKey: string; date: Date; employeeId: string; amountSar: number; roundedFrom?: number }[];
   blockingErrors: BlockingError[];
   sampleNonBlankCells: { row: number; col: number; headerRaw: string; value: unknown }[];
   mappedEmployees: { colIndex: number; headerRaw: string; employeeId: string; employeeName: string }[];
@@ -65,16 +66,16 @@ function toDateKey(raw: unknown): string | null {
     const s = raw.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
     return null;
   }
   if (typeof raw === 'number' && Number.isFinite(raw)) {
     const utcMs = (raw - 25569) * 86400 * 1000;
     const d = new Date(utcMs);
-    return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+    return Number.isNaN(d.getTime()) ? null : toRiyadhDayKey(d);
   }
   if (raw instanceof Date && !Number.isNaN((raw as Date).getTime())) {
-    return (raw as Date).toISOString().slice(0, 10);
+    return toRiyadhDayKey(raw as Date);
   }
   return null;
 }
@@ -84,22 +85,18 @@ function parseIntSarOrBlocking(
   row: number,
   col: number,
   headerRaw: string
-): { ok: true; value: number } | { ok: false; err: BlockingError } {
+): { ok: true; value: number; roundedFrom?: number } | { ok: false; err: BlockingError } {
   const t = String(raw ?? '').trim().replace(/,/g, '');
-  if (/^-?\d+\.\d+$/.test(t)) {
-    return { ok: false, err: { type: 'DECIMAL', message: 'Decimal values are not allowed (must be integer SAR).', row, col, headerRaw, value: raw } };
-  }
   const n = Number(t);
   if (!Number.isFinite(n)) {
     return { ok: false, err: { type: 'NOT_A_NUMBER', message: 'Value is not a number.', row, col, headerRaw, value: raw } };
   }
-  if (!Number.isInteger(n)) {
-    return { ok: false, err: { type: 'DECIMAL', message: 'Non-integer value is not allowed.', row, col, headerRaw, value: raw } };
-  }
   if (n < 0) {
     return { ok: false, err: { type: 'NEGATIVE', message: 'Negative values are not allowed.', row, col, headerRaw, value: raw } };
   }
-  return { ok: true, value: n };
+  const rounded = Math.round(n);
+  const hadDecimals = n !== rounded;
+  return { ok: true, value: rounded, ...(hadDecimals ? { roundedFrom: n } : {}) };
 }
 
 function previousMonthKey(monthKey: string): string | null {
@@ -204,7 +201,7 @@ export async function parseMatrixBuffer(
   const blockingErrors: BlockingError[] = [];
   const sampleNonBlankCells: { row: number; col: number; headerRaw: string; value: unknown }[] = [];
   const SAMPLE_MAX = 12;
-  const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number }[]; skippedEmpty: number }[] = [];
+  const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number; roundedFrom?: number }[]; skippedEmpty: number }[] = [];
 
   for (let r = DATA_START_ROW; r < aoa.length; r++) {
     const rowArr = aoa[r] ?? [];
@@ -243,7 +240,12 @@ export async function parseMatrixBuffer(
         blockingErrors.push(parsed.err);
         continue;
       }
-      values.push({ colIndex, headerRaw, amountSar: parsed.value });
+      values.push({
+        colIndex,
+        headerRaw,
+        amountSar: parsed.value,
+        ...(parsed.roundedFrom != null && { roundedFrom: parsed.roundedFrom }),
+      });
     }
     rows.push({ dateKey, date, scopeId: rowScopeId, values, skippedEmpty });
   }
@@ -281,18 +283,13 @@ export async function parseMatrixBuffer(
   }
 
   const allowedDateSet = new Set<string>();
-  for (let d = new Date(rangeStart.getTime()); d <= rangeEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-    allowedDateSet.add(d.toISOString().slice(0, 10));
-  }
+  const { keys: mainKeys } = getMonthRangeDayKeys(month);
+  mainKeys.forEach((k) => allowedDateSet.add(k));
   if (includePreviousMonth) {
     const prev = previousMonthKey(month);
     if (prev) {
-      const [py, pm] = prev.split('-').map(Number);
-      const pStart = new Date(Date.UTC(py, pm - 1, 1));
-      const pEnd = new Date(Date.UTC(py, pm, 0));
-      for (let d = new Date(pStart.getTime()); d <= pEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-        allowedDateSet.add(d.toISOString().slice(0, 10));
-      }
+      const { keys: prevKeys } = getMonthRangeDayKeys(prev);
+      prevKeys.forEach((k) => allowedDateSet.add(k));
     }
   }
 
@@ -305,7 +302,13 @@ export async function parseMatrixBuffer(
     for (const v of row.values) {
       const empId = headerToEmpId.get(norm(v.headerRaw));
       if (!empId) continue;
-      queue.push({ dateKey: row.dateKey, date: row.date, employeeId: empId, amountSar: v.amountSar });
+      queue.push({
+        dateKey: row.dateKey,
+        date: row.date,
+        employeeId: empId,
+        amountSar: v.amountSar,
+        ...(v.roundedFrom != null && { roundedFrom: v.roundedFrom }),
+      });
     }
   }
 

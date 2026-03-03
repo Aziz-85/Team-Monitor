@@ -191,6 +191,42 @@ export function getDaysInMonth(monthKey: string): number {
 }
 
 /**
+ * Riyadh calendar day key from a Date or date string.
+ * Use for SalesEntry.dateKey and any day-key logic so all month/day mapping is correct in Asia/Riyadh.
+ */
+export function toRiyadhDayKey(date: Date | string): string {
+  if (typeof date === 'string') {
+    const s = date.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s.includes('T') ? s : s + 'T12:00:00.000Z');
+    if (!Number.isNaN(d.getTime())) return toRiyadhDateString(d);
+    return toRiyadhDateString(getRiyadhNow());
+  }
+  if (Number.isNaN(date.getTime())) return toRiyadhDateString(getRiyadhNow());
+  return toRiyadhDateString(date);
+}
+
+/**
+ * Day keys for a calendar month in Riyadh: ["YYYY-MM-01", "YYYY-MM-02", ..., "YYYY-MM-31"] (or 28/29/30).
+ * Single source of truth for matrix day columns and month range so Jan 2026 is exactly 2026-01-01 .. 2026-01-31.
+ */
+export function getMonthRangeDayKeys(monthKey: string): { startKey: string; endKey: string; keys: string[] } {
+  const normalized = normalizeMonthKey(monthKey);
+  const [y, m] = normalized.split('-').map(Number);
+  const mm = String(m).padStart(2, '0');
+  const lastDay = getDaysInMonth(normalized);
+  const keys: string[] = [];
+  for (let d = 1; d <= lastDay; d++) {
+    keys.push(`${y}-${mm}-${String(d).padStart(2, '0')}`);
+  }
+  return {
+    startKey: keys[0] ?? '',
+    endKey: keys[keys.length - 1] ?? '',
+    keys,
+  };
+}
+
+/**
  * Start (inclusive) and end (exclusive) of month in Riyadh.
  * start: first day 00:00, endExclusive: first day of next month 00:00 (for range queries).
  */

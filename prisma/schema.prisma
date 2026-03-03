@@ -125,6 +125,8 @@ model Boutique {
   eventPeriods         EventPeriod[]
   employeeDayOverrides  EmployeeDayOverride[]
   compDayLedgers        CompDayLedger[]
+  boutiqueKeys          BoutiqueKey[]
+  keyHandovers          KeyHandover[]
 
   @@index([regionId])
   @@index([isActive])
@@ -601,6 +603,35 @@ model ScheduleLock {
   isActive       Boolean          @default(true) // active lock (false if revoked)
   @@index([boutiqueId])
   @@index([scopeType, scopeValue, isActive])
+}
+
+// --- Key possession & handover (2 keys per boutique) ---
+model BoutiqueKey {
+  id          String   @id @default(cuid())
+  boutiqueId String
+  keyNumber   Int      // 1 or 2
+  boutique    Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  handovers   KeyHandover[]
+
+  @@unique([boutiqueId, keyNumber])
+  @@index([boutiqueId])
+}
+
+model KeyHandover {
+  id                String     @id @default(cuid())
+  boutiqueId        String
+  keyId             String
+  fromEmployeeId    String?     // null for initial assignment
+  toEmployeeId      String     // Employee.empId
+  handoverAt        DateTime   // real timestamp (e.g. AM 09:00 or PM 16:00 local)
+  note              String?
+  createdByUserId   String
+  createdAt         DateTime   @default(now())
+  key               BoutiqueKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  boutique          Boutique    @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId, handoverAt])
+  @@index([keyId])
 }
 
 enum ScheduleWeekStatusEnum {

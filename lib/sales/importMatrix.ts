@@ -27,17 +27,18 @@ export function normalizeDateToDateKey(date: Date): string {
 }
 
 /**
- * Parse cell value to integer SAR. Returns { value } where value=null means invalid
- * (decimal, negative, non-numeric). Empty / '-' / '—' are handled by caller as ignored.
+ * Parse cell value to integer SAR. Rounds decimals to nearest integer; use roundedFrom to audit.
+ * Returns { value } where value=null means invalid (non-numeric or negative). Empty / '-' are handled by caller.
  */
-export function safeParseIntCell(value: unknown): { value: number | null } {
+export function safeParseIntCell(value: unknown): { value: number | null; roundedFrom?: number } {
   const s = String(value ?? '').trim();
   if (s === '') return { value: null };
   const cleaned = s.replace(/,/g, '');
-  if (/\./.test(cleaned)) return { value: null };
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return { value: null };
-  return { value: Math.round(n) };
+  const rounded = Math.round(n);
+  const hadDecimals = n !== rounded;
+  return { value: rounded, ...(hadDecimals ? { roundedFrom: n } : {}) };
 }
 
 export type MatrixParseIssue = {
@@ -55,6 +56,7 @@ export type ParsedCell = {
   rowIndex: number;
   colHeader: string;
   scopeId: string;
+  roundedFrom?: number;
 };
 
 export type MatrixParseResult = {
@@ -238,6 +240,7 @@ export function parseMatrixWorkbook(buffer: Buffer): MatrixParseResult {
         rowIndex: r + 1,
         colHeader: header,
         scopeId,
+        ...(parsed.roundedFrom != null && { roundedFrom: parsed.roundedFrom }),
       });
       cellsParsed += 1;
     }

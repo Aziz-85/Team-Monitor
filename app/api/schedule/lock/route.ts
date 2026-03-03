@@ -11,6 +11,7 @@ import { logAudit } from '@/lib/audit';
 import { lockDay, lockWeek } from '@/lib/services/scheduleLock';
 import { canLockUnlockDay, canLockWeek } from '@/lib/permissions';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
+import { validateWeekKeyContinuityFromHandovers } from '@/lib/keys/keyContinuity';
 import type { Role } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
@@ -44,6 +45,14 @@ export async function POST(request: NextRequest) {
     const weekStart = String(body.weekStart ?? '').trim();
     if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
       return NextResponse.json({ error: 'weekStart (YYYY-MM-DD, Saturday) required for WEEK' }, { status: 400 });
+    }
+    const keyErrors = await validateWeekKeyContinuityFromHandovers(scheduleScope.boutiqueId, weekStart);
+    if (keyErrors.length > 0) {
+      const first = keyErrors[0];
+      return NextResponse.json(
+        { error: first.message, code: 'KEY_CONTINUITY', errors: keyErrors },
+        { status: 400 }
+      );
     }
     try {
       await lockWeek(weekStart, scheduleScope.boutiqueId, user.id, reason);

@@ -255,6 +255,25 @@ function parseMonthFromUrl(value: string | null): string {
 
 type MonthMode = 'summary' | 'excel';
 
+type KeyPlanDay = {
+  date: string;
+  amHolderEmpId: string | null;
+  pmHolderEmpId: string | null;
+  amEligible?: Array<{ empId: string; name: string }>;
+  pmEligible?: Array<{ empId: string; name: string }>;
+};
+
+type KeyPlan = {
+  weekStart: string;
+  days: KeyPlanDay[];
+  currentHolders: {
+    key1HolderEmployeeId: string | null;
+    key2HolderEmployeeId: string | null;
+    key1HolderName: string | null;
+    key2HolderName: string | null;
+  };
+} | null;
+
 export function ScheduleEditClient({
   initialRole,
   ramadanRange,
@@ -337,6 +356,14 @@ export function ScheduleEditClient({
     isExternal?: boolean;
   };
   const [weekGuests, setWeekGuests] = useState<GuestItem[]>([]);
+
+  const [keyPlan, setKeyPlan] = useState<KeyPlan>(null);
+  const [keyPlanLoading, setKeyPlanLoading] = useState(false);
+  const [keyPlanDirty, setKeyPlanDirty] = useState(false);
+  const [keyPlanLocal, setKeyPlanLocal] = useState<KeyPlanDay[]>([]);
+  const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
+  const [handoverForm, setHandoverForm] = useState({ keyNumber: 1 as 1 | 2, toEmployeeId: '', note: '' });
+  const [handoverSubmitting, setHandoverSubmitting] = useState(false);
 
   /** Only guests from other boutiques (same-branch excluded from External Coverage rows) */
   const externalGuests = useMemo(
@@ -564,6 +591,26 @@ export function ScheduleEditClient({
   useEffect(() => {
     if (tab === 'week') fetchWeekGovernance();
   }, [tab, weekStart, fetchWeekGovernance]);
+
+  const fetchKeyPlan = useCallback(() => {
+    if (tab !== 'week' || !weekStart) return;
+    setKeyPlanLoading(true);
+    fetch(`/api/keys/week?weekStart=${encodeURIComponent(weekStart)}&eligible=1`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: KeyPlan | null) => {
+        if (data) {
+          setKeyPlan(data);
+          setKeyPlanLocal(data.days.map((d) => ({ ...d })));
+          setKeyPlanDirty(false);
+        } else setKeyPlan(null);
+      })
+      .catch(() => setKeyPlan(null))
+      .finally(() => setKeyPlanLoading(false));
+  }, [tab, weekStart]);
+
+  useEffect(() => {
+    if (tab === 'week' && weekStart) fetchKeyPlan();
+  }, [tab, weekStart, fetchKeyPlan]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -1135,7 +1182,12 @@ export function ScheduleEditClient({
                         fetchWeekGovernance();
                         fetchGrid();
                         setToast(t('governance.weekLocked'));
-                      } else setToast((data.error as string) || t('governance.approveBeforeLock') || 'Week must be approved before it can be locked');
+                      } else {
+                        const msg = data.code === 'KEY_CONTINUITY' && Array.isArray(data.errors)
+                          ? data.errors.map((e: { message?: string }) => e.message).filter(Boolean).join(' · ') || data.error
+                          : (data.error as string) || t('governance.approveBeforeLock') || 'Week must be approved before it can be locked';
+                        setToast(msg);
+                      }
                       setTimeout(() => setToast(null), 4000);
                     } finally {
                       setLockActionLoading(false);
@@ -1330,6 +1382,131 @@ export function ScheduleEditClient({
           <div className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
             <span className="font-medium">{t('schedule.fridayPmOnly')}</span>
             <span className="ms-1">— {gridData.integrityWarnings.join('; ')}</span>
+          </div>
+        )}
+
+        {tab === 'week' && gridData && (
+          <div className="mb-4 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="mb-2 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-slate-700">
+                {t('schedule.keys.keyStatus') ?? 'Key status'}: Key #1 → {keyPlan?.currentHolders?.key1HolderName ?? keyPlan?.currentHolders?.key1HolderEmployeeId ?? '—'}, Key #2 → {keyPlan?.currentHolders?.key2HolderName ?? keyPlan?.currentHolders?.key2HolderEmployeeId ?? '—'}
+              </span>
+              {keyPlanLoading && <span className="text-xs text-slate-500">{t('common.loading') ?? 'Loading…'}</span>}
+              {(initialRole === 'ASSISTANT_MANAGER' || initialRole === 'MANAGER' || initialRole === 'ADMIN' || initialRole === 'SUPER_ADMIN') && (
+                <button
+                  type="button"
+                  onClick={() => setHandoverDialogOpen(true)}
+                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  {t('schedule.keys.logHandover') ?? 'Log handover'}
+                </button>
+              )}
+            </div>
+            {keyPlan && keyPlan.days.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="py-1 pr-2 text-left font-medium text-slate-600">{t('schedule.day') ?? 'Day'}</th>
+                      {keyPlan.days.map((d) => (
+                        <th key={d.date} className="py-1 px-1 text-center font-medium text-slate-600">
+                          {getDayShort(d.date, locale)} {formatDDMM(d.date)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-100">
+                      <td className="py-1 pr-2 text-slate-600">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
+                      {keyPlan.days.map((day) => {
+                        const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
+                        const options = day.amEligible ?? [];
+                        return (
+                          <td key={day.date} className="py-1 px-1">
+                            <select
+                              value={local.amHolderEmpId ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value || null;
+                                setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, amHolderEmpId: v } : x)));
+                                setKeyPlanDirty(true);
+                              }}
+                              className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs"
+                            >
+                              <option value="">—</option>
+                              {options.map((o) => (
+                                <option key={o.empId} value={o.empId}>{o.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-2 text-slate-600">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
+                      {keyPlan.days.map((day) => {
+                        const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
+                        const options = day.pmEligible ?? [];
+                        return (
+                          <td key={day.date} className="py-1 px-1">
+                            <select
+                              value={local.pmHolderEmpId ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value || null;
+                                setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, pmHolderEmpId: v } : x)));
+                                setKeyPlanDirty(true);
+                              }}
+                              className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs"
+                            >
+                              <option value="">—</option>
+                              {options.map((o) => (
+                                <option key={o.empId} value={o.empId}>{o.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+                {keyPlanDirty && (initialRole === 'ASSISTANT_MANAGER' || initialRole === 'MANAGER' || initialRole === 'ADMIN' || initialRole === 'SUPER_ADMIN') && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await fetch('/api/keys/week', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            weekStart: keyPlan.weekStart,
+                            assignments: keyPlanLocal.map((d) => ({ date: d.date, amHolderEmpId: d.amHolderEmpId, pmHolderEmpId: d.pmHolderEmpId })),
+                          }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok) {
+                          setKeyPlanDirty(false);
+                          fetchKeyPlan();
+                          setToast(t('schedule.keys.saved') ?? 'Key plan saved');
+                          setTimeout(() => setToast(null), 3000);
+                        } else {
+                          setToast((data.error as string) ?? 'Key plan validation failed');
+                          setTimeout(() => setToast(null), 5000);
+                        }
+                      }}
+                      className="rounded bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                    >
+                      {t('schedule.keys.saveKeyPlan') ?? 'Save key plan'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setKeyPlanLocal(keyPlan.days.map((d) => ({ ...d }))); setKeyPlanDirty(false); }}
+                      className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      {t('common.cancel') ?? 'Cancel'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -2335,6 +2512,96 @@ export function ScheduleEditClient({
                 className="h-9 rounded-lg bg-red-600 px-4 font-medium text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               >
                 {lockActionLoading ? '…' : t('governance.lockDay')}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {handoverDialogOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !handoverSubmitting && setHandoverDialogOpen(false)} />
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-slate-900">{t('schedule.keys.logHandover') ?? 'Log handover'}</h4>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.keyNumber') ?? 'Key'}</label>
+              <select
+                value={handoverForm.keyNumber}
+                onChange={(e) => setHandoverForm((f) => ({ ...f, keyNumber: Number(e.target.value) as 1 | 2 }))}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={handoverSubmitting}
+              >
+                <option value={1}>Key #1</option>
+                <option value={2}>Key #2</option>
+              </select>
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.handoverTo') ?? 'Hand over to'}</label>
+              <select
+                value={handoverForm.toEmployeeId}
+                onChange={(e) => setHandoverForm((f) => ({ ...f, toEmployeeId: e.target.value }))}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={handoverSubmitting}
+              >
+                <option value="">—</option>
+                {gridData?.rows?.map((r) => (
+                  <option key={r.empId} value={r.empId}>{r.name}</option>
+                )) ?? null}
+              </select>
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.note') ?? 'Note'}</label>
+              <input
+                type="text"
+                value={handoverForm.note}
+                onChange={(e) => setHandoverForm((f) => ({ ...f, note: e.target.value }))}
+                placeholder={t('common.optional') ?? 'Optional'}
+                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={handoverSubmitting}
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => !handoverSubmitting && setHandoverDialogOpen(false)}
+                disabled={handoverSubmitting}
+                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={handoverSubmitting || !handoverForm.toEmployeeId}
+                onClick={async () => {
+                  setHandoverSubmitting(true);
+                  try {
+                    const res = await fetch('/api/keys/handover', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        keyNumber: handoverForm.keyNumber,
+                        toEmployeeId: handoverForm.toEmployeeId,
+                        note: handoverForm.note.trim() || undefined,
+                      }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                      setHandoverDialogOpen(false);
+                      setHandoverForm({ keyNumber: 1, toEmployeeId: '', note: '' });
+                      fetchKeyPlan();
+                      setToast(t('schedule.keys.handoverLogged') ?? 'Handover logged');
+                      setTimeout(() => setToast(null), 3000);
+                    } else {
+                      setToast((data.error as string) ?? 'Failed');
+                      setTimeout(() => setToast(null), 4000);
+                    }
+                  } finally {
+                    setHandoverSubmitting(false);
+                  }
+                }}
+                className="h-9 rounded-lg bg-slate-800 px-4 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+              >
+                {handoverSubmitting ? '…' : (t('schedule.keys.submitHandover') ?? 'Submit')}
               </button>
             </div>
           </div>

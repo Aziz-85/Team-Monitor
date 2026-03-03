@@ -10,6 +10,8 @@ import {
   getMonthRange,
   getWeekRangeForDate,
   getDaysInMonth,
+  getMonthRangeDayKeys,
+  toRiyadhDayKey,
   intersectRanges,
 } from '../lib/time';
 
@@ -70,7 +72,19 @@ assert(daysLast === 1, `Last week of Feb should have 1 day in Feb, got ${daysLas
 assert(getDaysInMonth('2026-02') === 28, 'Feb 2026 has 28 days');
 assert(getDaysInMonth('2026-01') === 31, 'Jan 2026 has 31 days');
 
-// formatMonthKey / toRiyadhDateString (run in any TZ; at least format is consistent)
+// getMonthRangeDayKeys: Jan 2026 = exactly 2026-01-01 .. 2026-01-31 (no Feb 1)
+const janKeys = getMonthRangeDayKeys('2026-01');
+assert(janKeys.startKey === '2026-01-01', 'Jan 2026 startKey');
+assert(janKeys.endKey === '2026-01-31', 'Jan 2026 endKey');
+assert(janKeys.keys.length === 31, 'Jan 2026 has 31 keys');
+assert(!janKeys.keys.includes('2026-02-01'), 'Jan 2026 must not include 2026-02-01');
+
+// toRiyadhDayKey
+assert(toRiyadhDayKey('2026-01-01') === '2026-01-01', 'toRiyadhDayKey string');
+const dJan1 = new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 0));
+assert(toRiyadhDayKey(dJan1) === '2026-01-01', 'toRiyadhDayKey Date');
+
+// formatMonthKey / toRiyadhDateString
 const d = new Date('2026-02-15T10:00:00.000Z');
 const key = formatMonthKey(d);
 assert(key === '2026-02' || key.length === 7, 'formatMonthKey YYYY-MM');

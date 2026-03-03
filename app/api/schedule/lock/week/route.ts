@@ -4,6 +4,7 @@ import { logAudit } from '@/lib/audit';
 import { lockWeek, unlockWeek, isWeekLocked } from '@/lib/services/scheduleLock';
 import { canLockWeek, canUnlockWeek } from '@/lib/permissions';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
+import { validateWeekKeyContinuityFromHandovers } from '@/lib/keys/keyContinuity';
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
@@ -28,6 +29,15 @@ export async function POST(request: NextRequest) {
   const reason = body.reason != null ? String(body.reason).trim() : null;
   if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
     return NextResponse.json({ error: 'weekStart (YYYY-MM-DD, Saturday) required' }, { status: 400 });
+  }
+
+  const keyErrors = await validateWeekKeyContinuityFromHandovers(scheduleScope.boutiqueId, weekStart);
+  if (keyErrors.length > 0) {
+    const first = keyErrors[0];
+    return NextResponse.json(
+      { error: first.message, code: 'KEY_CONTINUITY', errors: keyErrors },
+      { status: 400 }
+    );
   }
 
   try {

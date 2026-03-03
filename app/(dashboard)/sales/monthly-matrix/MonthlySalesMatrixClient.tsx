@@ -2,18 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
-
-function currentMonthKey(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
+import { getCurrentMonthKeyRiyadh, addMonths } from '@/lib/time';
 
 function addMonth(monthKey: string, delta: number): string {
-  const [y, m] = monthKey.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  return addMonths(monthKey, delta);
 }
 
 type EmployeeRow = {
@@ -42,7 +34,7 @@ const DAYS_WINDOW_SIZE = 7;
 export function MonthlySalesMatrixClient() {
   const { t } = useT();
 
-  const [monthKey, setMonthKey] = useState(() => currentMonthKey());
+  const [monthKey, setMonthKey] = useState(() => getCurrentMonthKeyRiyadh());
   const [data, setData] = useState<MatrixData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dayWindow, setDayWindow] = useState(0);

@@ -12,6 +12,7 @@ import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { parseMatrixBuffer } from '@/lib/sales/matrixImportParse';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
+import { logAudit } from '@/lib/audit';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
@@ -128,6 +129,25 @@ export async function POST(request: NextRequest) {
     const existingByEmp = new Map(summary.lines.map((l) => [l.employeeId, l]));
     for (const item of dayQueue) {
       const existed = existingByEmp.has(item.employeeId);
+      if (item.roundedFrom != null) {
+        await logAudit(
+          user!.id,
+          'SALES_AMOUNT_ROUNDED',
+          'SalesEntry',
+          null,
+          null,
+          JSON.stringify({
+            original: item.roundedFrom,
+            rounded: item.amountSar,
+            dateKey,
+            employeeId: item.employeeId,
+            boutiqueId: scopeId,
+            source: 'matrix_import',
+          }),
+          'Sales amount rounded to integer',
+          { boutiqueId: scopeId }
+        );
+      }
       await prisma.boutiqueSalesLine.upsert({
         where: {
           summaryId_employeeId: { summaryId: summary.id, employeeId: item.employeeId },

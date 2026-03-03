@@ -15,6 +15,7 @@ import {
   parseMatrixWorkbook,
   type MatrixParseIssue,
 } from '@/lib/sales/importMatrix';
+import { logAudit } from '@/lib/audit';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
   });
   const empIdToUserId = new Map(usersByEmpId.map((u) => [u.empId, u.id]));
   const unknownEmpIssues: MatrixParseIssue[] = [];
-  const toUpsert: { dateKey: string; userId: string; amount: number }[] = [];
+  const toUpsert: { dateKey: string; userId: string; amount: number; roundedFrom?: number }[] = [];
   for (const c of matchingCells) {
     const userId = empIdToUserId.get(c.empId);
     if (!userId) {
@@ -114,7 +115,12 @@ export async function POST(request: NextRequest) {
       });
       continue;
     }
-    toUpsert.push({ dateKey: c.dateKey, userId, amount: c.amount });
+    toUpsert.push({
+      dateKey: c.dateKey,
+      userId,
+      amount: c.amount,
+      ...(c.roundedFrom != null && { roundedFrom: c.roundedFrom }),
+    });
   }
 
   const allIssues: MatrixParseIssue[] = [
@@ -167,9 +173,30 @@ export async function POST(request: NextRequest) {
   let skipped = 0;
 
   await prisma.$transaction(async (tx) => {
-    for (const { dateKey, userId, amount } of toUpsert) {
+    for (const { dateKey, userId, amount, roundedFrom } of toUpsert) {
       const date = normalizeDateOnlyRiyadh(dateKey);
       const month = dateKey.slice(0, 7);
+      const empId = usersByEmpId.find((x) => x.id === userId)?.empId ?? '';
+
+      if (roundedFrom != null) {
+        await logAudit(
+          user.id,
+          'SALES_AMOUNT_ROUNDED',
+          'SalesEntry',
+          null,
+          null,
+          JSON.stringify({
+            original: roundedFrom,
+            rounded: amount,
+            dateKey,
+            employeeId: empId,
+            boutiqueId: scopeId,
+            source: 'matrix_import',
+          }),
+          'Sales amount rounded to integer',
+          { boutiqueId: scopeId }
+        );
+      }
 
       const existing = await tx.salesEntry.findUnique({
         where: {
