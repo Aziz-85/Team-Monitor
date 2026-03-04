@@ -13,7 +13,8 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
-import { normalizeMonthKey, toRiyadhDayKey, getMonthRangeDayKeys } from '@/lib/time';
+import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
@@ -48,32 +49,9 @@ function isBlankOrDash(v: unknown): boolean {
   return t === '' || t === '-';
 }
 
-/** Normalize Excel date (Date, serial number, or YYYY-MM-DD string) to dateKey (Riyadh calendar day) or null. */
+/** Normalize Excel date to dateKey (Riyadh YYYY-MM-DD). Uses shared helper to avoid day -1 / timezone drift. */
 function toDateKey(raw: unknown): string | null {
-  if (raw == null || raw === '') return null;
-  if (typeof raw === 'string') {
-    const s = raw.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
-    return null;
-  }
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    const d = excelSerialToDate(raw);
-    return d ? toRiyadhDayKey(d) : null;
-  }
-  if (raw instanceof Date && !Number.isNaN((raw as Date).getTime())) {
-    return toRiyadhDayKey(raw as Date);
-  }
-  return null;
-}
-
-/** Excel serial (days since 1899-12-30) to Date (UTC). */
-function excelSerialToDate(serial: number): Date | null {
-  if (!Number.isFinite(serial) || serial < 0) return null;
-  const utcMs = (serial - 25569) * 86400 * 1000;
-  const d = new Date(utcMs);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseExcelDateToDateKey(raw);
 }
 
 function parseIntSarOrBlocking(

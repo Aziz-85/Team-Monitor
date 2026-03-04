@@ -6,7 +6,7 @@
  */
 
 import * as XLSX from 'xlsx';
-import { toRiyadhDayKey } from '@/lib/time';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const SHEET_NAME = 'DATA_MATRIX';
 const HEADER_ROW_INDEX = 0;
@@ -97,24 +97,9 @@ function isEmptyOrNumericHeader(headerRaw: string): boolean {
   return false;
 }
 
-/** Normalize Excel date (string YYYY-MM-DD, Date, or serial) to Riyadh dateKey or null. */
+/** Normalize Excel date to Riyadh dateKey. Uses shared helper to avoid day -1 / timezone drift. */
 function rawToDateKey(raw: unknown): string | null {
-  if (raw == null || raw === '') return null;
-  const v = unwrapCell(raw);
-  if (typeof v === 'string') {
-    const s = v.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
-    return null;
-  }
-  if (typeof v === 'number' && Number.isFinite(v)) {
-    const utcMs = (v - 25569) * 86400 * 1000;
-    const d = new Date(utcMs);
-    return Number.isNaN(d.getTime()) ? null : toRiyadhDayKey(d);
-  }
-  if (v instanceof Date && !Number.isNaN(v.getTime())) return toRiyadhDayKey(v);
-  return null;
+  return parseExcelDateToDateKey(unwrapCell(raw));
 }
 
 export type MatrixParseRow = {

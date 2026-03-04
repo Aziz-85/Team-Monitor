@@ -6,7 +6,8 @@
 import * as XLSX from 'xlsx';
 import type { PrismaClient } from '@prisma/client';
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
-import { toRiyadhDayKey, getMonthRangeDayKeys } from '@/lib/time';
+import { getMonthRangeDayKeys } from '@/lib/time';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const SHEET_NAME = 'DATA_MATRIX';
 const HEADER_ROW_INDEX = 0;
@@ -61,23 +62,7 @@ function isBlankOrDash(v: unknown): boolean {
 }
 
 function toDateKey(raw: unknown): string | null {
-  if (raw == null || raw === '') return null;
-  if (typeof raw === 'string') {
-    const s = raw.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
-    return null;
-  }
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    const utcMs = (raw - 25569) * 86400 * 1000;
-    const d = new Date(utcMs);
-    return Number.isNaN(d.getTime()) ? null : toRiyadhDayKey(d);
-  }
-  if (raw instanceof Date && !Number.isNaN((raw as Date).getTime())) {
-    return toRiyadhDayKey(raw as Date);
-  }
-  return null;
+  return parseExcelDateToDateKey(raw);
 }
 
 function parseIntSarOrBlocking(

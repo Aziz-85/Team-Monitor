@@ -5,6 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { toRiyadhDateString } from '@/lib/time';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const SHEET_NAME = 'DATA_MATRIX';
 const HEADER_ROW_INDEX = 0;
@@ -74,30 +75,8 @@ export type MatrixParseResult = {
   issues?: MatrixParseIssue[];
 };
 
-function excelSerialToDate(serial: number): Date | null {
-  if (!Number.isFinite(serial) || serial < 0) return null;
-  const utcMs = (serial - 25569) * 86400 * 1000;
-  const d = new Date(utcMs);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function rawToDateKey(raw: unknown): string | null {
-  if (raw == null || raw === '') return null;
-  if (typeof raw === 'string') {
-    const s = raw.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return toRiyadhDateString(d);
-    return null;
-  }
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    const d = excelSerialToDate(raw);
-    return d ? toRiyadhDateString(d) : null;
-  }
-  if (raw instanceof Date && !Number.isNaN((raw as Date).getTime())) {
-    return toRiyadhDateString(raw as Date);
-  }
-  return null;
+  return parseExcelDateToDateKey(raw);
 }
 
 function isStopHeader(h: string): boolean {

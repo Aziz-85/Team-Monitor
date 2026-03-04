@@ -6,6 +6,7 @@
 
 import * as XLSX from 'xlsx';
 import { formatDateRiyadh, toRiyadhDateOnly } from '@/lib/time';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 export const HEADER_SCAN_ROWS = 120;
 
@@ -493,21 +494,7 @@ function parseCellAmount(
 }
 
 function excelDateToDateKey(raw: unknown): string | null {
-  if (raw == null) return null;
-  if (raw instanceof Date && Number.isFinite(raw.getTime())) {
-    return formatDateRiyadh(toRiyadhDateOnly(raw));
-  }
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    const d = new Date((raw - 25569) * 86400 * 1000);
-    return formatDateRiyadh(toRiyadhDateOnly(d));
-  }
-  const s = String(raw).trim();
-  if (!s) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (match) return s;
-  const parsed = new Date(s);
-  if (!Number.isNaN(parsed.getTime())) return formatDateRiyadh(toRiyadhDateOnly(parsed));
-  return null;
+  return parseExcelDateToDateKey(raw);
 }
 
 const MAX_ERRORS = 50;

@@ -8,12 +8,12 @@
  * - Decimal import rounds to integer and tracks roundedFrom for audit.
  * - Monthly matrix import includes day 1 (2026-02-01); allowed set and date parsing use Riyadh.
  *
- * Proof after import (run in DB):
- *   SELECT "dateKey", COUNT(*) AS cnt, SUM(amount) AS total
+ * Proof after import (run in DB) — day 1 must exist, no day shift:
+ *   SELECT date, SUM(amount)::int total
  *   FROM "SalesEntry"
- *   WHERE "boutiqueId" = :boutiqueId AND "dateKey" = '2026-02-01'
- *   GROUP BY "dateKey";
- *   -- Expect cnt >= 1 and total = sum of amounts for day 1.
+ *   WHERE "boutiqueId" = 'bout_dhhrn_001' AND month = '2026-01' AND source = 'IMPORT'
+ *   GROUP BY date ORDER BY date;
+ *   (Repeat for month = '2026-02'. Expect day 1 row present.)
  */
 
 import {
@@ -22,6 +22,7 @@ import {
   getDaysInMonth,
 } from '@/lib/time';
 import { safeParseIntCell } from '@/lib/sales/importMatrix';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 describe('Sales matrix date window (Riyadh)', () => {
   describe('getMonthRangeDayKeys', () => {
@@ -82,6 +83,54 @@ describe('Sales matrix date window (Riyadh)', () => {
       const set = new Set(keys);
       expect(set.has('2026-02-01')).toBe(true);
     });
+  });
+});
+
+describe('parseExcelDateToDateKey (shared Excel date → Riyadh dateKey)', () => {
+  it('Excel serial for 2026-01-01 00:00 UTC outputs 2026-01-01', () => {
+    const serial = 25569 + (Date.UTC(2026, 0, 1) / 86400000);
+    expect(parseExcelDateToDateKey(serial)).toBe('2026-01-01');
+  });
+
+  it('Excel serial for 2026-02-01 00:00 UTC outputs 2026-02-01', () => {
+    const serial = 25569 + (Date.UTC(2026, 1, 1) / 86400000);
+    expect(parseExcelDateToDateKey(serial)).toBe('2026-02-01');
+  });
+
+  it('string DD/MM/YYYY "01/02/2026" outputs 2026-02-01', () => {
+    expect(parseExcelDateToDateKey('01/02/2026')).toBe('2026-02-01');
+  });
+
+  it('string YYYY-MM-DD returns as-is', () => {
+    expect(parseExcelDateToDateKey('2026-02-01')).toBe('2026-02-01');
+    expect(parseExcelDateToDateKey('2026-01-01')).toBe('2026-01-01');
+  });
+
+  it('Date object for Feb 1 (UTC 2026-01-31T21:00:00Z = midnight Riyadh) outputs 2026-02-01', () => {
+    const d = new Date('2026-01-31T21:00:00.000Z');
+    expect(parseExcelDateToDateKey(d)).toBe('2026-02-01');
+  });
+
+  it('Date object for Jan 1 00:00 UTC outputs 2026-01-01', () => {
+    const d = new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 0));
+    expect(parseExcelDateToDateKey(d)).toBe('2026-01-01');
+  });
+
+  it('first day missing regression: days 1, 2, 3 produce distinct dateKeys for 2026-02', () => {
+    const keys = [
+      parseExcelDateToDateKey('01/02/2026'),
+      parseExcelDateToDateKey('02/02/2026'),
+      parseExcelDateToDateKey('03/02/2026'),
+    ];
+    expect(keys).toEqual(['2026-02-01', '2026-02-02', '2026-02-03']);
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  it('invalid input returns null', () => {
+    expect(parseExcelDateToDateKey(null)).toBeNull();
+    expect(parseExcelDateToDateKey('')).toBeNull();
+    expect(parseExcelDateToDateKey('not a date')).toBeNull();
+    expect(parseExcelDateToDateKey(-1)).toBeNull();
   });
 });
 
