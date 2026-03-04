@@ -24,6 +24,7 @@ import {
 import { getMonthRange } from '@/lib/time';
 import { formatDateRiyadh } from '@/lib/time';
 import { normalizeMonthKey } from '@/lib/time';
+import { monthDaysUTC } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
 
@@ -157,10 +158,10 @@ export async function POST(request: NextRequest) {
       const empId = resolveHeaderToEmployeeMatrix(col.headerRaw, employees);
       if (empId) headerToEmpId.set(norm(col.headerRaw), empId);
     }
-    const allowedDateSet = new Set<string>();
-    for (let d = new Date(rangeStart.getTime()); d <= rangeEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-      allowedDateSet.add(d.toISOString().slice(0, 10));
-    }
+    const prev = previousMonthKey(month);
+    const allowedDateSet = new Set<string>(
+      includePreviousMonth && prev ? [...monthDaysUTC(prev), ...monthDaysUTC(month)] : monthDaysUTC(month)
+    );
     for (const row of parseResult.rows) {
       if (row.scopeId !== scopeId) continue;
       if (!allowedDateSet.has(row.dateKey)) continue;
@@ -195,10 +196,10 @@ export async function POST(request: NextRequest) {
       const prev = previousMonthKey(month);
       if (prev) sheetsToParse.push({ sheetName: sheetNameFromMonth(prev), monthKey: prev });
     }
-    const allowedDateSet = new Set<string>();
-    for (let d = new Date(rangeStart.getTime()); d <= rangeEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-      allowedDateSet.add(d.toISOString().slice(0, 10));
-    }
+    const prevMsr = previousMonthKey(month);
+    const allowedDateSetMsr = new Set<string>(
+      includePreviousMonth && prevMsr ? [...monthDaysUTC(prevMsr), ...monthDaysUTC(month)] : monthDaysUTC(month)
+    );
     for (const { sheetName, monthKey } of sheetsToParse) {
       if (!sheetName) continue;
       const parsed = parseOneMonthlySheet(workbook, sheetName, monthKey);
@@ -207,7 +208,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
       for (const row of parsed.rows) {
-        if (!allowedDateSet.has(row.dateKey)) continue;
+        if (!allowedDateSetMsr.has(row.dateKey)) continue;
         for (const v of row.values) {
           const empId = resolveHeaderToEmployeeMsr(v.columnHeader, workbookMap, employees);
           if (!empId) continue;

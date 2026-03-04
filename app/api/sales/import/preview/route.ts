@@ -9,6 +9,7 @@ import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
 import { parseMatrixBuffer } from '@/lib/sales/matrixImportParse';
+import { dateKeyUTC } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     where: { boutiqueId: scopeId, date: { gte: rangeStart, lte: rangeEnd } },
     include: { lines: true },
   });
-  const summaryByDate = new Map(existing.map((s) => [s.date.toISOString().slice(0, 10), s]));
+  const summaryByDate = new Map(existing.map((s) => [dateKeyUTC(s.date), s]));
   let inserted = 0;
   let updated = 0;
   for (const item of result.queue) {

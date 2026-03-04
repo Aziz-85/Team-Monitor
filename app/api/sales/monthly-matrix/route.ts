@@ -8,21 +8,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
-import { normalizeMonthKey, getMonthRangeDayKeys, addMonths } from '@/lib/time';
+import { normalizeMonthKey, addMonths } from '@/lib/time';
+import { monthDaysUTC, monthRangeUTCNoon, dateKeyUTC } from '@/lib/dates/safeCalendar';
 
 export const dynamic = 'force-dynamic';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
 const SALES_ENTRY_SOURCES_ALL = ['LEDGER', 'IMPORT', 'MANUAL'];
 
-/** Build day keys for matrix: Riyadh calendar month(s). Jan 2026 = 2026-01-01 .. 2026-01-31 only. */
+/** Build day keys for matrix using safe calendar (no ISO slice). */
 function buildDays(monthKey: string, includePreviousMonth: boolean): string[] {
   const keys: string[] = [];
   if (includePreviousMonth) {
     const prev = addMonths(monthKey, -1);
-    keys.push(...getMonthRangeDayKeys(prev).keys);
+    keys.push(...monthDaysUTC(prev));
   }
-  keys.push(...getMonthRangeDayKeys(monthKey).keys);
+  keys.push(...monthDaysUTC(monthKey));
   return keys;
 }
 
@@ -55,6 +56,15 @@ export async function GET(request: NextRequest) {
   const months = Array.from(
     new Set(days.map((d) => d.slice(0, 7)))
   );
+
+  if (process.env.NODE_ENV !== 'production') {
+    const r0 = monthRangeUTCNoon(months[0] ?? monthKey);
+    const r1 = months.length > 1 ? monthRangeUTCNoon(months[months.length - 1]!) : r0;
+    const endExclusive = r1.endExclusive;
+    console.log('[MonthlyMatrix] months', months);
+    console.log('[MonthlyMatrix] range', dateKeyUTC(r0.start), dateKeyUTC(new Date(endExclusive.getTime() - 1)));
+    console.log('[MonthlyMatrix] days[0..2]', days.slice(0, 3));
+  }
 
   const [entries, activeEmployees, allEmployeesByEmpId] = await Promise.all([
     prisma.salesEntry.findMany({
@@ -159,13 +169,16 @@ export async function GET(request: NextRequest) {
     totalsByDay.push({ date: day, totalSar: total });
   }
 
+  const rStart = monthRangeUTCNoon(months[0] ?? monthKey);
+  const rEnd = months.length > 1 ? monthRangeUTCNoon(months[months.length - 1]!) : monthRangeUTCNoon(monthKey);
+
   return NextResponse.json({
     scopeId,
     month: monthKey,
     includePreviousMonth,
     range: {
-      startUTC: `${months[0]}-01T00:00:00.000Z`,
-      endExclusiveUTC: `${months[months.length - 1]}-31T23:59:59.999Z`,
+      startUTC: rStart.start.toISOString(),
+      endExclusiveUTC: rEnd.endExclusive.toISOString(),
     },
     employees,
     days,

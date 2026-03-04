@@ -206,7 +206,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
       }
       continue;
     }
-    const date = new Date(dateKey + 'T00:00:00.000Z');
+    const date = new Date(dateKey + 'T12:00:00.000Z');
     const scopeId = String(unwrapCell(row[SCOPE_COL]) ?? '').trim();
 
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];

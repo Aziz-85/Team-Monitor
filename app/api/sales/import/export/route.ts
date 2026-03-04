@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { dateKeyUTC, monthDaysUTC, monthRangeUTCNoon } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
 const SHEET_NAME = 'DATA_MATRIX';
@@ -40,16 +41,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
 
-  const [year, monthNum] = monthParam.split('-').map(Number);
-  let rangeStart = new Date(Date.UTC(year, monthNum - 1, 1));
-  const rangeEnd = new Date(Date.UTC(year, monthNum, 0));
-  if (includePreviousMonth) {
-    const prev = previousMonthKey(monthParam);
-    if (prev) {
-      const [py, pm] = prev.split('-').map(Number);
-      rangeStart = new Date(Date.UTC(py, pm - 1, 1));
-    }
-  }
+  const prev = previousMonthKey(monthParam);
+  const dayKeys: string[] = includePreviousMonth && prev
+    ? [...monthDaysUTC(prev), ...monthDaysUTC(monthParam)]
+    : monthDaysUTC(monthParam);
+
+  const rangeStart = includePreviousMonth && prev
+    ? monthRangeUTCNoon(prev).start
+    : monthRangeUTCNoon(monthParam).start;
+  const rangeEnd = monthRangeUTCNoon(monthParam).endExclusive;
 
   const employees = await prisma.employee.findMany({
     where: { boutiqueId: scopeId, active: true },
@@ -58,13 +58,13 @@ export async function GET(request: NextRequest) {
   });
 
   const summaries = await prisma.boutiqueSalesSummary.findMany({
-    where: { boutiqueId: scopeId, date: { gte: rangeStart, lte: rangeEnd } },
+    where: { boutiqueId: scopeId, date: { gte: rangeStart, lt: rangeEnd } },
     include: { lines: true },
   });
 
   const dateToLines = new Map<string, { employeeId: string; amountSar: number }[]>();
   for (const s of summaries) {
-    const dateKey = s.date.toISOString().slice(0, 10);
+    const dateKey = dateKeyUTC(s.date);
     dateToLines.set(dateKey, s.lines.map((l) => ({ employeeId: l.employeeId, amountSar: l.amountSar })));
   }
 
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
 
   const aoa: (string | number)[][] = [headerRow];
 
-  for (let d = new Date(rangeStart.getTime()); d <= rangeEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-    const dateKey = d.toISOString().slice(0, 10);
+  for (const dateKey of dayKeys) {
+    const d = new Date(dateKey + 'T12:00:00.000Z');
     const dayName = DAY_NAMES[d.getUTCDay()];
     const lineMap = new Map((dateToLines.get(dateKey) ?? []).map((l) => [l.employeeId, l.amountSar]));
     const row: (string | number)[] = [scopeId, dateKey, dayName];

@@ -15,6 +15,7 @@ import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesE
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
 import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
+import { dateKeyUTC } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
@@ -439,7 +440,13 @@ export async function POST(request: NextRequest) {
       where: { boutiqueId: scopeId, date: { gte: rangeStart, lte: rangeEnd } },
       include: { lines: true },
     });
-    const summaryByDate = new Map(existing.map((s) => [s.date.toISOString().slice(0, 10), s]));
+    const summaryByDate = new Map(existing.map((s) => [dateKeyUTC(s.date), s]));
+    if (process.env.NODE_ENV !== 'production' && existing.length > 0) {
+      const dates = existing.map((s) => s.date);
+      const minD = new Date(Math.min(...dates.map((d) => d.getTime())));
+      const maxD = new Date(Math.max(...dates.map((d) => d.getTime())));
+      console.log('[MonthlyMatrix import dry-run] existing dateKeyUTC min/max', dateKeyUTC(minD), dateKeyUTC(maxD));
+    }
     for (const item of queue) {
       const summary = summaryByDate.get(item.dateKey);
       const existed = summary?.lines.some((l) => l.employeeId === item.employeeId);
