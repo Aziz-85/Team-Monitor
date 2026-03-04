@@ -1,15 +1,13 @@
 /**
  * Matrix Template Import — sheet "DATA_MATRIX" only.
  * Columns: ScopeId (A), Date (B), Day (C), then employee columns until TOTAL/Notes.
- * Header row = row 1 (index 0). First data row = row 2 (index 1) = day 1 of month.
- * Employee columns start at index 3.
+ * First data row is detected dynamically (first row where column B is a valid date).
  */
 
 import * as XLSX from 'xlsx';
-import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
+import { parseExcelDateToYMD, ymdToUTCNoon, dateKeyUTC } from '@/lib/dates/safeCalendar';
 
 const SHEET_NAME = 'DATA_MATRIX';
-const HEADER_ROW_INDEX = 0;
 const SCOPE_COL = 0;
 const DATE_COL = 1;
 const EMPLOYEE_START_COL = 3;
@@ -97,9 +95,31 @@ function isEmptyOrNumericHeader(headerRaw: string): boolean {
   return false;
 }
 
-/** Normalize Excel date to Riyadh dateKey. Uses shared helper to avoid day -1 / timezone drift. */
-function rawToDateKey(raw: unknown): string | null {
-  return parseExcelDateToDateKey(unwrapCell(raw));
+function isDateCell(v: unknown): boolean {
+  try {
+    parseExcelDateToYMD(unwrapCell(v));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function findFirstDataRow(rows: unknown[][]): number {
+  for (let r = 0; r < rows.length; r++) {
+    const cellB = (rows[r] ?? [])[DATE_COL];
+    if (isDateCell(cellB)) return r;
+  }
+  return -1;
+}
+
+function dateFromCellB(raw: unknown): { dateKey: string; date: Date } | null {
+  try {
+    const ymd = parseExcelDateToYMD(unwrapCell(raw));
+    const date = ymdToUTCNoon(ymd);
+    return { dateKey: dateKeyUTC(date), date };
+  } catch {
+    return null;
+  }
 }
 
 export type MatrixParseRow = {
@@ -147,13 +167,17 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
   if (!sheet) return { ok: false, error: `Sheet "${SHEET_NAME}" not found` };
 
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
-  if (rows.length <= HEADER_ROW_INDEX) {
-    return { ok: false, error: `Sheet "${SHEET_NAME}" has no header row` };
+  if (rows.length === 0) {
+    return { ok: false, error: `Sheet "${SHEET_NAME}" is empty` };
   }
 
-  const headerRow = (rows[HEADER_ROW_INDEX] as unknown[]).map((c) => String(c ?? '').trim());
+  const firstDataRow = findFirstDataRow(rows);
+  if (firstDataRow < 0) {
+    return { ok: false, error: 'No date rows found in DATA_MATRIX (column B must contain a valid date)' };
+  }
+  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
+  const headerRow = (rows[headerRowIndex] as unknown[]).map((c) => String(c ?? '').trim());
 
-  // employeeStartCol = 4 (1-based). employeeEndCol = last employee column index (0-based).
   const totalColIndex = headerRow.findIndex((h, c) => c >= EMPLOYEE_START_COL && normalize(h ?? '') === 'total');
   let lastEmployeeColIndex: number;
   if (totalColIndex >= EMPLOYEE_START_COL) {
@@ -175,7 +199,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
     blockingErrors.push({
       type: 'NO_EMPLOYEE_COLUMNS_DETECTED',
       message: 'No employee columns detected (TOTAL not found or no valid headers before it)',
-      row: HEADER_ROW_INDEX + 1,
+      row: headerRowIndex + 1,
       col: EMPLOYEE_START_COL_1BASED,
       headerRaw: '',
       value: null,
@@ -188,16 +212,16 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
     if (raw) employeeColumns.push({ colIndex: c, headerRaw: raw });
   }
 
-  for (let r = HEADER_ROW_INDEX + 1; r < rows.length; r++) {
+  for (let r = firstDataRow; r < rows.length; r++) {
     const row = rows[r] as unknown[];
     const dateRaw = row[DATE_COL];
-    const dateKey = rawToDateKey(dateRaw);
-    if (!dateKey) {
+    const parsedDate = dateFromCellB(dateRaw);
+    if (!parsedDate) {
       const dateStr = String(unwrapCell(dateRaw) ?? '').trim();
       if (dateStr) {
         blockingErrors.push({
           type: 'INVALID_DATE',
-          message: `Invalid date format (expected YYYY-MM-DD): ${dateStr}`,
+          message: `Invalid date format (expected YYYY-MM-DD or DD/MM/YYYY): ${dateStr}`,
           row: r + 1,
           col: DATE_COL + 1,
           headerRaw: 'Date',
@@ -206,11 +230,12 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
       }
       continue;
     }
-    const date = new Date(dateKey + 'T12:00:00.000Z');
+    const { dateKey, date } = parsedDate;
     const scopeId = String(unwrapCell(row[SCOPE_COL]) ?? '').trim();
 
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];
     let skippedEmpty = 0;
+    let rowTotal = 0;
 
     for (const { colIndex, headerRaw } of employeeColumns) {
       const cell = row[colIndex];
@@ -238,10 +263,15 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
         });
         continue;
       }
+      rowTotal += parsed.value;
       values.push({ colIndex, headerRaw, amountSar: parsed.value });
       if (sampleNonBlankCells.length < SAMPLE_MAX) {
         sampleNonBlankCells.push({ row: r + 1, col: colIndex + 1, headerRaw, value: rawValue });
       }
+    }
+
+    if (process.env.NODE_ENV !== 'production' && resultRows.length < 5) {
+      console.log('[parseMatrixTemplateExcel] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
     }
 
     resultRows.push({ scopeId, dateKey, date, values, skippedEmpty });
@@ -254,7 +284,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
   return {
     ok: true,
     sheetName: SHEET_NAME,
-    headerRowIndex: HEADER_ROW_INDEX + 1,
+    headerRowIndex: headerRowIndex + 1,
     employeeStartCol: EMPLOYEE_START_COL_1BASED,
     employeeEndCol: employeeEndCol1Based,
     employeeColumns: employeeColumns.map((e) => ({ colIndex: e.colIndex, headerRaw: e.headerRaw })),

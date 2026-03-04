@@ -14,14 +14,12 @@ import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatr
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
-import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
+import { findFirstDataRow, dateFromCellB } from '@/lib/sales/matrixImportParse';
 import { dateKeyUTC } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
 const SHEET_NAME = 'DATA_MATRIX';
-const HEADER_ROW_INDEX = 0;   // row 1 in Excel
-const DATA_START_ROW = 1;     // row 2 in Excel
 const SCOPE_COL = 0;          // A (0-based)
 const DATE_COL = 1;           // B (0-based)
 const EMPLOYEE_START_COL = 3; // D (0-based)
@@ -48,11 +46,6 @@ function isBlankOrDash(v: unknown): boolean {
   if (v == null) return true;
   const t = String(v).trim();
   return t === '' || t === '-';
-}
-
-/** Normalize Excel date to dateKey (Riyadh YYYY-MM-DD). Uses shared helper to avoid day -1 / timezone drift. */
-function toDateKey(raw: unknown): string | null {
-  return parseExcelDateToDateKey(raw);
 }
 
 function parseIntSarOrBlocking(
@@ -249,10 +242,18 @@ export async function POST(request: NextRequest) {
     blankrows: false,
   }) as unknown[][];
 
-  const headerRowIndex = HEADER_ROW_INDEX;   // row 1 in Excel
-  const dataStartRow = DATA_START_ROW;       // row 2 in Excel
+  const firstDataRow = findFirstDataRow(aoa);
+  if (firstDataRow < 0) {
+    return NextResponse.json({
+      success: false,
+      error: 'No date rows found in DATA_MATRIX (column B must contain a valid date)',
+      applyAllowed: false,
+      applyBlockReasons: ['NO_DATE_ROWS'],
+    }, { status: 400 });
+  }
+  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
+  const dataStartRow = firstDataRow;
   const header = (aoa[headerRowIndex] ?? []).map((x) => String(x ?? '').trim());
-  // base cols: A,B,C => 0,1,2; employeeStartCol = 3 (D, 0-based)
 
   let employeeEndCol = EMPLOYEE_START_COL;
   for (let c = EMPLOYEE_START_COL; c < header.length; c++) {
@@ -294,8 +295,8 @@ export async function POST(request: NextRequest) {
   for (let r = dataStartRow; r < aoa.length; r++) {
     const rowArr = aoa[r] ?? [];
     const dateRaw = rowArr[DATE_COL];
-    const dateKey = toDateKey(dateRaw);
-    if (!dateKey) {
+    const parsedDate = dateFromCellB(dateRaw);
+    if (!parsedDate) {
       if (dateRaw != null && String(dateRaw).trim() !== '') {
         blockingErrors.push({
           type: 'INVALID_DATE',
@@ -308,11 +309,12 @@ export async function POST(request: NextRequest) {
       }
       continue;
     }
-    const date = new Date(dateKey + 'T00:00:00.000Z');
+    const { dateKey, date } = parsedDate;
     const scopeId = String(rowArr[SCOPE_COL] ?? '').trim();
 
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];
     let skippedEmpty = 0;
+    let rowTotal = 0;
 
     for (const { colIndex, headerRaw } of employeeColumns) {
       const raw = (aoa[r] ?? [])[colIndex] ?? null;
@@ -322,7 +324,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // sample nonblank
       if (sampleNonBlankCells.length < SAMPLE_MAX) {
         sampleNonBlankCells.push({ row: r + 1, col: colIndex + 1, headerRaw, value: raw });
       }
@@ -333,14 +334,19 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      rowTotal += parsed.value;
       values.push({ colIndex, headerRaw, amountSar: parsed.value });
+    }
+
+    if (process.env.NODE_ENV !== 'production' && rows.length < 5) {
+      console.log('[monthly-matrix import] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
     }
 
     rows.push({ dateKey, date, scopeId, values, skippedEmpty });
   }
 
   const firstRowWithDataSample: { r: number; c: number; header: string; v: string }[] = [];
-  for (let r = dataStartRow; r <= Math.min(14, aoa.length - 1); r++) {
+  for (let r = dataStartRow; r <= Math.min(dataStartRow + 14, aoa.length - 1); r++) {
     for (let c = EMPLOYEE_START_COL; c <= Math.min(EMPLOYEE_START_COL + 2, employeeEndCol); c++) {
       const raw = (aoa[r] ?? [])[c] ?? null;
       if (isBlankOrDash(raw)) continue;

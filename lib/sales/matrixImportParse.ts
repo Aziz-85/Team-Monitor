@@ -1,20 +1,58 @@
 /**
  * Shared matrix import parsing (DATA_MATRIX sheet, AOA).
  * Used by /api/sales/import/preview and /api/sales/import/apply.
+ * First data row is detected dynamically (first row where column B is a valid date).
  */
 
 import * as XLSX from 'xlsx';
 import type { PrismaClient } from '@prisma/client';
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
 import { getMonthRangeDayKeys } from '@/lib/time';
-import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
+import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 
 const SHEET_NAME = 'DATA_MATRIX';
-const HEADER_ROW_INDEX = 0;
-const DATA_START_ROW = 1;
 const SCOPE_COL = 0;
 const DATE_COL = 1;
 const EMPLOYEE_START_COL = 3;
+
+function unwrapCell(raw: unknown): unknown {
+  if (raw == null) return raw;
+  if (typeof raw === 'object' && raw !== null) {
+    const o = raw as Record<string, unknown>;
+    if ('result' in o) return o.result;
+    if ('v' in o) return o.v;
+  }
+  return raw;
+}
+
+function isDateCell(v: unknown): boolean {
+  const val = unwrapCell(v);
+  try {
+    parseExcelDateToYMD(val);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function findFirstDataRow(aoa: unknown[][]): number {
+  for (let r = 0; r < aoa.length; r++) {
+    const cellB = (aoa[r] ?? [])[DATE_COL];
+    if (isDateCell(cellB)) return r;
+  }
+  return -1;
+}
+
+export function dateFromCellB(raw: unknown): { dateKey: string; date: Date } | null {
+  const val = unwrapCell(raw);
+  try {
+    const ymd = parseExcelDateToYMD(val);
+    const date = ymdToUTCNoon(ymd);
+    return { dateKey: dateKeyUTC(date), date };
+  } catch {
+    return null;
+  }
+}
 
 export type BlockingError = {
   type: string;
@@ -59,10 +97,6 @@ function isBlankOrDash(v: unknown): boolean {
   if (v == null) return true;
   const t = String(v).trim();
   return t === '' || t === '-';
-}
-
-function toDateKey(raw: unknown): string | null {
-  return parseExcelDateToDateKey(raw);
 }
 
 function parseIntSarOrBlocking(
@@ -151,7 +185,12 @@ export async function parseMatrixBuffer(
   if (!ws) throw new Error(`Sheet "${SHEET_NAME}" not found`);
 
   const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, blankrows: false, raw: true }) as unknown[][];
-  const header = (aoa[HEADER_ROW_INDEX] ?? []).map((x) => String(x ?? '').trim());
+  const firstDataRow = findFirstDataRow(aoa);
+  if (firstDataRow < 0) {
+    throw new Error('No date rows found in DATA_MATRIX (column B must contain a valid date)');
+  }
+  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
+  const header = (aoa[headerRowIndex] ?? []).map((x) => String(x ?? '').trim());
 
   let employeeEndCol = EMPLOYEE_START_COL;
   for (let c = EMPLOYEE_START_COL; c < header.length; c++) {
@@ -177,12 +216,12 @@ export async function parseMatrixBuffer(
   const SAMPLE_MAX = 12;
   const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number; roundedFrom?: number }[]; skippedEmpty: number }[] = [];
 
-  for (let r = DATA_START_ROW; r < aoa.length; r++) {
+  for (let r = firstDataRow; r < aoa.length; r++) {
     const rowArr = aoa[r] ?? [];
     const dateRaw = rowArr[DATE_COL];
-    const dateKey = toDateKey(dateRaw);
-    if (!dateKey) {
-      if (dateRaw != null && String(dateRaw).trim() !== '') {
+    const parsedDate = dateFromCellB(dateRaw);
+    if (!parsedDate) {
+      if (dateRaw != null && String(unwrapCell(dateRaw)).trim() !== '') {
         blockingErrors.push({
           type: 'INVALID_DATE',
           message: `Invalid date format: ${String(dateRaw).slice(0, 50)}`,
@@ -194,11 +233,12 @@ export async function parseMatrixBuffer(
       }
       continue;
     }
-    const date = new Date(dateKey + 'T12:00:00.000Z');
-    const rowScopeId = String(rowArr[SCOPE_COL] ?? '').trim();
+    const { dateKey, date } = parsedDate;
+    const rowScopeId = String(unwrapCell(rowArr[SCOPE_COL]) ?? '').trim();
 
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];
     let skippedEmpty = 0;
+    let rowTotal = 0;
 
     for (const { colIndex, headerRaw } of employeeColumns) {
       const raw = (aoa[r] ?? [])[colIndex] ?? null;
@@ -214,6 +254,7 @@ export async function parseMatrixBuffer(
         blockingErrors.push(parsed.err);
         continue;
       }
+      rowTotal += parsed.value;
       values.push({
         colIndex,
         headerRaw,
@@ -221,11 +262,16 @@ export async function parseMatrixBuffer(
         ...(parsed.roundedFrom != null && { roundedFrom: parsed.roundedFrom }),
       });
     }
+
+    if (process.env.NODE_ENV !== 'production' && rows.length < 5) {
+      console.log('[matrixImportParse] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
+    }
+
     rows.push({ dateKey, date, scopeId: rowScopeId, values, skippedEmpty });
   }
 
   const firstRowWithDataSample: { r: number; c: number; header: string; v: string }[] = [];
-  for (let r = DATA_START_ROW; r <= Math.min(14, aoa.length - 1); r++) {
+  for (let r = firstDataRow; r <= Math.min(firstDataRow + 14, aoa.length - 1); r++) {
     for (let c = EMPLOYEE_START_COL; c <= Math.min(EMPLOYEE_START_COL + 2, employeeEndCol); c++) {
       const raw = (aoa[r] ?? [])[c] ?? null;
       if (isBlankOrDash(raw)) continue;
