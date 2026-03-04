@@ -1,10 +1,12 @@
 /**
  * Matrix Template Import — sheet "DATA_MATRIX" only.
  * Columns: ScopeId (A), Date (B), Day (C), then employee columns until TOTAL/Notes.
- * Header row = row 1 (index 0). Employee columns start at index 3.
+ * Header row = row 1 (index 0). First data row = row 2 (index 1) = day 1 of month.
+ * Employee columns start at index 3.
  */
 
 import * as XLSX from 'xlsx';
+import { toRiyadhDayKey } from '@/lib/time';
 
 const SHEET_NAME = 'DATA_MATRIX';
 const HEADER_ROW_INDEX = 0;
@@ -93,6 +95,26 @@ function isEmptyOrNumericHeader(headerRaw: string): boolean {
   if (!h) return true;
   if (/^\d+$/.test(normalize(h))) return true;
   return false;
+}
+
+/** Normalize Excel date (string YYYY-MM-DD, Date, or serial) to Riyadh dateKey or null. */
+function rawToDateKey(raw: unknown): string | null {
+  if (raw == null || raw === '') return null;
+  const v = unwrapCell(raw);
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
+    return null;
+  }
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const utcMs = (v - 25569) * 86400 * 1000;
+    const d = new Date(utcMs);
+    return Number.isNaN(d.getTime()) ? null : toRiyadhDayKey(d);
+  }
+  if (v instanceof Date && !Number.isNaN(v.getTime())) return toRiyadhDayKey(v);
+  return null;
 }
 
 export type MatrixParseRow = {
@@ -184,22 +206,21 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
   for (let r = HEADER_ROW_INDEX + 1; r < rows.length; r++) {
     const row = rows[r] as unknown[];
     const dateRaw = row[DATE_COL];
-    const dateStr = String(unwrapCell(dateRaw) ?? '').trim();
-    if (!dateStr) continue;
-
-    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
-    if (!dateMatch) {
-      blockingErrors.push({
-        type: 'INVALID_DATE',
-        message: `Invalid date format (expected YYYY-MM-DD): ${dateStr}`,
-        row: r + 1,
-        col: DATE_COL + 1,
-        headerRaw: 'Date',
-        value: dateRaw,
-      });
+    const dateKey = rawToDateKey(dateRaw);
+    if (!dateKey) {
+      const dateStr = String(unwrapCell(dateRaw) ?? '').trim();
+      if (dateStr) {
+        blockingErrors.push({
+          type: 'INVALID_DATE',
+          message: `Invalid date format (expected YYYY-MM-DD): ${dateStr}`,
+          row: r + 1,
+          col: DATE_COL + 1,
+          headerRaw: 'Date',
+          value: dateRaw,
+        });
+      }
       continue;
     }
-    const dateKey = dateStr;
     const date = new Date(dateKey + 'T00:00:00.000Z');
     const scopeId = String(unwrapCell(row[SCOPE_COL]) ?? '').trim();
 

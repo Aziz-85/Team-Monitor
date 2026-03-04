@@ -13,7 +13,7 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
-import { normalizeMonthKey } from '@/lib/time';
+import { normalizeMonthKey, toRiyadhDayKey, getMonthRangeDayKeys } from '@/lib/time';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
@@ -48,22 +48,22 @@ function isBlankOrDash(v: unknown): boolean {
   return t === '' || t === '-';
 }
 
-/** Normalize Excel date (Date, serial number, or YYYY-MM-DD string) to dateKey or null. */
+/** Normalize Excel date (Date, serial number, or YYYY-MM-DD string) to dateKey (Riyadh calendar day) or null. */
 function toDateKey(raw: unknown): string | null {
   if (raw == null || raw === '') return null;
   if (typeof raw === 'string') {
     const s = raw.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    if (!Number.isNaN(d.getTime())) return toRiyadhDayKey(d);
     return null;
   }
   if (typeof raw === 'number' && Number.isFinite(raw)) {
     const d = excelSerialToDate(raw);
-    return d ? d.toISOString().slice(0, 10) : null;
+    return d ? toRiyadhDayKey(d) : null;
   }
   if (raw instanceof Date && !Number.isNaN((raw as Date).getTime())) {
-    return (raw as Date).toISOString().slice(0, 10);
+    return toRiyadhDayKey(raw as Date);
   }
   return null;
 }
@@ -407,18 +407,13 @@ export async function POST(request: NextRequest) {
   }
 
   const allowedDateSet = new Set<string>();
-  for (let d = new Date(rangeStart.getTime()); d <= rangeEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-    allowedDateSet.add(d.toISOString().slice(0, 10));
-  }
+  const { keys: mainKeys } = getMonthRangeDayKeys(month);
+  mainKeys.forEach((k) => allowedDateSet.add(k));
   if (includePreviousMonth) {
     const prev = previousMonthKey(month);
     if (prev) {
-      const [py, pm] = prev.split('-').map(Number);
-      const pStart = new Date(Date.UTC(py, pm - 1, 1));
-      const pEnd = new Date(Date.UTC(py, pm, 0));
-      for (let d = new Date(pStart.getTime()); d <= pEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-        allowedDateSet.add(d.toISOString().slice(0, 10));
-      }
+      const { keys: prevKeys } = getMonthRangeDayKeys(prev);
+      prevKeys.forEach((k) => allowedDateSet.add(k));
     }
   }
 

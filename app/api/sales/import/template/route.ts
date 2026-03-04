@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { getMonthRangeDayKeys } from '@/lib/time';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
 const SHEET_NAME = 'DATA_MATRIX';
@@ -31,9 +32,6 @@ export async function GET(request: NextRequest) {
   if (!/^\d{4}-\d{2}$/.test(monthParam)) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
-  const [year, monthNum] = monthParam.split('-').map(Number);
-  const monthEnd = new Date(Date.UTC(year, monthNum, 0));
-  const daysInMonth = monthEnd.getUTCDate();
 
   const employees = await prisma.employee.findMany({
     where: { boutiqueId: scopeId, active: true },
@@ -47,10 +45,10 @@ export async function GET(request: NextRequest) {
   }
   headerRow.push('TOTAL');
 
+  const { keys: dayKeys } = getMonthRangeDayKeys(monthParam);
   const aoa: (string | number)[][] = [headerRow];
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(Date.UTC(year, monthNum - 1, day));
-    const dateKey = date.toISOString().slice(0, 10);
+  for (const dateKey of dayKeys) {
+    const date = new Date(dateKey + 'T12:00:00.000Z');
     const dayName = DAY_NAMES[date.getUTCDay()];
     const row: (string | number)[] = [scopeId, dateKey, dayName];
     for (let i = 0; i < employees.length; i++) {

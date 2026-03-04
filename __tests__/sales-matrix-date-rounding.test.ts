@@ -5,7 +5,15 @@
  * Verifies:
  * - January 2026 day keys are exactly 2026-01-01 .. 2026-01-31 (no Feb 1 in January matrix).
  * - toRiyadhDayKey produces Riyadh calendar day from Date/string.
- * - Decimal import rounds to integer (77599.24 -> 77600) and tracks roundedFrom for audit.
+ * - Decimal import rounds to integer and tracks roundedFrom for audit.
+ * - Monthly matrix import includes day 1 (2026-02-01); allowed set and date parsing use Riyadh.
+ *
+ * Proof after import (run in DB):
+ *   SELECT "dateKey", COUNT(*) AS cnt, SUM(amount) AS total
+ *   FROM "SalesEntry"
+ *   WHERE "boutiqueId" = :boutiqueId AND "dateKey" = '2026-02-01'
+ *   GROUP BY "dateKey";
+ *   -- Expect cnt >= 1 and total = sum of amounts for day 1.
  */
 
 import {
@@ -54,6 +62,25 @@ describe('Sales matrix date window (Riyadh)', () => {
     it('formats Date as Riyadh calendar day (UTC midnight Jan 1 -> Jan 1 in Riyadh)', () => {
       const utcJan1 = new Date(Date.UTC(2026, 0, 1, 0, 0, 0, 0));
       expect(toRiyadhDayKey(utcJan1)).toBe('2026-01-01');
+    });
+  });
+
+  describe('Monthly matrix import includes day 1 (regression)', () => {
+    it('February 2026 first data row is day 1 (2026-02-01)', () => {
+      const { keys } = getMonthRangeDayKeys('2026-02');
+      expect(keys[0]).toBe('2026-02-01');
+      expect(keys).toContain('2026-02-01');
+    });
+
+    it('Excel date Feb 1 midnight Riyadh (UTC 2026-01-31T21:00:00Z) parses to 2026-02-01', () => {
+      const excelFeb1Riyadh = new Date('2026-01-31T21:00:00.000Z');
+      expect(toRiyadhDayKey(excelFeb1Riyadh)).toBe('2026-02-01');
+    });
+
+    it('allowedDateSet built from getMonthRangeDayKeys includes 2026-02-01', () => {
+      const { keys } = getMonthRangeDayKeys('2026-02');
+      const set = new Set(keys);
+      expect(set.has('2026-02-01')).toBe(true);
     });
   });
 });
