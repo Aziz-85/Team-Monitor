@@ -21,6 +21,8 @@ function unwrapCell(raw: unknown): unknown {
     const o = raw as Record<string, unknown>;
     if ('result' in o) return o.result;
     if ('v' in o) return o.v;
+    if ('value' in o) return o.value;
+    if ('w' in o) return o.w;
   }
   return raw;
 }
@@ -52,6 +54,21 @@ export function dateFromCellB(raw: unknown): { dateKey: string; date: Date } | n
   } catch {
     return null;
   }
+}
+
+function isHeaderRow(row: unknown[]): boolean {
+  const a = String(unwrapCell(row?.[0]) ?? '').toLowerCase();
+  const b = String(unwrapCell(row?.[1]) ?? '').toLowerCase();
+  return a.includes('scopeid') && b.includes('date');
+}
+
+export function findHeaderRowIndex(aoa: unknown[][]): number {
+  const max = Math.min(aoa.length, 20);
+  for (let i = 0; i < max; i++) {
+    const row = (aoa[i] ?? []) as unknown[];
+    if (isHeaderRow(row)) return i;
+  }
+  return -1;
 }
 
 export type BlockingError = {
@@ -185,12 +202,30 @@ export async function parseMatrixBuffer(
   if (!ws) throw new Error(`Sheet "${SHEET_NAME}" not found`);
 
   const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, blankrows: false, raw: true }) as unknown[][];
-  const firstDataRow = findFirstDataRow(aoa);
-  if (firstDataRow < 0) {
+  const firstDateRow = findFirstDataRow(aoa);
+  const headerRowIndex = findHeaderRowIndex(aoa);
+  const dataStartRow =
+    headerRowIndex >= 0
+      ? headerRowIndex + 1
+      : firstDateRow >= 0
+        ? firstDateRow
+        : -1;
+  if (dataStartRow < 0) {
     throw new Error('No date rows found in DATA_MATRIX (column B must contain a valid date)');
   }
-  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
-  const header = (aoa[headerRowIndex] ?? []).map((x) => String(x ?? '').trim());
+  const headerSourceIndex = headerRowIndex >= 0 ? headerRowIndex : Math.max(0, dataStartRow - 1);
+  const header = (aoa[headerSourceIndex] ?? []).map((x) => String(x ?? '').trim());
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      '[matrixImportParse] headerRowIndex',
+      headerRowIndex,
+      'firstDateRow',
+      firstDateRow,
+      'dataStartRow',
+      dataStartRow
+    );
+  }
 
   let employeeEndCol = EMPLOYEE_START_COL;
   for (let c = EMPLOYEE_START_COL; c < header.length; c++) {
@@ -216,7 +251,7 @@ export async function parseMatrixBuffer(
   const SAMPLE_MAX = 12;
   const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number; roundedFrom?: number }[]; skippedEmpty: number }[] = [];
 
-  for (let r = firstDataRow; r < aoa.length; r++) {
+  for (let r = dataStartRow; r < aoa.length; r++) {
     const rowArr = aoa[r] ?? [];
     const dateRaw = rowArr[DATE_COL];
     const parsedDate = dateFromCellB(dateRaw);
@@ -263,7 +298,7 @@ export async function parseMatrixBuffer(
       });
     }
 
-    if (process.env.NODE_ENV !== 'production' && rows.length < 5) {
+    if (process.env.NODE_ENV !== 'production' && rows.length < 3) {
       console.log('[matrixImportParse] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
     }
 
@@ -271,7 +306,7 @@ export async function parseMatrixBuffer(
   }
 
   const firstRowWithDataSample: { r: number; c: number; header: string; v: string }[] = [];
-  for (let r = firstDataRow; r <= Math.min(firstDataRow + 14, aoa.length - 1); r++) {
+  for (let r = dataStartRow; r <= Math.min(dataStartRow + 14, aoa.length - 1); r++) {
     for (let c = EMPLOYEE_START_COL; c <= Math.min(EMPLOYEE_START_COL + 2, employeeEndCol); c++) {
       const raw = (aoa[r] ?? [])[c] ?? null;
       if (isBlankOrDash(raw)) continue;

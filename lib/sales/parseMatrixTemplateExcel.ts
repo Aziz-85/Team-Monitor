@@ -56,6 +56,8 @@ function unwrapCell(raw: unknown): unknown {
     const o = raw as Record<string, unknown>;
     if ('result' in o) return o.result;
     if ('v' in o) return o.v;
+    if ('value' in o) return o.value;
+    if ('w' in o) return o.w;
     if ('text' in o) return o.text;
     if (Array.isArray((o as { richText?: unknown }).richText)) {
       return ((o as { richText: Array<{ text?: string }> }).richText)
@@ -122,6 +124,21 @@ function dateFromCellB(raw: unknown): { dateKey: string; date: Date } | null {
   }
 }
 
+function isHeaderRow(row: unknown[]): boolean {
+  const a = String(unwrapCell(row?.[0]) ?? '').toLowerCase();
+  const b = String(unwrapCell(row?.[1]) ?? '').toLowerCase();
+  return a.includes('scopeid') && b.includes('date');
+}
+
+function findHeaderRowIndex(rows: unknown[][]): number {
+  const max = Math.min(rows.length, 20);
+  for (let i = 0; i < max; i++) {
+    const row = (rows[i] ?? []) as unknown[];
+    if (isHeaderRow(row)) return i;
+  }
+  return -1;
+}
+
 export type MatrixParseRow = {
   scopeId: string;
   dateKey: string;
@@ -171,12 +188,30 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
     return { ok: false, error: `Sheet "${SHEET_NAME}" is empty` };
   }
 
-  const firstDataRow = findFirstDataRow(rows);
-  if (firstDataRow < 0) {
+  const firstDateRow = findFirstDataRow(rows);
+  const headerRowIndex = findHeaderRowIndex(rows);
+  const dataStartRow =
+    headerRowIndex >= 0
+      ? headerRowIndex + 1
+      : firstDateRow >= 0
+        ? firstDateRow
+        : -1;
+  if (dataStartRow < 0) {
     return { ok: false, error: 'No date rows found in DATA_MATRIX (column B must contain a valid date)' };
   }
-  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
-  const headerRow = (rows[headerRowIndex] as unknown[]).map((c) => String(c ?? '').trim());
+  const headerSourceIndex = headerRowIndex >= 0 ? headerRowIndex : Math.max(0, dataStartRow - 1);
+  const headerRow = (rows[headerSourceIndex] as unknown[]).map((c) => String(c ?? '').trim());
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      '[parseMatrixTemplateExcel] headerRowIndex',
+      headerRowIndex,
+      'firstDateRow',
+      firstDateRow,
+      'dataStartRow',
+      dataStartRow
+    );
+  }
 
   const totalColIndex = headerRow.findIndex((h, c) => c >= EMPLOYEE_START_COL && normalize(h ?? '') === 'total');
   let lastEmployeeColIndex: number;
@@ -199,7 +234,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
     blockingErrors.push({
       type: 'NO_EMPLOYEE_COLUMNS_DETECTED',
       message: 'No employee columns detected (TOTAL not found or no valid headers before it)',
-      row: headerRowIndex + 1,
+      row: headerSourceIndex + 1,
       col: EMPLOYEE_START_COL_1BASED,
       headerRaw: '',
       value: null,
@@ -212,7 +247,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
     if (raw) employeeColumns.push({ colIndex: c, headerRaw: raw });
   }
 
-  for (let r = firstDataRow; r < rows.length; r++) {
+  for (let r = dataStartRow; r < rows.length; r++) {
     const row = rows[r] as unknown[];
     const dateRaw = row[DATE_COL];
     const parsedDate = dateFromCellB(dateRaw);
@@ -270,7 +305,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
       }
     }
 
-    if (process.env.NODE_ENV !== 'production' && resultRows.length < 5) {
+    if (process.env.NODE_ENV !== 'production' && resultRows.length < 3) {
       console.log('[parseMatrixTemplateExcel] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
     }
 
@@ -284,7 +319,7 @@ export function parseMatrixTemplateExcel(buffer: Buffer): MatrixParseResult {
   return {
     ok: true,
     sheetName: SHEET_NAME,
-    headerRowIndex: headerRowIndex + 1,
+    headerRowIndex: headerSourceIndex + 1,
     employeeStartCol: EMPLOYEE_START_COL_1BASED,
     employeeEndCol: employeeEndCol1Based,
     employeeColumns: employeeColumns.map((e) => ({ colIndex: e.colIndex, headerRaw: e.headerRaw })),

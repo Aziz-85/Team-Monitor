@@ -14,8 +14,7 @@ import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatr
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
-import { findFirstDataRow, dateFromCellB } from '@/lib/sales/matrixImportParse';
-import { dateKeyUTC } from '@/lib/dates/safeCalendar';
+import { dateKeyUTC, monthDaysUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
@@ -23,6 +22,43 @@ const SHEET_NAME = 'DATA_MATRIX';
 const SCOPE_COL = 0;          // A (0-based)
 const DATE_COL = 1;           // B (0-based)
 const EMPLOYEE_START_COL = 3; // D (0-based)
+const EMPLOYEE_END_COL_FALLBACK = 11; // L (0-based), template D..L
+
+function unwrapCell(raw: unknown): unknown {
+  if (raw == null) return raw;
+  if (typeof raw === 'object' && raw !== null) {
+    const o = raw as Record<string, unknown>;
+    if ('result' in o) return o.result;
+    if ('v' in o) return o.v;
+    if ('value' in o) return o.value;
+    if ('w' in o) return o.w;
+  }
+  return raw;
+}
+
+function isDateCell(v: unknown): boolean {
+  try {
+    parseExcelDateToYMD(unwrapCell(v));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Parse employee cell to number; 0 if not numeric. Do not read TOTAL column. */
+function parseNumberCell(v: unknown): number {
+  const raw = unwrapCell(v);
+  if (typeof raw === 'number' && Number.isFinite(raw)) return Math.round(raw);
+  const s = String(raw ?? '').trim().replace(/,/g, '');
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+
+function isHeaderRow(row: unknown[]): boolean {
+  const a = String(unwrapCell(row?.[0]) ?? '').toLowerCase();
+  const b = String(unwrapCell(row?.[1]) ?? '').toLowerCase();
+  return a.includes('scopeid') && b.includes('date');
+}
 
 type BlockingError = {
   type: string;
@@ -237,23 +273,22 @@ export async function POST(request: NextRequest) {
   }
 
   const aoa = XLSX.utils.sheet_to_json(ws, {
-    header: 1,        // Array of arrays
-    defval: null,     // IMPORTANT: keep blanks as null
+    header: 1,
+    defval: null,
     blankrows: false,
   }) as unknown[][];
 
-  const firstDataRow = findFirstDataRow(aoa);
-  if (firstDataRow < 0) {
-    return NextResponse.json({
-      success: false,
-      error: 'No date rows found in DATA_MATRIX (column B must contain a valid date)',
-      applyAllowed: false,
-      applyBlockReasons: ['NO_DATE_ROWS'],
-    }, { status: 400 });
+  const prev = includePreviousMonth ? previousMonthKey(month) : null;
+
+  // Header row only for column labels (no start-row logic)
+  let headerRowIndex = -1;
+  for (let i = 0; i < Math.min(aoa.length, 20); i++) {
+    if (isHeaderRow((aoa[i] ?? []) as unknown[])) {
+      headerRowIndex = i;
+      break;
+    }
   }
-  const headerRowIndex = firstDataRow > 0 ? firstDataRow - 1 : 0;
-  const dataStartRow = firstDataRow;
-  const header = (aoa[headerRowIndex] ?? []).map((x) => String(x ?? '').trim());
+  const header = (headerRowIndex >= 0 ? (aoa[headerRowIndex] ?? []) : []).map((x) => String(unwrapCell(x) ?? '').trim());
 
   let employeeEndCol = EMPLOYEE_START_COL;
   for (let c = EMPLOYEE_START_COL; c < header.length; c++) {
@@ -263,28 +298,73 @@ export async function POST(request: NextRequest) {
     }
     employeeEndCol = c;
   }
-
   if (employeeEndCol < EMPLOYEE_START_COL) {
-    return NextResponse.json({
-      success: false,
-      dryRun,
-      applyAllowed: false,
-      applyBlockReasons: ['NO_EMPLOYEE_COLUMNS'],
-      blockingErrorsCount: 1,
-      blockingErrors: [{ type: 'NO_EMPLOYEE_COLUMNS', message: 'No employee columns found before TOTAL/Notes.' }],
-      diagnostic: {
-        headerCellCount: header.length,
-        employeeStartCol: EMPLOYEE_START_COL + 1,
-        employeeEndCol: employeeEndCol + 1,
-        firstRowWithDataSample: [],
-      },
-    }, { status: 400 });
+    employeeEndCol = EMPLOYEE_END_COL_FALLBACK;
   }
 
   const employeeColumns: { colIndex: number; headerRaw: string }[] = [];
   for (let c = EMPLOYEE_START_COL; c <= employeeEndCol; c++) {
     const headerRaw = header[c] ?? '';
-    if (headerRaw) employeeColumns.push({ colIndex: c, headerRaw });
+    employeeColumns.push({ colIndex: c, headerRaw: headerRaw || `Col${c + 1}` });
+  }
+
+  // Scan ALL rows by dateKey only; no dataStartRow/header offset
+  const rowsByDateKey = new Map<string, { row: unknown[]; date: Date; score: number }>();
+  for (let r = 0; r < aoa.length; r++) {
+    const rowArr = (aoa[r] ?? []) as unknown[];
+    const dateRaw = unwrapCell(rowArr[DATE_COL]);
+    if (!isDateCell(dateRaw)) continue;
+    const ymd = parseExcelDateToYMD(dateRaw);
+    const date = ymdToUTCNoon(ymd);
+    const dateKey = dateKeyUTC(date);
+    const inMonth = dateKey.startsWith(month + '-');
+    const inPrev = !!prev && dateKey.startsWith(prev + '-');
+    if (!inMonth && !inPrev) continue;
+    let score = 0;
+    for (let c = EMPLOYEE_START_COL; c <= employeeEndCol; c++) {
+      score += parseNumberCell(rowArr[c]);
+    }
+    const existing = rowsByDateKey.get(dateKey);
+    if (!existing || score > existing.score) {
+      rowsByDateKey.set(dateKey, { row: rowArr, date, score });
+    }
+  }
+
+  if (rowsByDateKey.size === 0) {
+    return NextResponse.json({
+      success: false,
+      error: 'No rows found for the requested month in DATA_MATRIX',
+      applyAllowed: false,
+      applyBlockReasons: ['NO_ROWS_FOR_MONTH'],
+    }, { status: 400 });
+  }
+
+  const firstDayKey = `${month}-01`;
+  if (!rowsByDateKey.has(firstDayKey)) {
+    return NextResponse.json({
+      success: false,
+      error: `Expected ${firstDayKey} row missing; do not import.`,
+      applyAllowed: false,
+      applyBlockReasons: ['IMPORT_ROW_START_MISMATCH'],
+    }, { status: 400 });
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    for (const dayKey of [firstDayKey, `${month}-02`, `${month}-03`]) {
+      const entry = rowsByDateKey.get(dayKey);
+      let computedTotal = 0;
+      if (entry) {
+        for (let c = EMPLOYEE_START_COL; c <= employeeEndCol; c++) {
+          computedTotal += parseNumberCell(entry.row[c]);
+        }
+      }
+      console.log('[IMPORT CHECK]', month, dayKey, 'rowFound', !!entry, 'rowTotal', computedTotal);
+    }
+  }
+
+  const dayKeysOrdered = [...monthDaysUTC(month)];
+  if (prev) {
+    dayKeysOrdered.unshift(...monthDaysUTC(prev));
   }
 
   const blockingErrors: BlockingError[] = [];
@@ -292,75 +372,39 @@ export async function POST(request: NextRequest) {
   const SAMPLE_MAX = 12;
   const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number }[]; skippedEmpty: number }[] = [];
 
-  for (let r = dataStartRow; r < aoa.length; r++) {
-    const rowArr = aoa[r] ?? [];
-    const dateRaw = rowArr[DATE_COL];
-    const parsedDate = dateFromCellB(dateRaw);
-    if (!parsedDate) {
-      if (dateRaw != null && String(dateRaw).trim() !== '') {
-        blockingErrors.push({
-          type: 'INVALID_DATE',
-          message: `Invalid date format (use YYYY-MM-DD or Excel date): ${String(dateRaw).slice(0, 50)}`,
-          row: r + 1,
-          col: DATE_COL + 1,
-          headerRaw: 'Date',
-          value: dateRaw,
-        });
-      }
-      continue;
-    }
-    const { dateKey, date } = parsedDate;
-    const scopeId = String(rowArr[SCOPE_COL] ?? '').trim();
-
+  for (const dayKey of dayKeysOrdered) {
+    const entry = rowsByDateKey.get(dayKey);
+    if (!entry) continue;
+    const rowArr = entry.row;
+    const dateKey = dayKey;
+    const date = entry.date;
+    const scopeId = String(unwrapCell(rowArr[SCOPE_COL]) ?? '').trim();
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];
     let skippedEmpty = 0;
-    let rowTotal = 0;
-
     for (const { colIndex, headerRaw } of employeeColumns) {
-      const raw = (aoa[r] ?? [])[colIndex] ?? null;
-
-      if (isBlankOrDash(raw)) {
+      const amt = parseNumberCell(rowArr[colIndex]);
+      if (amt > 0) {
+        values.push({ colIndex, headerRaw, amountSar: amt });
+        if (sampleNonBlankCells.length < SAMPLE_MAX) {
+          sampleNonBlankCells.push({ row: 0, col: colIndex + 1, headerRaw, value: rowArr[colIndex] });
+        }
+      } else {
         skippedEmpty++;
-        continue;
       }
-
-      if (sampleNonBlankCells.length < SAMPLE_MAX) {
-        sampleNonBlankCells.push({ row: r + 1, col: colIndex + 1, headerRaw, value: raw });
-      }
-
-      const parsed = parseIntSarOrBlocking(raw, r + 1, colIndex + 1, headerRaw);
-      if (!parsed.ok) {
-        blockingErrors.push(parsed.err);
-        continue;
-      }
-
-      rowTotal += parsed.value;
-      values.push({ colIndex, headerRaw, amountSar: parsed.value });
     }
-
-    if (process.env.NODE_ENV !== 'production' && rows.length < 5) {
-      console.log('[monthly-matrix import] row', r + 1, 'rawDate', dateRaw, 'dateKey', dateKey, 'rowTotal', rowTotal, 'skipped', rowTotal === 0);
-    }
-
     rows.push({ dateKey, date, scopeId, values, skippedEmpty });
   }
 
   const firstRowWithDataSample: { r: number; c: number; header: string; v: string }[] = [];
-  for (let r = dataStartRow; r <= Math.min(dataStartRow + 14, aoa.length - 1); r++) {
+  for (const dk of [firstDayKey, `${month}-02`, `${month}-03`]) {
+    const entry = rowsByDateKey.get(dk);
+    if (!entry) continue;
     for (let c = EMPLOYEE_START_COL; c <= Math.min(EMPLOYEE_START_COL + 2, employeeEndCol); c++) {
-      const raw = (aoa[r] ?? [])[c] ?? null;
-      if (isBlankOrDash(raw)) continue;
-      const v = String(raw).trim();
-      if (!v || v === '-') continue;
-      firstRowWithDataSample.push({
-        r: r + 1,
-        c: c + 1,
-        header: header[c] ?? '',
-        v,
-      });
-      if (firstRowWithDataSample.length >= 8) break;
+      const v = parseNumberCell(entry.row[c]);
+      if (v > 0 && firstRowWithDataSample.length < 8) {
+        firstRowWithDataSample.push({ r: 0, c: c + 1, header: header[c] ?? '', v: String(v) });
+      }
     }
-    if (firstRowWithDataSample.length >= 8) break;
   }
 
   const sheetName = SHEET_NAME;
@@ -466,7 +510,7 @@ export async function POST(request: NextRequest) {
       month,
       includePreviousMonth,
       sheetName,
-      headerRowIndex: 1,
+      headerRowIndex: headerRowIndex >= 0 ? headerRowIndex + 1 : 0,
       employeeStartCol: EMPLOYEE_START_COL + 1,
       employeeEndCol: employeeEndCol + 1,
       mappedEmployees,
@@ -614,8 +658,8 @@ export async function POST(request: NextRequest) {
     month,
     includePreviousMonth,
     sheetName,
-    headerRowIndex: 1,
-    employeeStartCol: EMPLOYEE_START_COL,
+    headerRowIndex: headerRowIndex >= 0 ? headerRowIndex + 1 : 0,
+    employeeStartCol: EMPLOYEE_START_COL + 1,
     employeeEndCol,
     mappedEmployees,
     unmappedEmployees,
