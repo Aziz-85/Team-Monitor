@@ -116,7 +116,7 @@ export function MonthlyBoardClient() {
       .then(setData)
       .catch(() => setError(t('executive.monthly.failedToLoad')))
       .finally(() => setLoading(false));
-  }, [monthKey]);
+  }, [monthKey, t]);
 
   const goPrev = () => setMonthInUrl(addMonths(monthKey, -1));
   const goNext = () => setMonthInUrl(addMonths(monthKey, 1));

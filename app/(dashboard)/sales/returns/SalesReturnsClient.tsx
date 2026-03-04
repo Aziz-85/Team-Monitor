@@ -67,7 +67,7 @@ export function SalesReturnsClient() {
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, t]);
 
   useEffect(() => {
     if (from && to) load();

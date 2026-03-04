@@ -1,5 +1,21 @@
 # ملاحظات النشر و PM2 — Team Monitor
 
+## خطأ: Could not find a production build in the '.next' directory
+
+**السبب:** تم تشغيل `next start` (عبر `npm start` أو PM2) دون وجود بناء إنتاج. مجلد `.next` غير موجود أو فارغ (مثلاً بعد `git pull` دون تشغيل `npm run build`).
+
+**الحل على السيرفر:**
+
+```bash
+cd /var/www/team-monitor
+npm run build
+pm2 restart team-monitor
+```
+
+يجب تشغيل `npm run build` بعد كل سحب تحديثات (`git pull`) أو عند أول نشر قبل `pm2 start`. لا تعتمد على وجود مجلد `.next` من جهاز آخر — البناء يجب أن يتم على السيرفر.
+
+---
+
 ## أخطاء شائعة في السجلات وحلولها
 
 ### 1. `Failed to find Server Action "x"`

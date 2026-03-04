@@ -70,7 +70,7 @@ export function SalesSummaryClient() {
     } finally {
       setLoading(false);
     }
-  }, [from, to, boutiqueId]);
+  }, [from, to, boutiqueId, t]);
 
   const loadTargets = useCallback(async () => {
     if (!from || !to) return;

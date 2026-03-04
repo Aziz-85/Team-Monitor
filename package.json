@@ -6,6 +6,7 @@
     "dev": "node scripts/dev-with-lan-url.js",
     "dev:lan": "node scripts/dev-with-lan-url.js 3001",
     "build": "next build",
+    "prestart": "node -e \"const fs=require('fs'); if(!fs.existsSync('.next/BUILD_ID')){ console.error('\\nError: No production build in .next. Run: npm run build\\n'); process.exit(1); }\"",
     "start": "next start -p 3002",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -35,6 +36,7 @@
     "pdf-lib": "^1.17.1",
     "react": "^18",
     "react-dom": "^18",
+    "sharp": "^0.34.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
