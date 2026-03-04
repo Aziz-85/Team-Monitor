@@ -578,6 +578,7 @@ export async function POST(request: NextRequest) {
       boutiqueId: scopeId,
       date,
       actorUserId: user.id,
+      sourceOverride: 'MONTHLY_MATRIX_TRACE_V9',
     });
   }
 

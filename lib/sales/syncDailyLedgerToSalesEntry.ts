@@ -14,6 +14,8 @@ export type SyncDailyLedgerInput = {
   boutiqueId: string;
   date: Date | string;
   actorUserId: string;
+  /** When set, SalesEntry rows written by this sync use this source (e.g. MONTHLY_MATRIX_TRACE_V9). */
+  sourceOverride?: string;
 };
 
 export type SyncDailyLedgerResult = {
@@ -34,11 +36,12 @@ export type SyncDailyLedgerResult = {
 export async function syncDailyLedgerToSalesEntry(
   input: SyncDailyLedgerInput
 ): Promise<SyncDailyLedgerResult> {
-  const { boutiqueId, date, actorUserId } = input;
+  const { boutiqueId, date, actorUserId, sourceOverride } = input;
   const dateOnly = normalizeDateOnlyRiyadh(date);
   const dateKey = formatDateRiyadh(dateOnly);
   const dayStart = startOfDayRiyadh(dateOnly);
   const dayEnd = addDays(dayStart, 1);
+  const effectiveSource = sourceOverride ?? SALES_ENTRY_SOURCE_LEDGER;
 
   const summary = await prisma.boutiqueSalesSummary.findFirst({
     where: {
@@ -53,14 +56,14 @@ export async function syncDailyLedgerToSalesEntry(
       where: {
         boutiqueId,
         dateKey,
-        source: SALES_ENTRY_SOURCE_LEDGER,
+        source: effectiveSource,
       },
     });
     return { ok: true, summaryId: null, upserted: 0, skipped: 0 };
   }
 
   try {
-    const result = await syncSummaryToSalesEntry(summary.id, actorUserId);
+    const result = await syncSummaryToSalesEntry(summary.id, actorUserId, effectiveSource);
     return {
       ok: true,
       summaryId: summary.id,

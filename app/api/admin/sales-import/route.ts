@@ -1,9 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { toRiyadhDateOnly, formatDateRiyadh, formatMonthKey } from '@/lib/time';
+import { formatMonthKey } from '@/lib/time';
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
+import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 import * as XLSX from 'xlsx';
+
+function unwrapCell(raw: unknown): unknown {
+  if (raw == null) return raw;
+  if (typeof raw === 'object' && raw !== null) {
+    const o = raw as Record<string, unknown>;
+    if ('result' in o) return o.result;
+    if ('v' in o) return o.v;
+    if ('value' in o) return o.value;
+    if ('w' in o) return o.w;
+  }
+  return raw;
+}
+
+/** Parse Excel date cell to dateKey (YYYY-MM-DD) using safeCalendar; no toISOString slice. */
+function rawToDateKey(raw: unknown): string | null {
+  const v = unwrapCell(raw);
+  try {
+    const ymd = parseExcelDateToYMD(v);
+    const date = ymdToUTCNoon(ymd);
+    return dateKeyUTC(date);
+  } catch {
+    return null;
+  }
+}
+
+function rawToDate(raw: unknown): Date | null {
+  const v = unwrapCell(raw);
+  try {
+    const ymd = parseExcelDateToYMD(v);
+    return ymdToUTCNoon(ymd);
+  } catch {
+    return null;
+  }
+}
 
 const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
 const MAX_ROWS_SIMPLE = 10000;
@@ -52,68 +87,6 @@ async function getUserIdToBoutiqueId(userIds: string[]): Promise<Map<string, str
 type SkippedItem = { rowNumber: number; empId?: string; columnHeader?: string; reason: string };
 type WarningItem = { rowNumber: number; date?: string; message?: string; totalAfter?: number; sumEmployees?: number; delta?: number };
 
-const MONTH_NAMES: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-};
-
-function parseExcelDate(
-  raw: unknown,
-  inferYear: number
-): { ok: true; date: Date } | { ok: false } {
-  if (raw == null || (typeof raw === 'string' && raw.trim() === '')) return { ok: false };
-  if (raw instanceof Date && Number.isFinite(raw.getTime())) {
-    return { ok: true, date: raw };
-  }
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    try {
-      const parsed = (XLSX.SSF as { parse_date_code?: (v: number) => { y: number; m: number; d: number } | null }).parse_date_code?.(raw);
-      if (parsed && typeof parsed.y === 'number') {
-        return {
-          ok: true,
-          date: new Date(Date.UTC(parsed.y, (parsed.m ?? 1) - 1, parsed.d ?? 1, 0, 0, 0, 0)),
-        };
-      }
-    } catch {
-      // fall through
-    }
-    const utc = (raw - 25569) * 86400 * 1000;
-    if (Number.isFinite(utc)) return { ok: true, date: new Date(utc) };
-  }
-  const s = String(raw).trim();
-  if (!s) return { ok: false };
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    return { ok: true, date: new Date(s + 'T00:00:00.000Z') };
-  }
-  const dmySlash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (dmySlash) {
-    const day = parseInt(dmySlash[1], 10);
-    const month = parseInt(dmySlash[2], 10) - 1;
-    const year = parseInt(dmySlash[3], 10);
-    if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-      return { ok: true, date: new Date(Date.UTC(year, month, day, 0, 0, 0, 0)) };
-    }
-  }
-  const dmyDash = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (dmyDash) {
-    const day = parseInt(dmyDash[1], 10);
-    const month = parseInt(dmyDash[2], 10) - 1;
-    const year = parseInt(dmyDash[3], 10);
-    if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
-      return { ok: true, date: new Date(Date.UTC(year, month, day, 0, 0, 0, 0)) };
-    }
-  }
-  const shortMatch = s.match(/^(\d{1,2})[-/](\w+)$/i);
-  if (shortMatch) {
-    const d = parseInt(shortMatch[1], 10);
-    const m = MONTH_NAMES[shortMatch[2].toLowerCase()];
-    if (m !== undefined && d >= 1 && d <= 31) {
-      return { ok: true, date: new Date(Date.UTC(inferYear, m, d, 0, 0, 0, 0)) };
-    }
-  }
-  return { ok: false };
-}
-
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
   try {
@@ -139,9 +112,6 @@ export async function POST(request: NextRequest) {
   }
   const importMode = (formData.get('importMode') as string)?.toLowerCase() || 'auto';
   const monthParam = (formData.get('month') as string)?.trim() || '';
-  const inferYear = monthParam && /^\d{4}-\d{2}$/.test(monthParam)
-    ? parseInt(monthParam.slice(0, 4), 10)
-    : new Date().getUTCFullYear();
 
   const buf = Buffer.from(await file.arrayBuffer());
   let workbook: XLSX.WorkBook;
@@ -257,10 +227,8 @@ export async function POST(request: NextRequest) {
     for (let i = 1; i <= limit; i++) {
       const row = rows[i] as unknown[];
       const dateRaw = row[dateCol];
-      const dateStr =
-        dateRaw instanceof Date
-          ? dateRaw.toISOString().slice(0, 10)
-          : String(dateRaw ?? '').trim();
+      const dateKey = rawToDateKey(dateRaw);
+      const dateNorm = rawToDate(dateRaw);
       const email = String(row[emailCol] ?? '').trim().toLowerCase();
       let amount: number;
       const amountRaw = row[amountCol];
@@ -269,7 +237,7 @@ export async function POST(request: NextRequest) {
       } else {
         amount = Math.round(Number(amountRaw));
       }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      if (!dateKey || !dateNorm) {
         skipped.push({ rowNumber: i + 1, reason: 'Invalid date' });
         continue;
       }
@@ -283,8 +251,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
       const boutiqueId = userIdToBoutique.get(userId) ?? defaultBoutiqueId;
-      const dateNorm = toRiyadhDateOnly(new Date(dateStr + 'T12:00:00.000Z'));
-      const dateKey = formatDateRiyadh(dateNorm);
       const month = formatMonthKey(dateNorm);
       try {
         const existing = await prisma.salesEntry.findUnique({
@@ -350,21 +316,44 @@ export async function POST(request: NextRequest) {
 
     const dataStart = headerIndex + 1;
     const rowLimit = Math.min(rows.length - 1, dataStart + MAX_ROWS_MSR - 1);
+
+    const dateKeysInRequestedMonth = new Set<string>();
+    for (let i = dataStart; i <= rowLimit; i++) {
+      const row = rows[i] as unknown[];
+      const dateKey = rawToDateKey(row[dateCol]);
+      if (dateKey && monthParam && dateKey.startsWith(monthParam + '-')) {
+        dateKeysInRequestedMonth.add(dateKey);
+      }
+    }
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam) && !dateKeysInRequestedMonth.has(monthParam + '-01')) {
+      return NextResponse.json(
+        {
+          error: `Expected row for ${monthParam}-01 missing in sheet. Do not import.`,
+          importedCount: 0,
+          updatedCount: 0,
+          skippedCount: 0,
+          skippedRowCount: 0,
+          skipped: [],
+          warnings: [],
+        },
+        { status: 400 }
+      );
+    }
+
     for (let i = dataStart; i <= rowLimit; i++) {
       const row = rows[i] as unknown[];
       const dateRaw = row[dateCol];
-      const parsed = parseExcelDate(dateRaw, inferYear);
-      if (!parsed.ok) {
+      const dateKey = rawToDateKey(dateRaw);
+      const dateNorm = rawToDate(dateRaw);
+      if (!dateKey || !dateNorm) {
         skippedRowsCount += 1;
         warnings.push({
           rowNumber: i + 1,
-          date: String(dateRaw ?? '').slice(0, 30),
+          date: String(unwrapCell(dateRaw) ?? '').slice(0, 30),
           message: 'Invalid date; row skipped',
         });
         continue;
       }
-      const dateNorm = toRiyadhDateOnly(parsed.date);
-      const dateKey = formatDateRiyadh(dateNorm);
       const month = formatMonthKey(dateNorm);
       let totalSaleAfter = 0;
       const totalRaw = row[totalSaleAfterCol];
@@ -407,7 +396,7 @@ export async function POST(request: NextRequest) {
       ) {
         warnings.push({
           rowNumber: i + 1,
-          date: dateNorm.toISOString().slice(0, 10),
+          date: dateKey,
           message: `Total mismatch: sum employees ${sumEmployees} vs Total Sale After ${totalSaleAfter} (delta ${sumEmployees - totalSaleAfter})`,
           totalAfter: totalSaleAfter,
           sumEmployees,
@@ -417,7 +406,10 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const monthKey = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : new Date().toISOString().slice(0, 7);
+  const monthKey =
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam)
+      ? monthParam
+      : dateKeyUTC(new Date()).slice(0, 7);
   await logSalesTargetAudit(monthKey, 'IMPORT_SALES', user.id, {
     importedCount,
     updatedCount,

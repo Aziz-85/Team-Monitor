@@ -19,12 +19,13 @@ export type SyncSummaryResult = {
 /**
  * Sync all lines of a summary to SalesEntry for that date and boutique.
  * Uses dateKey (YYYY-MM-DD Riyadh) so ledger and SalesEntry keys never drift.
- * Upsert by (boutiqueId, dateKey, userId); sets source='LEDGER'.
- * Deletes ONLY SalesEntry rows with source='LEDGER' for this dateKey+boutique whose userId is not in current lines.
+ * Upsert by (boutiqueId, dateKey, userId); sets source to sourceForEntry (default 'LEDGER').
+ * Deletes ONLY SalesEntry rows with that source for this dateKey+boutique whose userId is not in current lines.
  */
 export async function syncSummaryToSalesEntry(
   summaryId: string,
-  createdById: string
+  createdById: string,
+  sourceForEntry: string = SALES_ENTRY_SOURCE_LEDGER
 ): Promise<SyncSummaryResult> {
   const summary = await prisma.boutiqueSalesSummary.findUnique({
     where: { id: summaryId },
@@ -67,27 +68,27 @@ export async function syncSummaryToSalesEntry(
           month: monthKey,
           boutiqueId,
           amount: line.amountSar,
-          source: SALES_ENTRY_SOURCE_LEDGER,
+          source: sourceForEntry,
           createdById,
         },
         update: {
           amount: line.amountSar,
           month: monthKey,
-          source: SALES_ENTRY_SOURCE_LEDGER,
+          source: sourceForEntry,
           updatedAt: new Date(),
         },
       });
     }
   }
 
-  // Safe delete: only LEDGER rows for this exact dateKey+boutique whose userId is not in current lines
+  // Safe delete: only rows with this source for this dateKey+boutique whose userId is not in current lines
   if (userIdsInLines.size > 0) {
     const staleUserIds = await prisma.salesEntry
       .findMany({
         where: {
           boutiqueId,
           dateKey,
-          source: SALES_ENTRY_SOURCE_LEDGER,
+          source: sourceForEntry,
           userId: { notIn: Array.from(userIdsInLines) },
         },
         select: { userId: true },
@@ -98,14 +99,14 @@ export async function syncSummaryToSalesEntry(
         where: {
           boutiqueId,
           dateKey,
-          source: SALES_ENTRY_SOURCE_LEDGER,
+          source: sourceForEntry,
           userId: { in: staleUserIds },
         },
       });
     }
   } else {
     await prisma.salesEntry.deleteMany({
-      where: { boutiqueId, dateKey, source: SALES_ENTRY_SOURCE_LEDGER },
+      where: { boutiqueId, dateKey, source: sourceForEntry },
     });
   }
 
