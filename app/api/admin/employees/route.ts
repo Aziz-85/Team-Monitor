@@ -275,6 +275,11 @@ export async function PATCH(request: NextRequest) {
       beforeJson: JSON.stringify({ boutiqueId: before?.boutiqueId }),
       afterJson: JSON.stringify({ boutiqueId: employee.boutiqueId }),
     });
+    // Sync User.boutiqueId so "Working on" and schedule scope reflect the new branch on next request
+    await prisma.user.updateMany({
+      where: { empId },
+      data: { boutiqueId: employee.boutiqueId },
+    });
   }
   const boutique = employee.boutiqueId
     ? await prisma.boutique.findUnique({

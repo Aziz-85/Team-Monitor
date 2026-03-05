@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { prisma } from '@/lib/db';
 import { ImportSubpageLayout } from '@/components/admin/ImportSubpageLayout';
-import { MonthSnapshotUploadClient } from '../month-snapshot/MonthSnapshotUploadClient';
+import { MonthSnapshotUploadClient } from './MonthSnapshotUploadClient';
 
 export default async function AdminMonthlySnapshotPage() {
   const user = await getSessionUser();

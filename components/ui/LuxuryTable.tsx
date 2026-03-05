@@ -1,4 +1,18 @@
+'use client';
+
+/**
+ * Luxury table: optional noScroll for schedule/edit. Uses unified DataTable.
+ * @see components/ui/DataTable.tsx
+ */
+
 import React, { forwardRef, ReactNode } from 'react';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableTh,
+  DataTableBody,
+  DataTableTd,
+} from '@/components/ui/DataTable';
 
 export function LuxuryTable({
   children,
@@ -11,42 +25,28 @@ export function LuxuryTable({
   noScroll?: boolean;
 }) {
   return (
-    <div
-      className={`w-full rounded-xl border border-slate-200 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-x-auto'} ${className}`}
-    >
-      <table className={`w-full border-collapse text-sm ${noScroll ? 'min-w-0 table-fixed' : 'min-w-[600px]'}`}>
-        {children}
-      </table>
-    </div>
+    <DataTable variant="luxury" noScroll={noScroll} className={className}>
+      {children}
+    </DataTable>
   );
 }
 
 export function LuxuryTableHead({ children }: { children: ReactNode }) {
-  return (
-    <thead>
-      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
-        {children}
-      </tr>
-    </thead>
-  );
+  return <DataTableHead>{children}</DataTableHead>;
 }
 
 export const LuxuryTh = forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<HTMLTableCellElement>>(
   function LuxuryTh({ children, className = '', ...props }, ref) {
     return (
-      <th
-        ref={ref}
-        className={`border-b border-slate-200 px-3 py-2 text-xs md:text-sm font-semibold text-slate-700 ${className}`}
-        {...props}
-      >
+      <DataTableTh ref={ref} className={className} {...props}>
         {children}
-      </th>
+      </DataTableTh>
     );
   }
 );
 
 export function LuxuryTableBody({ children }: { children: ReactNode }) {
-  return <tbody className="bg-white">{children}</tbody>;
+  return <DataTableBody>{children}</DataTableBody>;
 }
 
 export function LuxuryTd({
@@ -55,8 +55,8 @@ export function LuxuryTd({
   ...props
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <td className={`border-b border-slate-200 px-3 py-2 text-sm ${className}`} {...props}>
+    <DataTableTd className={className} {...props}>
       {children}
-    </td>
+    </DataTableTd>
   );
 }

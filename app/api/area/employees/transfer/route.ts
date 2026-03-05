@@ -68,6 +68,11 @@ export async function POST(request: NextRequest) {
         reason: reason ?? undefined,
       },
     }),
+    // Sync User.boutiqueId so "Working on" and schedule scope reflect the new branch on next request
+    prisma.user.updateMany({
+      where: { empId: employeeId },
+      data: { boutiqueId: toBoutiqueId },
+    }),
   ]);
 
   return NextResponse.json({ ok: true, employeeId, fromBoutiqueId, toBoutiqueId });

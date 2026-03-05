@@ -6,5 +6,5 @@ export default async function AdminImportIssuesPage() {
   if (!user) redirect('/login');
   if (!['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role)) redirect('/');
 
-  redirect('/sales/import-issues');
+  redirect('/admin/import/sales?section=issues');
 }

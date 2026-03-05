@@ -1,10 +1,19 @@
 'use client';
 
-import { ReactNode } from 'react';
-
 /**
- * Table wrapper: no horizontal scroll, truncate long text. Light theme.
+ * Admin table: truncate long text, no horizontal scroll. Uses unified DataTable.
+ * @see components/ui/DataTable.tsx
  */
+
+import { ReactNode } from 'react';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableTh,
+  DataTableBody,
+  DataTableTd,
+} from '@/components/ui/DataTable';
+
 export function AdminDataTable({
   children,
   className = '',
@@ -13,24 +22,14 @@ export function AdminDataTable({
   className?: string;
 }) {
   return (
-    <div className={`max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white ${className}`}>
-      <div className="overflow-x-auto overflow-y-visible" style={{ overflowX: 'hidden' }}>
-        <table className="w-full table-fixed border-collapse text-sm">
-          {children}
-        </table>
-      </div>
-    </div>
+    <DataTable variant="admin" className={className}>
+      {children}
+    </DataTable>
   );
 }
 
 export function AdminTableHead({ children }: { children: ReactNode }) {
-  return (
-    <thead>
-      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
-        {children}
-      </tr>
-    </thead>
-  );
+  return <DataTableHead>{children}</DataTableHead>;
 }
 
 export function AdminTh({
@@ -39,19 +38,14 @@ export function AdminTh({
   ...props
 }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th
-      className={`border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 md:text-sm ${className}`}
-      {...props}
-    >
-      <span className="block truncate" title={typeof children === 'string' ? children : undefined}>
-        {children}
-      </span>
-    </th>
+    <DataTableTh truncate className={className} {...props}>
+      {children}
+    </DataTableTh>
   );
 }
 
 export function AdminTableBody({ children }: { children: ReactNode }) {
-  return <tbody className="bg-white">{children}</tbody>;
+  return <DataTableBody>{children}</DataTableBody>;
 }
 
 export function AdminTd({
@@ -60,12 +54,9 @@ export function AdminTd({
   title,
   ...props
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  const t = title ?? (typeof children === 'string' ? children : undefined);
   return (
-    <td className={`border-b border-slate-200 px-3 py-2 text-sm ${className}`} {...props}>
-      <span className="block min-w-0 truncate" title={t}>
-        {children}
-      </span>
-    </td>
+    <DataTableTd truncate title={title} className={className} {...props}>
+      {children}
+    </DataTableTd>
   );
 }
