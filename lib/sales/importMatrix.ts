@@ -5,6 +5,7 @@
 
 import * as XLSX from 'xlsx';
 import { toRiyadhDateString } from '@/lib/time';
+import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const SHEET_NAME = 'DATA_MATRIX';
@@ -75,8 +76,73 @@ export type MatrixParseResult = {
   issues?: MatrixParseIssue[];
 };
 
+/**
+ * Excel stores dates in creator's local time (Riyadh). Use Riyadh dateKey so 01/01 row = 2026-01-01.
+ * parseExcelDateToDateKey uses toRiyadhDateString for Date/number — fixes 2025-12-31 21:00 UTC → 2026-01-01.
+ */
 function rawToDateKey(raw: unknown): string | null {
   return parseExcelDateToDateKey(raw);
+}
+
+function debugDateCell(rowIndex: number, raw: unknown, dateKey: string): void {
+  // Only log a small number of rows to avoid noisy logs
+  if (rowIndex > HEADER_ROW_INDEX + 6) return;
+  try {
+    const t = raw === null ? 'null' : typeof raw;
+    let iso = '';
+    let localYMD = '';
+    let utcYMD = '';
+    let safeUTCKey = '';
+
+    if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+      iso = raw.toISOString();
+      localYMD = `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, '0')}-${String(
+        raw.getDate()
+      ).padStart(2, '0')}`;
+      utcYMD = `${raw.getUTCFullYear()}-${String(raw.getUTCMonth() + 1).padStart(2, '0')}-${String(
+        raw.getUTCDate()
+      ).padStart(2, '0')}`;
+    }
+
+    try {
+      const ymd = parseExcelDateToYMD(raw as unknown);
+      const d = ymdToUTCNoon(ymd);
+      safeUTCKey = dateKeyUTC(d);
+    } catch {
+      // ignore; safeUTCKey stays empty
+    }
+
+    // Truncate raw string representation to keep log readable
+    const rawStr =
+      typeof raw === 'string'
+        ? raw.slice(0, 40)
+        : raw instanceof Date
+          ? `[Date ${iso}]`
+          : JSON.stringify(raw)?.slice(0, 60);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      '[IMPORT_MATRIX_DEBUG]',
+      'rowIndex',
+      rowIndex + 1,
+      'raw',
+      rawStr,
+      'type',
+      t,
+      'iso',
+      iso,
+      'localYMD',
+      localYMD,
+      'utcYMD',
+      utcYMD,
+      'safeUTCKey',
+      safeUTCKey,
+      'dateKey',
+      dateKey
+    );
+  } catch {
+    // best-effort debug only
+  }
 }
 
 function isStopHeader(h: string): boolean {
@@ -134,12 +200,33 @@ export function parseMatrixWorkbook(buffer: Buffer): MatrixParseResult {
   let rowsRead = 0;
   let cellsParsed = 0;
   let ignoredEmptyCells = 0;
+  let lastNonEmptyScopeIdSeen: string | null = null;
+
+  // Log header diagnostics once
+  try {
+    // eslint-disable-next-line no-console
+    console.log(
+      '[IMPORT_MATRIX_DEBUG]',
+      'headerRowIndex',
+      HEADER_ROW_INDEX + 1,
+      'headerLength',
+      headerRow.length,
+      'headerSample',
+      headerRow.slice(0, 8)
+    );
+  } catch {
+    // ignore
+  }
 
   for (let r = HEADER_ROW_INDEX + 1; r < aoa.length; r++) {
     const row = aoa[r] ?? [];
-    const scopeIdRaw = row[SCOPE_COL];
-    const scopeId = String(scopeIdRaw ?? '').trim();
-    if (scopeId) scopeIdsSet.add(scopeId);
+    const scopeCell = row[SCOPE_COL];
+    const scopeIdCandidate =
+      typeof scopeCell === 'string' ? scopeCell.trim() : String(scopeCell ?? '').trim();
+    const normalized = scopeIdCandidate.toUpperCase();
+    if (normalized) lastNonEmptyScopeIdSeen = normalized;
+    const effectiveScopeId = normalized || lastNonEmptyScopeIdSeen || '';
+    if (effectiveScopeId) scopeIdsSet.add(effectiveScopeId);
 
     const dateRaw = row[DATE_COL];
     const dateKey = rawToDateKey(dateRaw);
@@ -152,6 +239,21 @@ export function parseMatrixWorkbook(buffer: Buffer): MatrixParseResult {
       });
       continue;
     }
+
+    if (process.env.NODE_ENV !== 'production' && rowsRead < 12) {
+      const scopeIdEmpty = !normalized;
+      // eslint-disable-next-line no-console
+      console.log('[IMPORT_MATRIX_DEBUG]', 'scopeRow', {
+        rowIndex: r + 1,
+        scopeIdRaw: scopeCell == null ? null : String(scopeCell).slice(0, 20),
+        normalizedScopeId: normalized || '(empty)',
+        dateKey,
+        scopeIdEmpty,
+        effectiveScopeId: effectiveScopeId || '(none)',
+      });
+    }
+
+    debugDateCell(r, dateRaw, dateKey);
     const month = dateKey.slice(0, 7);
     monthsSet.add(month);
     rowsRead += 1;
@@ -218,7 +320,7 @@ export function parseMatrixWorkbook(buffer: Buffer): MatrixParseResult {
         amount: parsed.value,
         rowIndex: r + 1,
         colHeader: header,
-        scopeId,
+        scopeId: effectiveScopeId,
         ...(parsed.roundedFrom != null && { roundedFrom: parsed.roundedFrom }),
       });
       cellsParsed += 1;

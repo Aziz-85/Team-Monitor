@@ -9,6 +9,11 @@ import { toRiyadhDateString, toRiyadhDayKey } from '@/lib/time';
 const EXCEL_EPOCH_OFFSET = 25569;
 const MS_PER_DAY = 86400 * 1000;
 
+/** Excel stores midnight Riyadh as ~21:00 UTC previous day. Add 3h so 20:59 UTC → next day in Riyadh. */
+function shiftForRiyadhBoundary(d: Date): Date {
+  return new Date(d.getTime() + 3 * 60 * 60 * 1000);
+}
+
 /**
  * Parse any Excel date value to YYYY-MM-DD in Asia/Riyadh (date-only, no timezone shift).
  * Use for every import path that reads Date from Excel so day 1 is never missing.
@@ -26,10 +31,10 @@ export function parseExcelDateToDateKey(raw: unknown, monthHint?: string): strin
     const utcMs = (raw - EXCEL_EPOCH_OFFSET) * MS_PER_DAY;
     const d = new Date(utcMs);
     if (Number.isNaN(d.getTime())) return null;
-    dateKey = toRiyadhDateString(d);
+    dateKey = toRiyadhDateString(shiftForRiyadhBoundary(d));
   } else if (raw instanceof Date) {
     if (!Number.isFinite((raw as Date).getTime())) return null;
-    dateKey = toRiyadhDateString(raw as Date);
+    dateKey = toRiyadhDateString(shiftForRiyadhBoundary(raw as Date));
   } else if (typeof raw === 'string') {
     const s = String(raw).trim();
     if (!s) return null;

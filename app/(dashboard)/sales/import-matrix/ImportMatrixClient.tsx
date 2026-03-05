@@ -32,8 +32,13 @@ type ApplyResult = {
 
 type ApiResult = PreviewResult | ApplyResult | { ok: false; error: string; issues?: unknown[] };
 
+function getCurrentMonthRiyadh(): string {
+  return new Date().toLocaleString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(0, 7);
+}
+
 export function ImportMatrixClient() {
   const [file, setFile] = useState<File | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthRiyadh);
   const [confirmApply, setConfirmApply] = useState(false);
   const [force, setForce] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -49,6 +54,7 @@ export function ImportMatrixClient() {
       const form = new FormData();
       form.set('file', file);
       form.set('mode', 'preview');
+      form.set('month', selectedMonth);
       if (force) form.set('force', 'true');
       const res = await fetch('/api/sales/import/matrix', { method: 'POST', body: form });
       const j: ApiResult = await res.json();
@@ -71,6 +77,7 @@ export function ImportMatrixClient() {
       const form = new FormData();
       form.set('file', file);
       form.set('mode', 'apply');
+      form.set('month', selectedMonth);
       if (force) form.set('force', 'true');
       const res = await fetch('/api/sales/import/matrix', { method: 'POST', body: form });
       const j: ApiResult = await res.json();
@@ -123,6 +130,15 @@ export function ImportMatrixClient() {
             >
               {file ? file.name : 'Choose .xlsx file'}
             </button>
+            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+              <span>Import month:</span>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded border border-slate-300 px-2 py-1 text-sm"
+              />
+            </label>
             <label className="flex items-center gap-1.5 text-sm text-slate-700">
               <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
               Force overwrite (including LEDGER)

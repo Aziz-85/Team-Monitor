@@ -14,7 +14,8 @@ import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatr
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
-import { dateKeyUTC, monthDaysUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
+import { dateKeyUTC, monthDaysUTC } from '@/lib/dates/safeCalendar';
+import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'] as const;
 
@@ -37,12 +38,7 @@ function unwrapCell(raw: unknown): unknown {
 }
 
 function isDateCell(v: unknown): boolean {
-  try {
-    parseExcelDateToYMD(unwrapCell(v));
-    return true;
-  } catch {
-    return false;
-  }
+  return parseExcelDateToDateKey(unwrapCell(v)) != null;
 }
 
 /** Parse employee cell to number; 0 if not numeric. Do not read TOTAL column. */
@@ -144,6 +140,17 @@ export async function POST(request: NextRequest) {
   if (!scopeResult.ok) return scopeResult.res;
   const scopeId = scopeResult.boutiqueId;
 
+  const boutique = await prisma.boutique.findUnique({
+    where: { id: scopeId },
+    select: { id: true, code: true },
+  });
+  if (!boutique) {
+    return NextResponse.json({ success: false, error: 'Boutique not found', applyAllowed: false }, { status: 404 });
+  }
+  const acceptedScopeValues = new Set(
+    [boutique.id, boutique.code].filter(Boolean).map((s) => String(s).trim().toUpperCase())
+  );
+
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
   const monthParam = (formData.get('month') as string)?.trim() ?? '';
@@ -243,9 +250,10 @@ export async function POST(request: NextRequest) {
     const rowArr = (aoa[r] ?? []) as unknown[];
     const dateRaw = unwrapCell(rowArr[DATE_COL]);
     if (!isDateCell(dateRaw)) continue;
-    const ymd = parseExcelDateToYMD(dateRaw);
-    const date = ymdToUTCNoon(ymd);
-    const dateKey = dateKeyUTC(date);
+    const dateKey = parseExcelDateToDateKey(dateRaw);
+    if (!dateKey) continue;
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
     const inMonth = dateKey.startsWith(month + '-');
     const inPrev = !!prev && dateKey.startsWith(prev + '-');
     if (!inMonth && !inPrev) continue;
@@ -300,6 +308,7 @@ export async function POST(request: NextRequest) {
   const sampleNonBlankCells: { row: number; col: number; headerRaw: string; value: unknown }[] = [];
   const SAMPLE_MAX = 12;
   const rows: { dateKey: string; date: Date; scopeId: string; values: { colIndex: number; headerRaw: string; amountSar: number }[]; skippedEmpty: number }[] = [];
+  let lastNonEmptyScopeIdSeen = '';
 
   for (const dayKey of dayKeysOrdered) {
     const entry = rowsByDateKey.get(dayKey);
@@ -307,7 +316,9 @@ export async function POST(request: NextRequest) {
     const rowArr = entry.row;
     const dateKey = dayKey;
     const date = entry.date;
-    const scopeId = String(unwrapCell(rowArr[SCOPE_COL]) ?? '').trim();
+    const rawScope = String(unwrapCell(rowArr[SCOPE_COL]) ?? '').trim();
+    if (rawScope) lastNonEmptyScopeIdSeen = rawScope;
+    const scopeId = rawScope || lastNonEmptyScopeIdSeen || '';
     const values: { colIndex: number; headerRaw: string; amountSar: number }[] = [];
     let skippedEmpty = 0;
     for (const { colIndex, headerRaw } of employeeColumns) {
@@ -379,7 +390,8 @@ export async function POST(request: NextRequest) {
   let skippedEmpty = 0;
 
   for (const row of rows) {
-    if (String(row.scopeId ?? '').trim() !== scopeId) continue;
+    const rowScopeNorm = String(row.scopeId ?? '').trim().toUpperCase();
+    if (!rowScopeNorm || !acceptedScopeValues.has(rowScopeNorm)) continue; // scopeId fill-down applied in rows
     if (!allowedDateSet.has(row.dateKey)) continue;
     skippedEmpty += row.skippedEmpty;
     for (const v of row.values) {

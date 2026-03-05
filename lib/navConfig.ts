@@ -97,7 +97,6 @@ const GROUP_SYSTEM: NavGroup = {
     { href: '/planner-export', key: 'nav.export', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
     { href: '/sync/planner', key: 'nav.syncPlanner', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import', key: 'nav.admin.importDashboard', roles: ['ADMIN', 'SUPER_ADMIN'] },
-    { href: '/admin/import/sales', key: 'nav.admin.importSales', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import/monthly-snapshot', key: 'nav.admin.monthSnapshot', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import/historical', key: 'nav.admin.historicalImport', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import/issues', key: 'nav.admin.importIssues', roles: ['ADMIN', 'SUPER_ADMIN'] },

@@ -46,13 +46,13 @@ export function parseExcelDateToYMD(input: unknown): YMD {
   }
 
   if (input instanceof Date && !Number.isNaN(input.getTime())) {
-    return { y: input.getFullYear(), m: input.getMonth() + 1, d: input.getDate() };
+    return { y: input.getUTCFullYear(), m: input.getUTCMonth() + 1, d: input.getUTCDate() };
   }
 
   if (typeof input === 'number' && Number.isFinite(input)) {
-    const epoch = new Date(1899, 11, 30);
-    const dt = new Date(epoch.getTime() + Math.round(input * 86400000));
-    return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+    const utcMs = (input - 25569) * 86400000;
+    const dt = new Date(utcMs);
+    return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
   }
 
   throw new Error(`Unsupported Excel date type: ${Object.prototype.toString.call(input)}`);
