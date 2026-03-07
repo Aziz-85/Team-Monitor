@@ -11,6 +11,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
 import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import {
   getRiyadhNow,
   formatMonthKey,
@@ -470,7 +471,7 @@ export async function GET(request: NextRequest) {
     imbalanceHighlight: amCountToday > pmCountToday,
   };
 
-  const employeesForTable = await prisma.employee.findMany({
+  const employeesForTableRaw = await prisma.employee.findMany({
     where: {
       active: true,
       isSystemOnly: false,
@@ -482,6 +483,7 @@ export async function GET(request: NextRequest) {
     },
     orderBy: employeeOrderByStable,
   });
+  const employeesForTable = filterOperationalEmployees(employeesForTableRaw);
 
   const empTargetMap = new Map(empTargetsWithUser.map((et) => [et.userId, et.amount]));
   const empSalesMap = salesMetrics.byUserId;

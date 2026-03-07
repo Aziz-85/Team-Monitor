@@ -1,21 +1,33 @@
 /**
  * GET /api/sales/daily?date=YYYY-MM-DD
  * Returns daily sales summaries for boutiques in scope (status, totals, linesTotal, diff).
+ * RBAC: MANAGER, ASSISTANT_MANAGER, ADMIN, SUPER_ADMIN only. EMPLOYEE must use /sales/my.
  * No cache so ledger writes reflect immediately.
  */
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { assertOperationalBoutiqueId } from '@/lib/guards/assertOperationalBoutique';
 import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { computeLinesTotal, computeDiff } from '@/lib/sales/reconcile';
+import type { Role } from '@prisma/client';
+
+const DAILY_SALES_VIEW_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
 export async function GET(request: NextRequest) {
-  const user = await getSessionUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    await requireRole(DAILY_SALES_VIEW_ROLES);
+  } catch (e) {
+    const err = e as { code?: string };
+    if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Daily sales view is for managers and above. Use My Sales for your own data.' },
+      { status: 403 }
+    );
+  }
 
   const scope = await getOperationalScope(request);
   assertOperationalBoutiqueId(scope?.boutiqueId);

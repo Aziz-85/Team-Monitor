@@ -4,15 +4,23 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
-import { getNavLinksForRole } from '@/lib/permissions';
+import { getNavLinksForUser } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
-export function MobileBottomNav({ role }: { role: Role }) {
+export function MobileBottomNav({
+  role,
+  canEditSchedule,
+  canApproveWeek,
+}: {
+  role: Role;
+  canEditSchedule: boolean;
+  canApproveWeek: boolean;
+}) {
   const pathname = usePathname();
   const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const allLinks = getNavLinksForRole(role);
+  const allLinks = getNavLinksForUser({ role, canEditSchedule, canApproveWeek });
   const mainLinks = allLinks.filter((l) => !l.href.startsWith('/admin') && l.href !== '/change-password').slice(0, 4);
   const moreLinks = allLinks.filter((l) => l.href.startsWith('/admin') || l.href === '/change-password');
 

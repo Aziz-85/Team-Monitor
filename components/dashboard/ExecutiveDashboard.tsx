@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import type { Role } from '@prisma/client';
@@ -133,9 +134,27 @@ export function ExecutiveDashboard() {
 
   const { rbac, snapshot, salesBreakdown, scheduleOverview, taskIntegrity, teamTable } = data;
 
+  const role = (rbac?.role ?? '') as string;
+  const titleKey =
+    role === 'EMPLOYEE'
+      ? 'my'
+      : role === 'ASSISTANT_MANAGER'
+        ? 'branch'
+        : role === 'MANAGER'
+          ? 'manager'
+          : role === 'ADMIN' || role === 'SUPER_ADMIN'
+            ? 'admin'
+            : role === 'DEMO_VIEWER'
+              ? 'demo'
+              : role === 'AREA_MANAGER'
+                ? 'area'
+                : 'default';
+  const isEmployee = role === 'EMPLOYEE';
+  const showBranchSections = !isEmployee;
+
   return (
     <div className="mx-auto max-w-7xl p-4 md:p-6">
-      <h1 className="mb-6 text-2xl font-semibold text-slate-900">Executive Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-slate-900">{t(`dashboard.title.${titleKey}`)}</h1>
 
       {/* Section 1 — Top 4 cards */}
       <section className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -175,15 +194,48 @@ export function ExecutiveDashboard() {
         )}
       </section>
 
-      {/* Section 2 — Sales breakdown */}
-      {salesBreakdown && salesBreakdown.length > 0 && (
+      {/* Quick links — EMPLOYEE only */}
+      {isEmployee && (
+        <section className="mb-6">
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t('dashboard.quickLinks.title')}</h2>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/tasks"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              {t('dashboard.quickLinks.tasks')}
+            </Link>
+            <Link
+              href="/sales/my"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              {t('dashboard.quickLinks.mySales')}
+            </Link>
+            <Link
+              href="/me/target"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              {t('dashboard.quickLinks.myTarget')}
+            </Link>
+            <Link
+              href="/leaves/requests"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              {t('dashboard.quickLinks.myLeaves')}
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Section 2 — Sales breakdown (branch/manager/admin only) */}
+      {showBranchSections && salesBreakdown && salesBreakdown.length > 0 && (
         <section className="mb-6">
           <SalesBreakdownSection employees={salesBreakdown} />
         </section>
       )}
 
-      {/* Section 3 — Schedule overview (all except employee) */}
-      {scheduleOverview && (
+      {/* Section 3 — Schedule overview (branch/manager/admin only) */}
+      {showBranchSections && scheduleOverview && (
         <section className="mb-6">
           <ScheduleOverviewSection
             amPmBalanceSummary={scheduleOverview.amPmBalanceSummary}
@@ -204,8 +256,8 @@ export function ExecutiveDashboard() {
         </section>
       )}
 
-      {/* Section 5 — Team table */}
-      {teamTable && teamTable.rows.length > 0 && (
+      {/* Section 5 — Team table (branch/manager/admin only) */}
+      {showBranchSections && teamTable && teamTable.rows.length > 0 && (
         <section className="mb-6">
           <TeamTableSection rows={teamRowsWithRoleLabel} />
         </section>

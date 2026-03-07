@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 import { getEmployeeTeam } from '@/lib/services/employeeTeam';
 import { deactivateEmployeeCascade } from '@/lib/services/deactivateEmployeeCascade';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role, Team, EmployeePosition } from '@prisma/client';
 import { writeAdminAudit } from '@/lib/admin/audit';
 
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: {
       isSystemOnly: false,
       boutiqueId: { in: boutiqueIds },
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
       },
     },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const uniqueBoutiqueIds = Array.from(new Set(employees.map((e) => e.boutiqueId).filter(Boolean))) as string[];
   const boutiques =

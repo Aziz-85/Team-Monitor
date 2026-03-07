@@ -13,10 +13,13 @@ import type { Role, EmployeePosition } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
-  OPERATIONS: true,
-  PERFORMANCE: true,
-  HR_AND_TEAM: false,
-  SYSTEM: false,
+  DASHBOARD: true,
+  TEAM: true,
+  SALES: false,
+  TASKS: false,
+  INVENTORY: false,
+  REPORTS: false,
+  SETTINGS: false,
   HELP: false,
   AREA_MANAGER: false,
 };
@@ -95,8 +98,8 @@ export function Sidebar({
           <ul className="space-y-1">
             {groups.map((group) => {
               const isOpen = openKeys[group.key] ?? false;
-              const isPerformanceWithExecutive = group.key === 'PERFORMANCE' && group.items.some((i) => i.href === '/executive');
-              const primaryHref = isPerformanceWithExecutive ? '/executive' : null;
+              const isReportsWithExecutive = group.key === 'REPORTS' && group.items.some((i) => i.href === '/executive');
+              const primaryHref = isReportsWithExecutive ? '/executive' : null;
               return (
                 <li key={group.key} className="min-w-0">
                   <div className="flex w-full items-center gap-1 rounded-lg min-w-0">

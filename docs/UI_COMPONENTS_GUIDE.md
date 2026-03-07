@@ -14,16 +14,13 @@
 | **DataTable** | `components/ui/DataTable.tsx` | المصدر الموحد. استخدم `variant="admin"` أو `variant="luxury"` حسب الحاجة. |
 | **AdminDataTable** | `components/admin/AdminDataTable.tsx` | جداول إدارية: قوائم، أعضاء، إجازات، إلخ. **يُقتطع** النص الطويل. |
 | **LuxuryTable** | `components/ui/LuxuryTable.tsx` | جداول عامة: الجدولة، المستخدمين، المهام. استخدم `noScroll` عند الحاجة لملاءمة الحاوية. |
-| **Table** | `components/ui/Table.tsx` | جدول بيانات (columns + data) مع CSS vars. للاستخدام العام. |
-| **ExecTable** | `components/dashboard-ui/ExecTable.tsx` | لوحة Executive: أسلوب slate، بدون إطار. |
+| **ExecTable** | `components/dashboard-ui/ExecTable.tsx` | لوحة Executive: أسلوب slate، بدون إطار (columns + data). |
 | **ExecSimpleTable** | `components/dashboard-ui/ExecSimpleTable.tsx` | Executive: header + children (صفوف مخصصة). |
-| **MiniTable** | `components/ui/MiniTable.tsx` | جدول بيانات مصغّر. |
 
 **اختيار سريع:**
 - **قائمة إدارية** (موظفون، إجازات، إعدادات) → `AdminDataTable`
 - **جدول تفاعلي** (جدولة، مهام) → `LuxuryTable` (مع `noScroll` عند الحاجة)
-- **بيانات مع أعمدة ثابتة** → `Table` أو `ExecTable`
-- **صفوف مخصصة** → `ExecSimpleTable`
+- **بيانات Executive** → `ExecTable` أو `ExecSimpleTable`
 
 ---
 
@@ -59,7 +56,6 @@
 | **KpiCard** | `components/ui/KpiCard.tsx` | **مقياس واحد** مع label, value, note, delta, status. |
 | **ExecKpiBlock** | `components/dashboard-ui/ExecKpiBlock.tsx` | **Executive:** actual vs target, variance, status badge, bullet. |
 | **KPIBlock** | `components/ui/KPIBlock.tsx` | **ثيم Luxury:** مقياس واحد مع `highlight` (ذهبي) للمقاييس المهمة. |
-| **ExecKpiCard** | `components/dashboard-ui/ExecKpiCard.tsx` | بطاقة Executive بمستوى (tone). |
 
 **اختيار سريع:**
 - **لوحة Executive** (actual/target/variance) → `ExecKpiBlock`
@@ -93,7 +89,7 @@
 ├── قائمة/جدول بيانات
 │   ├── إداري (تقطيع) → AdminDataTable
 │   ├── تفاعلي (جدولة، مهام) → LuxuryTable
-│   └── عرض بسيط → Table
+│   └── بيانات Executive → ExecTable / ExecSimpleTable
 ├── بطاقة/لوحة
 │   ├── للنقر (رابط) → OpsCard
 │   ├── عرض ثيم Luxury → CardShell

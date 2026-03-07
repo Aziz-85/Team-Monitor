@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from './tasks';
 import { availabilityFor } from './availability';
 import { effectiveShiftFor } from './shift';
@@ -34,10 +35,11 @@ export async function schedulePlannerRows(
     ...notDisabledUserWhere,
     ...(boutiqueId ? { boutiqueId } : {}),
   };
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: employeeWhere,
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const rows: PlannerRow[] = [];
   const cur = new Date(from);

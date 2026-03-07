@@ -7,6 +7,7 @@ import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { buildScheduleSuggestions } from '@/lib/services/scheduleSuggestions';
 import { canViewFullSchedule, canEditSchedule } from '@/lib/permissions';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { compDayBalanceForBoutique } from '@/lib/schedule/dayOverride';
 import type { Role } from '@prisma/client';
 
@@ -209,15 +210,18 @@ export async function GET(request: NextRequest) {
   ));
   const pendingEmployees = pendingEmpIds.length > 0
     ? new Map(
-        (await prisma.employee.findMany({
-          where: { empId: { in: pendingEmpIds }, active: true },
-          select: {
-            empId: true,
-            name: true,
-            boutiqueId: true,
-            boutique: { select: { id: true, code: true, name: true } },
-          },
-        })).map((e) => [e.empId, e])
+        filterOperationalEmployees(
+          await prisma.employee.findMany({
+            where: { empId: { in: pendingEmpIds }, active: true },
+            select: {
+              empId: true,
+              name: true,
+              boutiqueId: true,
+              isSystemOnly: true,
+              boutique: { select: { id: true, code: true, name: true } },
+            },
+          })
+        ).map((e) => [e.empId, e])
       )
     : new Map<string, { empId: string; name: string; boutiqueId: string; boutique: { id: string; code: string; name: string } | null }>();
   const pendingGuestShifts = pendingRequests.map((req) => {

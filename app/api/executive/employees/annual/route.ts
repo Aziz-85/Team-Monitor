@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
 import type { Role } from '@prisma/client';
 
@@ -68,19 +69,20 @@ export async function GET(request: NextRequest) {
   const empIds = Array.from(
     new Set(entries.map((e) => e.user?.empId).filter((id): id is string => Boolean(id)))
   );
-  const [employees, users] = await Promise.all([
+  const [employeesRaw, users] = await Promise.all([
     prisma.employee.findMany({
       where: {
         empId: { in: empIds },
         ...(boutiqueIds.length > 0 ? { boutiqueId: { in: boutiqueIds } } : {}),
       },
-      select: { empId: true, name: true },
+      select: { empId: true, name: true, isSystemOnly: true },
     }),
     prisma.user.findMany({
       where: { empId: { in: empIds } },
       select: { id: true, empId: true },
     }),
   ]);
+  const employees = filterOperationalEmployees(employeesRaw);
   const empName = new Map(employees.map((e) => [e.empId, e.name ?? e.empId]));
   const allowedEmpIds = new Set(employees.map((e) => e.empId));
   const empIdToUserId = new Map(users.map((u) => [u.empId, u.id]));

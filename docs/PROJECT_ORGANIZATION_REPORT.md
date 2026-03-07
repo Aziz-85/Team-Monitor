@@ -44,7 +44,7 @@
 | الفئة | المكونات | التكرار | التوصية |
 |-------|----------|---------|----------|
 | **الجداول** | `Table`, `ExecTable`, `MiniTable`, `AdminDataTable`, `LuxuryTable`, `ExecSimpleTable` | 6 مكونات ذات وظائف متقاربة | توحيد تدريجي عبر `Table` مع variants (مثل `variant="exec"`, `variant="admin"`) |
-| **بطاقات KPI** | `ExecKpiCard`, `KpiCard`, `ExecKpiBlock`, `KPIBlock` | 4 مكونات | الإبقاء على `ExecKpiBlock` و`KpiCard` كمرجعين رئيسيين؛ توثيق الفروقات والاستخدام |
+| **بطاقات KPI** | `KpiCard`, `ExecKpiBlock`, `KPIBlock` | 3 مكونات | الإبقاء على `ExecKpiBlock` و`KpiCard` كمرجعين رئيسيين؛ توثيق الفروقات والاستخدام |
 | **البطاقات/الألواح** | `Card`, `Panel`, `PanelCard`, `CardShell`, `ExecPanel`, `OpsCard` | 6 مكونات | الإبقاء على `OpsCard` للبطاقات القابلة للنقر، و`CardShell` للعرض؛ توثيق الاستخدام |
 
 ---
@@ -207,6 +207,23 @@
 2. ~~**توحيد مجلد month-snapshot:**~~ ✅ **تم تنفيذه** — `MonthSnapshotUploadClient` نُقل إلى `monthly-snapshot/`؛ مجلد `month-snapshot` يُبقي فقط على صفحة إعادة التوجيه للتوافق العكسي.
 3. ~~**توثيق مكونات UI:**~~ ✅ **تم تنفيذه** — `docs/UI_COMPONENTS_GUIDE.md`.
 4. **مراجعة دورية:** إجراء مراجعة ربع سنوية للتنظيم والتكرار بناءً على هذا التقرير.
+
+---
+
+## 8. تنظيف الملفات غير المستخدمة (تنفيذ لاحق)
+
+تم حذف المكونات التالية لعدم استخدامها في أي صفحة أو واجهة:
+- `components/ui/Table.tsx` — جدول بيانات (استُبدل بالاعتماد على DataTable / AdminDataTable / LuxuryTable)
+- `components/ui/MiniTable.tsx` — جدول مصغّر غير مستخدم
+- `components/nav/DesktopNav.tsx` — تنقل سطح المكتب غير مستخدم (الواجهة تستخدم Sidebar)
+- `components/dashboard-ui/ExecCard.tsx` — غير مستخدم
+- `components/dashboard-ui/ExecGauge.tsx` — غير مستخدم
+- `components/dashboard-ui/ExecKpiCard.tsx` — غير مستخدم
+- `components/ui/ExecutivePanel.tsx` — غير مستخدم
+- `components/ui/WarningCard.tsx` — غير مستخدم
+- `components/scope/ScopeSelector.tsx` — غير مستخدم
+
+تم تحديث `docs/UI_COMPONENTS_GUIDE.md` و `docs/NAV_DEMO_THEME_REPORT.md` لتعكس الحذف.
 
 ---
 

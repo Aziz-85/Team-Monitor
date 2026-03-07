@@ -80,9 +80,12 @@ export async function getSalesScope(
   let allowedBoutiqueIds: string[];
 
   if (roleStr === 'ADMIN' || roleStr === 'SUPER_ADMIN') {
+    // When no boutique param, default to operational boutique (one boutique), not all boutiques.
     allowedBoutiqueIds = requestBoutiqueId
       ? [requestBoutiqueId]
-      : []; // empty = no filter = all boutiques
+      : activeBoutiqueId
+        ? [activeBoutiqueId]
+        : [];
     effectiveBoutiqueId = requestBoutiqueId || activeBoutiqueId;
   } else {
     allowedBoutiqueIds = [activeBoutiqueId];

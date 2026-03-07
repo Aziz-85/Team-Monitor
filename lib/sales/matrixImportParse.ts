@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import type { PrismaClient } from '@prisma/client';
 import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatrixTemplateExcel';
 import { getMonthRangeDayKeys } from '@/lib/time';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 
 const SHEET_NAME = 'DATA_MATRIX';
@@ -318,10 +319,11 @@ export async function parseMatrixBuffer(
     if (firstRowWithDataSample.length >= 8) break;
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId: scopeId },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const mappedEmployees: { colIndex: number; headerRaw: string; employeeId: string; employeeName: string }[] = [];
   const unmappedEmployees: { colIndex: number; headerRaw: string; normalized: string }[] = [];

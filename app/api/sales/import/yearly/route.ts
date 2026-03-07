@@ -16,6 +16,7 @@ import { parseYearlyImportExcel } from '@/lib/sales/parseYearlyImportExcel';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { formatMonthKey, normalizeMonthKey } from '@/lib/time';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
@@ -76,10 +77,11 @@ export async function POST(request: NextRequest) {
   const { employeeColumns, rows, skippedEmpty, skippedDash } = parseResult;
 
   const empIdsFromSheet = Array.from(new Set(employeeColumns.map((c) => c.empId)));
-  const employeesInBoutique = await prisma.employee.findMany({
+  const employeesInBoutiqueRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: empIdsFromSheet } },
-    select: { empId: true },
+    select: { empId: true, isSystemOnly: true },
   });
+  const employeesInBoutique = filterOperationalEmployees(employeesInBoutiqueRaw);
   const mappedEmpIds = new Set(employeesInBoutique.map((e) => e.empId));
   const unmappedEmpIds = empIdsFromSheet.filter((id) => !mappedEmpIds.has(id));
 

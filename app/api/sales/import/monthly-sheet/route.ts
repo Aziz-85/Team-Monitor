@@ -24,6 +24,7 @@ import {
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey } from '@/lib/time';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
 const ALLOWED_EXTENSIONS = ['.xlsx', '.xlsm'];
@@ -220,10 +221,11 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const employeesInBoutique = await prisma.employee.findMany({
+  const employeesInBoutiqueRaw = await prisma.employee.findMany({
     where: { boutiqueId },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employeesInBoutique = filterOperationalEmployees(employeesInBoutiqueRaw);
   const workbookEmployeeMap = loadEmployeesMapWithIds(workbook);
   const headerToEmpId = new Map<string, string>();
   const mappedHeadersBySheet: { sheet: string; col?: number; header: string; empId: string; employeeName: string }[] = [];

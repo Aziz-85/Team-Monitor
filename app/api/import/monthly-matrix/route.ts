@@ -14,6 +14,7 @@ import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatr
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey, getMonthRangeDayKeys } from '@/lib/time';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { dateKeyUTC, monthDaysUTC } from '@/lib/dates/safeCalendar';
 import { parseExcelDateToDateKey } from '@/lib/sales/excelDateKey';
 
@@ -351,10 +352,11 @@ export async function POST(request: NextRequest) {
   const headerCellCount = header.length;
   const rowCount = aoa.length;
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId: scopeId },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const mappedEmployees: { colIndex: number; headerRaw: string; employeeId: string; employeeName: string }[] = [];
   const unmappedEmployees: { colIndex: number; headerRaw: string; normalized: string }[] = [];

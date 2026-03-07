@@ -106,19 +106,25 @@
     "employeeHome": "صفحتي",
     "changePassword": "تغيير كلمة المرور",
     "group": {
+      "DASHBOARD": "لوحة القيادة",
+      "TEAM": "الفريق",
+      "SALES": "المبيعات",
+      "TASKS": "المهام",
+      "INVENTORY": "الجرد",
+      "REPORTS": "التقارير",
+      "SETTINGS": "الإعدادات",
+      "HELP": "مساعدة",
       "EXECUTIVE": "تنفيذي",
       "OPERATIONS": "عمليات",
       "PERFORMANCE": "أداء",
       "HR_AND_TEAM": "الموارد البشرية والفرق",
       "SYSTEM": "النظام",
-      "SALES": "مبيعات",
       "LEAVES": "إجازات",
       "PLANNER_SYNC": "المخطط والمزامنة",
       "AREA_MANAGER": "مدير المنطقة",
       "ADMINISTRATION": "الإدارة",
       "IMPORT": "استيراد",
-      "KPI": "تقييم KPI",
-      "HELP": "مساعدة"
+      "KPI": "تقييم KPI"
     },
     "admin": {
       "kpiTemplates": "قوالب KPI",
@@ -172,6 +178,34 @@
     "area": {
       "employees": "الموظفون (عالمي)",
       "targets": "الأهداف (عالمي)"
+    },
+    "reports": {
+      "performanceOverview": "نظرة عامة على الأداء",
+      "monthlyPerformance": "الأداء الشهري",
+      "salesSummary": "ملخص المبيعات",
+      "targets": "الأهداف",
+      "dailyLedger": "سجل المبيعات اليومية",
+      "insights": "رؤى",
+      "compareBranches": "مقارنة الفروع",
+      "teamPerformance": "أداء الفريق"
+    }
+  },
+  "dashboard": {
+    "title": {
+      "my": "لوحتي",
+      "branch": "لوحة الفرع",
+      "manager": "لوحة المدير",
+      "admin": "لوحة الأدمن",
+      "demo": "لوحة التجربة",
+      "area": "لوحة المنطقة",
+      "default": "لوحة القيادة"
+    },
+    "quickLinks": {
+      "title": "روابط سريعة",
+      "tasks": "المهام",
+      "mySales": "مبيعاتي",
+      "myTarget": "هدفي",
+      "myLeaves": "إجازاتي"
     }
   },
   "admin": {
@@ -986,9 +1020,11 @@
     },
     "summary": {
       "title": "ملخص المبيعات",
+      "subtitle": "تقدم الأسبوع والشهر والفريق مقابل الهدف",
       "apply": "تطبيق",
       "loading": "جاري التحميل…",
       "loadingTargets": "جاري تحميل الأهداف…",
+      "boutique": "البوتيك",
       "boutiqueIdPlaceholder": "معرف الفرع (أدمن)",
       "boutiqueTargets": "أهداف الفرع",
       "week": "الأسبوع",
@@ -1009,6 +1045,7 @@
       "guestCoverage": "تغطية الضيوف",
       "sourceBoutique": "فرع المصدر",
       "sourcesNote": "المصادر: السجل + الاستيراد + اليدوي",
+      "noDataForPeriod": "لا توجد مبيعات في هذه الفترة للبوتيك المحدد.",
       "failedToLoad": "فشل التحميل"
     },
     "returns": {

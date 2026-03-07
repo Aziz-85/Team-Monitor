@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { dateKeyUTC, monthDaysUTC, monthRangeUTCNoon } from '@/lib/dates/safeCalendar';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
@@ -51,11 +52,12 @@ export async function GET(request: NextRequest) {
     : monthRangeUTCNoon(monthParam).start;
   const rangeEnd = monthRangeUTCNoon(monthParam).endExclusive;
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId: scopeId, active: true },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
     orderBy: [{ name: 'asc' }, { empId: 'asc' }],
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const summaries = await prisma.boutiqueSalesSummary.findMany({
     where: { boutiqueId: scopeId, date: { gte: rangeStart, lt: rangeEnd } },

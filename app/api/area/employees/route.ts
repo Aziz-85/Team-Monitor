@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
 import { assertAreaManagerOrSuperAdmin } from '@/lib/rbac';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 
 const SAFE_SELECT = {
   empId: true,
@@ -19,6 +20,7 @@ const SAFE_SELECT = {
   position: true,
   active: true,
   boutiqueId: true,
+  isSystemOnly: true,
   boutique: { select: { id: true, code: true, name: true } },
 } as const;
 
@@ -42,11 +44,12 @@ export async function GET(request: NextRequest) {
     ...(status === 'active' ? { active: true } : {}),
   };
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where,
     select: SAFE_SELECT,
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   return NextResponse.json(employees);
 }

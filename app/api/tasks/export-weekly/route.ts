@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import type { Role } from '@prisma/client';
 
@@ -131,13 +132,14 @@ export async function GET(request: NextRequest) {
   }
 
   const empIds = Array.from(new Set(openRows.map((r) => r.empId).filter((e): e is string => !!e)));
-  const employees =
+  const employeesRaw =
     empIds.length > 0
       ? await prisma.employee.findMany({
           where: { empId: { in: empIds } },
-          select: { empId: true, email: true },
+          select: { empId: true, email: true, isSystemOnly: true },
         })
       : [];
+  const employees = filterOperationalEmployees(employeesRaw);
   const emailByEmp = new Map(employees.map((e) => [e.empId, e.email ?? '']));
 
   const workbook = new ExcelJS.Workbook();

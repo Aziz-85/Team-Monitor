@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { formatSarInt } from '@/lib/utils/money';
 import { useT } from '@/lib/i18n/useT';
+
+type BoutiqueOption = { id: string; code: string; name: string };
 
 type TargetsResponse = {
   week: { key: string; from?: string; to?: string; targetSar: number; achievedSar: number; remainingSar: number; pct: number };
@@ -35,22 +38,87 @@ type Summary = {
 
 export function SalesSummaryClient() {
   const { t } = useT();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [boutiqueId, setBoutiqueId] = useState('');
+  const [operationalBoutique, setOperationalBoutique] = useState<{ boutiqueId: string; label: string } | null>(null);
+  const [allowedBoutiques, setAllowedBoutiques] = useState<BoutiqueOption[]>([]);
+  const [scopeReady, setScopeReady] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [targets, setTargets] = useState<TargetsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [targetsLoading, setTargetsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Read URL on mount and when searchParams change
   useEffect(() => {
+    const fromParam = searchParams.get('from')?.trim() || '';
+    const toParam = searchParams.get('to')?.trim() || '';
+    const boutiqueParam = searchParams.get('boutiqueId')?.trim() || '';
+    if (fromParam) setFrom(fromParam);
+    if (toParam) setTo(toParam);
+    if (boutiqueParam) setBoutiqueId(boutiqueParam);
+  }, [searchParams]);
+
+  // Default date range when not in URL
+  useEffect(() => {
+    if (from || to) return;
     const end = new Date();
     const start = new Date(end);
     start.setDate(start.getDate() - 30);
     setTo(end.toISOString().slice(0, 10));
     setFrom(start.toISOString().slice(0, 10));
+  }, [from, to]);
+
+  // Fetch operational boutique and allowed boutiques; resolve default boutique and validate URL
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [opRes, listRes] = await Promise.all([
+        fetch('/api/me/operational-boutique', { cache: 'no-store' }),
+        fetch('/api/me/boutiques', { cache: 'no-store' }),
+      ]);
+      if (cancelled) return;
+      const op = opRes.ok ? await opRes.json() : null;
+      const list = listRes.ok ? await listRes.json() : null;
+      const boutiques: BoutiqueOption[] = list?.boutiques ?? [];
+      const defaultId = op?.boutiqueId ?? boutiques[0]?.id ?? '';
+      const defaultLabel = op?.label ?? boutiques.find((b: BoutiqueOption) => b.id === defaultId)?.name ?? defaultId;
+      setOperationalBoutique(defaultId ? { boutiqueId: defaultId, label: defaultLabel } : null);
+      setAllowedBoutiques(boutiques);
+      setScopeReady(true);
+    })();
+    return () => { cancelled = true; };
   }, []);
+
+  // When scope is ready, ensure boutiqueId is set to a valid allowed boutique (default or from URL)
+  useEffect(() => {
+    if (!scopeReady || allowedBoutiques.length === 0) return;
+    const defaultId = operationalBoutique?.boutiqueId ?? allowedBoutiques[0]?.id ?? '';
+    if (!defaultId) return;
+    setBoutiqueId((prev) => {
+      if (prev && allowedBoutiques.some((b) => b.id === prev)) return prev;
+      return defaultId;
+    });
+  }, [scopeReady, operationalBoutique?.boutiqueId, allowedBoutiques]);
+
+  // Sync URL when from, to, boutiqueId or scope become ready (one-way: state -> URL)
+  useEffect(() => {
+    if (!scopeReady) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (from) params.set('from', from);
+    else params.delete('from');
+    if (to) params.set('to', to);
+    else params.delete('to');
+    if (boutiqueId) params.set('boutiqueId', boutiqueId);
+    else params.delete('boutiqueId');
+    const qs = params.toString();
+    const current = searchParams.toString();
+    if (qs !== current) router.replace(qs ? `/sales/summary?${qs}` : '/sales/summary', { scroll: false });
+  }, [scopeReady, from, to, boutiqueId, router, searchParams]);
 
   const load = useCallback(async () => {
     if (!from || !to) return;
@@ -91,15 +159,18 @@ export function SalesSummaryClient() {
   }, [from, to, boutiqueId]);
 
   useEffect(() => {
-    if (from && to) {
+    if (from && to && scopeReady) {
       load();
       loadTargets();
     }
-  }, [from, to, load, loadTargets]);
+  }, [from, to, boutiqueId, scopeReady, load, loadTargets]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-xl font-semibold">{t('sales.summary.title')}</h1>
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold text-slate-900">{t('sales.summary.title')}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t('sales.summary.subtitle')}</p>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="date"
@@ -113,13 +184,27 @@ export function SalesSummaryClient() {
           onChange={(e) => setTo(e.target.value)}
           className="rounded border px-2 py-1"
         />
-        <input
-          type="text"
-          placeholder={t('sales.summary.boutiqueIdPlaceholder')}
-          value={boutiqueId}
-          onChange={(e) => setBoutiqueId(e.target.value)}
-          className="rounded border px-2 py-1"
-        />
+        {scopeReady && (
+          <>
+            <label className="text-sm text-slate-600">{t('sales.summary.boutique')}</label>
+            <select
+              value={boutiqueId}
+              onChange={(e) => setBoutiqueId(e.target.value)}
+              disabled={allowedBoutiques.length <= 1}
+              className="rounded border px-2 py-1 min-w-[10rem]"
+              aria-label={t('sales.summary.boutique')}
+            >
+              {allowedBoutiques.length === 0 && (
+                <option value="">—</option>
+              )}
+              {allowedBoutiques.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({b.code})
+                </option>
+              ))}
+            </select>
+          </>
+        )}
         <button
           type="button"
           onClick={() => { load(); loadTargets(); }}
@@ -168,6 +253,9 @@ export function SalesSummaryClient() {
             {summary.from} – {summary.to}
           </p>
           <p className="text-xs text-slate-500">{t('sales.summary.sourcesNote')}</p>
+          {summary.netSalesTotal === 0 && summary.breakdownByEmployee.length === 0 && (
+            <p className="text-sm text-slate-500">{t('sales.summary.noDataForPeriod')}</p>
+          )}
           <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
             <div className="rounded border p-2">
               <p className="text-slate-600">{t('sales.summary.netSales')}</p>

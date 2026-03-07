@@ -11,6 +11,7 @@ import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { prisma } from '@/lib/db';
 import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
@@ -39,16 +40,18 @@ export async function GET(request: NextRequest) {
     ...(allowAll ? {} : { boutiqueId: { notIn: scope.boutiqueIds } }),
   };
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where,
     select: {
       empId: true,
       name: true,
       boutiqueId: true,
+      isSystemOnly: true,
       boutique: { select: { name: true, code: true } },
     },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   return NextResponse.json({
     employees: employees.map((e) => ({

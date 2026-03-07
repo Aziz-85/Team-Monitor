@@ -9,6 +9,7 @@ import type { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { resolveBoutiqueIdsForRequest } from '@/lib/scope/ssot';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { ScopeSelectionJson } from '@/lib/scope/types';
 import type { Employee, Prisma, Role } from '@prisma/client';
 
@@ -58,23 +59,25 @@ export async function getOperationalEmployees(
 
   const employees = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(boutiqueIds, { excludeSystemOnly }),
-    ...(select ? { select } : {}),
+    ...(select ? { select: { ...select, empId: true, isSystemOnly: true } } : {}),
     orderBy,
   });
-  return employees as Employee[];
+  const filtered = excludeSystemOnly ? filterOperationalEmployees(employees) : employees;
+  return filtered as Employee[];
 }
 
 /**
  * Get operational employee empIds only (for allowlists / validation).
+ * Excludes system accounts.
  */
 export async function getOperationalEmpIds(boutiqueIds: string[]): Promise<Set<string>> {
   if (!boutiqueIds.length) return new Set();
   const rows = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(boutiqueIds),
-    select: { empId: true },
+    select: { empId: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
-  return new Set(rows.map((e) => e.empId));
+  return new Set(filterOperationalEmployees(rows).map((e) => e.empId));
 }
 
 /** Thrown when an employee is not in the current operational scope. */
@@ -142,7 +145,7 @@ export async function assertEmployeesInBoutiqueScope(
 }
 
 /**
- * Assert all empIds exist, are active, and not system-only.
+ * Assert all empIds exist, are active, operational (not system-only / not system account).
  * Use for schedule save so both in-scope and guest (other-branch) employees are allowed.
  * Throws with invalidEmpIds for 400 response.
  */
@@ -151,9 +154,9 @@ export async function assertEmployeesExistForSchedule(empIds: string[]): Promise
   if (unique.length === 0) return;
   const employees = await prisma.employee.findMany({
     where: { empId: { in: unique }, active: true, isSystemOnly: false },
-    select: { empId: true },
+    select: { empId: true, isSystemOnly: true },
   });
-  const found = new Set(employees.map((e) => e.empId));
+  const found = new Set(filterOperationalEmployees(employees).map((e) => e.empId));
   const invalid = unique.filter((id) => !found.has(id));
   if (invalid.length) {
     const err = new Error(`Employees not found or inactive: ${invalid.join(', ')}`);

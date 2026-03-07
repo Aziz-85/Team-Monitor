@@ -5,6 +5,7 @@ import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { assertOperationalBoutiqueId } from '@/lib/guards/assertOperationalBoutique';
 import { buildEmployeeWhereForOperational } from '@/lib/employee/employeeQuery';
 import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { parseWeekPeriodKey, getWeekStartFromPeriodKey } from '@/lib/sync/taskKey';
 import type { Role } from '@prisma/client';
@@ -273,11 +274,12 @@ export async function GET(request: NextRequest) {
         })
       : [];
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(scope.boutiqueIds),
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const empIdToName = new Map(employees.map((e) => [e.empId, e.name]));
   const operationalEmpIds = new Set(employees.map((e) => e.empId));
 

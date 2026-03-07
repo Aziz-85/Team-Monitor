@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { getMonthRange } from '@/lib/time';
 import { formatDateRiyadh } from '@/lib/time';
@@ -71,11 +72,12 @@ export async function GET(request: NextRequest) {
     cur.setUTCDate(cur.getUTCDate() + 1);
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational([scopeId]),
-    select: { empId: true, name: true, weeklyOffDay: true, weeklyOffOverrideDay: true },
+    select: { empId: true, name: true, weeklyOffDay: true, weeklyOffOverrideDay: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const [closedHolidays, eventPeriods] = await Promise.all([
     prisma.officialHoliday.findMany({

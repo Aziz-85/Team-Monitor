@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import {
   parseMatrixTemplateExcel,
   extractEmpIdFromHeader,
@@ -127,10 +128,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId: scopeId },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const empNameById = new Map(employees.map((e) => [e.empId, (e.name ?? '').trim() || e.empId]));
 
   const fileMap = new Map<string, number>();

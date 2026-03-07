@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { availabilityFor } from './availability';
 import { effectiveShiftFor } from './shift';
 
@@ -22,11 +23,12 @@ export async function rosterForDate(
 ): Promise<RosterForDateResult> {
   const d = toDateOnly(date);
   const boutiqueIds = options.boutiqueIds ?? [];
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(boutiqueIds),
-    select: { empId: true, name: true, boutiqueId: true },
+    select: { empId: true, name: true, boutiqueId: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const amEmployees: RosterEmployee[] = [];
   const pmEmployees: RosterEmployee[] = [];

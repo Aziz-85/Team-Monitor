@@ -11,6 +11,7 @@ import {
   getRiyadhNow,
 } from '@/lib/time';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { rosterForDate } from '@/lib/services/roster';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import type { Task, TaskPlan, TaskSchedule } from '@prisma/client';
@@ -54,13 +55,14 @@ export async function getTeamToday(
   const dayStart = normalizeDateOnlyRiyadh(dateStr);
   const dayEnd = addDays(dayStart, 1);
 
-  const [employees, roster, salesByUser, completionsByUser, tasksWithPlans] = await Promise.all([
+  const [employeesRaw, roster, salesByUser, completionsByUser, tasksWithPlans] = await Promise.all([
     prisma.employee.findMany({
       where: buildEmployeeWhereForOperational([boutiqueId]),
       select: {
         empId: true,
         name: true,
         position: true,
+        isSystemOnly: true,
         user: { select: { id: true } },
       },
       orderBy: employeeOrderByStable,
@@ -97,6 +99,7 @@ export async function getTeamToday(
       },
     }),
   ]);
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const salesMap = new Map<string, number>();
   for (const row of salesByUser) {

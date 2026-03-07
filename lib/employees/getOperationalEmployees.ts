@@ -9,11 +9,12 @@
 import { prisma } from '@/lib/db';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
 import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Employee } from '@prisma/client';
 
 /**
  * Get employees for operational pages. REQUIRES boutiqueId.
- * Throws in dev if boutiqueId is missing/empty.
+ * Excludes system accounts (SUPER_ADMIN, ADMIN, SYS_SYSTEM, non-numeric empId, admin_/sys_/system_ prefix).
  */
 export async function getOperationalEmployees(
   boutiqueId: string
@@ -36,11 +37,12 @@ export async function getOperationalEmployees(
     },
     orderBy: employeeOrderByStable,
   });
-  return employees as Employee[];
+  return filterOperationalEmployees(employees) as Employee[];
 }
 
 /**
  * Get operational employees with empId and name (for dropdowns).
+ * Excludes system accounts.
  */
 export async function getOperationalEmployeesSelect(
   boutiqueId: string
@@ -53,8 +55,8 @@ export async function getOperationalEmployeesSelect(
       isSystemOnly: false,
       ...notDisabledUserWhere,
     },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
-  return employees;
+  return filterOperationalEmployees(employees).map((e) => ({ empId: e.empId, name: e.name }));
 }

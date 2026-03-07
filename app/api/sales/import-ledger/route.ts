@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { coverageForTxn } from '@/lib/coverageForTxn';
 import { parseDateRiyadh, formatDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
@@ -55,10 +56,11 @@ async function resolveEmployee(row: ImportLedgerRow): Promise<string | null> {
   const name = (row.name ?? '').trim();
   if (name) {
     const norm = normalizeName(name);
-    const all = await prisma.employee.findMany({
+    const allRaw = await prisma.employee.findMany({
       where: { active: true },
-      select: { empId: true, name: true },
+      select: { empId: true, name: true, isSystemOnly: true },
     });
+    const all = filterOperationalEmployees(allRaw);
     const match = all.find((e) => normalizeName(e.name) === norm);
     if (match) return match.empId;
   }

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { availabilityFor } from '@/lib/services/availability';
 import { logAudit } from '@/lib/audit';
@@ -216,7 +217,7 @@ export async function getExcludedEmpIdsForDate(boutiqueId: string, date: Date): 
 export async function computeEligibleEmployees(boutiqueId: string, date: Date): Promise<string[]> {
   const d = toDateOnly(date);
   const excludedToday = await getExcludedEmpIdsForDate(boutiqueId, d);
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: {
       boutiqueId,
       active: true,
@@ -225,9 +226,10 @@ export async function computeEligibleEmployees(boutiqueId: string, date: Date): 
       excludeFromDailyInventory: false,
       ...notDisabledUserWhere,
     },
-    select: { empId: true },
+    select: { empId: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const eligible: string[] = [];
   for (const e of employees) {
     if (excludedToday.has(e.empId)) continue;
@@ -598,10 +600,11 @@ export async function getExclusionsForDate(boutiqueId: string, date: Date): Prom
     orderBy: { createdAt: 'asc' },
   });
   const empIds = Array.from(new Set(rows.map((r) => r.empId)));
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: empIds } },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const nameByEmp = new Map(employees.map((e) => [e.empId, e.name]));
   return rows.map((r) => ({
     ...r,
@@ -787,10 +790,11 @@ export async function getDailyStats(boutiqueId: string, month: string): Promise<
     const empId = r.completedByEmpId ?? r.assignedEmpId ?? '';
     if (empId) byEmp.set(empId, (byEmp.get(empId) ?? 0) + 1);
   }
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: Array.from(byEmp.keys()) } },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const byEmployee = employees.map((e) => ({
     empId: e.empId,
     name: e.name,

@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getMonthRangeDayKeys } from '@/lib/time';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
@@ -33,11 +34,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId: scopeId, active: true },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
     orderBy: [{ name: 'asc' }, { empId: 'asc' }],
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const headerRow: (string | number)[] = ['ScopeId', 'Date', 'Day'];
   for (const e of employees) {

@@ -5,6 +5,7 @@ import { getOrCreateDailyRun } from '@/lib/services/inventoryDaily';
 import { getSLACutoffMs, computeInventoryStatus } from '@/lib/inventorySla';
 import type { Role, InventoryDailyRunSkipReason, LeaveType } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,10 +67,11 @@ async function enrichSkips(
   if (skips.length === 0) return [];
 
   const empIds = Array.from(new Set(skips.map((s) => s.empId)));
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: empIds } },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const nameByEmp = new Map(employees.map((e) => [e.empId, e.name]));
 
   const enriched = [];

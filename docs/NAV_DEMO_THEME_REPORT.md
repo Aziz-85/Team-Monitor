@@ -75,7 +75,7 @@
 ### Reusable components
 
 - **components/ui/CardShell.tsx** — New. Card with 12px radius, soft shadow, spacious padding, uses CSS vars.
-- **components/ui/ExecutivePanel.tsx** — New. Panel with optional title, subtitle, actions; uses luxury tokens.
+- **components/ui/ExecutivePanel.tsx** — Removed in cleanup (unused).
 - **components/ui/KPIBlock.tsx** — New. Single KPI with optional gold highlight (`highlight` uses `var(--accent)`).
 - **components/ui/SectionHeader.tsx** — Updated to use `var(--primary)` and `var(--muted)` for title and subtitle.
 
@@ -89,7 +89,7 @@ Existing **Card**, **Panel**, **KpiCard** unchanged; they already use `var(--sur
 |------|--------|
 | **Nav** | `lib/navConfig.ts`, `components/nav/Sidebar.tsx`, `messages/en.json` |
 | **Demo** | `prisma/schema.prisma`, `lib/auth.ts`, `lib/permissions.ts`, `lib/roleLabel.ts`, `lib/demoGuard.ts`, `lib/rbac/effectiveAccess.ts`, `lib/mobileAuth.ts`, `app/(dashboard)/layout.tsx`, `components/RouteGuard.tsx`, `app/api/leaves/approve/route.ts`, `app/api/leaves/reject/route.ts`, `app/api/sales/entry/route.ts`, `messages/en.json` |
-| **Theme** | `lib/designTokens.ts`, `app/globals.css`, `tailwind.config.ts`, `components/ui/CardShell.tsx`, `components/ui/ExecutivePanel.tsx`, `components/ui/KPIBlock.tsx`, `components/ui/SectionHeader.tsx` |
+| **Theme** | `lib/designTokens.ts`, `app/globals.css`, `tailwind.config.ts`, `components/ui/CardShell.tsx`, `components/ui/KPIBlock.tsx`, `components/ui/SectionHeader.tsx` |
 | **Docs** | `docs/NAV_DEMO_THEME_REPORT.md` (this file) |
 
 ---

@@ -16,6 +16,7 @@ import { getWeekIndexInYear, FRIDAY_DAY_OF_WEEK } from './shift';
 import type { ShiftType } from './shift';
 import { getEmployeeTeamsForDateRange } from './employeeTeam';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
 import { toRiyadhDateString } from '@/lib/time';
 
@@ -160,11 +161,12 @@ export async function getScheduleGridForWeek(
   };
 
   // Option 1: Base roster only (Employee.boutiqueId = host). Guest coverage shown separately per day via External Coverage.
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: empWhere,
-    select: { empId: true, name: true, team: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true },
+    select: { empId: true, name: true, team: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const overrides = await prisma.shiftOverride.findMany({
     where: {

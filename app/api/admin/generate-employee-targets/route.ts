@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import {
   positionToSalesTargetRole,
   getWeightForRole,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
   }
 
   const targetBoutiqueId = boutiqueTarget.boutiqueId;
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { active: true, isSystemOnly: false, boutiqueId: targetBoutiqueId },
     select: {
       empId: true,
@@ -71,9 +72,11 @@ export async function POST(request: NextRequest) {
       email: true,
       position: true,
       salesTargetRole: true,
+      isSystemOnly: true,
     },
     orderBy: { empId: 'asc' },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   const usersByEmpId = await prisma.user.findMany({
     where: { disabled: false, empId: { in: employees.map((e) => e.empId) } },

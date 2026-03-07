@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getOrCreateDailyRun, getProjectedAssignee } from '@/lib/services/inventoryDaily';
 import { getWeeklyRuns } from '@/lib/services/inventoryZones';
 import { getSLACutoffMs, computeInventoryStatus } from '@/lib/inventorySla';
@@ -83,10 +84,11 @@ export async function getDailyFollowUp(
   }
 
   empIdsToResolve.delete('');
-  const empList = await prisma.employee.findMany({
+  const empListRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: Array.from(empIdsToResolve) } },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const empList = filterOperationalEmployees(empListRaw);
   const nameByEmp = new Map(empList.map((e) => [e.empId, e.name]));
 
   for (const day of days) {
@@ -113,10 +115,10 @@ export async function getDailyFollowUp(
   const absentEmpNames =
     absentEmpIds.length > 0
       ? new Map(
-          (
+          filterOperationalEmployees(
             await prisma.employee.findMany({
               where: { boutiqueId, empId: { in: absentEmpIds } },
-              select: { empId: true, name: true },
+              select: { empId: true, name: true, isSystemOnly: true },
             })
           ).map((e) => [e.empId, e.name])
         )

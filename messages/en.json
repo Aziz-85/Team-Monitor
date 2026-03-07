@@ -107,19 +107,25 @@
     "employeeHome": "My Home",
     "changePassword": "Change Password",
     "group": {
+      "DASHBOARD": "Dashboard",
+      "TEAM": "Team",
+      "SALES": "Sales",
+      "TASKS": "Tasks",
+      "INVENTORY": "Inventory",
+      "REPORTS": "Reports",
+      "SETTINGS": "Settings",
+      "HELP": "Help",
       "EXECUTIVE": "Executive",
       "OPERATIONS": "Operations",
       "PERFORMANCE": "Performance",
       "HR_AND_TEAM": "HR & Team",
       "SYSTEM": "System",
-      "SALES": "Sales",
       "LEAVES": "Leaves",
       "PLANNER_SYNC": "Planner & Sync",
       "AREA_MANAGER": "Area Manager",
       "ADMINISTRATION": "Administration",
       "IMPORT": "Import",
-      "KPI": "KPI Appraisal",
-      "HELP": "Help"
+      "KPI": "KPI Appraisal"
     },
     "admin": {
       "kpiTemplates": "KPI Templates",
@@ -173,6 +179,34 @@
     "area": {
       "employees": "Employees (Global)",
       "targets": "Targets (Global)"
+    },
+    "reports": {
+      "performanceOverview": "Performance overview",
+      "monthlyPerformance": "Monthly performance",
+      "salesSummary": "Sales summary",
+      "targets": "Targets",
+      "dailyLedger": "Daily sales ledger",
+      "insights": "Insights",
+      "compareBranches": "Compare branches",
+      "teamPerformance": "Team performance"
+    }
+  },
+  "dashboard": {
+    "title": {
+      "my": "My Dashboard",
+      "branch": "Branch Dashboard",
+      "manager": "Manager Dashboard",
+      "admin": "Admin Dashboard",
+      "demo": "Demo Dashboard",
+      "area": "Area Dashboard",
+      "default": "Dashboard"
+    },
+    "quickLinks": {
+      "title": "Quick links",
+      "tasks": "Tasks",
+      "mySales": "My Sales",
+      "myTarget": "My Target",
+      "myLeaves": "My Leaves"
     }
   },
   "admin": {
@@ -987,9 +1021,11 @@
     },
     "summary": {
       "title": "Sales Summary",
+      "subtitle": "Week, month and team progress vs target",
       "apply": "Apply",
       "loading": "Loading…",
       "loadingTargets": "Loading targets…",
+      "boutique": "Boutique",
       "boutiqueIdPlaceholder": "Boutique ID (ADMIN)",
       "boutiqueTargets": "Boutique Targets",
       "week": "Week",
@@ -1010,6 +1046,7 @@
       "guestCoverage": "Guest coverage",
       "sourceBoutique": "Source boutique",
       "sourcesNote": "Sources: LEDGER + IMPORT + MANUAL",
+      "noDataForPeriod": "No sales in this period for the selected boutique.",
       "failedToLoad": "Failed to load"
     },
     "returns": {

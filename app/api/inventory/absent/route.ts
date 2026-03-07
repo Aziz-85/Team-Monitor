@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
 
 const managerRoles: Role[] = ['MANAGER', 'ADMIN'];
@@ -44,10 +45,11 @@ export async function GET(request: NextRequest) {
     },
   });
   const empIds = Array.from(new Set(absents.map((a) => a.empId)));
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: { boutiqueId, empId: { in: empIds } },
-    select: { empId: true, name: true },
+    select: { empId: true, name: true, isSystemOnly: true },
   });
+  const employees = filterOperationalEmployees(employeesRaw);
   const nameByEmp = new Map(employees.map((e) => [e.empId, e.name]));
 
   const list = absents.map((a) => ({

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { normalizeMonthKey, addMonths } from '@/lib/time';
 import { monthDaysUTC, monthRangeUTCNoon, dateKeyUTC } from '@/lib/dates/safeCalendar';
 
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     console.log('[MonthlyMatrix] days[0..2]', days.slice(0, 3));
   }
 
-  const [entries, activeEmployees, allEmployeesByEmpId] = await Promise.all([
+  const [entries, activeEmployeesRaw, allEmployeesByEmpIdRaw] = await Promise.all([
     prisma.salesEntry.findMany({
       where: {
         boutiqueId: scopeId,
@@ -85,13 +86,17 @@ export async function GET(request: NextRequest) {
     }),
     prisma.employee.findMany({
       where: { boutiqueId: scopeId, active: true, isSystemOnly: false },
-      select: { empId: true, name: true },
+      select: { empId: true, name: true, isSystemOnly: true },
       orderBy: { empId: 'asc' },
     }),
     prisma.employee.findMany({
-      select: { empId: true, name: true },
-    }).then((list) => new Map(list.map((e) => [e.empId, e.name]))),
+      select: { empId: true, name: true, isSystemOnly: true },
+    }),
   ]);
+  const activeEmployees = filterOperationalEmployees(activeEmployeesRaw);
+  const allEmployeesByEmpId = new Map(
+    filterOperationalEmployees(allEmployeesByEmpIdRaw).map((e) => [e.empId, e.name])
+  );
 
   const employeeIdsFromSales = new Set<string>();
   for (const e of entries) {

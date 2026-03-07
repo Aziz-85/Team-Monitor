@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { validateSarInteger } from '@/lib/sales/reconcile';
@@ -121,15 +122,17 @@ export async function POST(request: NextRequest) {
   const nameCol = findColumnIndex(headerRow, 'name', 'اسم', 'employee name');
   const useNameCol = nameCol >= 0 && nameCol !== empCol;
 
-  const [employeesInBoutique, allEmpBoutique] = await Promise.all([
+  const [employeesInBoutiqueRaw, allEmpBoutiqueRaw] = await Promise.all([
     prisma.employee.findMany({
       where: { boutiqueId, active: true },
-      select: { empId: true, name: true },
+      select: { empId: true, name: true, isSystemOnly: true },
     }),
     prisma.employee.findMany({
-      select: { empId: true, boutiqueId: true },
+      select: { empId: true, boutiqueId: true, isSystemOnly: true },
     }),
   ]);
+  const employeesInBoutique = filterOperationalEmployees(employeesInBoutiqueRaw);
+  const allEmpBoutique = filterOperationalEmployees(allEmpBoutiqueRaw);
   const empIdToBoutique = new Map(allEmpBoutique.map((e) => [e.empId, e.boutiqueId]));
   const byEmpId = new Map<string, { empId: string; name: string | null }>(
     employeesInBoutique.map((e) => [e.empId.trim().toLowerCase(), { empId: e.empId, name: e.name ?? null }])

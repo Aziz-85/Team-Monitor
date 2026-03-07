@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { prisma } from '@/lib/db';
 import { notDisabledUserWhere } from '@/lib/employeeWhere';
 import type { Role } from '@prisma/client';
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Source boutique must be different from host boutique' }, { status: 400 });
   }
 
-  const employees = await prisma.employee.findMany({
+  const employeesRaw = await prisma.employee.findMany({
     where: {
       active: true,
       isSystemOnly: false,
@@ -48,10 +49,12 @@ export async function GET(request: NextRequest) {
       empId: true,
       name: true,
       boutiqueId: true,
+      isSystemOnly: true,
       boutique: { select: { name: true, code: true } },
     },
     orderBy: [{ empId: 'asc' }, { name: 'asc' }],
   });
+  const employees = filterOperationalEmployees(employeesRaw);
 
   return NextResponse.json({
     employees: employees.map((e) => ({

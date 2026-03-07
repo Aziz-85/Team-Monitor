@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { assertAreaManagerOrSuperAdmin } from '@/lib/rbac';
+import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { parseMonthKey, normalizeMonthKey } from '@/lib/time';
 
 export async function GET(request: NextRequest) {
@@ -33,10 +34,11 @@ export async function GET(request: NextRequest) {
     select: { userId: true, amount: true, user: { select: { empId: true, employee: { select: { name: true } } } } },
   });
 
-  const employeesInBoutique = await prisma.employee.findMany({
+  const employeesInBoutiqueRaw = await prisma.employee.findMany({
     where: { boutiqueId, active: true, isSystemOnly: false },
-    select: { empId: true, name: true, user: { select: { id: true } } },
+    select: { empId: true, name: true, isSystemOnly: true, user: { select: { id: true } } },
   });
+  const employeesInBoutique = filterOperationalEmployees(employeesInBoutiqueRaw);
 
   const targetByUserId = new Map(targets.map((t) => [t.userId, t.amount]));
   const list = employeesInBoutique.map((e) => ({

@@ -10,12 +10,11 @@ function isPublic(pathname: string): boolean {
   return publicPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
+/** All non-public, non-API app routes require session (banking-grade: protect at edge). */
 function isAuthRequired(pathname: string): boolean {
   if (isPublic(pathname)) return false;
   if (pathname.startsWith('/api')) return false;
-  return pathname === '/' || pathname.startsWith('/employee') || pathname.startsWith('/schedule')
-    || pathname.startsWith('/tasks') || pathname.startsWith('/planner-export') || pathname.startsWith('/change-password')
-    || pathname.startsWith('/admin') || pathname.startsWith('/area');
+  return true;
 }
 
 /** Paths that must never run auth logic (Next internals + static assets). */
@@ -131,6 +130,9 @@ export const config = {
   matcher: [
     '/',
     '/login',
+    '/dashboard',
+    '/dashboard/:path*',
+    '/about',
     '/employee/:path*',
     '/schedule/:path*',
     '/tasks/:path*',
@@ -139,6 +141,7 @@ export const config = {
     '/admin/:path*',
     '/approvals',
     '/leaves',
+    '/leaves/:path*',
     '/inventory/:path*',
     '/me/:path*',
     '/sync/:path*',
@@ -146,6 +149,12 @@ export const config = {
     '/executive/:path*',
     '/area',
     '/area/:path*',
+    '/sales',
+    '/sales/:path*',
+    '/boutique',
+    '/boutique/:path*',
+    '/kpi',
+    '/kpi/:path*',
     '/app/:path*',
     '/(dashboard)/:path*',
     '/api/:path*',
