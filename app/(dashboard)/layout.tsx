@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
+import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
 import { RouteGuard } from '@/components/RouteGuard';
 import { IdleDetector } from '@/components/IdleDetector';
 import { getEffectiveAccess } from '@/lib/rbac/effectiveAccess';
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
   const isDemoMode = (user.role as string) === 'DEMO_VIEWER';
 
   return (
-    <div className="flex min-h-screen min-w-0 overflow-x-hidden" style={{ background: 'var(--app-bg)' }}>
+    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background">
       <IdleDetector />
       <Sidebar
         role={navRole}
@@ -58,6 +59,7 @@ export default async function DashboardLayout({
           canEditSchedule={canEditSchedule}
           canApproveWeek={canApproveWeek}
         />
+        <DesktopTopBar name={user.employee?.name ?? undefined} />
         <main className="flex-1 min-w-0">
           <RouteGuard role={navRole}>{children}</RouteGuard>
         </main>

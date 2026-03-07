@@ -1,11 +1,50 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { formatSarInt } from '@/lib/utils/money';
 import { useT } from '@/lib/i18n/useT';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { FilterBar } from '@/components/ui/FilterBar';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableTh,
+  DataTableBody,
+  DataTableTd,
+} from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type BoutiqueOption = { id: string; code: string; name: string };
+
+const QUICK_PERIODS = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: 'quarter', label: 'Quarter' },
+  { id: 'custom', label: 'Custom' },
+] as const;
+
+function getDateRangeForPeriod(periodId: string): { from: string; to: string } {
+  const end = new Date();
+  const start = new Date(end);
+  if (periodId === 'week') start.setDate(start.getDate() - 7);
+  else if (periodId === 'month') start.setDate(start.getDate() - 30);
+  else if (periodId === 'quarter') start.setDate(start.getDate() - 90);
+  else {
+    start.setDate(start.getDate() - 30);
+  }
+  return {
+    from: start.toISOString().slice(0, 10),
+    to: end.toISOString().slice(0, 10),
+  };
+}
+
+function getDefaultDateRange(): { from: string; to: string } {
+  return getDateRangeForPeriod('month');
+}
 
 type TargetsResponse = {
   week: { key: string; from?: string; to?: string; targetSar: number; achievedSar: number; remainingSar: number; pct: number };
@@ -44,6 +83,7 @@ export function SalesSummaryClient() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [boutiqueId, setBoutiqueId] = useState('');
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('month');
   const [operationalBoutique, setOperationalBoutique] = useState<{ boutiqueId: string; label: string } | null>(null);
   const [allowedBoutiques, setAllowedBoutiques] = useState<BoutiqueOption[]>([]);
   const [scopeReady, setScopeReady] = useState(false);
@@ -61,16 +101,15 @@ export function SalesSummaryClient() {
     if (fromParam) setFrom(fromParam);
     if (toParam) setTo(toParam);
     if (boutiqueParam) setBoutiqueId(boutiqueParam);
+    if (fromParam || toParam) setSelectedPeriodId('custom');
   }, [searchParams]);
 
   // Default date range when not in URL
   useEffect(() => {
     if (from || to) return;
-    const end = new Date();
-    const start = new Date(end);
-    start.setDate(start.getDate() - 30);
-    setTo(end.toISOString().slice(0, 10));
-    setFrom(start.toISOString().slice(0, 10));
+    const { from: defaultFrom, to: defaultTo } = getDefaultDateRange();
+    setFrom(defaultFrom);
+    setTo(defaultTo);
   }, [from, to]);
 
   // Fetch operational boutique and allowed boutiques; resolve default boutique and validate URL
@@ -165,61 +204,99 @@ export function SalesSummaryClient() {
     }
   }, [from, to, boutiqueId, scopeReady, load, loadTargets]);
 
+  const activeFilters: { label: string; value: string }[] = [];
+  if (from && to) activeFilters.push({ label: 'From–To', value: `${from} – ${to}` });
+  const selectedBoutique = allowedBoutiques.find((b) => b.id === boutiqueId);
+  if (selectedBoutique) activeFilters.push({ label: t('sales.summary.boutique'), value: `${selectedBoutique.name} (${selectedBoutique.code})` });
+
+  const handlePeriodSelect = useCallback((id: string) => {
+    if (id === 'custom') {
+      setSelectedPeriodId('custom');
+      return;
+    }
+    const { from: f, to: t } = getDateRangeForPeriod(id);
+    setFrom(f);
+    setTo(t);
+    setSelectedPeriodId(id);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    const { from: defaultFrom, to: defaultTo } = getDefaultDateRange();
+    setFrom(defaultFrom);
+    setTo(defaultTo);
+    setSelectedPeriodId('month');
+    const defaultId = operationalBoutique?.boutiqueId ?? allowedBoutiques[0]?.id ?? '';
+    if (defaultId) setBoutiqueId(defaultId);
+  }, [operationalBoutique?.boutiqueId, allowedBoutiques]);
+
+  const summaryLine = from && to
+    ? `Viewing ${selectedBoutique?.name ?? '—'} • ${from} → ${to}`
+    : undefined;
+
+  const boutiqueOptions = useMemo(() => {
+    if (allowedBoutiques.length === 0) return [{ value: '', label: '—' }];
+    return allowedBoutiques.map((b) => ({
+      value: b.id,
+      label: `${b.name} (${b.code})`,
+    }));
+  }, [allowedBoutiques]);
+
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold text-slate-900">{t('sales.summary.title')}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t('sales.summary.subtitle')}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <input
+      <PageHeader title={t('sales.summary.title')} subtitle={t('sales.summary.subtitle')} />
+      <FilterBar
+        activeFilters={activeFilters}
+        quickPeriods={QUICK_PERIODS}
+        selectedPeriodId={selectedPeriodId}
+        onPeriodSelect={handlePeriodSelect}
+        summaryLine={summaryLine}
+        onReset={handleReset}
+      >
+        <Input
           type="date"
+          label="From"
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          className="rounded border px-2 py-1"
+          onChange={(e) => {
+            setFrom(e.target.value);
+            setSelectedPeriodId('custom');
+          }}
+          className="min-w-[10rem]"
         />
-        <input
+        <Input
           type="date"
+          label="To"
           value={to}
-          onChange={(e) => setTo(e.target.value)}
-          className="rounded border px-2 py-1"
+          onChange={(e) => {
+            setTo(e.target.value);
+            setSelectedPeriodId('custom');
+          }}
+          className="min-w-[10rem]"
         />
         {scopeReady && (
-          <>
-            <label className="text-sm text-slate-600">{t('sales.summary.boutique')}</label>
-            <select
-              value={boutiqueId}
-              onChange={(e) => setBoutiqueId(e.target.value)}
-              disabled={allowedBoutiques.length <= 1}
-              className="rounded border px-2 py-1 min-w-[10rem]"
-              aria-label={t('sales.summary.boutique')}
-            >
-              {allowedBoutiques.length === 0 && (
-                <option value="">—</option>
-              )}
-              {allowedBoutiques.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </select>
-          </>
+          <Select
+            label={t('sales.summary.boutique')}
+            value={boutiqueId}
+            onChange={(e) => setBoutiqueId(e.target.value)}
+            disabled={allowedBoutiques.length <= 1}
+            options={boutiqueOptions}
+            className="min-w-[10rem]"
+            aria-label={t('sales.summary.boutique')}
+          />
         )}
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={() => { load(); loadTargets(); }}
           disabled={loading}
-          className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
         >
           {loading ? t('sales.summary.loading') : t('sales.summary.apply')}
-        </button>
-      </div>
-      {error && <p className="text-red-600">{error}</p>}
+        </Button>
+      </FilterBar>
+      {error && <p className="text-sm text-luxury-error">{error}</p>}
 
-      {targetsLoading && !targets && <p className="text-sm text-slate-500">{t('sales.summary.loadingTargets')}</p>}
+      {targetsLoading && !targets && <p className="text-sm text-muted">{t('sales.summary.loadingTargets')}</p>}
       {targets && (
         <section className="space-y-3">
-          <h2 className="text-lg font-medium">{t('sales.summary.boutiqueTargets')}</h2>
+          <h2 className="text-sm font-semibold text-muted">{t('sales.summary.boutiqueTargets')}</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
               { label: t('sales.summary.week'), data: targets.week, sub: targets.week.from && targets.week.to ? `${targets.week.from} – ${targets.week.to}` : undefined },
@@ -228,7 +305,7 @@ export function SalesSummaryClient() {
               { label: t('sales.summary.halfYear'), data: targets.half, sub: targets.half.key },
               { label: t('sales.summary.year'), data: targets.year, sub: targets.year.key },
             ].map(({ label, data, sub }) => (
-              <div key={label} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div key={label} className="rounded-lg border border-border bg-surface p-4 shadow-sm">
                 <p className="text-sm font-medium text-slate-700">{label}</p>
                 {sub && <p className="text-xs text-slate-500">{sub}</p>}
                 <p className="mt-1 text-xs text-slate-600">{t('sales.summary.target')}: {formatSarInt(data.targetSar)}</p>
@@ -248,60 +325,58 @@ export function SalesSummaryClient() {
       )}
 
       {summary && (
-        <div className="space-y-4 rounded-lg border bg-white p-4">
-          <p className="text-sm text-slate-600">
+        <div className="space-y-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
+          <p className="text-sm text-foreground">
             {summary.from} – {summary.to}
           </p>
-          <p className="text-xs text-slate-500">{t('sales.summary.sourcesNote')}</p>
+          <p className="text-xs text-muted">{t('sales.summary.sourcesNote')}</p>
           {summary.netSalesTotal === 0 && summary.breakdownByEmployee.length === 0 && (
-            <p className="text-sm text-slate-500">{t('sales.summary.noDataForPeriod')}</p>
+            <EmptyState title={t('sales.summary.noDataForPeriod')} />
           )}
           <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-            <div className="rounded border p-2">
-              <p className="text-slate-600">{t('sales.summary.netSales')}</p>
-              <p className="font-medium">{formatSarInt(summary.netSalesTotal)}</p>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted">{t('sales.summary.netSales')}</p>
+              <p className="font-medium text-foreground">{formatSarInt(summary.netSalesTotal)}</p>
             </div>
-            <div className="rounded border p-2">
-              <p className="text-slate-600">{t('sales.summary.grossSales')}</p>
-              <p>{formatSarInt(summary.grossSalesTotal)}</p>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted">{t('sales.summary.grossSales')}</p>
+              <p className="text-foreground">{formatSarInt(summary.grossSalesTotal)}</p>
             </div>
-            <div className="rounded border p-2">
-              <p className="text-slate-600">{t('sales.summary.returns')}</p>
-              <p>{formatSarInt(summary.returnsTotal)}</p>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted">{t('sales.summary.returns')}</p>
+              <p className="text-foreground">{formatSarInt(summary.returnsTotal)}</p>
             </div>
-            <div className="rounded border p-2">
-              <p className="text-slate-600">{t('sales.summary.guestCoverageNet')}</p>
-              <p>{formatSarInt(summary.guestCoverageNetSales)}</p>
+            <div className="rounded border border-border p-2">
+              <p className="text-muted">{t('sales.summary.guestCoverageNet')}</p>
+              <p className="text-foreground">{formatSarInt(summary.guestCoverageNetSales)}</p>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-1 pe-2 text-start">{t('sales.summary.employee')}</th>
-                  <th className="py-1 pe-2 text-end">{t('sales.summary.net')}</th>
-                  <th className="py-1 pe-2 text-end">{t('sales.summary.guestCoverage')}</th>
-                  <th className="py-1 text-start">{t('sales.summary.sourceBoutique')}</th>
-                </tr>
-              </thead>
-              <tbody>
+          {summary.breakdownByEmployee.length > 0 ? (
+            <DataTable variant="luxury" zebra>
+              <DataTableHead>
+                <DataTableTh className="text-start">{t('sales.summary.employee')}</DataTableTh>
+                <DataTableTh className="text-end">{t('sales.summary.net')}</DataTableTh>
+                <DataTableTh className="text-end">{t('sales.summary.guestCoverage')}</DataTableTh>
+                <DataTableTh className="text-start">{t('sales.summary.sourceBoutique')}</DataTableTh>
+              </DataTableHead>
+              <DataTableBody>
                 {summary.breakdownByEmployee.map((row) => (
-                  <tr key={row.employeeId} className="border-b">
-                    <td className="py-1 pe-2">{row.employeeName}</td>
-                    <td className="text-end py-1 pe-2">{formatSarInt(row.netSales)}</td>
-                    <td className="text-end py-1 pe-2">{formatSarInt(row.guestCoverageNetSales)}</td>
-                    <td className="py-1">
+                  <tr key={row.employeeId}>
+                    <DataTableTd className="text-start">{row.employeeName}</DataTableTd>
+                    <DataTableTd className="text-end">{formatSarInt(row.netSales)}</DataTableTd>
+                    <DataTableTd className="text-end">{formatSarInt(row.guestCoverageNetSales)}</DataTableTd>
+                    <DataTableTd className="text-start">
                       {row.guestCoverageSources.map((s) => (
                         <span key={s.sourceBoutiqueId} className="me-2">
                           {s.sourceBoutiqueName ?? s.sourceBoutiqueId}: {formatSarInt(s.netSales)}
                         </span>
                       ))}
-                    </td>
+                    </DataTableTd>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </DataTableBody>
+            </DataTable>
+          ) : null}
         </div>
       )}
     </div>

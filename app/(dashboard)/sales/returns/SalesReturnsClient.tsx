@@ -3,6 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { formatSarFromHalala } from '@/lib/utils/money';
 import { useT } from '@/lib/i18n/useT';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableTh,
+  DataTableBody,
+  DataTableTd,
+} from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type ReturnItem = {
   id: string;
@@ -227,34 +235,33 @@ export function SalesReturnsClient() {
           {loading ? t('sales.returns.loading') : t('sales.returns.apply')}
         </button>
       </div>
-      {error && <p className="text-red-600">{error}</p>}
-      <div className="overflow-x-auto rounded-lg border bg-white">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-slate-50">
-              <th className="p-2 text-start">{t('sales.returns.dateCol')}</th>
-              <th className="p-2 text-start">{t('sales.returns.employeeCol')}</th>
-              <th className="p-2 text-start">{t('sales.returns.typeCol')}</th>
-              <th className="p-2 text-start">{t('sales.returns.referenceCol')}</th>
-              <th className="p-2 text-end">{t('sales.returns.netSarCol')}</th>
-              <th className="p-2 text-start">{t('sales.returns.originalTxnCol')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((r) => (
-              <tr key={r.id} className="border-b">
-                <td className="p-2">{r.txnDate}</td>
-                <td className="p-2">{r.employeeName}</td>
-                <td className="p-2">{r.type}</td>
-                <td className="p-2">{r.referenceNo ?? '—'}</td>
-                <td className="text-end p-2">{formatSarFromHalala(r.netAmount)}</td>
-                <td className="p-2">{r.originalTxnId ? t('sales.returns.linked') : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {items.length === 0 && !loading && (
-          <p className="p-4 text-slate-500">{t('sales.returns.noReturnsInPeriod')}</p>
+      {error && <p className="text-sm text-luxury-error">{error}</p>}
+      <div className="rounded-lg border border-border bg-surface shadow-sm">
+        {items.length === 0 && !loading ? (
+          <EmptyState title={t('sales.returns.noReturnsInPeriod')} />
+        ) : (
+          <DataTable variant="luxury" zebra>
+            <DataTableHead>
+              <DataTableTh className="text-start">{t('sales.returns.dateCol')}</DataTableTh>
+              <DataTableTh className="text-start">{t('sales.returns.employeeCol')}</DataTableTh>
+              <DataTableTh className="text-start">{t('sales.returns.typeCol')}</DataTableTh>
+              <DataTableTh className="text-start">{t('sales.returns.referenceCol')}</DataTableTh>
+              <DataTableTh className="text-end">{t('sales.returns.netSarCol')}</DataTableTh>
+              <DataTableTh className="text-start">{t('sales.returns.originalTxnCol')}</DataTableTh>
+            </DataTableHead>
+            <DataTableBody>
+              {items.map((r) => (
+                <tr key={r.id}>
+                  <DataTableTd>{r.txnDate}</DataTableTd>
+                  <DataTableTd>{r.employeeName}</DataTableTd>
+                  <DataTableTd>{r.type}</DataTableTd>
+                  <DataTableTd>{r.referenceNo ?? '—'}</DataTableTd>
+                  <DataTableTd className="text-end">{formatSarFromHalala(r.netAmount)}</DataTableTd>
+                  <DataTableTd>{r.originalTxnId ? t('sales.returns.linked') : '—'}</DataTableTd>
+                </tr>
+              ))}
+            </DataTableBody>
+          </DataTable>
         )}
       </div>
     </div>

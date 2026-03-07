@@ -23,24 +23,18 @@ export function Input({
       {label != null && (
         <label
           htmlFor={id}
-          className="mb-1 block text-xs font-medium uppercase tracking-wide"
-          style={{ color: 'var(--muted)' }}
+          className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted"
         >
           {label}
         </label>
       )}
       <input
         id={id}
-        className={`h-10 w-full min-w-0 rounded-lg border px-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 ${className}`}
-        style={{
-          backgroundColor: 'var(--surface)',
-          borderColor: 'var(--border)',
-          color: 'var(--text)',
-        }}
+        className={`h-10 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-0 disabled:opacity-50 ${className}`}
         {...props}
       />
       {error != null && error !== '' && (
-        <p className="mt-1 text-xs text-red-600">{error}</p>
+        <p className="mt-1 text-xs text-luxury-error">{error}</p>
       )}
     </div>
   );

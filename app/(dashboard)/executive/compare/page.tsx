@@ -8,7 +8,7 @@ export default async function ExecutiveComparePage() {
   if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') redirect('/dashboard');
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background p-4 pb-nav md:p-6">
       <ExecutiveCompareClient />
     </div>
   );

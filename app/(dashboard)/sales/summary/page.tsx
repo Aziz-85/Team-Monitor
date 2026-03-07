@@ -8,7 +8,7 @@ export default async function SalesSummaryPage() {
   if (!['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role)) redirect('/');
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4">
+    <div className="min-h-screen bg-background p-4 pb-nav md:p-6">
       <SalesSummaryClient />
     </div>
   );

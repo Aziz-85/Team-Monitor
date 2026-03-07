@@ -13,7 +13,7 @@ export default async function ExecutiveEmployeeDetailPage({
 
   const { empId } = await params;
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background p-4 pb-nav md:p-6">
       <ExecutiveEmployeeDetailClient empId={empId} />
     </div>
   );

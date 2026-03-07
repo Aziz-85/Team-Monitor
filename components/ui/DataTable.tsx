@@ -3,6 +3,7 @@
 /**
  * Unified DataTable — single source for table composition (admin, luxury variants).
  * Use AdminDataTable or LuxuryTable for backward compatibility; prefer DataTable with variant for new code.
+ * Supports sticky header, optional zebra rows, and row hover (via globals .data-table-tbody).
  */
 
 import React, { forwardRef, ReactNode } from 'react';
@@ -15,6 +16,10 @@ export type DataTableProps = {
   variant?: DataTableVariant;
   /** When true (luxury only), no horizontal scroll; table fits container. */
   noScroll?: boolean;
+  /** Sticky thead when scrolling (default true). */
+  stickyHeader?: boolean;
+  /** Alternating row background for tbody (default false). */
+  zebra?: boolean;
 };
 
 export function DataTable({
@@ -22,8 +27,18 @@ export function DataTable({
   className = '',
   variant = 'luxury',
   noScroll = false,
+  stickyHeader = true,
+  zebra = false,
 }: DataTableProps) {
   const isAdmin = variant === 'admin';
+  const wrapperClass = [
+    'rounded-lg border border-border bg-surface shadow-sm',
+    stickyHeader ? 'data-table-sticky' : '',
+    zebra ? 'data-table-zebra' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const tableEl = (
     <table
       className={`w-full border-collapse text-sm ${
@@ -35,9 +50,7 @@ export function DataTable({
   );
   if (isAdmin) {
     return (
-      <div
-        className={`max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white ${className}`}
-      >
+      <div className={`max-w-full overflow-hidden ${wrapperClass}`}>
         <div className="overflow-x-auto overflow-y-visible" style={{ overflowX: 'hidden' }}>
           {tableEl}
         </div>
@@ -46,9 +59,7 @@ export function DataTable({
   }
   return (
     <div
-      className={`w-full rounded-xl border border-slate-200 bg-white ${
-        noScroll ? 'overflow-hidden' : 'overflow-x-auto'
-      } ${className}`}
+      className={`w-full ${noScroll ? 'overflow-hidden' : 'overflow-x-auto'} ${wrapperClass}`}
     >
       {tableEl}
     </div>
@@ -58,7 +69,7 @@ export function DataTable({
 export function DataTableHead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
+      <tr className="sticky top-0 z-10 border-b border-border bg-surface-subtle text-start text-foreground">
         {children}
       </tr>
     </thead>
@@ -72,7 +83,7 @@ export const DataTableTh = forwardRef<
   return (
     <th
       ref={ref}
-      className={`border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 md:text-sm ${className}`}
+      className={`border-b border-border px-3 py-2.5 text-xs font-semibold text-foreground md:text-sm ${className}`}
       {...props}
     >
       {truncate ? (
@@ -87,7 +98,7 @@ export const DataTableTh = forwardRef<
 });
 
 export function DataTableBody({ children }: { children: ReactNode }) {
-  return <tbody className="bg-white">{children}</tbody>;
+  return <tbody className="data-table-tbody bg-surface">{children}</tbody>;
 }
 
 export function DataTableTd({
@@ -99,7 +110,7 @@ export function DataTableTd({
 }: React.TdHTMLAttributes<HTMLTableCellElement> & { truncate?: boolean }) {
   const t = title ?? (typeof children === 'string' ? children : undefined);
   return (
-    <td className={`border-b border-slate-200 px-3 py-2 text-sm ${className}`} {...props}>
+    <td className={`border-b border-border px-3 py-2.5 text-sm transition-colors ${className}`} {...props}>
       {truncate ? (
         <span className="block min-w-0 truncate" title={t}>
           {children}

@@ -2,21 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens — single source for theme (Executive Clean / Luxury Light) */
 :root {
-  /* Light Corporate Luxury */
+  /* Colors: background, surfaces, border, text */
   --background: #F8F8F6;
   --foreground: #1E1E1E;
   --app-bg: #F8F8F6;
   --surface: #FFFFFF;
+  --surface-subtle: #F5F4F3;
+  --surface-elevated: #FFFFFF;
   --border: #E8E6E3;
   --text: #1E1E1E;
   --muted: #6B7280;
   --accent: #C6A75E;
+  --accent-hover: #B8964E;
   --primary: #1E1E1E;
   --success: #4A7C59;
   --error: #B85450;
+  --warning: #B45318;
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-card: 12px;
   --radius-button: 8px;
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.06);
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
 }
 
@@ -46,9 +60,40 @@ body {
   }
 }
 
+/* Optional: consistent page content padding + mobile nav clearance */
+.page-content {
+  padding: 1rem;
+  padding-bottom: 4.5rem;
+}
+
+@media (min-width: 768px) {
+  .page-content {
+    padding: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
 /* Focus rings for accessibility */
 *:focus-visible {
   @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Data table: row hover */
+.data-table-tbody tr:hover {
+  background-color: rgb(245 244 243 / 0.7);
+}
+
+/* Sticky header: shadow when scrolling */
+.data-table-sticky thead tr {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Zebra rows (when DataTable has zebra prop) */
+.data-table-zebra .data-table-tbody tr:nth-child(even) {
+  background-color: rgb(245 244 243 / 0.4);
+}
+.data-table-zebra .data-table-tbody tr:nth-child(even):hover {
+  background-color: rgb(245 244 243 / 0.7);
 }
 
 /* RTL: flip chevrons/arrows */

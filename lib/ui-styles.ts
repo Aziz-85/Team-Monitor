@@ -1,41 +1,43 @@
 /**
- * Shared UI class constants for consistent theme across the app.
- * Theme: light professional, high readability, Excel-like tables, mobile-friendly.
+ * Shared UI class constants — aligned with design tokens (Stripe/Linear-style).
+ * Use these for consistent surfaces, buttons, inputs, and tables.
  */
 
 /** Page background */
-export const pageBg = 'bg-slate-50';
+export const pageBg = 'bg-background';
 
-/** Card: white, border, shadow, rounded */
-export const card = 'bg-white border border-slate-200 shadow-sm rounded-xl';
+/** Card: surface, border, shadow, radius from tokens */
+export const card = 'bg-surface border border-border shadow-card rounded-lg overflow-hidden';
 
-/** Text */
-export const textPrimary = 'text-slate-900';
-export const textSecondary = 'text-slate-600';
-export const textMuted = 'text-slate-500';
+/** Text (token-aligned) */
+export const textPrimary = 'text-foreground';
+export const textSecondary = 'text-muted';
+export const textMuted = 'text-muted';
 
 /** Borders */
-export const borderDefault = 'border-slate-200';
-export const borderStrong = 'border-slate-300';
+export const borderDefault = 'border-border';
+export const borderStrong = 'border-border';
 
-/** Buttons */
+/** Buttons — accent primary, surface secondary */
 export const btnPrimary =
-  'h-9 md:h-10 rounded-lg px-4 font-medium bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
+  'h-9 md:h-10 rounded-md px-4 font-medium bg-accent hover:bg-accent-hover text-white focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 export const btnSecondary =
-  'h-9 md:h-10 rounded-lg px-4 font-medium bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
+  'h-9 md:h-10 rounded-md px-4 font-medium bg-surface border border-border text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-border focus:ring-offset-2 disabled:opacity-50';
 export const btnDanger =
-  'h-9 md:h-10 rounded-lg px-4 font-medium bg-red-600 hover:bg-red-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2';
+  'h-9 md:h-10 rounded-md px-4 font-medium bg-red-600 hover:bg-red-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50';
+export const btnGhost =
+  'h-9 md:h-10 rounded-md px-4 font-medium bg-transparent text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-border focus:ring-offset-2 disabled:opacity-50';
 
 /** Form inputs baseline */
 export const inputBase =
-  'h-9 md:h-10 rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
+  'h-9 md:h-10 rounded-md border border-border bg-surface px-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-0 disabled:opacity-50';
 
 /** Table */
-export const tableWrapper = 'bg-white border border-slate-200 rounded-xl overflow-hidden';
-export const tableHeaderRow = 'bg-slate-50 border-b border-slate-200';
-export const tableHeaderCell = 'px-3 py-2 text-xs md:text-sm font-semibold text-slate-700';
-export const tableCell = 'px-3 py-2 text-sm';
-export const tableCellMuted = 'text-slate-500';
+export const tableWrapper = 'bg-surface border border-border rounded-lg overflow-hidden shadow-sm';
+export const tableHeaderRow = 'bg-surface-subtle border-b border-border';
+export const tableHeaderCell = 'px-3 py-2.5 text-xs md:text-sm font-semibold text-foreground';
+export const tableCell = 'px-3 py-2.5 text-sm';
+export const tableCellMuted = 'text-muted';
 
 /** Schedule Excel blocks */
 export const excelMorningHeader = 'bg-sky-50 text-sky-800 border-slate-200';
@@ -63,3 +65,6 @@ export const alertDanger = 'bg-red-100 text-red-900 border-red-200';
 
 /** Container */
 export const containerWidth = 'max-w-6xl mx-auto px-4 md:px-6';
+
+/** Filter bar / toolbar container */
+export const filterBar = 'rounded-lg border border-border bg-surface p-4 flex flex-wrap items-end gap-3 shadow-sm';

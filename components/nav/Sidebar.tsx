@@ -74,16 +74,16 @@ export function Sidebar({
   }, []);
 
   return (
-    <aside className={`hidden h-screen w-52 flex-col bg-white lg:w-56 md:flex ${isRtl ? 'border-l border-slate-200' : 'border-r border-slate-200'}`}>
+    <aside className={`hidden h-screen w-48 flex-col bg-surface lg:w-52 md:flex ${isRtl ? 'border-l border-border' : 'border-r border-border'}`}>
       <div className="flex min-w-0 flex-col h-full">
         {/* Header + Scope */}
-        <div className="shrink-0 border-b border-slate-200 px-3 py-4">
-          <Link href="/" className="text-lg font-semibold text-slate-900 hover:text-slate-700 truncate block min-w-0">
+        <div className="shrink-0 border-b border-border px-2.5 py-3">
+          <Link href="/" className="text-lg font-semibold text-foreground hover:text-muted truncate block min-w-0">
             {t('nav.appTitle')}
           </Link>
           {!pathname.startsWith('/admin') && (
             <div className="mt-2 min-w-0">
-              <p className="text-xs font-medium text-slate-500 mb-1">{t('common.workingOnBoutique')}:</p>
+              <p className="text-xs font-medium text-muted mb-1">{t('common.workingOnBoutique')}:</p>
               {role === 'SUPER_ADMIN' ? (
                 <SuperAdminBoutiqueContextPicker />
               ) : (
@@ -94,19 +94,19 @@ export function Sidebar({
         </div>
 
         {/* Nav: collapsible groups */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 min-w-0">
-          <ul className="space-y-1">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 min-w-0">
+          <ul className="space-y-0.5">
             {groups.map((group) => {
               const isOpen = openKeys[group.key] ?? false;
               const isReportsWithExecutive = group.key === 'REPORTS' && group.items.some((i) => i.href === '/executive');
               const primaryHref = isReportsWithExecutive ? '/executive' : null;
               return (
                 <li key={group.key} className="min-w-0">
-                  <div className="flex w-full items-center gap-1 rounded-lg min-w-0">
+                  <div className="flex w-full items-center gap-0.5 rounded-md min-w-0">
                     {primaryHref ? (
                       <Link
                         href={primaryHref}
-                        className="flex-1 min-w-0 rounded-lg px-3 py-2 text-start text-sm font-medium text-slate-700 hover:bg-slate-50 truncate"
+                        className="flex-1 min-w-0 rounded-md px-2.5 py-1.5 text-start text-xs font-medium uppercase tracking-wide text-muted hover:bg-surface-subtle hover:text-foreground truncate"
                       >
                         <span className="truncate min-w-0 block">{t(group.labelKey)}</span>
                       </Link>
@@ -114,7 +114,7 @@ export function Sidebar({
                       <button
                         type="button"
                         onClick={() => toggleGroup(group.key)}
-                        className="flex-1 min-w-0 rounded-lg px-3 py-2 text-start text-sm font-medium text-slate-700 hover:bg-slate-50 truncate"
+                        className="flex-1 min-w-0 rounded-md px-2.5 py-1.5 text-start text-xs font-medium uppercase tracking-wide text-muted hover:bg-surface-subtle hover:text-foreground truncate"
                         aria-expanded={isOpen}
                       >
                         <span className="truncate min-w-0 block">{t(group.labelKey)}</span>
@@ -126,7 +126,7 @@ export function Sidebar({
                         e.preventDefault();
                         toggleGroup(group.key);
                       }}
-                      className="shrink-0 rounded p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+                      className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-subtle hover:text-foreground"
                       aria-expanded={isOpen}
                       aria-label={isOpen ? 'Collapse' : 'Expand'}
                     >
@@ -134,17 +134,17 @@ export function Sidebar({
                     </button>
                   </div>
                   {isOpen && (
-                    <ul className="mt-1 space-y-0.5 ps-2 border-s border-slate-200 ms-3">
+                    <ul className="mt-0.5 space-y-0.5 border-s border-border ms-2.5 ps-2">
                       {group.items.map((item) => {
                         const active = isItemActive(item.href);
                         return (
                           <li key={item.href} className="min-w-0">
                             <Link
                               href={item.href}
-                              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors min-w-0 truncate ${
+                              className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors min-w-0 truncate ${
                                 active
-                                  ? `bg-slate-100 font-medium text-slate-900 ${isRtl ? 'border-r-4 border-r-sky-500' : 'border-l-4 border-l-sky-500'}`
-                                  : 'text-slate-700 hover:bg-slate-50'
+                                  ? `bg-surface-subtle font-medium text-foreground ${isRtl ? 'border-r-4 border-r-accent' : 'border-l-4 border-l-accent'}`
+                                  : 'text-foreground hover:bg-surface-subtle'
                               }`}
                             >
                               <span className="truncate min-w-0">{t(item.key)}</span>
@@ -161,25 +161,25 @@ export function Sidebar({
         </nav>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-slate-200 px-3 py-4 min-w-0">
+        <div className="shrink-0 border-t border-border px-2.5 py-3 min-w-0">
           {name && (
             <div className="mb-3 min-w-0">
-              <div className="truncate text-sm font-medium text-slate-900">{name}</div>
-              <div className="truncate text-xs text-slate-500">{getRoleDisplayLabel(role, position ?? null, t)}</div>
+              <div className="truncate text-sm font-medium text-foreground">{name}</div>
+              <div className="truncate text-xs text-muted">{getRoleDisplayLabel(role, position ?? null, t)}</div>
             </div>
           )}
           <div className="space-y-2">
             <select
               value={localeFromT}
               onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-              className="h-9 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="en">{t('common.english')}</option>
               <option value="ar">{t('common.arabic')}</option>
             </select>
             <Link
               href="/change-password"
-              className="flex h-9 items-center rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50 truncate min-w-0"
+              className="flex h-9 items-center rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle truncate min-w-0"
             >
               {t('nav.changePassword')}
             </Link>
@@ -189,12 +189,12 @@ export function Sidebar({
                 await fetch('/api/auth/logout', { method: 'POST' });
                 window.location.href = '/login';
               }}
-              className="w-full text-start h-9 rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50 min-w-0"
+              className="w-full text-start h-9 rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle min-w-0"
             >
               {t('common.logout')}
             </button>
           </div>
-          <div className="mt-4 text-xs text-slate-400 truncate min-w-0">{t('nav.appTitle')} v{APP_VERSION}</div>
+          <div className="mt-4 text-xs text-muted truncate min-w-0">{t('nav.appTitle')} v{APP_VERSION}</div>
         </div>
       </div>
     </aside>

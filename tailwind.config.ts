@@ -11,6 +11,13 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        accent: "var(--accent)",
+        "accent-hover": "var(--accent-hover)",
+        muted: "var(--muted)",
+        surface: "var(--surface)",
+        "surface-subtle": "var(--surface-subtle)",
+        "surface-elevated": "var(--surface-elevated)",
+        border: "var(--border)",
         luxury: {
           accent: "var(--accent)",
           primary: "var(--primary)",
@@ -22,10 +29,17 @@ const config: Config = {
         },
       },
       borderRadius: {
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
         card: "var(--radius-card)",
         "luxury-btn": "var(--radius-button)",
       },
       boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
         card: "var(--shadow-card)",
       },
     },

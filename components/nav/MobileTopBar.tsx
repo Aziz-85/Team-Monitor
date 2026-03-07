@@ -34,11 +34,11 @@ export function MobileTopBar({
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2 md:hidden">
+      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-50"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-surface-subtle"
           aria-label={t('nav.more') ?? 'Menu'}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,7 +48,7 @@ export function MobileTopBar({
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           {!pathname.startsWith('/admin') && (
             <div className="min-w-0 max-w-[140px] flex items-center gap-1">
-              <span className="text-xs text-slate-500 shrink-0">{t('common.workingOnBoutiqueShort')}:</span>
+              <span className="text-xs text-muted shrink-0">{t('common.workingOnBoutiqueShort')}:</span>
               {role === 'SUPER_ADMIN' ? (
                 <SuperAdminBoutiqueContextPicker />
               ) : (
@@ -59,7 +59,7 @@ export function MobileTopBar({
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-            className="h-8 shrink-0 rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="en">{t('common.english')}</option>
             <option value="ar">{t('common.arabic')}</option>
@@ -78,24 +78,24 @@ export function MobileTopBar({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 z-50 h-full w-64 bg-white shadow-lg transition-transform md:hidden ${
+        className={`fixed top-0 z-50 h-full w-64 bg-surface shadow-lg transition-transform md:hidden ${
           isRtl ? 'end-0' : 'start-0'
         } ${drawerOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'}`}
       >
         <div className="flex h-full flex-col">
           {/* Drawer Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+          <div className="flex items-center justify-between border-b border-border px-4 py-4">
             <Link
               href="/"
               onClick={() => setDrawerOpen(false)}
-              className="text-lg font-semibold text-slate-900"
+              className="text-lg font-semibold text-foreground"
             >
               {t('nav.appTitle')}
             </Link>
             <button
               type="button"
               onClick={() => setDrawerOpen(false)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-50"
+              className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-surface-subtle"
               aria-label="Close"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -114,10 +114,10 @@ export function MobileTopBar({
                     <Link
                       href={item.href}
                       onClick={() => setDrawerOpen(false)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
                         isActive
-                          ? `bg-slate-100 font-medium text-slate-900 ${isRtl ? 'border-r-4 border-r-sky-500' : 'border-l-4 border-l-sky-500'}`
-                          : 'text-slate-700 hover:bg-slate-50'
+                          ? `bg-surface-subtle font-medium text-foreground ${isRtl ? 'border-r-4 border-r-accent' : 'border-l-4 border-l-accent'}`
+                          : 'text-foreground hover:bg-surface-subtle'
                       }`}
                     >
                       {t(item.key)}
@@ -129,18 +129,18 @@ export function MobileTopBar({
           </nav>
 
           {/* Drawer Footer */}
-          <div className="border-t border-slate-200 px-4 py-4">
+          <div className="border-t border-border px-4 py-4">
             {name && (
               <div className="mb-3">
-                <div className="text-sm font-medium text-slate-900">{name}</div>
-                <div className="text-xs text-slate-500">{getRoleDisplayLabel(role, position ?? null, t)}</div>
+                <div className="text-sm font-medium text-foreground">{name}</div>
+                <div className="text-xs text-muted">{getRoleDisplayLabel(role, position ?? null, t)}</div>
               </div>
             )}
             <div className="space-y-2">
               <Link
                 href="/change-password"
                 onClick={() => setDrawerOpen(false)}
-                className="flex h-9 items-center rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50"
+                className="flex h-9 items-center rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle"
               >
                 {t('nav.changePassword')}
               </Link>
@@ -150,7 +150,7 @@ export function MobileTopBar({
                   await fetch('/api/auth/logout', { method: 'POST' });
                   window.location.href = '/login';
                 }}
-                className="w-full text-start h-9 rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-50"
+                className="w-full text-start h-9 rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle"
               >
                 {t('common.logout')}
               </button>

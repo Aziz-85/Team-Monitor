@@ -18,14 +18,24 @@ export function LuxuryTable({
   children,
   className = '',
   noScroll,
+  stickyHeader = true,
+  zebra = false,
 }: {
   children: ReactNode;
   className?: string;
   /** When true, no horizontal scroll; table fits container (e.g. schedule edit page). */
   noScroll?: boolean;
+  stickyHeader?: boolean;
+  zebra?: boolean;
 }) {
   return (
-    <DataTable variant="luxury" noScroll={noScroll} className={className}>
+    <DataTable
+      variant="luxury"
+      noScroll={noScroll}
+      className={className}
+      stickyHeader={stickyHeader}
+      zebra={zebra}
+    >
       {children}
     </DataTable>
   );

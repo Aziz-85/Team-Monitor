@@ -14,6 +14,7 @@ import { SalesBreakdownSection } from './sections/SalesBreakdownSection';
 import { ScheduleOverviewSection } from './sections/ScheduleOverviewSection';
 import { TaskIntegritySection } from './sections/TaskIntegritySection';
 import { TeamTableSection } from './sections/TeamTableSection';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 type DashboardData = {
   rbac: {
@@ -153,8 +154,8 @@ export function ExecutiveDashboard() {
   const showBranchSections = !isEmployee;
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-6">
-      <h1 className="mb-6 text-2xl font-semibold text-slate-900">{t(`dashboard.title.${titleKey}`)}</h1>
+    <div className="mx-auto max-w-7xl p-4 md:p-6 pb-nav">
+      <PageHeader title={t(`dashboard.title.${titleKey}`)} />
 
       {/* Section 1 — Top 4 cards */}
       <section className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -197,29 +198,29 @@ export function ExecutiveDashboard() {
       {/* Quick links — EMPLOYEE only */}
       {isEmployee && (
         <section className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t('dashboard.quickLinks.title')}</h2>
+          <h2 className="mb-3 text-sm font-semibold text-muted">{t('dashboard.quickLinks.title')}</h2>
           <div className="flex flex-wrap gap-3">
             <Link
               href="/tasks"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle"
             >
               {t('dashboard.quickLinks.tasks')}
             </Link>
             <Link
               href="/sales/my"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle"
             >
               {t('dashboard.quickLinks.mySales')}
             </Link>
             <Link
               href="/me/target"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle"
             >
               {t('dashboard.quickLinks.myTarget')}
             </Link>
             <Link
               href="/leaves/requests"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              className="rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle"
             >
               {t('dashboard.quickLinks.myLeaves')}
             </Link>

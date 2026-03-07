@@ -26,12 +26,12 @@ export function MobileBottomNav({
 
   return (
     <>
-      <nav className="fixed bottom-0 start-0 end-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white py-2 md:hidden">
+      <nav className="fixed bottom-0 start-0 end-0 z-40 flex items-center justify-around border-t border-border bg-surface py-2 md:hidden">
         {mainLinks.slice(0, 4).map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 text-sm ${pathname === l.href ? 'font-semibold text-sky-600' : 'text-slate-600'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 min-h-[44px] justify-center text-sm ${pathname === l.href ? 'font-semibold text-accent' : 'text-muted'}`}
           >
             {t(l.key)}
           </Link>
@@ -39,7 +39,7 @@ export function MobileBottomNav({
         <button
           type="button"
           onClick={() => setMoreOpen(true)}
-          className="flex flex-col items-center gap-0.5 px-3 py-1 text-sm text-slate-600"
+          className="flex flex-col items-center gap-0.5 px-3 py-2 min-h-[44px] justify-center text-sm text-muted"
         >
           {t('nav.more')}
         </button>
@@ -53,9 +53,9 @@ export function MobileBottomNav({
         />
       )}
       <div
-        className={`fixed bottom-0 start-0 end-0 z-50 max-h-[70vh] overflow-auto rounded-t-xl border border-slate-200 bg-white shadow-lg transition-transform md:hidden ${moreOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed bottom-0 start-0 end-0 z-50 max-h-[70vh] overflow-auto rounded-t-xl border border-border bg-surface shadow-lg transition-transform md:hidden ${moreOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
-        <div className="sticky top-0 border-b border-slate-200 bg-white px-4 py-3 font-semibold">
+        <div className="sticky top-0 border-b border-border bg-surface px-4 py-3 font-semibold text-foreground">
           {t('nav.more')}
         </div>
         <div className="p-4">
@@ -64,7 +64,7 @@ export function MobileBottomNav({
               key={l.href}
               href={l.href}
               onClick={() => setMoreOpen(false)}
-              className="block py-3 text-base text-slate-700 hover:text-slate-900"
+              className="block py-3 text-base text-foreground hover:text-muted"
             >
               {t(l.key)}
             </Link>

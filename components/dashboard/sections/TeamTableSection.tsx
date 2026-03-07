@@ -2,6 +2,13 @@
 
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarFromHalala } from '@/lib/utils/money';
+import {
+  DataTable,
+  DataTableHead,
+  DataTableTh,
+  DataTableBody,
+  DataTableTd,
+} from '@/components/ui/DataTable';
 
 type Row = {
   empId?: string;
@@ -20,47 +27,43 @@ export function TeamTableSection({ rows }: { rows: Row[] }) {
   if (!rows?.length) return null;
 
   return (
-    <OpsCard title="Team" className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-0 border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
-              <th className="px-3 py-2 text-start font-semibold text-slate-700">Employee</th>
-              <th className="px-3 py-2 text-start font-semibold text-slate-700">Role</th>
-              <th className="px-3 py-2 text-end font-semibold text-slate-700">Target</th>
-              <th className="px-3 py-2 text-end font-semibold text-slate-700">Actual</th>
-              <th className="px-3 py-2 text-end font-semibold text-slate-700">%</th>
-              <th className="px-3 py-2 text-end font-semibold text-slate-700">Tasks</th>
-              <th className="px-3 py-2 text-end font-semibold text-slate-700">Late</th>
-              <th className="px-3 py-2 text-start font-semibold text-slate-700">Zone</th>
+    <OpsCard title="Team" className="overflow-hidden rounded-2xl border border-border shadow-sm">
+      <DataTable variant="luxury" zebra noScroll>
+        <DataTableHead>
+          <DataTableTh className="text-start">Employee</DataTableTh>
+          <DataTableTh className="text-start">Role</DataTableTh>
+          <DataTableTh className="text-end">Target</DataTableTh>
+          <DataTableTh className="text-end">Actual</DataTableTh>
+          <DataTableTh className="text-end">%</DataTableTh>
+          <DataTableTh className="text-end">Tasks</DataTableTh>
+          <DataTableTh className="text-end">Late</DataTableTh>
+          <DataTableTh className="text-start">Zone</DataTableTh>
+        </DataTableHead>
+        <DataTableBody>
+          {rows.map((r) => (
+            <tr key={r.empId ?? r.employee}>
+              <DataTableTd className="font-medium text-foreground">{r.employee}</DataTableTd>
+              <DataTableTd>
+                <span className="inline-flex rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-foreground">
+                  {r.roleLabel ?? r.role}
+                </span>
+              </DataTableTd>
+              <DataTableTd className="text-end text-foreground">{formatSarFromHalala(r.target)}</DataTableTd>
+              <DataTableTd className="text-end text-foreground">{formatSarFromHalala(r.actual)}</DataTableTd>
+              <DataTableTd
+                className={`text-end font-medium ${
+                  r.pct >= 60 ? 'text-foreground' : r.pct >= 40 ? 'text-amber-600' : 'text-luxury-error'
+                }`}
+              >
+                {r.pct}%
+              </DataTableTd>
+              <DataTableTd className="text-end">{r.tasksDone}</DataTableTd>
+              <DataTableTd className="text-end">{r.late}</DataTableTd>
+              <DataTableTd className="text-muted">{r.zone ?? '—'}</DataTableTd>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.empId ?? r.employee} className="border-b border-slate-100 last:border-0">
-                <td className="px-3 py-2 font-medium text-slate-900">{r.employee}</td>
-                <td className="px-3 py-2">
-                  <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                    {r.roleLabel ?? r.role}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-end text-slate-700">{formatSarFromHalala(r.target)}</td>
-                <td className="px-3 py-2 text-end text-slate-700">{formatSarFromHalala(r.actual)}</td>
-                <td
-                  className={`px-3 py-2 text-end font-medium ${
-                    r.pct >= 60 ? 'text-slate-900' : r.pct >= 40 ? 'text-amber-600' : 'text-red-600'
-                  }`}
-                >
-                  {r.pct}%
-                </td>
-                <td className="px-3 py-2 text-end text-slate-700">{r.tasksDone}</td>
-                <td className="px-3 py-2 text-end text-slate-700">{r.late}</td>
-                <td className="px-3 py-2 text-slate-600">{r.zone ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </DataTableBody>
+      </DataTable>
     </OpsCard>
   );
 }

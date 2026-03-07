@@ -17,12 +17,16 @@ import {
 export function AdminDataTable({
   children,
   className = '',
+  stickyHeader = true,
+  zebra = false,
 }: {
   children: ReactNode;
   className?: string;
+  stickyHeader?: boolean;
+  zebra?: boolean;
 }) {
   return (
-    <DataTable variant="admin" className={className}>
+    <DataTable variant="admin" className={className} stickyHeader={stickyHeader} zebra={zebra}>
       {children}
     </DataTable>
   );

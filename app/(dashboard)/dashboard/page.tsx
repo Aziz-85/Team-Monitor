@@ -8,9 +8,5 @@ export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
 
-  return (
-    <div className="min-h-screen bg-slate-100">
-      <ExecutiveDashboard />
-    </div>
-  );
+  return <ExecutiveDashboard />;
 }
