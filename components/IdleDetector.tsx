@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useT } from '@/lib/i18n/useT';
 
-const DEFAULT_IDLE_MINUTES = 30;
-const DEFAULT_WARNING_MINUTES = 28;
+const DEFAULT_IDLE_MINUTES = 720;   // 12 hours
+const DEFAULT_WARNING_MINUTES = 718; // warn 2 min before logout
 
 export function IdleDetector() {
   const { t } = useT();

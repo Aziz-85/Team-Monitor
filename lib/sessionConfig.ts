@@ -1,10 +1,11 @@
 /**
  * Session and auth security config from env.
- * Defaults: 30 min idle, 12 h max session.
+ * Defaults: 12 h idle, 12 h max session.
  */
 const env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {};
 
-export const SESSION_IDLE_MINUTES = Math.max(1, Math.min(120, parseInt(env.SESSION_IDLE_MINUTES ?? '30', 10) || 30));
+/** Idle timeout: after this many minutes without activity, user is signed out. Default 12 hours (720 min). Max 24 h. */
+export const SESSION_IDLE_MINUTES = Math.max(1, Math.min(1440, parseInt(env.SESSION_IDLE_MINUTES ?? '720', 10) || 720));
 export const SESSION_MAX_HOURS = Math.max(1, Math.min(168, parseInt(env.SESSION_MAX_HOURS ?? '12', 10) || 12));
 
 /** Only update lastSeenAt if older than this (throttle DB writes) */
