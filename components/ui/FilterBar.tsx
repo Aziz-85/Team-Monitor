@@ -13,7 +13,7 @@ export type FilterBarProps = {
   onClearFilter?: (label: string) => void;
   onClearAll?: () => void;
   /** Quick period chips (e.g. Week, Month, Quarter, Custom); selecting one calls onPeriodSelect(id) */
-  quickPeriods?: QuickPeriod[];
+  quickPeriods?: readonly QuickPeriod[];
   /** Currently selected quick period id (for chip highlight); use "custom" when dates are manual */
   selectedPeriodId?: string;
   onPeriodSelect?: (id: string) => void;
