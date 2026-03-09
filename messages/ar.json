@@ -498,7 +498,20 @@
     "pendingApproval": "في انتظار الموافقة",
     "guestRemoved": "تمت إزالة تغطية الضيف",
     "add": "إضافة",
-    "shift": "الوردية"
+    "shift": "الوردية",
+    "keys": {
+      "keyStatus": "حالة المفتاح",
+      "logHandover": "تسجيل تسليم",
+      "amHolder": "حامل الصباح",
+      "pmHolder": "حامل المساء",
+      "saved": "تم حفظ خطة المفاتيح",
+      "saveKeyPlan": "حفظ خطة المفاتيح",
+      "keyNumber": "المفتاح",
+      "handoverTo": "تسليم إلى",
+      "note": "ملاحظة",
+      "handoverLogged": "تم تسجيل التسليم",
+      "submitHandover": "تأكيد"
+    }
   },
   "editor": {
     "gridView": "عرض الشبكة",

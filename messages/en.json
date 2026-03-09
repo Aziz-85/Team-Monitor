@@ -499,7 +499,20 @@
     "pendingApproval": "Pending approval",
     "guestRemoved": "Guest coverage removed",
     "add": "Add",
-    "shift": "Shift"
+    "shift": "Shift",
+    "keys": {
+      "keyStatus": "Key status",
+      "logHandover": "Log handover",
+      "amHolder": "AM holder",
+      "pmHolder": "PM holder",
+      "saved": "Key plan saved",
+      "saveKeyPlan": "Save key plan",
+      "keyNumber": "Key",
+      "handoverTo": "Hand over to",
+      "note": "Note",
+      "handoverLogged": "Handover logged",
+      "submitHandover": "Submit"
+    }
   },
   "editor": {
     "gridView": "Grid View",
