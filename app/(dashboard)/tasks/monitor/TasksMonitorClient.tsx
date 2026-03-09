@@ -304,14 +304,12 @@ export function TasksMonitorClient() {
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('completedTableTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
-                <tr>
                   <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
                   <LuxuryTh>{t('due')}</LuxuryTh>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
                   <LuxuryTh>{t('completedAt')}</LuxuryTh>
                   <LuxuryTh>{t('delay')}</LuxuryTh>
-                </tr>
               </LuxuryTableHead>
               <LuxuryTableBody>
                 {data.completedTasks.length === 0 ? (
@@ -357,13 +355,11 @@ export function TasksMonitorClient() {
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('pendingTableTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
-                <tr>
                   <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
                   <LuxuryTh>{t('due')}</LuxuryTh>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
                   <LuxuryTh>{t('status')}</LuxuryTh>
-                </tr>
               </LuxuryTableHead>
               <LuxuryTableBody>
                 {data.pendingTasks.length === 0 ? (
@@ -403,7 +399,6 @@ export function TasksMonitorClient() {
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('employeePerformanceTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
-                <tr>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
                   <LuxuryTh>{t('assignedCount')}</LuxuryTh>
                   <LuxuryTh>{t('completedCount')}</LuxuryTh>
@@ -412,7 +407,6 @@ export function TasksMonitorClient() {
                   <LuxuryTh>{t('completionRate')}</LuxuryTh>
                   <LuxuryTh>{t('onTimeRate')}</LuxuryTh>
                   <LuxuryTh>{t('avgDelay')}</LuxuryTh>
-                </tr>
               </LuxuryTableHead>
               <LuxuryTableBody>
                 {data.employeeStats.length === 0 ? (
