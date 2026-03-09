@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { SALES_TARGET_ROLE_LABELS, type SalesTargetRole } from '@/lib/sales-target-weights';
+import { addMonths, getCurrentMonthKeyRiyadh } from '@/lib/time';
 
 const ROLE_KEYS: SalesTargetRole[] = [
   'MANAGER',
@@ -318,14 +319,36 @@ export function AdminTargetsClient() {
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <label className="text-sm font-medium text-foreground">{t('targets.month')}</label>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="rounded border border-border px-3 py-2 text-sm"
-          />
+          <div className="inline-flex items-center rounded-lg border border-border bg-surface">
+            <button
+              type="button"
+              onClick={() => setMonth(addMonths(month, -1))}
+              className="rounded-s-lg px-3 py-2 text-sm text-muted hover:bg-surface-subtle"
+              aria-label={t('common.prev')}
+            >
+              ◀
+            </button>
+            <span className="min-w-[7rem] px-3 py-2 text-center text-sm font-medium text-foreground">
+              {month}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMonth(addMonths(month, 1))}
+              className="rounded-e-lg px-3 py-2 text-sm text-muted hover:bg-surface-subtle"
+              aria-label={t('common.next')}
+            >
+              ▶
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMonth(getCurrentMonthKeyRiyadh())}
+            className="rounded border border-border bg-surface-subtle px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
+          >
+            {t('common.thisMonth')}
+          </button>
         </div>
 
         <OpsCard title={t('targets.boutiqueTarget')} className="mb-4">

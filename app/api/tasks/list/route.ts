@@ -101,18 +101,29 @@ export async function GET(request: NextRequest) {
   const completions =
     taskIds.length > 0
       ? await prisma.taskCompletion.findMany({
-          where: { userId, taskId: { in: taskIds } },
+          where: {
+            taskId: { in: taskIds },
+            ...(canSeeAll ? {} : { userId }),
+          },
         })
       : [];
-  const completedTaskIds = new Set(
-    completions.filter((c) => c.undoneAt == null).map((c) => c.taskId)
+  const completedByTaskUser = new Set(
+    completions.filter((c) => c.undoneAt == null).map((c) => `${c.taskId}::${c.userId}`)
   );
+
+  const empIdToUserId = new Map<string, string>();
+  if (canSeeAll) {
+    const users = await prisma.user.findMany({
+      where: { employee: { boutiqueId } },
+      select: { id: true, empId: true },
+    });
+    for (const u of users) empIdToUserId.set(u.empId, u.id);
+  }
 
   const rows: TaskListRow[] = [];
 
   for (const dateStrItem of dateStrs) {
     const date = new Date(dateStrItem + 'T00:00:00Z');
-    const isToday = dateStrItem === dateStr;
 
     for (const task of tasks) {
       if (!tasksRunnableOnDate(task, date)) continue;
@@ -122,7 +133,13 @@ export async function GET(request: NextRequest) {
 
       const assigneeName = a.assignedName ?? null;
       const assigneeEmpId = a.assignedEmpId;
-      const isCompleted = isToday && completedTaskIds.has(task.id);
+
+      const assigneeUserId = assigneeEmpId
+        ? (canSeeAll ? empIdToUserId.get(assigneeEmpId) : (assigneeEmpId === empId ? userId : undefined))
+        : undefined;
+      const isCompleted = assigneeUserId
+        ? completedByTaskUser.has(`${task.id}::${assigneeUserId}`)
+        : false;
 
       if (statusFilter === 'open' && isCompleted) continue;
       if (statusFilter === 'done' && !isCompleted) continue;

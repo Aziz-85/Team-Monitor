@@ -22,8 +22,14 @@ export async function POST(request: NextRequest) {
   const boutiqueId = scope.boutiqueId;
   const userId = scope.userId;
   const empId = scope.empId;
+  const isManager = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
 
-  const body = (await request.json().catch(() => null)) as { taskId?: string; action?: ToggleAction } | null;
+  const body = (await request.json().catch(() => null)) as {
+    taskId?: string;
+    action?: ToggleAction;
+    dueDate?: string;
+    assigneeEmpId?: string;
+  } | null;
   const taskId = body?.taskId;
   const action = body?.action;
 
@@ -31,7 +37,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
 
-  const { date } = getTodayDateInKsa();
+  const { dateStr: todayStr } = getTodayDateInKsa();
+  const dueDateStr = body?.dueDate ?? todayStr;
+  const dueDate = new Date(`${dueDateStr}T00:00:00Z`);
 
   const task = await prisma.task.findFirst({
     where: { id: taskId, boutiqueId },
@@ -51,13 +59,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
   }
 
-  if (!tasksRunnableOnDate(task, date)) {
-    return NextResponse.json({ error: 'Task not due today' }, { status: 400 });
+  if (!tasksRunnableOnDate(task, dueDate)) {
+    return NextResponse.json({ error: 'Task not scheduled for this date' }, { status: 400 });
   }
 
-  const assignment = await assignTaskOnDate(task, date);
+  const assignment = await assignTaskOnDate(task, dueDate);
 
-  if (assignment.assignedEmpId !== empId) {
+  let targetUserId = userId;
+
+  if (isManager && body?.assigneeEmpId && body.assigneeEmpId !== empId) {
+    const targetUser = await prisma.user.findFirst({
+      where: { empId: body.assigneeEmpId },
+      select: { id: true },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 });
+    }
+    targetUserId = targetUser.id;
+  } else if (assignment.assignedEmpId !== empId && !isManager) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -68,12 +87,12 @@ export async function POST(request: NextRequest) {
       where: {
         taskId_userId: {
           taskId,
-          userId,
+          userId: targetUserId,
         },
       },
       create: {
         taskId,
-        userId,
+        userId: targetUserId,
         completedAt: now,
         undoneAt: null,
       },
@@ -96,7 +115,7 @@ export async function POST(request: NextRequest) {
       where: {
         taskId_userId: {
           taskId,
-          userId,
+          userId: targetUserId,
         },
       },
       data: {
@@ -110,7 +129,6 @@ export async function POST(request: NextRequest) {
       completedAt: completion.completedAt.toISOString(),
     });
   } catch {
-    // If there is no existing completion row, treat as no-op.
     return NextResponse.json({
       taskId,
       isCompleted: false,

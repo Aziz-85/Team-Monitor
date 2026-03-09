@@ -300,11 +300,12 @@ export function TasksMonitorClient() {
           </div>
 
           {/* Completed tasks */}
-          <OpsCard title={t('completedTableTitle')} className="rounded-2xl border border-border shadow-sm">
+          <section>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">{t('completedTableTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
-                  <LuxuryTh>{t('title') || 'Title'}</LuxuryTh>
+                  <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
                   <LuxuryTh>{t('due')}</LuxuryTh>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
@@ -349,14 +350,15 @@ export function TasksMonitorClient() {
                 )}
               </LuxuryTableBody>
             </LuxuryTable>
-          </OpsCard>
+          </section>
 
           {/* Pending / Overdue tasks */}
-          <OpsCard title={t('pendingTableTitle')} className="rounded-2xl border border-border shadow-sm">
+          <section>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">{t('pendingTableTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
-                  <LuxuryTh>{t('title') || 'Title'}</LuxuryTh>
+                  <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
                   <LuxuryTh>{t('due')}</LuxuryTh>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
@@ -394,10 +396,11 @@ export function TasksMonitorClient() {
                 )}
               </LuxuryTableBody>
             </LuxuryTable>
-          </OpsCard>
+          </section>
 
           {/* Employee performance */}
-          <OpsCard title={t('employeePerformanceTitle')} className="rounded-2xl border border-border shadow-sm">
+          <section>
+            <h2 className="mb-2 text-lg font-semibold text-foreground">{t('employeePerformanceTitle')}</h2>
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
@@ -438,7 +441,7 @@ export function TasksMonitorClient() {
                 )}
               </LuxuryTableBody>
             </LuxuryTable>
-          </OpsCard>
+          </section>
 
           {/* Suspicious activity */}
           {data.suspiciousBursts.length > 0 && (

@@ -81,13 +81,13 @@ export function TasksPageClient({ role }: { role: Role }) {
   }, [search]);
 
   const toggleCompletion = useCallback(
-    (taskId: string, action: 'done' | 'undo') => {
+    (taskId: string, action: 'done' | 'undo', dueDate?: string, assigneeEmpId?: string | null) => {
       if (updatingId) return;
       setUpdatingId(taskId);
       fetch('/api/tasks/completion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, action }),
+        body: JSON.stringify({ taskId, action, dueDate, assigneeEmpId: assigneeEmpId ?? undefined }),
       })
         .then((r) => {
           if (r.ok) fetchList();
@@ -213,95 +213,100 @@ export function TasksPageClient({ role }: { role: Role }) {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-subtle">
-                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
+                <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wider text-muted">
                   {t('tasks.colStatus')}
                 </th>
-                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
+                <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wider text-muted">
                   {t('tasks.colTitle')}
                 </th>
-                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
+                <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wider text-muted">
                   {t('tasks.colAssignee')}
                 </th>
-                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
+                <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wider text-muted">
                   {t('tasks.colDueDate')}
                 </th>
-                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
+                <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wider text-muted">
                   {t('tasks.colActions')}
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {loading && (
                 <tr>
-                  <td colSpan={5} className="border border-border px-2 py-4 text-center text-muted">
+                  <td colSpan={5} className="px-3 py-6 text-center text-muted">
                     {t('common.loading')}
                   </td>
                 </tr>
               )}
               {!loading && tasks.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="border border-border px-2 py-6 text-center text-muted">
+                  <td colSpan={5} className="px-3 py-8 text-center text-muted">
                     {t('tasks.emptyList')}
                   </td>
                 </tr>
               )}
               {!loading &&
-                tasks.map((row) => (
-                  <tr key={`${row.taskId}-${row.dueDate}`} className="border-b border-border">
-                    <td className="border border-border px-2 py-2">
-                      {row.isCompleted ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                          {t('tasks.done')}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs text-muted">
-                          {t('tasks.statusOpen')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="max-w-[200px] border border-border px-2 py-2">
-                      <span className="line-clamp-2 break-words text-foreground">{row.title}</span>
-                    </td>
-                    <td className="border border-border px-2 py-2 text-foreground">
-                      {row.assigneeName ? getFirstName(row.assigneeName) : '—'}
-                    </td>
-                    <td
-                      className={`border border-border px-2 py-2 ${isOverdue(row.dueDate) ? 'font-medium text-red-600' : 'text-foreground'}`}
-                    >
-                      {formatDDMM(row.dueDate)}
-                    </td>
-                    <td className="border border-border px-2 py-2">
-                      <div className="flex flex-wrap gap-1">
-                        {row.isMine && row.dueDate === todayStr && (
-                          <button
-                            type="button"
-                            disabled={!!updatingId}
-                            onClick={() => toggleCompletion(row.taskId, row.isCompleted ? 'undo' : 'done')}
-                            className={
-                              row.isCompleted
-                                ? 'rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50'
-                                : 'rounded bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50'
-                            }
-                          >
-                            {updatingId === row.taskId ? t('common.loading') : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
-                          </button>
+                tasks.map((row) => {
+                  const canToggle = row.isMine || canSeeAllAssigned;
+                  return (
+                    <tr key={`${row.taskId}-${row.dueDate}`} className="hover:bg-surface-subtle/50">
+                      <td className="px-3 py-2.5">
+                        {row.isCompleted ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                            {t('tasks.done')}
+                          </span>
+                        ) : isOverdue(row.dueDate) ? (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
+                            {t('tasks.filterOverdue')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs text-muted">
+                            {t('tasks.statusOpen')}
+                          </span>
                         )}
-                        {(role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-                          <Link
-                            href="/tasks/setup"
-                            className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
-                          >
-                            {t('tasks.edit')}
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="max-w-[240px] px-3 py-2.5">
+                        <span className="line-clamp-2 break-words text-foreground">{row.title}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-foreground">
+                        {row.assigneeName ? getFirstName(row.assigneeName) : '—'}
+                      </td>
+                      <td className={`px-3 py-2.5 ${isOverdue(row.dueDate) && !row.isCompleted ? 'font-medium text-red-600' : 'text-foreground'}`}>
+                        {formatDDMM(row.dueDate)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {canToggle && (
+                            <button
+                              type="button"
+                              disabled={!!updatingId}
+                              onClick={() => toggleCompletion(row.taskId, row.isCompleted ? 'undo' : 'done', row.dueDate, row.assigneeEmpId)}
+                              className={
+                                row.isCompleted
+                                  ? 'rounded border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50'
+                                  : 'rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50'
+                              }
+                            >
+                              {updatingId === row.taskId ? '...' : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
+                            </button>
+                          )}
+                          {canSeeAllAssigned && (
+                            <Link
+                              href="/tasks/setup"
+                              className="rounded border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
+                            >
+                              {t('tasks.edit')}
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>

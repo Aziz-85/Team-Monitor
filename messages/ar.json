@@ -29,7 +29,10 @@
     "search": "بحث",
     "failed": "فشل",
     "workingOnBoutique": "تعمل على",
-    "workingOnBoutiqueShort": "البوتيك"
+    "workingOnBoutiqueShort": "البوتيك",
+    "prev": "السابق",
+    "next": "التالي",
+    "thisMonth": "الشهر الحالي"
   },
   "adminEmp": {
     "addEmployee": "إضافة موظف",
@@ -553,6 +556,7 @@
     "errorDuplicatePrimaryBackup1": "لا يمكن أن يكون الأساسي و الاحتياطي 1 نفس الشخص.",
     "errorDuplicatePrimaryBackup2": "لا يمكن أن يكون الأساسي والاحتياطي 2 نفس الشخص.",
     "errorDuplicateBackup1Backup2": "لا يمكن أن يكون الاحتياطي 1 والاحتياطي 2 نفس الشخص.",
+    "colTaskTitle": "العنوان",
     "monitorTitle": "مراقبة إنجاز المهام",
     "monitorNav": "مراقبة المهام",
     "status": "الحالة",

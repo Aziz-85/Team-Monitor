@@ -29,7 +29,10 @@
     "search": "Search",
     "failed": "Failed",
     "workingOnBoutique": "Working on",
-    "workingOnBoutiqueShort": "Boutique"
+    "workingOnBoutiqueShort": "Boutique",
+    "prev": "Previous",
+    "next": "Next",
+    "thisMonth": "This month"
   },
   "adminEmp": {
     "addEmployee": "Add employee",
@@ -554,6 +557,7 @@
     "errorDuplicatePrimaryBackup1": "Primary and Backup 1 cannot be the same.",
     "errorDuplicatePrimaryBackup2": "Primary and Backup 2 cannot be the same.",
     "errorDuplicateBackup1Backup2": "Backup 1 and Backup 2 cannot be the same.",
+    "colTaskTitle": "Title",
     "monitorTitle": "Task Completion Monitor",
     "monitorNav": "Task Monitor",
     "status": "Status",
