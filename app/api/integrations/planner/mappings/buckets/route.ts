@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
     select: { boutiqueId: true },
   });
   if (!integration) return NextResponse.json({ error: 'Integration not found' }, { status: 404 });
-  if (access.boutiqueId && integration.boutiqueId !== access.boutiqueId) {
+  const canAccessBoutique = (boutiqueId: string | null) =>
+    !boutiqueId ||
+    (access.boutiqueId ? boutiqueId === access.boutiqueId : access.boutiqueIds?.includes(boutiqueId) ?? true);
+  if (integration.boutiqueId && !canAccessBoutique(integration.boutiqueId)) {
     return NextResponse.json({ error: 'Forbidden: integration not in your boutique' }, { status: 403 });
   }
 
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
       where: { id: body.id },
       include: { integration: { select: { boutiqueId: true } } },
     });
-    if (access.boutiqueId && existing?.integration.boutiqueId !== access.boutiqueId) {
+    if (existing?.integration.boutiqueId && !canAccessBoutique(existing.integration.boutiqueId)) {
       return NextResponse.json({ error: 'Forbidden: boutique scope' }, { status: 403 });
     }
     const updated = await prisma.plannerBucketMap.update({

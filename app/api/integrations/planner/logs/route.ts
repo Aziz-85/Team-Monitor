@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
   if (mode) where.mode = mode;
   if (access.boutiqueId) {
     where.integration = { boutiqueId: access.boutiqueId };
+  } else if (access.boutiqueIds?.length) {
+    where.integration = { boutiqueId: { in: access.boutiqueIds } };
   }
 
   const [logs, total] = await Promise.all([

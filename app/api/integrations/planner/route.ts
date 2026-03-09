@@ -13,7 +13,11 @@ export async function GET() {
     return handleAdminError(e);
   }
 
-  const where = access.boutiqueId ? { boutiqueId: access.boutiqueId } : {};
+  const where = access.boutiqueId
+    ? { boutiqueId: access.boutiqueId }
+    : access.boutiqueIds?.length
+      ? { boutiqueId: { in: access.boutiqueIds } }
+      : {};
   const [integrations, graphOk] = await Promise.all([
     prisma.plannerIntegration.findMany({
       where,
@@ -69,9 +73,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  if (access.boutiqueId) {
+  const canAccessBoutique = (boutiqueId: string | null) =>
+    !boutiqueId ||
+    (access.boutiqueId ? boutiqueId === access.boutiqueId : access.boutiqueIds?.includes(boutiqueId) ?? true);
+
+  if (access.boutiqueId || access.boutiqueIds?.length) {
     const requestedBoutique = body.boutiqueId ?? null;
-    if (requestedBoutique && requestedBoutique !== access.boutiqueId) {
+    if (requestedBoutique && !canAccessBoutique(requestedBoutique)) {
       return NextResponse.json({ error: 'Forbidden: boutique scope' }, { status: 403 });
     }
     if (body.id) {
@@ -79,7 +87,7 @@ export async function POST(request: NextRequest) {
         where: { id: body.id },
         select: { boutiqueId: true },
       });
-      if (existing && existing.boutiqueId !== access.boutiqueId) {
+      if (existing?.boutiqueId && !canAccessBoutique(existing.boutiqueId)) {
         return NextResponse.json({ error: 'Forbidden: boutique scope' }, { status: 403 });
       }
     }
@@ -90,8 +98,10 @@ export async function POST(request: NextRequest) {
   const syncDirection: PlannerSyncDirection =
     body.syncDirection === 'EXPORT_ONLY' || body.syncDirection === 'TWO_WAY' ? body.syncDirection : 'IMPORT_ONLY';
 
+  const effectiveBoutiqueId =
+    access.boutiqueId ?? (body.boutiqueId && canAccessBoutique(body.boutiqueId) ? body.boutiqueId : null) ?? body.boutiqueId ?? null;
   const data = {
-    boutiqueId: access.boutiqueId ?? body.boutiqueId ?? null,
+    boutiqueId: effectiveBoutiqueId,
     mode,
     enabled: !!body.enabled,
     syncDirection,

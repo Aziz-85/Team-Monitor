@@ -11,9 +11,14 @@ export async function GET() {
     return handleAdminError(e);
   }
 
-  const userWhere = access.boutiqueId ? { active: true, boutiqueId: access.boutiqueId } : { active: true };
-  const bucketWhere = access.boutiqueId
-    ? { active: true, integration: { boutiqueId: access.boutiqueId } }
+  const boutiqueFilter = access.boutiqueId
+    ? { boutiqueId: access.boutiqueId }
+    : access.boutiqueIds?.length
+      ? { boutiqueId: { in: access.boutiqueIds } }
+      : null;
+  const userWhere = boutiqueFilter ? { active: true, ...boutiqueFilter } : { active: true };
+  const bucketWhere = boutiqueFilter
+    ? { active: true, integration: boutiqueFilter }
     : { active: true };
 
   const [userMaps, bucketMaps] = await Promise.all([

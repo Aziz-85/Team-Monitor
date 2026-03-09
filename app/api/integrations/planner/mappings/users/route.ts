@@ -36,12 +36,16 @@ export async function POST(request: NextRequest) {
   });
   if (!emp) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
 
-  if (access.boutiqueId && emp.boutiqueId !== access.boutiqueId) {
+  const canAccessBoutique = (boutiqueId: string | null) =>
+    !boutiqueId ||
+    (access.boutiqueId ? boutiqueId === access.boutiqueId : access.boutiqueIds?.includes(boutiqueId) ?? true);
+  if ((access.boutiqueId || access.boutiqueIds?.length) && emp.boutiqueId && !canAccessBoutique(emp.boutiqueId)) {
     return NextResponse.json({ error: 'Forbidden: employee not in your boutique' }, { status: 403 });
   }
 
+  const effectiveBoutiqueId = access.boutiqueId ?? (body.boutiqueId && canAccessBoutique(body.boutiqueId) ? body.boutiqueId : null) ?? emp.boutiqueId ?? body.boutiqueId ?? null;
   const data = {
-    boutiqueId: access.boutiqueId ?? body.boutiqueId ?? null,
+    boutiqueId: effectiveBoutiqueId,
     microsoftUserId: body.microsoftUserId ?? null,
     microsoftEmail: body.microsoftEmail ?? null,
     microsoftDisplayName: body.microsoftDisplayName ?? null,
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest) {
       where: { id: body.id },
       select: { boutiqueId: true },
     });
-    if (access.boutiqueId && existing && existing.boutiqueId !== access.boutiqueId) {
+    if ((access.boutiqueId || access.boutiqueIds?.length) && existing?.boutiqueId && !canAccessBoutique(existing.boutiqueId)) {
       return NextResponse.json({ error: 'Forbidden: boutique scope' }, { status: 403 });
     }
     const updated = await prisma.plannerUserMap.update({
