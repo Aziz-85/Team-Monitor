@@ -104,6 +104,7 @@
     "inventoryZones": "جرد المناطق",
     "inventoryFollowUp": "متابعة الجرد",
     "syncPlanner": "مزامنة المخطط",
+    "plannerIntegration": "تكامل المخطط",
     "about": "حول",
     "more": "المزيد",
     "employeeHome": "صفحتي",
@@ -349,6 +350,12 @@
     "system": {
       "defaultBoutiqueDescription": "الفرع الافتراضي عند عدم وجود نطاق محدد.",
       "confirmDefaultBoutique": "تغيير الفرع الافتراضي؟ هذا يؤثر على المستخدمين بدون تفضيل نطاق."
+    },
+    "planner": {
+      "overview": "نظرة عامة على التكامل",
+      "actions": "إجراءات",
+      "logs": "سجلات المزامنة",
+      "runReconcile": "تشغيل المطابقة"
     }
   },
   "auth": {

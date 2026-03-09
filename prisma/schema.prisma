@@ -67,6 +67,38 @@ enum TaskScheduleType {
   MONTHLY
 }
 
+// Microsoft Planner integration
+enum PlannerIntegrationMode {
+  GRAPH_DIRECT
+  POWER_AUTOMATE
+  MANUAL
+}
+
+enum PlannerSyncDirection {
+  IMPORT_ONLY
+  EXPORT_ONLY
+  TWO_WAY
+}
+
+enum PlannerTaskLinkSyncStatus {
+  LINKED
+  PENDING
+  ERROR
+  DISCONNECTED
+}
+
+enum PlannerSyncLogDirection {
+  INBOUND
+  OUTBOUND
+  RECONCILIATION
+}
+
+enum PlannerSyncLogStatus {
+  SUCCESS
+  ERROR
+  SKIPPED
+}
+
 enum EmployeePosition {
   BOUTIQUE_MANAGER
   ASSISTANT_MANAGER
@@ -393,6 +425,7 @@ model Employee {
   dayOverrides          EmployeeDayOverride[]
   compDayLedger         CompDayLedger[]
   transferAudits        EmployeeTransferAudit[]
+  plannerUserMaps       PlannerUserMap[]
 
   @@index([boutiqueId])
   @@index([boutiqueId, active])
@@ -665,6 +698,7 @@ model Task {
   taskPlans             TaskPlan[]
   taskSchedules         TaskSchedule[]
   completions           TaskCompletion[]
+  plannerTaskLink       PlannerTaskLink?
   @@index([boutiqueId])
 }
 
@@ -703,6 +737,134 @@ model PlannerImportRow {
   @@index([batchId])
   @@index([boutiqueId])
   @@index([taskKey])
+}
+
+// --- Microsoft Planner Integration (additive) ---
+model PlannerIntegration {
+  id                     String                 @id @default(cuid())
+  boutiqueId             String?
+  provider               String                 @default("MICROSOFT_PLANNER")
+  mode                   PlannerIntegrationMode  @default(MANUAL)
+  enabled                Boolean                @default(false)
+  syncDirection          PlannerSyncDirection   @default(IMPORT_ONLY)
+  tenantId               String?
+  planExternalId         String?
+  planName               String?
+  webhookSecret          String?
+  graphConnectionStatus  String?
+  lastSyncAt             DateTime?
+  lastSuccessfulSyncAt   DateTime?
+  lastErrorAt            DateTime?
+  lastErrorMessage      String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  bucketMaps   PlannerBucketMap[]
+  syncLogs     PlannerSyncLog[]
+  inboundEvents PlannerInboundEvent[]
+
+  @@index([boutiqueId])
+  @@index([enabled, mode])
+}
+
+model PlannerTaskLink {
+  id                 String                     @id @default(cuid())
+  localTaskId        String
+  externalTaskId     String
+  externalPlanId     String?
+  externalBucketId   String?
+  sourceMode         PlannerIntegrationMode     @default(MANUAL)
+  syncStatus         PlannerTaskLinkSyncStatus  @default(LINKED)
+  lastInboundSyncAt  DateTime?
+  lastOutboundSyncAt DateTime?
+  lastSyncHash       String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  localTask Task @relation(fields: [localTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([localTaskId])
+  @@unique([externalTaskId])
+  @@index([externalPlanId])
+  @@index([syncStatus])
+}
+
+model PlannerUserMap {
+  id                   String   @id @default(cuid())
+  boutiqueId           String?
+  microsoftUserId      String?
+  microsoftEmail       String?
+  microsoftDisplayName String?
+  employeeId           String
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [empId], onDelete: Cascade)
+
+  @@unique([boutiqueId, microsoftUserId])
+  @@unique([boutiqueId, employeeId])
+  @@index([boutiqueId])
+  @@index([microsoftEmail])
+}
+
+model PlannerBucketMap {
+  id                 String   @id @default(cuid())
+  integrationId      String
+  externalBucketId   String
+  externalBucketName String
+  localTaskType      String?
+  localZone          String?
+  localPriority      Int?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  integration PlannerIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, externalBucketId])
+  @@index([integrationId])
+}
+
+model PlannerSyncLog {
+  id                    String                  @id @default(cuid())
+  integrationId         String?
+  direction             PlannerSyncLogDirection
+  mode                  PlannerIntegrationMode
+  eventType             String
+  status                PlannerSyncLogStatus
+  relatedLocalTaskId    String?
+  relatedExternalTaskId String?
+  requestPayload        Json?
+  responsePayload       Json?
+  message               String?
+  createdAt             DateTime                @default(now())
+
+  integration PlannerIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@index([integrationId])
+  @@index([createdAt])
+  @@index([status, createdAt])
+}
+
+model PlannerInboundEvent {
+  id              String                 @id @default(cuid())
+  integrationId   String?
+  sourceMode      PlannerIntegrationMode
+  externalEventId String?
+  eventHash       String
+  eventType       String
+  payload         Json
+  processed       Boolean                @default(false)
+  processedAt     DateTime?
+  processingError String?
+  createdAt       DateTime               @default(now())
+
+  integration PlannerIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@unique([eventHash])
+  @@index([integrationId])
+  @@index([processed, createdAt])
 }
 
 model TaskPlan {

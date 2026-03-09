@@ -120,6 +120,7 @@ const GROUP_SETTINGS: NavGroup = {
     { href: '/admin/reset-emp-id', key: 'nav.admin.resetEmpId', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/reset-password', key: 'nav.admin.resetPassword', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/sync/planner', key: 'nav.syncPlanner', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+    { href: '/admin/integrations/planner', key: 'nav.plannerIntegration', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import', key: 'nav.admin.importDashboard', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import/monthly-snapshot', key: 'nav.admin.monthSnapshot', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { href: '/admin/import/historical', key: 'nav.admin.historicalImport', roles: ['ADMIN', 'SUPER_ADMIN'] },

@@ -105,6 +105,7 @@
     "inventoryZones": "Zone Inventory",
     "inventoryFollowUp": "Inventory Follow-up",
     "syncPlanner": "Sync Planner",
+    "plannerIntegration": "Planner Integration",
     "about": "About",
     "more": "More",
     "employeeHome": "My Home",
@@ -350,6 +351,12 @@
     "system": {
       "defaultBoutiqueDescription": "Default boutique used when user has no scope selection.",
       "confirmDefaultBoutique": "Change the default boutique? This affects users with no scope preference."
+    },
+    "planner": {
+      "overview": "Integration Overview",
+      "actions": "Actions",
+      "logs": "Sync logs",
+      "runReconcile": "Run reconciliation"
     }
   },
   "auth": {
