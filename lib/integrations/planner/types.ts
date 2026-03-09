@@ -10,7 +10,25 @@ export type PlannerTaskLinkSyncStatus = 'LINKED' | 'PENDING' | 'ERROR' | 'DISCON
 export type PlannerSyncLogDirection = 'INBOUND' | 'OUTBOUND' | 'RECONCILIATION';
 export type PlannerSyncLogStatus = 'SUCCESS' | 'ERROR' | 'SKIPPED';
 
-/** Power Automate / webhook inbound payload shape. */
+/**
+ * Power Automate webhook inbound payload contract.
+ *
+ * REQUIRED:
+ *   - taskId (string): External Planner task ID. Also accepted in payload.raw.taskId.
+ *   - eventType (string, if present): Must be string. Recommended: task.created | task.updated | task.completed | task.uncompleted
+ *
+ * OPTIONAL (used for completion sync when isCompleted=true):
+ *   - assignedUsers: Array<{ email?, displayName?, id? }> — first email used to resolve Employee via PlannerUserMap
+ *   - isCompleted (boolean) or percentComplete (number, 100 = completed)
+ *   - planId, bucketId, title, description, dueDateTime, sourceUpdatedAt
+ *   - eventId: For idempotency hints (full payload hash is primary)
+ *   - raw: Fallback object for nested fields (e.g. raw.taskId)
+ *
+ * FALLBACK BEHAVIOR:
+ *   - Unmapped user: Skipped; no TaskCompletion created
+ *   - Unmapped bucket: Not used for completion; bucket maps only affect future features
+ *   - Missing optional fields: Normalized to null/empty; processing continues
+ */
 export type InboundPlannerPayload = {
   eventType: string;
   eventId?: string;

@@ -121,7 +121,11 @@
 
 ---
 
-## 8. Example Power Automate Payload
+## 8. Webhook Contract
+
+See `docs/PLANNER_WEBHOOK_CONTRACT.md` for full payload shape, required/optional fields, and fallback behavior.
+
+## 9. Example Power Automate Payload
 
 ```json
 {
@@ -147,7 +151,7 @@
 
 ---
 
-## 9. Recommended Next Steps
+## 10. Recommended Next Steps
 
 1. Run `npx prisma migrate deploy` to apply migration
 2. Create a PlannerIntegration via API or extend UI with connection settings form

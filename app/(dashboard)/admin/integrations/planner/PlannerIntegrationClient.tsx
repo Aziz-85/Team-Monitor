@@ -7,20 +7,59 @@ import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from
 import { Modal } from '@/components/admin/Modal';
 
 const WEBHOOK_SECRET_HEADER = 'x-planner-webhook-secret';
-const EXAMPLE_PAYLOAD = {
-  eventType: 'task.created',
-  eventId: 'flow-run-id-or-guid',
-  mode: 'POWER_AUTOMATE',
-  planId: 'plan-id',
-  bucketId: 'bucket-id',
-  taskId: 'external-task-id',
-  title: 'Task title',
-  description: 'Description',
-  percentComplete: 0,
-  isCompleted: false,
-  dueDateTime: '2026-03-10T00:00:00Z',
-  assignedUsers: [{ id: 'user-id', email: 'user@example.com', displayName: 'User Name' }],
-  sourceUpdatedAt: new Date().toISOString(),
+
+const SAMPLE_PAYLOADS: Record<string, object> = {
+  'task.created': {
+    eventType: 'task.created',
+    eventId: 'flow-run-' + Date.now(),
+    mode: 'POWER_AUTOMATE',
+    planId: 'plan-id',
+    bucketId: 'bucket-id',
+    taskId: 'external-task-id',
+    title: 'New task',
+    description: 'Description',
+    percentComplete: 0,
+    isCompleted: false,
+    dueDateTime: new Date().toISOString().slice(0, 19) + 'Z',
+    assignedUsers: [{ id: 'user-id', email: 'user@example.com', displayName: 'User Name' }],
+    sourceUpdatedAt: new Date().toISOString(),
+  },
+  'task.updated': {
+    eventType: 'task.updated',
+    eventId: 'flow-run-' + Date.now(),
+    mode: 'POWER_AUTOMATE',
+    planId: 'plan-id',
+    bucketId: 'bucket-id',
+    taskId: 'external-task-id',
+    title: 'Updated task',
+    percentComplete: 50,
+    isCompleted: false,
+    dueDateTime: new Date().toISOString().slice(0, 19) + 'Z',
+    assignedUsers: [{ email: 'user@example.com', displayName: 'User Name' }],
+    sourceUpdatedAt: new Date().toISOString(),
+  },
+  'task.completed': {
+    eventType: 'task.completed',
+    eventId: 'flow-run-' + Date.now(),
+    mode: 'POWER_AUTOMATE',
+    taskId: 'external-task-id',
+    title: 'Completed task',
+    percentComplete: 100,
+    isCompleted: true,
+    assignedUsers: [{ email: 'user@example.com', displayName: 'User Name' }],
+    sourceUpdatedAt: new Date().toISOString(),
+  },
+  'task.uncompleted': {
+    eventType: 'task.uncompleted',
+    eventId: 'flow-run-' + Date.now(),
+    mode: 'POWER_AUTOMATE',
+    taskId: 'external-task-id',
+    title: 'Reopened task',
+    percentComplete: 0,
+    isCompleted: false,
+    assignedUsers: [{ email: 'user@example.com' }],
+    sourceUpdatedAt: new Date().toISOString(),
+  },
 };
 
 type Integration = {
@@ -75,7 +114,7 @@ type Log = {
   createdAt: string;
 };
 
-function CopyButton({ text, label }: { text: string; label: string }) {
+function CopyButton({ text, label, t }: { text: string; label: string; t: (k: string) => string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -88,9 +127,9 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       type="button"
       onClick={copy}
       className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
-      title={`Copy ${label}`}
+      title={`${t('admin.planner.copy')} ${label}`}
     >
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? t('admin.planner.copied') : t('admin.planner.copy')}
     </button>
   );
 }
@@ -104,7 +143,7 @@ export function PlannerIntegrationClient() {
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<Log[]>([]);
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [testPayload, setTestPayload] = useState(JSON.stringify(EXAMPLE_PAYLOAD, null, 2));
+  const [testPayload, setTestPayload] = useState(JSON.stringify(SAMPLE_PAYLOADS['task.created'], null, 2));
   const [testResult, setTestResult] = useState<{ ok: boolean; eventHash?: string; normalized?: unknown; parseError?: string } | null>(null);
   const [testLoading, setTestLoading] = useState(false);
   const [userMapModal, setUserMapModal] = useState<'add' | 'edit' | null>(null);
@@ -244,46 +283,67 @@ export function PlannerIntegrationClient() {
       <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className="rounded-xl border border-border">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-medium uppercase text-muted">Graph API</p>
-            <p className="text-foreground">{graphConfigured ? 'Configured' : 'Not configured'}</p>
+            <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.graphApi')}</p>
+            <p className="text-foreground">{graphConfigured ? t('admin.planner.configured') : t('admin.planner.notConfigured')}</p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase text-muted">Integrations</p>
+            <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.integrations')}</p>
             <p className="text-foreground">{integrations.length}</p>
           </div>
         </div>
       </OpsCard>
 
       {!powerAutomateIntegration && (
-        <OpsCard title="Add Power Automate integration" className="rounded-xl border border-border">
-          <IntegrationForm onSuccess={fetchData} />
+        <OpsCard title={t('admin.planner.addPowerAutomate')} className="rounded-xl border border-border">
+          <IntegrationForm onSuccess={fetchData} t={t} />
         </OpsCard>
       )}
 
       {powerAutomateIntegration && (
-        <OpsCard title="Webhook (Power Automate)" className="rounded-xl border border-border">
-          <div className="space-y-3 text-sm">
+        <OpsCard title={t('admin.planner.powerAutomateSetup')} className="rounded-xl border border-border">
+          <p className="mb-4 text-sm text-muted">{t('admin.planner.powerAutomateSetupDesc')}</p>
+          <div className="space-y-4 text-sm">
             <div>
-              <p className="text-xs font-medium uppercase text-muted">Webhook URL</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.webhookUrl')}</p>
               <div className="mt-1 flex items-center gap-2">
                 <code className="flex-1 truncate rounded bg-muted/50 px-2 py-1 font-mono text-xs">{webhookUrl || '/api/integrations/planner/webhook'}</code>
-                <CopyButton text={webhookUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/integrations/planner/webhook`} label="URL" />
+                <CopyButton text={webhookUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/integrations/planner/webhook`} label="URL" t={t} />
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-muted">Required header</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.requiredHeader')}</p>
               <div className="mt-1 flex items-center gap-2">
                 <code className="rounded bg-muted/50 px-2 py-1 font-mono text-xs">{WEBHOOK_SECRET_HEADER}</code>
-                <CopyButton text={WEBHOOK_SECRET_HEADER} label="header name" />
+                <CopyButton text={WEBHOOK_SECRET_HEADER} label="header name" t={t} />
               </div>
-              <p className="mt-1 text-xs text-muted">Value must match the webhook secret configured for this integration.</p>
+              <p className="mt-1 text-xs text-muted">{t('admin.planner.headerValueHint')}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.samplePayload')}</p>
+              <div className="mt-1 flex items-start gap-2">
+                <pre className="flex-1 overflow-auto rounded bg-muted/50 p-2 font-mono text-xs">{JSON.stringify(SAMPLE_PAYLOADS['task.completed'], null, 2)}</pre>
+                <CopyButton text={JSON.stringify(SAMPLE_PAYLOADS['task.completed'], null, 2)} label="sample" t={t} />
+              </div>
+              <p className="mt-1 text-xs text-muted">{t('admin.planner.samplePayloadHint')}</p>
             </div>
           </div>
         </OpsCard>
       )}
 
-      <OpsCard title="Test payload helper" className="rounded-xl border border-border">
-        <p className="mb-2 text-sm text-muted">Paste or edit a Power Automate payload below, then click Test to validate (dry-run).</p>
+      <OpsCard title={t('admin.planner.testPayloadHelper')} className="rounded-xl border border-border">
+        <p className="mb-2 text-sm text-muted">{t('admin.planner.testPayloadDesc')}</p>
+        <div className="mb-2 flex flex-wrap gap-2">
+          {(['task.created', 'task.updated', 'task.completed', 'task.uncompleted'] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTestPayload(JSON.stringify(SAMPLE_PAYLOADS[key], null, 2))}
+              className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
+            >
+              {key}
+            </button>
+          ))}
+        </div>
         <textarea
           value={testPayload}
           onChange={(e) => setTestPayload(e.target.value)}
@@ -298,7 +358,7 @@ export function PlannerIntegrationClient() {
             disabled={testLoading}
             className="rounded bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
-            {testLoading ? 'Testing…' : 'Test payload'}
+            {testLoading ? t('admin.planner.testing') : t('admin.planner.testPayload')}
           </button>
           {testResult && (
             <span className={testResult.ok ? 'text-green-600' : 'text-amber-600'}>
@@ -311,7 +371,7 @@ export function PlannerIntegrationClient() {
         ) : null}
       </OpsCard>
 
-      <OpsCard title="User mappings (Microsoft → Employee)" className="rounded-xl border border-border">
+      <OpsCard title={t('admin.planner.userMappings')} className="rounded-xl border border-border">
         <div className="mb-3">
           <button
             type="button"
@@ -326,8 +386,8 @@ export function PlannerIntegrationClient() {
         </div>
         <AdminDataTable>
           <AdminTableHead>
-            <AdminTh>Microsoft email</AdminTh>
-            <AdminTh>Employee</AdminTh>
+            <AdminTh>{t('admin.planner.microsoftEmail')}</AdminTh>
+            <AdminTh>{t('admin.planner.employee')}</AdminTh>
             <AdminTh>{t('common.edit')}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
@@ -361,7 +421,7 @@ export function PlannerIntegrationClient() {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title="Bucket mappings (Planner bucket → local)" className="rounded-xl border border-border">
+      <OpsCard title={t('admin.planner.bucketMappings')} className="rounded-xl border border-border">
         <div className="mb-3">
           <button
             type="button"
@@ -376,9 +436,9 @@ export function PlannerIntegrationClient() {
         </div>
         <AdminDataTable>
           <AdminTableHead>
-            <AdminTh>Bucket</AdminTh>
-            <AdminTh>Plan</AdminTh>
-            <AdminTh>Local type/zone</AdminTh>
+            <AdminTh>{t('admin.planner.bucket')}</AdminTh>
+            <AdminTh>{t('admin.planner.plan')}</AdminTh>
+            <AdminTh>{t('admin.planner.localTypeZone')}</AdminTh>
             <AdminTh>{t('common.edit')}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
@@ -436,32 +496,30 @@ export function PlannerIntegrationClient() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-3 py-2 text-start text-muted">Dir</th>
-                <th className="px-3 py-2 text-start text-muted">Event</th>
-                <th className="px-3 py-2 text-start text-muted">Status</th>
-                <th className="px-3 py-2 text-start text-muted">Local task</th>
-                <th className="px-3 py-2 text-start text-muted">External task</th>
-                <th className="px-3 py-2 text-start text-muted">Message</th>
-                <th className="px-3 py-2 text-start text-muted">Date</th>
+                <th className="px-3 py-2 text-start text-muted">eventType</th>
+                <th className="px-3 py-2 text-start text-muted">status</th>
+                <th className="px-3 py-2 text-start text-muted">taskId</th>
+                <th className="px-3 py-2 text-start text-muted">localTaskId</th>
+                <th className="px-3 py-2 text-start text-muted">message</th>
+                <th className="px-3 py-2 text-start text-muted">createdAt</th>
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-center text-muted">
+                  <td colSpan={6} className="px-3 py-4 text-center text-muted">
                     —
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="border-b border-border">
-                    <td className="px-3 py-2 text-foreground">{log.direction}</td>
                     <td className="px-3 py-2 text-foreground">{log.eventType}</td>
                     <td className="px-3 py-2">{log.status}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-muted">{log.relatedLocalTaskId ? log.relatedLocalTaskId.slice(0, 8) + '…' : '—'}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-muted">{log.relatedExternalTaskId ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted max-w-[200px] truncate" title={log.message ?? undefined}>{log.message ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs" title={log.relatedExternalTaskId ?? undefined}>{log.relatedExternalTaskId ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs" title={log.relatedLocalTaskId ?? undefined}>{log.relatedLocalTaskId ?? '—'}</td>
+                    <td className="px-3 py-2 text-muted max-w-[220px] truncate" title={log.message ?? undefined}>{log.message ?? '—'}</td>
+                    <td className="px-3 py-2 text-muted whitespace-nowrap">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</td>
                   </tr>
                 ))
               )}
@@ -477,7 +535,7 @@ export function PlannerIntegrationClient() {
             setUserMapModal(null);
             setEditingUserMap(null);
           }}
-          title={editingUserMap ? 'Edit user map' : 'Add user map'}
+          title={editingUserMap ? t('admin.planner.editUserMap') : t('admin.planner.addUserMap')}
         >
           <UserMapForm
             employees={employees}
@@ -487,6 +545,7 @@ export function PlannerIntegrationClient() {
               setUserMapModal(null);
               setEditingUserMap(null);
             }}
+            t={t}
           />
         </Modal>
       )}
@@ -498,7 +557,7 @@ export function PlannerIntegrationClient() {
             setBucketMapModal(null);
             setEditingBucketMap(null);
           }}
-          title={editingBucketMap ? 'Edit bucket map' : 'Add bucket map'}
+          title={editingBucketMap ? t('admin.planner.editBucketMap') : t('admin.planner.addBucketMap')}
         >
           <BucketMapForm
             integrations={integrations}
@@ -519,6 +578,7 @@ export function PlannerIntegrationClient() {
               setBucketMapModal(null);
               setEditingBucketMap(null);
             }}
+            t={t}
           />
         </Modal>
       )}
@@ -526,7 +586,7 @@ export function PlannerIntegrationClient() {
   );
 }
 
-function IntegrationForm({ onSuccess }: { onSuccess: () => void }) {
+function IntegrationForm({ onSuccess, t }: { onSuccess: () => void; t: (k: string) => string }) {
   const [boutiqueId, setBoutiqueId] = useState('');
   const [webhookSecret, setWebhookSecret] = useState('');
   const [planName, setPlanName] = useState('');
@@ -575,7 +635,7 @@ function IntegrationForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-foreground">Boutique (optional)</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.boutiqueOptional')}</label>
         <select value={boutiqueId} onChange={(e) => setBoutiqueId(e.target.value)} className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm">
           <option value="">—</option>
           {boutiques.map((b) => (
@@ -586,29 +646,29 @@ function IntegrationForm({ onSuccess }: { onSuccess: () => void }) {
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Webhook secret</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.webhookSecret')}</label>
         <input
           type="password"
           value={webhookSecret}
           onChange={(e) => setWebhookSecret(e.target.value)}
-          placeholder="Strong random string"
+          placeholder={t('admin.planner.webhookSecretPlaceholder')}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Plan name (optional)</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.planNameOptional')}</label>
         <input
           type="text"
           value={planName}
           onChange={(e) => setPlanName(e.target.value)}
-          placeholder="e.g. DHTasks Plan"
+          placeholder={t('admin.planner.planNamePlaceholder')}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
       <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
-        {saving ? 'Creating…' : 'Create integration'}
+        {saving ? t('admin.planner.creating') : t('admin.planner.createIntegration')}
       </button>
     </form>
   );
@@ -619,11 +679,13 @@ function UserMapForm({
   initial,
   onSubmit,
   onCancel,
+  t,
 }: {
   employees: Array<{ empId: string; name: string }>;
   initial?: { employeeId: string; microsoftEmail?: string; microsoftDisplayName?: string };
   onSubmit: (v: { employeeId: string; microsoftEmail?: string; microsoftDisplayName?: string }) => Promise<void>;
   onCancel: () => void;
+  t: (k: string) => string;
 }) {
   const initialInList = initial?.employeeId && employees.some((e) => e.empId === initial.employeeId);
   const [employeeId, setEmployeeId] = useState(initialInList ? initial!.employeeId : initial?.employeeId ? '__custom__' : '');
@@ -655,7 +717,7 @@ function UserMapForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-foreground">Employee</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.employee')}</label>
         <select
           value={employees.some((e) => e.empId === employeeId) || employeeId === '__custom__' ? employeeId : '__custom__'}
           onChange={(e) => {
@@ -666,26 +728,26 @@ function UserMapForm({
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         >
-          <option value="">Select…</option>
+          <option value="">{t('admin.planner.selectPlaceholder')}</option>
           {employees.map((e) => (
             <option key={e.empId} value={e.empId}>
               {e.name} ({e.empId})
             </option>
           ))}
-          <option value="__custom__">Other (enter empId)</option>
+          <option value="__custom__">{t('admin.planner.otherEmpId')}</option>
         </select>
         {employeeId === '__custom__' && (
           <input
             type="text"
             value={customEmpId}
             onChange={(e) => setCustomEmpId(e.target.value)}
-            placeholder="Employee ID (empId)"
+            placeholder={t('admin.planner.empIdPlaceholder')}
             className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           />
         )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Microsoft email</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.microsoftEmail')}</label>
         <input
           type="text"
           value={microsoftEmail}
@@ -695,22 +757,22 @@ function UserMapForm({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Microsoft display name</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.microsoftDisplayName')}</label>
         <input
           type="text"
           value={microsoftDisplayName}
           onChange={(e) => setMicrosoftDisplayName(e.target.value)}
-          placeholder="Optional"
+          placeholder={t('admin.planner.optional')}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('admin.planner.saving') : t('common.save')}
         </button>
         <button type="button" onClick={onCancel} className="rounded border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-surface-subtle">
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>
@@ -722,11 +784,13 @@ function BucketMapForm({
   initial,
   onSubmit,
   onCancel,
+  t,
 }: {
   integrations: Integration[];
   initial?: { integrationId: string; externalBucketId: string; externalBucketName: string; localTaskType?: string; localZone?: string; localPriority?: number };
   onSubmit: (v: { integrationId: string; externalBucketId: string; externalBucketName: string; localTaskType?: string; localZone?: string; localPriority?: number }) => Promise<void>;
   onCancel: () => void;
+  t: (k: string) => string;
 }) {
   const [integrationId, setIntegrationId] = useState(initial?.integrationId ?? '');
   const [externalBucketId, setExternalBucketId] = useState(initial?.externalBucketId ?? '');
@@ -764,14 +828,14 @@ function BucketMapForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-foreground">Integration</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.integration')}</label>
         <select
           value={integrationId}
           onChange={(e) => setIntegrationId(e.target.value)}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         >
-          <option value="">Select…</option>
+          <option value="">{t('admin.planner.selectPlaceholder')}</option>
           {integrations.map((i) => (
             <option key={i.id} value={i.id}>
               {i.planName ?? i.id}
@@ -780,29 +844,29 @@ function BucketMapForm({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">External bucket ID</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.externalBucketId')}</label>
         <input
           type="text"
           value={externalBucketId}
           onChange={(e) => setExternalBucketId(e.target.value)}
-          placeholder="Planner bucket ID"
+          placeholder={t('admin.planner.externalBucketIdPlaceholder')}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">External bucket name</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.externalBucketName')}</label>
         <input
           type="text"
           value={externalBucketName}
           onChange={(e) => setExternalBucketName(e.target.value)}
-          placeholder="e.g. To Do"
+          placeholder={t('admin.planner.externalBucketNamePlaceholder')}
           className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Local task type (optional)</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.localTaskTypeOptional')}</label>
         <input
           type="text"
           value={localTaskType}
@@ -811,7 +875,7 @@ function BucketMapForm({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Local zone (optional)</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.localZoneOptional')}</label>
         <input
           type="text"
           value={localZone}
@@ -820,7 +884,7 @@ function BucketMapForm({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-foreground">Local priority (optional)</label>
+        <label className="block text-sm font-medium text-foreground">{t('admin.planner.localPriorityOptional')}</label>
         <input
           type="number"
           value={localPriority}
@@ -831,10 +895,10 @@ function BucketMapForm({
       {error && <p className="text-sm text-amber-600">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('admin.planner.saving') : t('common.save')}
         </button>
         <button type="button" onClick={onCancel} className="rounded border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-surface-subtle">
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>

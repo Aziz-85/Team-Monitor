@@ -1,5 +1,7 @@
 /**
  * Map Microsoft users to local employees.
+ * Fallback: returns null if no PlannerUserMap match and no Employee with matching email.
+ * Unmapped user → inbound skips TaskCompletion creation.
  */
 
 import { prisma } from '@/lib/db';

@@ -1,3 +1,13 @@
+/**
+ * Power Automate webhook — POST /api/integrations/planner/webhook
+ *
+ * CONTRACT:
+ *   - Header: x-planner-webhook-secret = integration.webhookSecret
+ *   - Body: JSON object with REQUIRED taskId (string), optional eventType (string)
+ *   - Response: { ok, processed, created, updated, skipped, errors? }
+ *
+ * Accepted payload shape: see lib/integrations/planner/types.ts InboundPlannerPayload
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { processInboundEvent } from '@/lib/integrations/planner/inbound';

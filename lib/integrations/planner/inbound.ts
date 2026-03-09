@@ -1,6 +1,12 @@
 /**
  * Process inbound Power Automate / webhook payloads.
  * Idempotent; never bypass RBAC or boutique scope.
+ *
+ * Fallback behavior:
+ * - Unmapped user (resolveEmployeeIdFromMicrosoft returns null): skipped; no TaskCompletion
+ * - Unmapped bucket: not used for completion sync; bucket maps for future features
+ * - Missing optional fields: normalize uses null/empty; processing continues
+ * - No PlannerTaskLink for externalTaskId: skipped; error "No linked task for externalTaskId"
  */
 
 import { prisma } from '@/lib/db';
