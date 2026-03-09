@@ -150,30 +150,30 @@ export function SalesImportClient() {
   return (
     <div className="overflow-x-hidden p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">Sales Import</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">Sales Import</h1>
 
         {/* 1) Template */}
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Template</h3>
-          <p className="mb-3 text-xs text-slate-500">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Template</h3>
+          <p className="mb-3 text-xs text-muted">
             Download an Excel template (DATA_MATRIX sheet) with days and employee columns for the selected month.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={templateMonth}
                 onChange={(e) => setTemplateMonth(e.target.value)}
-                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
               />
             </div>
             <button
               type="button"
               disabled={!templateMonth.trim() || templateLoading}
               onClick={downloadTemplate}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
             >
               {templateLoading ? '…' : 'Download Template'}
             </button>
@@ -182,8 +182,8 @@ export function SalesImportClient() {
 
         {/* 2) Import */}
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Import</h3>
-          <p className="mb-3 text-xs text-slate-500">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Import</h3>
+          <p className="mb-3 text-xs text-muted">
             Upload .xlsx with DATA_MATRIX sheet. Preview (dry run) first; Apply writes to DB when there are no blocking errors.
           </p>
           <input
@@ -202,21 +202,21 @@ export function SalesImportClient() {
             <button
               type="button"
               onClick={() => importFileInputRef.current?.click()}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               {importFile ? importFile.name : 'Choose .xlsx file'}
             </button>
             <div>
-              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={importMonth}
                 onChange={(e) => setImportMonth(e.target.value)}
-                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
               />
             </div>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={importIncludePrevious}
@@ -228,7 +228,7 @@ export function SalesImportClient() {
               type="button"
               disabled={!importFile || !importMonth.trim() || importLoading}
               onClick={runPreview}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
             >
               {importLoading ? '…' : 'Preview'}
             </button>
@@ -241,7 +241,7 @@ export function SalesImportClient() {
                 (importPreviewResult != null && !importPreviewResult.applyAllowed)
               }
               onClick={runApply}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {importApplyLoading ? '…' : 'Apply'}
             </button>
@@ -284,7 +284,7 @@ export function SalesImportClient() {
                   </div>
                 </>
               ) : null}
-              <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800">
+              <div className="rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
                 <p>Mapped employees: {importPreviewResult.mappedEmployees?.length ?? 0}</p>
                 <p>Unmapped employees: {importPreviewResult.unmappedEmployees?.length ?? 0}</p>
                 <p>Inserted: {importPreviewResult.inserted ?? 0} · Updated: {importPreviewResult.updated ?? 0} · Skipped empty: {importPreviewResult.skippedEmpty ?? 0}</p>
@@ -306,22 +306,22 @@ export function SalesImportClient() {
 
         {/* 3) Export */}
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Export</h3>
-          <p className="mb-3 text-xs text-slate-500">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Export</h3>
+          <p className="mb-3 text-xs text-muted">
             Export sales from DB to Excel in the same DATA_MATRIX format as the template.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={exportMonth}
                 onChange={(e) => setExportMonth(e.target.value)}
-                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
               />
             </div>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={exportIncludePrevious}
@@ -333,7 +333,7 @@ export function SalesImportClient() {
               type="button"
               disabled={!exportMonth.trim() || exportLoading}
               onClick={runExport}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {exportLoading ? '…' : 'Export DB to Excel'}
             </button>

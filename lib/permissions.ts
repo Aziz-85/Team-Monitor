@@ -25,7 +25,7 @@ export function canUnlockWeek(role: Role): boolean {
   return role === 'ADMIN' || role === 'SUPER_ADMIN';
 }
 export function canApproveWeek(role: Role): boolean {
-  return role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return role === 'MANAGER' || role === 'AREA_MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
 }
 
 /** Roles that can view full schedule grid (all rows) on /schedule/view */
@@ -189,9 +189,32 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   AREA_MANAGER: [
+    '/',
     '/dashboard',
+    '/executive',
+    '/executive/monthly',
+    '/executive/insights',
+    '/executive/compare',
+    '/executive/employees',
+    '/approvals',
+    '/schedule/view',
+    '/leaves',
+    '/boutique/leaves',
+    '/tasks',
     '/area/employees',
     '/area/targets',
+    '/targets',
+    '/targets/boutiques',
+    '/targets/employees',
+    '/targets/import',
+    '/admin/targets',
+    '/admin/import/sales',
+    '/admin/sales-edit-requests',
+    '/sales/summary',
+    '/sales/daily',
+    '/sales/returns',
+    '/sales/leadership-impact',
+    '/me/target',
     '/about',
     '/change-password',
   ],

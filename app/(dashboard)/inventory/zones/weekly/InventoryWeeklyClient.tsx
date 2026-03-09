@@ -160,17 +160,17 @@ export function InventoryWeeklyClient({
   const renderZoneRow = (z: WeeklyRunItem) => (
     <li
       key={z.id}
-      className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 shadow-sm"
     >
-      <span className="text-lg font-semibold text-slate-900">{z.zoneCode}</span>
-      {z.zoneName && <span className="text-sm text-slate-600">({z.zoneName})</span>}
+      <span className="text-lg font-semibold text-foreground">{z.zoneCode}</span>
+      {z.zoneName && <span className="text-sm text-muted">({z.zoneName})</span>}
       <span
         className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
           eff(z) === 'COMPLETED'
             ? 'border-emerald-200 bg-emerald-100 text-emerald-900'
             : eff(z) === 'LATE'
               ? 'border-red-200 bg-red-100 text-red-900'
-              : 'border-slate-200 bg-slate-100 text-slate-700'
+              : 'border-border bg-surface-subtle text-foreground'
         }`}
       >
         {eff(z) === 'COMPLETED' ? t('inventory.completed') : eff(z) === 'LATE' ? t('inventory.late') : t('inventory.planned')}
@@ -180,7 +180,7 @@ export function InventoryWeeklyClient({
           type="button"
           onClick={() => handleMarkComplete(z.zoneId)}
           disabled={completing === z.zoneId}
-          className="ms-auto h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="ms-auto h-9 rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
         >
           {completing === z.zoneId ? '…' : t('inventory.markZoneCompleted')}
         </button>
@@ -202,20 +202,20 @@ export function InventoryWeeklyClient({
     <div className={embedded ? '' : 'p-4 md:p-6'}>
       <div className="mx-auto max-w-3xl">
         {!embedded && (
-          <Link href="/inventory/daily" className="mb-4 inline-block text-base text-sky-600 hover:underline">
+          <Link href="/inventory/daily" className="mb-4 inline-block text-base text-accent hover:underline">
             ← {t('common.back')}
           </Link>
         )}
 
         {/* Static Zones Map - visible to all users */}
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-base font-semibold text-slate-900">
+        <section className="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold text-foreground">
             {t('inventory.zonesMapSectionTitle')}
           </h2>
-          <div className="relative mx-auto max-w-2xl overflow-hidden rounded-lg bg-slate-100">
+          <div className="relative mx-auto max-w-2xl overflow-hidden rounded-lg bg-surface-subtle">
             <div className="relative aspect-[4/3] w-full">
               {mapImageError ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-slate-200/80 p-6 text-center text-slate-600">
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-surface-subtle/80 p-6 text-center text-muted">
                   <span className="text-sm font-medium">{t('inventory.zonesMapNoImage')}</span>
                 </div>
               ) : (
@@ -233,26 +233,26 @@ export function InventoryWeeklyClient({
         </section>
 
         {/* My Zone card */}
-        <section className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">
+        <section className="mb-6 rounded-xl border border-border bg-surface-subtle p-4 shadow-sm">
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
             {t('inventory.myZoneCardTitle')}
           </h3>
           {myZoneLetter ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full border-2 border-blue-500 bg-blue-50 px-3 py-1.5 text-lg font-bold text-blue-900">
+              <span className="rounded-full border-2 border-accent bg-accent/10 px-3 py-1.5 text-lg font-bold text-foreground">
                 {myZoneLetter}
               </span>
-              <span className="text-sm text-slate-600">{periodKey}</span>
+              <span className="text-sm text-muted">{periodKey}</span>
               <button
                 type="button"
                 onClick={() => myZonesSectionRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('inventory.goToMyZoneInventory')}
               </button>
             </div>
           ) : (
-            <p className="text-sm text-slate-600">{t('inventory.noZoneAssignmentMessage')}</p>
+            <p className="text-sm text-muted">{t('inventory.noZoneAssignmentMessage')}</p>
           )}
         </section>
 
@@ -264,16 +264,16 @@ export function InventoryWeeklyClient({
             </div>
           )}
           <div className="mb-4 flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-700">{t('inventory.weekStart')}</label>
+            <label className="text-sm font-medium text-foreground">{t('inventory.weekStart')}</label>
             <input
               type="date"
               value={weekStart}
               onChange={(e) => setWeekStart(e.target.value)}
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
             />
           </div>
           {isManagerOrAdmin && (
-            <p className="mb-4 font-mono text-xs text-slate-500" aria-hidden>
+            <p className="mb-4 font-mono text-xs text-muted" aria-hidden>
               {(t('inventory.periodKeyWeekRangeDebug') as string)
                 .replace('{key}', periodKey)
                 .replace('{range}', weekRange)
@@ -284,16 +284,16 @@ export function InventoryWeeklyClient({
           {/* Employee: My zones this week first */}
           {myZones.length > 0 && (
             <div ref={myZonesSectionRef} id="my-zones" className="mb-6">
-              <h3 className="mb-2 text-base font-semibold text-slate-800">{t('inventory.myZonesThisWeek')}</h3>
+              <h3 className="mb-2 text-base font-semibold text-foreground">{t('inventory.myZonesThisWeek')}</h3>
               {toastMessage && (
                 <p
-                  className={`mb-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-sm ${toastIsInfo ? 'border-slate-200 bg-slate-50 text-slate-800' : 'border-emerald-200 bg-emerald-100 text-emerald-900'}`}
+                  className={`mb-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-sm ${toastIsInfo ? 'border-border bg-surface-subtle text-foreground' : 'border-emerald-200 bg-emerald-100 text-emerald-900'}`}
                   role="status"
                 >
                   {toastMessage}
                 </p>
               )}
-              <p className="mb-2 text-sm text-slate-600">
+              <p className="mb-2 text-sm text-muted">
                 {t('inventory.summaryCompletedTotal')}: {myCompleted} / {myTotal}
               </p>
               {pendingCount > 0 && (
@@ -301,7 +301,7 @@ export function InventoryWeeklyClient({
                   <button
                     type="button"
                     onClick={() => copyWeeklyReminder(myZones.filter((z) => z.status !== 'COMPLETED').map((z) => z.zoneCode))}
-                    className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   >
                     {t('inventory.copyReminder')}
                   </button>
@@ -313,7 +313,7 @@ export function InventoryWeeklyClient({
                     type="button"
                     onClick={() => markAllEnabled && setConfirmMarkAllOpen(true)}
                     disabled={!markAllEnabled || completingAll}
-                    className={`h-9 rounded-lg px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-10 ${markAllEnabled ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50' : 'cursor-default bg-slate-200 text-slate-500'}`}
+                    className={`h-9 rounded-lg px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 md:h-10 ${markAllEnabled ? 'bg-accent text-white hover:bg-accent/90 disabled:opacity-50' : 'cursor-default bg-surface-subtle text-muted'}`}
                   >
                     {completingAll
                       ? '…'
@@ -337,9 +337,9 @@ export function InventoryWeeklyClient({
                 aria-hidden
                 onClick={() => !completingAll && setConfirmMarkAllOpen(false)}
               />
-              <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-                <h4 className="text-lg font-semibold text-slate-900">{t('inventory.confirmMarkAllTitle')}</h4>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+              <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+                <h4 className="text-lg font-semibold text-foreground">{t('inventory.confirmMarkAllTitle')}</h4>
+                <p className="mt-2 text-sm leading-6 text-muted">
                   {(t('inventory.confirmMarkAllBody') as string).replace('{count}', String(pendingCount))}
                 </p>
                 <div className="mt-4 flex justify-end gap-2">
@@ -347,7 +347,7 @@ export function InventoryWeeklyClient({
                     type="button"
                     onClick={() => !completingAll && setConfirmMarkAllOpen(false)}
                     disabled={completingAll}
-                    className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   >
                     {t('common.cancel')}
                   </button>
@@ -355,7 +355,7 @@ export function InventoryWeeklyClient({
                     type="button"
                     onClick={handleConfirmMarkAll}
                     disabled={completingAll}
-                    className="h-9 rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="h-9 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   >
                     {completingAll ? '…' : t('inventory.confirmMarkAllContinue')}
                   </button>
@@ -367,8 +367,8 @@ export function InventoryWeeklyClient({
           {/* Manager: Zones by employee */}
           {isManagerOrAdmin && byEmployee.length > 0 && (
             <div>
-              <h3 className="mb-2 text-base font-semibold text-slate-800">{t('inventory.zonesByEmployee')}</h3>
-              <p className="mb-3 text-sm text-slate-600">
+              <h3 className="mb-2 text-base font-semibold text-foreground">{t('inventory.zonesByEmployee')}</h3>
+              <p className="mb-3 text-sm text-muted">
                 {t('inventory.summaryCompletedTotal')}: {allCompleted} / {allTotal}
               </p>
               <div className="space-y-4">
@@ -378,12 +378,12 @@ export function InventoryWeeklyClient({
                   return (
                     <div key={emp.empId}>
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <h4 className="text-sm font-medium text-slate-700">{emp.employeeName}</h4>
+                        <h4 className="text-sm font-medium text-foreground">{emp.employeeName}</h4>
                         {pendingCodes.length > 0 && (
                           <button
                             type="button"
                             onClick={() => copyWeeklyReminder(pendingCodes)}
-                            className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            className="h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                           >
                             {t('inventory.copyReminder')}
                           </button>
@@ -401,7 +401,7 @@ export function InventoryWeeklyClient({
 
           {/* Employee with no zones */}
           {!isManagerOrAdmin && myZones.length === 0 && (
-            <p className="text-slate-600">{t('inventory.noZonesAssigned')}</p>
+            <p className="text-muted">{t('inventory.noZonesAssigned')}</p>
           )}
         </OpsCard>
       </div>

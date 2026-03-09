@@ -13,11 +13,11 @@ export function ExecutiveDashboardLayout() {
     <div className="min-w-0 space-y-6">
       <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-slate-900">Executive Dashboard</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Working on: {MOCK_BOUTIQUE}</p>
+          <h1 className="text-xl font-semibold text-foreground">Executive Dashboard</h1>
+          <p className="mt-0.5 text-sm text-muted">Working on: {MOCK_BOUTIQUE}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-sm text-slate-500">Mock data · UI only</span>
+          <span className="text-sm text-muted">Mock data · UI only</span>
         </div>
       </header>
 
@@ -131,18 +131,18 @@ export function ExecutiveDashboardLayout() {
               return (
                 <li key={i} className="min-w-0 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate text-sm font-medium text-slate-900">
+                    <span className="min-w-0 truncate text-sm font-medium text-foreground">
                       {row.name}
                     </span>
                     <span
-                      className={`shrink-0 text-sm tabular-nums ${isWeak ? 'text-amber-700' : 'text-slate-900'}`}
+                      className={`shrink-0 text-sm tabular-nums ${isWeak ? 'text-amber-700' : 'text-foreground'}`}
                     >
                       {row.percent}%
                     </span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
                     <div
-                      className="h-full rounded-full bg-blue-700"
+                      className="h-full rounded-full bg-accent"
                       style={{ width: `${row.percent}%` }}
                     />
                   </div>
@@ -156,8 +156,8 @@ export function ExecutiveDashboardLayout() {
       <section className="grid min-w-0 grid-cols-12 gap-4">
         <div className="col-span-12 min-w-0 xl:col-span-8">
           <ExecPanel title="Performance Overview" subtitle="Placeholder for charts">
-            <div className="flex h-40 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-              <span className="text-sm text-slate-500">Chart area</span>
+            <div className="flex h-40 items-center justify-center rounded-lg border border-border bg-surface-subtle">
+              <span className="text-sm text-muted">Chart area</span>
             </div>
           </ExecPanel>
         </div>
@@ -169,9 +169,9 @@ export function ExecutiveDashboardLayout() {
                 { name: 'Layla A.', sales: '16,800' },
                 { name: 'Nora K.', sales: '15,400' },
               ].map((p, i) => (
-                <li key={i} className="flex justify-between gap-2 text-slate-900">
+                <li key={i} className="flex justify-between gap-2 text-foreground">
                   <span className="min-w-0 truncate">{p.name}</span>
-                  <span className="shrink-0 tabular-nums text-slate-500">{p.sales} SAR</span>
+                  <span className="shrink-0 tabular-nums text-muted">{p.sales} SAR</span>
                 </li>
               ))}
             </ul>
@@ -182,9 +182,9 @@ export function ExecutiveDashboardLayout() {
                 { text: 'Schedule approval pending for week 13', time: '2h ago' },
                 { text: 'Leave request from 3 employees', time: '5h ago' },
               ].map((a, i) => (
-                <li key={i} className="text-slate-900">
+                <li key={i} className="text-foreground">
                   <p>{a.text}</p>
-                  <p className="text-xs text-slate-500">{a.time}</p>
+                  <p className="text-xs text-muted">{a.time}</p>
                 </li>
               ))}
             </ul>

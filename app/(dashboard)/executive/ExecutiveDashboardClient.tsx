@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/useT';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
 import { ExecutiveBarChart } from '@/components/executive/ExecutiveBarChart';
 
@@ -31,7 +32,7 @@ type ExecutiveData = {
 
 function pctColor(pct: number): string {
   if (pct >= 90) return 'text-emerald-600';
-  if (pct >= 20) return 'text-slate-600';
+  if (pct >= 20) return 'text-muted';
   return 'text-amber-700';
 }
 
@@ -48,16 +49,16 @@ function KPICard({
   pct?: number;
   showPctBar?: boolean;
 }) {
-  const colorClass = pct != null ? pctColor(pct) : 'text-gray-800';
+  const colorClass = pct != null ? pctColor(pct) : 'text-foreground';
   return (
     <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-sm text-muted">{title}</p>
       <p className={`text-3xl font-semibold ${colorClass}`}>{value}</p>
       {delta != null && delta !== '' && (
-        <p className="mt-1 text-xs text-gray-500">{delta}</p>
+        <p className="mt-1 text-xs text-muted">{delta}</p>
       )}
       {showPctBar && pct != null && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -72,6 +73,7 @@ function KPICard({
 }
 
 export function ExecutiveDashboardClient() {
+  const { t } = useT();
   const [data, setData] = useState<ExecutiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,15 +85,15 @@ export function ExecutiveDashboardClient() {
         return r.json();
       })
       .then(setData)
-      .catch(() => setError('Failed to load executive data'))
+      .catch(() => setError(t('executive.failedToLoad')))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   if (error) {
     return (
       <div className="p-6">
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-6 shadow-sm">
-          <p className="text-slate-600">{error}</p>
+          <p className="text-muted">{error}</p>
         </div>
       </div>
     );
@@ -100,7 +102,7 @@ export function ExecutiveDashboardClient() {
   if (loading || !data) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       </div>
     );
   }
@@ -123,19 +125,19 @@ export function ExecutiveDashboardClient() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-gray-800">Executive Dashboard</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t('executive.title')}</h1>
         <div className="flex flex-wrap items-center gap-3">
           <a
             href={`/api/executive/weekly-pdf?weekStart=${weekStart}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm hover:bg-[#F8F4E8]"
+            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-[#F8F4E8]"
           >
             Download Weekly PDF
           </a>
           <a
             href="/executive/monthly"
-            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm hover:bg-[#F8F4E8]"
+            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-[#F8F4E8]"
           >
             Executive Monthly
           </a>
@@ -144,10 +146,10 @@ export function ExecutiveDashboardClient() {
 
       {data.boutiqueScore != null && (
         <div className="rounded-2xl border-2 border-[#E8DFC8] bg-white p-4 shadow-sm">
-          <p className="text-sm text-gray-500">Boutique Performance Score</p>
+          <p className="text-sm text-muted">Boutique Performance Score</p>
           <p className="text-2xl font-semibold text-[#C6A756]">
             {data.boutiqueScore.score}
-            <span className="ms-2 text-base font-normal text-gray-600">
+            <span className="ms-2 text-base font-normal text-muted">
               ({data.boutiqueScore.classification})
             </span>
           </p>
@@ -186,7 +188,7 @@ export function ExecutiveDashboardClient() {
           showPctBar
         />
         <KPICard
-          title="Risk Index"
+          title={t('executive.riskIndex')}
           value={riskPct}
           pct={100 - Math.min(100, riskPct)}
           showPctBar
@@ -196,7 +198,7 @@ export function ExecutiveDashboardClient() {
       {/* Section 2 – Performance Analytics */}
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Sales vs Target trend</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.salesVsTarget')}</h2>
           <ExecutiveLineChart
             height={200}
             data={data.salesVsTargetTrend.map((d) => ({ label: d.label, value: d.sales }))}
@@ -205,7 +207,7 @@ export function ExecutiveDashboardClient() {
           />
         </div>
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Task completion breakdown</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.taskCompletion')}</h2>
           <ExecutiveBarChart
             height={200}
             data={data.taskCompletionBreakdown}
@@ -213,7 +215,7 @@ export function ExecutiveDashboardClient() {
           />
         </div>
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Zone compliance rate (A–G)</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.zoneCompliance')}</h2>
           <ExecutiveBarChart
             height={200}
             data={data.zoneCompliance.map((z) => ({ label: z.zone, value: z.rate }))}
@@ -225,27 +227,27 @@ export function ExecutiveDashboardClient() {
       {/* Section 3 – Executive Control */}
       <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Anti-Gaming summary</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.antiGaming')}</h2>
           <div className="space-y-1 text-sm">
             <p>Burst flags: <span className="font-semibold text-[#C6A756]">{data.antiGamingSummary.burstCount}</span></p>
             <p>Same-day bulk: <span className="font-semibold">{data.antiGamingSummary.sameDayBulkCount}</span></p>
             {data.antiGamingSummary.topSuspicious.length > 0 && (
-              <p className="mt-2 text-xs text-gray-500">Top: {data.antiGamingSummary.topSuspicious.join(', ')}</p>
+              <p className="mt-2 text-xs text-muted">Top: {data.antiGamingSummary.topSuspicious.join(', ')}</p>
             )}
           </div>
         </div>
 
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Latest schedule edits</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.scheduleEdits')}</h2>
           <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
             {data.latestScheduleEdits.length === 0 ? (
-              <li className="text-gray-500">—</li>
+              <li className="text-muted">—</li>
             ) : (
               data.latestScheduleEdits.map((e) => (
                 <li key={e.id} className="flex flex-wrap gap-x-2">
                   <span className="font-medium">{e.editorName}</span>
-                  <span className="text-gray-500">{e.weekStart}</span>
-                  <span className="text-gray-400">{new Date(e.editedAt).toLocaleString()}</span>
+                  <span className="text-muted">{e.weekStart}</span>
+                  <span className="text-muted">{new Date(e.editedAt).toLocaleString()}</span>
                 </li>
               ))
             )}
@@ -253,20 +255,20 @@ export function ExecutiveDashboardClient() {
         </div>
 
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-          <h2 className="mb-3 text-sm font-medium text-gray-500">Top performer (this week)</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.topPerformer')}</h2>
           {data.topPerformer ? (
             <>
               <p className="text-2xl font-semibold text-[#C6A756]">{data.topPerformer.name}</p>
-              <p className="text-sm text-gray-500">{data.topPerformer.completedCount} tasks completed</p>
+              <p className="text-sm text-muted">{data.topPerformer.completedCount} tasks completed</p>
             </>
           ) : (
-            <p className="text-sm text-gray-500">—</p>
+            <p className="text-sm text-muted">—</p>
           )}
         </div>
 
         {data.showRiskPanel && (
           <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/80 p-4 shadow-sm">
-            <h2 className="mb-2 text-sm font-medium text-amber-800">Risk panel</h2>
+            <h2 className="mb-2 text-sm font-medium text-amber-800">{t('executive.riskPanel')}</h2>
             <p className="text-sm text-amber-900">
               Overdue &gt; 10% or suspicious &gt; 5% or achievement &lt; 80%. Review task completion and sales targets.
             </p>

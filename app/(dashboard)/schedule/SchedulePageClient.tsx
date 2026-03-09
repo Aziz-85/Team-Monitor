@@ -397,7 +397,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
             <button
               type="button"
               onClick={() => setTab('week')}
-              className={`rounded px-3 py-2 text-base font-medium ${tab === 'week' ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-700'}`}
+              className={`rounded px-3 py-2 text-base font-medium ${tab === 'week' ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground'}`}
             >
               {t('schedule.week')}
             </button>
@@ -405,7 +405,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
               <button
                 type="button"
                 onClick={() => setTab('month')}
-                className={`rounded px-3 py-2 text-base font-medium ${tab === 'month' ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-700'}`}
+                className={`rounded px-3 py-2 text-base font-medium ${tab === 'month' ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground'}`}
               >
                 {t('schedule.month')}
               </button>
@@ -418,12 +418,12 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 onClick={() => setWeekStart(addDays(weekStart, -7))}
                 disabled={gridLoading}
                 title={t('schedule.previousWeek')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.previousWeek')}
               >
                 <span aria-hidden>◀</span>
               </button>
-              <span className="min-w-[200px] text-base font-medium text-slate-800">
+              <span className="min-w-[200px] text-base font-medium text-foreground">
                 {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
                   .replace('{start}', formatWeekRangeLabel(weekStart, locale).start)
                   .replace('{end}', formatWeekRangeLabel(weekStart, locale).end)}
@@ -433,7 +433,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 onClick={() => setWeekStart(addDays(weekStart, 7))}
                 disabled={gridLoading}
                 title={t('schedule.nextWeek')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.nextWeek')}
               >
                 <span aria-hidden>▶</span>
@@ -442,7 +442,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="date"
                 value={weekStart}
                 onChange={(e) => setWeekStart(weekStartSaturday(e.target.value))}
-                className="rounded border border-slate-300 px-3 py-2 text-base"
+                className="rounded border border-border px-3 py-2 text-base"
                 aria-label={t('schedule.week')}
               />
             </div>
@@ -454,12 +454,12 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 onClick={() => setMonth(addMonths(month, -1))}
                 disabled={monthLoading}
                 title={t('schedule.previousMonth')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.previousMonth')}
               >
                 <span aria-hidden>◀</span>
               </button>
-              <span className="min-w-[140px] text-base font-medium text-slate-800">
+              <span className="min-w-[140px] text-base font-medium text-foreground">
                 {formatMonthYear(month, locale)}
               </span>
               <button
@@ -467,7 +467,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 onClick={() => setMonth(addMonths(month, 1))}
                 disabled={monthLoading}
                 title={t('schedule.nextMonth')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.nextMonth')}
               >
                 <span aria-hidden>▶</span>
@@ -476,7 +476,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="rounded border border-slate-300 px-3 py-2 text-base"
+                className="rounded border border-border px-3 py-2 text-base"
                 aria-label={t('schedule.month')}
               />
             </div>
@@ -492,7 +492,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="button"
                 onClick={() => setSaveModalOpen(true)}
                 disabled={pendingCount === 0}
-                className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('schedule.saveChanges') ?? 'Save changes'}
               </button>
@@ -500,7 +500,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="button"
                 onClick={discardAll}
                 disabled={pendingCount === 0}
-                className="rounded border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded border border-border bg-surface px-4 py-2 text-base font-medium text-foreground hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('schedule.discardChanges') ?? 'Discard changes'}
               </button>
@@ -514,7 +514,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
               type="button"
               onClick={() => setViewMode('modern')}
               className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
-                viewMode === 'modern' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                viewMode === 'modern' ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground hover:bg-surface-subtle'
               }`}
             >
               Modern
@@ -523,7 +523,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
               type="button"
               onClick={() => setViewMode('excel')}
               className={`rounded px-3 py-2 text-sm font-medium transition-colors ${
-                viewMode === 'excel' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                viewMode === 'excel' ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground hover:bg-surface-subtle'
               }`}
             >
               Excel
@@ -534,7 +534,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
         {tab === 'week' && showBanner && (
           <div
             className={`mb-3 flex items-center justify-between rounded-md border px-4 py-2 text-sm ${
-              viewMode === 'excel' ? 'border-blue-200 bg-blue-50 text-blue-900' : 'border-slate-200 bg-slate-100 text-slate-700'
+              viewMode === 'excel' ? 'border-accent bg-accent/10 text-foreground' : 'border-border bg-surface-subtle text-foreground'
             }`}
           >
             <div>{viewMode === 'excel' ? t('schedule.view.excelBanner') : t('schedule.view.modernBanner')}</div>
@@ -568,7 +568,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
               <div className="overflow-hidden">
                 <LuxuryTable>
                   <LuxuryTableHead>
-                    <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-slate-100">{t('schedule.day')}</LuxuryTh>
+                    <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle">{t('schedule.day')}</LuxuryTh>
                     {gridData.days.map((day) => (
                       <LuxuryTh
                         key={day.date}
@@ -578,14 +578,14 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                         className="min-w-[88px] text-center"
                       >
                         <div className="font-medium">{getDayName(day.date, locale)}</div>
-                        <div className="text-xs text-slate-500">{formatDDMM(day.date)}</div>
+                        <div className="text-xs text-muted">{formatDDMM(day.date)}</div>
                       </LuxuryTh>
                     ))}
                   </LuxuryTableHead>
                   <LuxuryTableBody>
                     {gridData.rows.map((row) => (
                       <tr key={row.empId}>
-                        <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-white font-medium" title={row.name}>
+                        <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface font-medium" title={row.name}>
                           <span className="whitespace-nowrap">{getFirstName(row.name)}</span>
                         </LuxuryTd>
                         {row.cells.map((cell) => {
@@ -598,10 +598,10 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                           return (
                             <LuxuryTd
                               key={cell.date}
-                              className={`min-w-[88px] p-0 align-middle ${isEdited ? 'ring-1 ring-sky-400 ring-inset' : ''}`}
+                              className={`min-w-[88px] p-0 align-middle ${isEdited ? 'ring-1 ring-accent ring-inset' : ''}`}
                             >
                               {locked ? (
-                                <div className="flex h-full min-h-[44px] items-center justify-center bg-slate-100 px-2 text-center text-xs text-slate-500">
+                                <div className="flex h-full min-h-[44px] items-center justify-center bg-surface-subtle px-2 text-center text-xs text-muted">
                                   {cell.availability === 'LEAVE'
                                     ? 'Leave'
                                     : cell.availability === 'HOLIDAY'
@@ -624,7 +624,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                                         const shift = val as 'MORNING' | 'EVENING' | 'NONE';
                                         addPendingEdit(row.empId, cell.date, shift, row, cell);
                                       }}
-                                      className="w-full min-w-0 max-w-[84px] cursor-pointer rounded border border-slate-300 bg-white py-1.5 pl-2 pr-6 text-center text-sm"
+                                      className="w-full min-w-0 max-w-[84px] cursor-pointer rounded border border-border bg-surface py-1.5 pl-2 pr-6 text-center text-sm"
                                     >
                                       <option value="MORNING">{t('schedule.morning')}</option>
                                       <option value="EVENING">{t('schedule.evening')}</option>
@@ -649,8 +649,8 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                         })}
                       </tr>
                     ))}
-                    <tr className="bg-slate-50 font-medium">
-                      <LuxuryTd className="sticky left-0 z-10 bg-slate-100">AM</LuxuryTd>
+                    <tr className="bg-surface-subtle font-medium">
+                      <LuxuryTd className="sticky left-0 z-10 bg-surface-subtle">AM</LuxuryTd>
                       {(draftCounts.length ? draftCounts : gridData.counts).map((c, i) => {
                         const day = gridData.days[i];
                         const am = c.amCount;
@@ -668,8 +668,8 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                         );
                       })}
                     </tr>
-                    <tr className="bg-slate-50 font-medium">
-                      <LuxuryTd className="sticky left-0 z-10 bg-slate-100">PM</LuxuryTd>
+                    <tr className="bg-surface-subtle font-medium">
+                      <LuxuryTd className="sticky left-0 z-10 bg-surface-subtle">PM</LuxuryTd>
                       {(draftCounts.length ? draftCounts : gridData.counts).map((c, i) => {
                         const am = c.amCount;
                         const pm = c.pmCount;
@@ -691,9 +691,9 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
 
             {canEdit && (
               <div className="w-full shrink-0 lg:w-72">
-                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                  <h3 className="mb-2 text-sm font-semibold text-slate-800">{t('coverage.title')}</h3>
-                  <p className="mb-3 text-xs text-slate-600">
+                <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+                  <h3 className="mb-2 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
+                  <p className="mb-3 text-xs text-muted">
                     {(t('schedule.daysNeedingAttention') as string)?.replace?.('{n}', String(daysNeedingAttention)) ??
                       `Days needing attention: ${daysNeedingAttention}`}
                   </p>
@@ -725,7 +725,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                     )}
                   </ul>
                   {daysNeedingAttention === 0 && (
-                    <p className="text-sm text-slate-500">{t('coverage.noWarnings')}</p>
+                    <p className="text-sm text-muted">{t('coverage.noWarnings')}</p>
                   )}
                 </div>
               </div>
@@ -769,39 +769,39 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
         )}
 
         {tab === 'week' && !gridData && (
-          <p className="text-slate-600">{typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}</p>
+          <p className="text-muted">{typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}</p>
         )}
       </div>
 
       {saveModalOpen && canEdit && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !saving && setSaveModalOpen(false)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <h4 className="text-lg font-semibold text-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+            <h4 className="text-lg font-semibold text-foreground">
               {(t('schedule.saveConfirmTitle') as string)?.replace?.('{n}', String(pendingCount)) ?? `Apply ${pendingCount} changes?`}
             </h4>
-            <p className="mt-2 text-sm text-slate-600">{t('schedule.saveConfirmSubtitle') ?? 'Summary of changes:'}</p>
-            <ul className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-100 bg-slate-50 p-2 text-sm">
+            <p className="mt-2 text-sm text-muted">{t('schedule.saveConfirmSubtitle') ?? 'Summary of changes:'}</p>
+            <ul className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface-subtle p-2 text-sm">
               {Array.from(pendingEdits.entries()).map(([key, edit]) => {
                 const [, date] = key.split('|');
                 const from = edit.originalEffectiveShift === 'MORNING' ? 'AM' : edit.originalEffectiveShift === 'EVENING' ? 'PM' : 'NONE';
                 const to = edit.newShift === 'MORNING' ? 'AM' : edit.newShift === 'EVENING' ? 'PM' : 'NONE';
                 return (
                   <li key={key} className="flex justify-between gap-2 py-0.5">
-                    <span className="text-slate-800">{formatDDMM(date)} {edit.employeeName}</span>
-                    <span className="text-slate-600">{from} → {to}</span>
+                    <span className="text-foreground">{formatDDMM(date)} {edit.employeeName}</span>
+                    <span className="text-muted">{from} → {to}</span>
                   </li>
                 );
               })}
             </ul>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+              <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
               <input
                 type="text"
                 value={globalReason}
                 onChange={(e) => setGlobalReason(e.target.value)}
                 placeholder={DEFAULT_REASON}
-                className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded border border-border px-3 py-2 text-sm"
                 disabled={saving}
               />
             </div>
@@ -810,7 +810,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="button"
                 onClick={() => !saving && setSaveModalOpen(false)}
                 disabled={saving}
-                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {t('common.cancel')}
               </button>
@@ -818,7 +818,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                 type="button"
                 onClick={applyBatch}
                 disabled={saving}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {saving ? `${saveProgress.done} / ${saveProgress.total}…` : (t('schedule.saveChanges') ?? 'Save changes')}
               </button>
@@ -830,15 +830,15 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
       {leaveConfirm && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <p className="text-sm font-medium text-slate-800">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+            <p className="text-sm font-medium text-foreground">
               {t('schedule.unsavedLeaveMessage') ?? 'You have unsaved changes. Leave anyway?'}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setLeaveConfirm(null)}
-                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
               >
                 {t('schedule.stay') ?? 'Stay'}
               </button>

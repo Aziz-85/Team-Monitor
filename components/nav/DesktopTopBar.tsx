@@ -4,17 +4,23 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
+import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import type { Role, EmployeePosition } from '@prisma/client';
 
 export type DesktopTopBarProps = {
   /** User display name (e.g. from user.employee?.name) */
   name?: string;
+  /** User role for display in dropdown */
+  role?: Role;
+  /** Employee position (used with EMPLOYEE role for label) */
+  position?: EmployeePosition | null;
 };
 
 /**
- * Desktop-only top bar: app name, locale, profile dropdown (change password, logout).
+ * Desktop-only top bar: app name, locale, profile dropdown (role, change password, logout).
  * Rendered in dashboard layout above main content; hidden on mobile (MobileTopBar used instead).
  */
-export function DesktopTopBar({ name }: DesktopTopBarProps) {
+export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
   const { t, locale } = useT();
   const { setLocale } = useI18n();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -65,6 +71,12 @@ export function DesktopTopBar({ name }: DesktopTopBarProps) {
           </button>
           {profileOpen && (
             <div className="absolute end-0 top-full z-20 mt-1 min-w-[160px] rounded-md border border-border bg-surface-elevated py-1 shadow-md">
+              {role != null && (
+                <div className="border-b border-border px-3 py-2 text-sm text-muted">
+                  <span className="font-medium text-foreground">{t('common.role')}:</span>{' '}
+                  {getRoleDisplayLabel(role, position ?? null, t)}
+                </div>
+              )}
               <Link
                 href="/change-password"
                 onClick={() => setProfileOpen(false)}

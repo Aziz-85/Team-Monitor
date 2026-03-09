@@ -8,7 +8,7 @@ import type { Role } from '@prisma/client';
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof requireRole>>;
   try {
-    user = await requireRole(['MANAGER', 'ADMIN'] as Role[]);
+    user = await requireRole(['MANAGER', 'ADMIN', 'AREA_MANAGER'] as Role[]);
     if (!user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   } catch (e) {
     const err = e as { code?: string };

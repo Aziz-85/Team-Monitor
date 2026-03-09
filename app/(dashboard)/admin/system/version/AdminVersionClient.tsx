@@ -208,21 +208,21 @@ export function AdminVersionClient() {
 
   return (
     <div className="min-w-0 p-4 md:p-6 space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">{t('nav.admin.versionDeploys')}</h1>
+      <h1 className="text-xl font-semibold text-foreground">{t('nav.admin.versionDeploys')}</h1>
 
       {/* Current Build */}
       <OpsCard title="Current Build">
         {versionInfo && (
           <div className="grid gap-2 text-sm">
-            <p><span className="font-medium text-slate-600">App Version:</span> {versionInfo.appVersion}</p>
-            <p><span className="font-medium text-slate-600">Git Hash:</span> {versionInfo.gitHash || '—'}</p>
-            <p><span className="font-medium text-slate-600">Build Date:</span> {versionInfo.buildDate ? formatRiyadh(versionInfo.buildDate) : '—'}</p>
-            <p><span className="font-medium text-slate-600">Environment:</span> {versionInfo.environment}</p>
+            <p><span className="font-medium text-muted">App Version:</span> {versionInfo.appVersion}</p>
+            <p><span className="font-medium text-muted">Git Hash:</span> {versionInfo.gitHash || '—'}</p>
+            <p><span className="font-medium text-muted">Build Date:</span> {versionInfo.buildDate ? formatRiyadh(versionInfo.buildDate) : '—'}</p>
+            <p><span className="font-medium text-muted">Environment:</span> {versionInfo.environment}</p>
             <div className="mt-3">
               <button
                 type="button"
                 onClick={() => setRegisterModal(true)}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700"
+                className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
               >
                 Register current deploy
               </button>
@@ -234,11 +234,11 @@ export function AdminVersionClient() {
       {/* Deploy History */}
       <OpsCard title="Deploy History">
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-slate-600">Environment:</label>
+          <label className="text-sm text-muted">Environment:</label>
           <select
             value={deployEnvFilter}
             onChange={(e) => { setDeployEnvFilter(e.target.value); setDeploys((d) => ({ ...d, page: 1 })); }}
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
+            className="rounded border border-border px-2 py-1 text-sm"
           >
             <option value="">All</option>
             <option value="production">production</option>
@@ -260,7 +260,7 @@ export function AdminVersionClient() {
           </AdminTableHead>
           <AdminTableBody>
             {deploys.items.map((d) => (
-              <tr key={d.id} className="border-b border-slate-100">
+              <tr key={d.id} className="border-b border-border">
                 <AdminTd>{formatRiyadh(d.createdAt)}</AdminTd>
                 <AdminTd>{d.appVersion}</AdminTd>
                 <AdminTd>{d.gitHash}</AdminTd>
@@ -275,12 +275,12 @@ export function AdminVersionClient() {
           </AdminTableBody>
         </AdminDataTable>
         {deploys.total > PAGE_SIZE && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted">
             <button
               type="button"
               disabled={deploys.page <= 1}
               onClick={() => setDeploys((d) => ({ ...d, page: d.page - 1 }))}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+              className="rounded border border-border px-2 py-1 disabled:opacity-50"
             >
               Previous
             </button>
@@ -289,7 +289,7 @@ export function AdminVersionClient() {
               type="button"
               disabled={deploys.page >= Math.ceil(deploys.total / PAGE_SIZE)}
               onClick={() => setDeploys((d) => ({ ...d, page: d.page + 1 }))}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+              className="rounded border border-border px-2 py-1 disabled:opacity-50"
             >
               Next
             </button>
@@ -303,7 +303,7 @@ export function AdminVersionClient() {
           <button
             type="button"
             onClick={() => { setReleaseModal('create'); setReleaseForm({ version: '', title: '', notes: '' }); }}
-            className="rounded bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
           >
             Create release note
           </button>
@@ -319,24 +319,24 @@ export function AdminVersionClient() {
           </AdminTableHead>
           <AdminTableBody>
             {releases.items.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-border">
                 <AdminTd>{r.version}</AdminTd>
                 <AdminTd>{r.title}</AdminTd>
-                <AdminTd className="max-w-[200px] truncate text-slate-600" title={r.notes}>{r.notes.slice(0, 80)}{r.notes.length > 80 ? '…' : ''}</AdminTd>
+                <AdminTd className="max-w-[200px] truncate text-muted" title={r.notes}>{r.notes.slice(0, 80)}{r.notes.length > 80 ? '…' : ''}</AdminTd>
                 <AdminTd>{r.isPublished ? 'Yes' : 'No'}</AdminTd>
                 <AdminTd>{formatRiyadh(r.createdAt)}</AdminTd>
                 <AdminTd>
                   <button
                     type="button"
                     onClick={() => handlePublishToggle(r.id)}
-                    className="me-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+                    className="me-2 rounded border border-border px-2 py-0.5 text-xs hover:bg-surface-subtle"
                   >
                     {r.isPublished ? 'Unpublish' : 'Publish'}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setReleaseModal({ id: r.id }); setReleaseForm({ version: r.version, title: r.title, notes: r.notes }); }}
-                    className="me-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+                    className="me-2 rounded border border-border px-2 py-0.5 text-xs hover:bg-surface-subtle"
                   >
                     Edit
                   </button>
@@ -353,12 +353,12 @@ export function AdminVersionClient() {
           </AdminTableBody>
         </AdminDataTable>
         {releases.total > PAGE_SIZE && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted">
             <button
               type="button"
               disabled={releases.page <= 1}
               onClick={() => setReleases((r) => ({ ...r, page: r.page - 1 }))}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+              className="rounded border border-border px-2 py-1 disabled:opacity-50"
             >
               Previous
             </button>
@@ -367,7 +367,7 @@ export function AdminVersionClient() {
               type="button"
               disabled={releases.page >= Math.ceil(releases.total / PAGE_SIZE)}
               onClick={() => setReleases((r) => ({ ...r, page: r.page + 1 }))}
-              className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+              className="rounded border border-border px-2 py-1 disabled:opacity-50"
             >
               Next
             </button>
@@ -379,13 +379,13 @@ export function AdminVersionClient() {
       {registerModal && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" onClick={() => !registering && setRegisterModal(false)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <h3 className="text-lg font-semibold text-slate-900">Register current deploy</h3>
-            <p className="mt-1 text-sm text-slate-600">Optional notes:</p>
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+            <h3 className="text-lg font-semibold text-foreground">Register current deploy</h3>
+            <p className="mt-1 text-sm text-muted">Optional notes:</p>
             <textarea
               value={registerNotes}
               onChange={(e) => setRegisterNotes(e.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded border border-border px-3 py-2 text-sm"
               rows={3}
               placeholder="e.g. Deployed after hotfix"
             />
@@ -394,7 +394,7 @@ export function AdminVersionClient() {
                 type="button"
                 onClick={() => !registering && setRegisterModal(false)}
                 disabled={registering}
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {t('common.cancel')}
               </button>
@@ -402,7 +402,7 @@ export function AdminVersionClient() {
                 type="button"
                 onClick={handleRegisterDeploy}
                 disabled={registering}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {registering ? 'Registering…' : 'Register'}
               </button>
@@ -415,32 +415,32 @@ export function AdminVersionClient() {
       {releaseModal && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" onClick={() => !releaseSaving && setReleaseModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <h3 className="text-lg font-semibold text-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg">
+            <h3 className="text-lg font-semibold text-foreground">
               {releaseModal === 'create' ? 'Create release note' : 'Edit release note'}
             </h3>
             <div className="mt-3 space-y-2">
-              <label className="block text-sm font-medium text-slate-700">Version</label>
+              <label className="block text-sm font-medium text-foreground">Version</label>
               <input
                 type="text"
                 value={releaseForm.version}
                 onChange={(e) => setReleaseForm((f) => ({ ...f, version: e.target.value }))}
                 placeholder="1.2.0"
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded border border-border px-3 py-2 text-sm"
               />
-              <label className="block text-sm font-medium text-slate-700">Title</label>
+              <label className="block text-sm font-medium text-foreground">Title</label>
               <input
                 type="text"
                 value={releaseForm.title}
                 onChange={(e) => setReleaseForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="Operational Hardening"
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded border border-border px-3 py-2 text-sm"
               />
-              <label className="block text-sm font-medium text-slate-700">Notes (markdown allowed)</label>
+              <label className="block text-sm font-medium text-foreground">Notes (markdown allowed)</label>
               <textarea
                 value={releaseForm.notes}
                 onChange={(e) => setReleaseForm((f) => ({ ...f, notes: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded border border-border px-3 py-2 text-sm"
                 rows={6}
               />
             </div>
@@ -449,7 +449,7 @@ export function AdminVersionClient() {
                 type="button"
                 onClick={() => !releaseSaving && setReleaseModal(null)}
                 disabled={releaseSaving}
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {t('common.cancel')}
               </button>
@@ -457,7 +457,7 @@ export function AdminVersionClient() {
                 type="button"
                 onClick={handleSaveRelease}
                 disabled={releaseSaving}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {releaseSaving ? 'Saving…' : t('common.save')}
               </button>
@@ -467,7 +467,7 @@ export function AdminVersionClient() {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow" role="status">
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground shadow" role="status">
           {toast}
         </div>
       )}

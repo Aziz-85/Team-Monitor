@@ -35,23 +35,23 @@ export function LeadershipImpactClient({ monthKey, sourceFilter, linkAll, linkLe
   const { t } = useT();
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="min-h-screen bg-surface-subtle p-4 md:p-6">
       <div className="mx-auto max-w-4xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">{t('leadershipImpact.title')}</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('leadershipImpact.title')}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-600">{monthKey}</span>
-            <span className="text-slate-400">|</span>
-            <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
+            <span className="text-sm text-muted">{monthKey}</span>
+            <span className="text-muted">|</span>
+            <div className="flex rounded-lg border border-border bg-surface p-0.5 text-sm">
               <Link
                 href={linkAll}
-                className={`rounded-md px-2 py-1 ${sourceFilter === 'ALL' ? 'bg-slate-200 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`rounded-md px-2 py-1 ${sourceFilter === 'ALL' ? 'bg-surface-subtle font-medium text-foreground' : 'text-muted hover:bg-surface-subtle'}`}
               >
                 {t('leadershipImpact.allSources')}
               </Link>
               <Link
                 href={linkLedger}
-                className={`rounded-md px-2 py-1 ${sourceFilter === 'LEDGER' ? 'bg-slate-200 font-medium text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`rounded-md px-2 py-1 ${sourceFilter === 'LEDGER' ? 'bg-surface-subtle font-medium text-foreground' : 'text-muted hover:bg-surface-subtle'}`}
               >
                 {t('leadershipImpact.ledgerOnly')}
               </Link>
@@ -61,27 +61,27 @@ export function LeadershipImpactClient({ monthKey, sourceFilter, linkAll, linkLe
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <OpsCard className="p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('leadershipImpact.total')}</p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-900">{formatSar(dto.total)} SAR</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t('leadershipImpact.total')}</p>
+            <p className="mt-0.5 text-lg font-semibold text-foreground">{formatSar(dto.total)} SAR</p>
           </OpsCard>
           <OpsCard className="p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('leadershipImpact.top1Share')}</p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-900">{formatPct(dto.top1Share)}%</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t('leadershipImpact.top1Share')}</p>
+            <p className="mt-0.5 text-lg font-semibold text-foreground">{formatPct(dto.top1Share)}%</p>
           </OpsCard>
           <OpsCard className="p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('leadershipImpact.top2Share')}</p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-900">{formatPct(dto.top2Share)}%</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t('leadershipImpact.top2Share')}</p>
+            <p className="mt-0.5 text-lg font-semibold text-foreground">{formatPct(dto.top2Share)}%</p>
           </OpsCard>
           <OpsCard className="p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('leadershipImpact.balanceScore')}</p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-900">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t('leadershipImpact.balanceScore')}</p>
+            <p className="mt-0.5 text-lg font-semibold text-foreground">
               {(dto.balanceScore * 100).toFixed(0)}%
             </p>
           </OpsCard>
           <OpsCard className="p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('leadershipImpact.concentration')}</p>
-            <p className="mt-0.5 text-lg font-semibold text-slate-900">{dto.concentrationLevel}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">{t('leadershipImpact.concentration')}</p>
+            <p className="mt-0.5 text-lg font-semibold text-foreground">{dto.concentrationLevel}</p>
+            <p className="text-xs text-muted">
               {dto.concentrationLevel === 'HIGH'
                 ? t('leadershipImpact.concentrationHigh')
                 : dto.concentrationLevel === 'MED'
@@ -95,7 +95,7 @@ export function LeadershipImpactClient({ monthKey, sourceFilter, linkAll, linkLe
           <div className="overflow-x-auto">
             <table className="w-full min-w-0 border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-start text-slate-600">
+                <tr className="border-b border-border text-start text-muted">
                   <th className="py-2 pe-2 font-medium">{t('leadershipImpact.rank')}</th>
                   <th className="py-2 pe-2 font-medium">{t('leadershipImpact.seller')}</th>
                   <th className="py-2 pe-2 font-medium text-end">{t('leadershipImpact.amountSar')}</th>
@@ -104,24 +104,24 @@ export function LeadershipImpactClient({ monthKey, sourceFilter, linkAll, linkLe
               </thead>
               <tbody>
                 {dto.distribution.map((d, i) => (
-                  <tr key={d.userId} className="border-b border-slate-100 last:border-0">
-                    <td className="py-1.5 pe-2 text-slate-700">{i + 1}</td>
-                    <td className="py-1.5 pe-2 font-medium text-slate-900">{d.label}</td>
-                    <td className="py-1.5 pe-2 text-end text-slate-800">{formatSar(d.total)}</td>
-                    <td className="py-1 text-end text-slate-700">{formatPct(d.share)}%</td>
+                  <tr key={d.userId} className="border-b border-border last:border-0">
+                    <td className="py-1.5 pe-2 text-foreground">{i + 1}</td>
+                    <td className="py-1.5 pe-2 font-medium text-foreground">{d.label}</td>
+                    <td className="py-1.5 pe-2 text-end text-foreground">{formatSar(d.total)}</td>
+                    <td className="py-1 text-end text-foreground">{formatPct(d.share)}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           {dto.distribution.length === 0 && (
-            <p className="py-4 text-center text-sm text-slate-500">{t('leadershipImpact.noSalesDataForMonth')}</p>
+            <p className="py-4 text-center text-sm text-muted">{t('leadershipImpact.noSalesDataForMonth')}</p>
           )}
         </OpsCard>
 
         <OpsCard title={t('leadershipImpact.coachingFlags')}>
           {dto.flags.length === 0 ? (
-            <p className="text-sm text-slate-600">{t('leadershipImpact.noCoachingFlags')}</p>
+            <p className="text-sm text-muted">{t('leadershipImpact.noCoachingFlags')}</p>
           ) : (
             <ul className="space-y-2">
               {dto.flags.map((f) => (
@@ -135,7 +135,7 @@ export function LeadershipImpactClient({ monthKey, sourceFilter, linkAll, linkLe
         </OpsCard>
 
         <OpsCard title={t('leadershipImpact.summary')}>
-          <p className="text-sm leading-relaxed text-slate-700">{dto.narrative}</p>
+          <p className="text-sm leading-relaxed text-foreground">{dto.narrative}</p>
         </OpsCard>
       </div>
     </div>

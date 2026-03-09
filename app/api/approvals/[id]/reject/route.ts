@@ -3,7 +3,7 @@ import { requireRole, getSessionUser } from '@/lib/auth';
 import { rejectRequest } from '@/lib/services/approvals';
 import type { Role } from '@prisma/client';
 
-const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN'];
+const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN', 'AREA_MANAGER'];
 
 /**
  * POST /api/approvals/[id]/reject

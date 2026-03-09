@@ -41,30 +41,30 @@ export function InventoryHistoryClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-3xl">
-        <Link href="/inventory/daily" className="mb-4 inline-block text-base text-sky-600 hover:underline">
+        <Link href="/inventory/daily" className="mb-4 inline-block text-base text-accent hover:underline">
           ← {t('common.back')}
         </Link>
         <OpsCard title={t('inventory.historyTitle')}>
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-slate-700">{t('inventory.month')}</label>
+            <label className="text-sm font-medium text-foreground">{t('inventory.month')}</label>
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
             />
             <button
               type="button"
               onClick={handleRebalance}
               disabled={rebalancing}
-              className="h-9 rounded-lg bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-10"
+              className="h-9 rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 md:h-10"
             >
               {rebalancing ? '…' : t('inventory.rebalance')}
             </button>
           </div>
           {stats && (
             <>
-              <p className="mb-3 text-sm font-semibold text-slate-900">
+              <p className="mb-3 text-sm font-semibold text-foreground">
                 {t('inventory.totalCompleted')}: {stats.totalCompleted}
               </p>
               <LuxuryTable>

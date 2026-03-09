@@ -59,7 +59,11 @@ export default async function DashboardLayout({
           canEditSchedule={canEditSchedule}
           canApproveWeek={canApproveWeek}
         />
-        <DesktopTopBar name={user.employee?.name ?? undefined} />
+        <DesktopTopBar
+          name={user.employee?.name ?? undefined}
+          role={navRole as import('@prisma/client').Role}
+          position={user.employee?.position ?? undefined}
+        />
         <main className="flex-1 min-w-0">
           <RouteGuard role={navRole}>{children}</RouteGuard>
         </main>

@@ -29,7 +29,7 @@ type Employee = {
   user?: { role: Role; disabled: boolean; mustChangePassword: boolean } | null;
 };
 
-const ROLES: Role[] = ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN'];
+const ROLES: Role[] = ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'];
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 /** Single "Weekly Off (Effective)" dropdown: Sat→Fri then None. Value 6,0,1,2,3,4,5,-1. */
@@ -436,7 +436,7 @@ export function AdminEmployeesClient() {
             placeholder="Emp ID"
             value={form.empId}
             onChange={(e) => setForm((f) => ({ ...f, empId: e.target.value }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
             required
           />
           <input
@@ -444,7 +444,7 @@ export function AdminEmployeesClient() {
             placeholder={t('common.name')}
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
             required
           />
           <input
@@ -452,19 +452,19 @@ export function AdminEmployeesClient() {
             placeholder={t('common.email')}
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
           <input
             type="text"
             placeholder={t('common.phone')}
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
           <select
             value={form.team}
             onChange={(e) => setForm((f) => ({ ...f, team: e.target.value as 'A' | 'B' }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           >
             <option value="A">A</option>
             <option value="B">B</option>
@@ -472,7 +472,7 @@ export function AdminEmployeesClient() {
           <select
             value={form.boutiqueId}
             onChange={(e) => setForm((f) => ({ ...f, boutiqueId: e.target.value }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
             title={t('admin.boutiques.boutique')}
           >
             <option value="">— {t('admin.boutiques.boutique')}</option>
@@ -485,7 +485,7 @@ export function AdminEmployeesClient() {
           <select
             value={String(form.weeklyOffEffective)}
             onChange={(e) => setForm((f) => ({ ...f, weeklyOffEffective: e.target.value === '-1' ? -1 : Number(e.target.value) }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
             title="Weekly Off (Effective)"
           >
             {WEEKLY_OFF_EFFECTIVE_OPTIONS.map((opt) => (
@@ -497,7 +497,7 @@ export function AdminEmployeesClient() {
           <select
             value={form.position}
             onChange={(e) => setForm((f) => ({ ...f, position: e.target.value as EmployeePosition | '' }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           >
             <option value="">— {t('adminEmp.position')}</option>
             {POSITIONS.map((p) => (
@@ -509,7 +509,7 @@ export function AdminEmployeesClient() {
           <select
             value={form.language}
             onChange={(e) => setForm((f) => ({ ...f, language: e.target.value as 'en' | 'ar' }))}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           >
             <option value="en">{t('common.english')}</option>
             <option value="ar">{t('common.arabic')}</option>
@@ -518,7 +518,7 @@ export function AdminEmployeesClient() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+              className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {t('common.add')}
             </button>
@@ -528,10 +528,10 @@ export function AdminEmployeesClient() {
       </OpsCard>
 
       <OpsCard title={t('nav.admin.employees')}>
-        <p className="mb-2 text-sm text-slate-600">{t('admin.adminFilterLabel')}</p>
+        <p className="mb-2 text-sm text-muted">{t('admin.adminFilterLabel')}</p>
         <AdminFilterBar filterLabel={t('admin.adminFilterLabel')} onFilterChange={setAdminFilter} t={t} />
         {adminFilter?.kind === 'BOUTIQUE' && (
-          <p className="mb-2 text-xs text-slate-500">{t('admin.filterByBoutiqueHint')}</p>
+          <p className="mb-2 text-xs text-muted">{t('admin.filterByBoutiqueHint')}</p>
         )}
         {list.length === 0 && adminFilter?.kind === 'BOUTIQUE' && (
           <p className="mb-2 text-sm text-amber-700">{t('admin.employeesEmptyByBoutique')}</p>
@@ -566,7 +566,7 @@ export function AdminEmployeesClient() {
                         .then((data) => setBoutiquesForSelect(Array.isArray(data) ? data : []))
                         .catch(() => setBoutiquesForSelect([]));
                     }}
-                    className="ms-1 text-xs text-sky-600 hover:underline"
+                    className="ms-1 text-xs text-accent hover:underline"
                   >
                     {t('admin.changeBoutique')}
                   </button>
@@ -604,7 +604,7 @@ export function AdminEmployeesClient() {
                     <button
                       type="button"
                       onClick={() => openEditEmployee(e)}
-                      className="text-base text-sky-600 hover:underline"
+                      className="text-base text-accent hover:underline"
                     >
                       {t('common.edit')}
                     </button>
@@ -621,7 +621,7 @@ export function AdminEmployeesClient() {
                           allowImbalanceOverride: false,
                         });
                       }}
-                      className="text-base text-sky-600 hover:underline"
+                      className="text-base text-accent hover:underline"
                     >
                       {t('adminEmp.changeTeam')}
                     </button>
@@ -630,7 +630,7 @@ export function AdminEmployeesClient() {
                         <button
                           type="button"
                           onClick={() => openEdit(e)}
-                          className="text-base text-sky-600 hover:underline"
+                          className="text-base text-accent hover:underline"
                         >
                           {t('adminEmp.editAccount')}
                         </button>
@@ -638,7 +638,7 @@ export function AdminEmployeesClient() {
                         <button
                           type="button"
                           onClick={() => setCreateModal({ empId: e.empId })}
-                          className="text-base text-sky-600 hover:underline"
+                          className="text-base text-accent hover:underline"
                         >
                           {t('adminEmp.createAccount')}
                         </button>
@@ -672,9 +672,9 @@ export function AdminEmployeesClient() {
       {createModal && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setCreateModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('adminEmp.createAccount')}</h3>
-            <p className="mb-2 text-base text-slate-600">Emp ID: {createModal.empId}</p>
+            <p className="mb-2 text-base text-muted">Emp ID: {createModal.empId}</p>
             <form onSubmit={handleCreateAccount} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium">{t('auth.password')}</label>
@@ -682,7 +682,7 @@ export function AdminEmployeesClient() {
                   type="password"
                   value={createPassword}
                   onChange={(e) => setCreatePassword(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -691,7 +691,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={createRole}
                   onChange={(e) => setCreateRole(e.target.value as Role)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -701,10 +701,10 @@ export function AdminEmployeesClient() {
                 </select>
               </div>
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setCreateModal(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setCreateModal(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>
@@ -716,9 +716,9 @@ export function AdminEmployeesClient() {
       {editEmployeeModal && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setEditEmployeeModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('adminEmp.editEmployee')}</h3>
-            <p className="mb-4 text-base text-slate-600">
+            <p className="mb-4 text-base text-muted">
               <span dir="ltr">{editEmployeeModal.empId}</span>
             </p>
             <form onSubmit={handleEditEmployee} className="space-y-3">
@@ -728,7 +728,7 @@ export function AdminEmployeesClient() {
                   type="text"
                   value={editEmployeeForm.name}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -738,7 +738,7 @@ export function AdminEmployeesClient() {
                   type="text"
                   value={editEmployeeForm.email}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               <div>
@@ -747,14 +747,14 @@ export function AdminEmployeesClient() {
                   type="text"
                   value={editEmployeeForm.phone}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium">{t('common.team')}</label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-700">
+                <p className="rounded border border-border bg-surface-subtle px-3 py-2 text-base text-foreground">
                   {editEmployeeForm.team}
-                  <span className="ms-2 text-xs text-slate-500">
+                  <span className="ms-2 text-xs text-muted">
                     ({t('adminEmp.changeTeam')} for future-dated change)
                   </span>
                 </p>
@@ -764,7 +764,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={String(editEmployeeForm.weeklyOffEffective)}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, weeklyOffEffective: e.target.value === '-1' ? -1 : Number(e.target.value) }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   {WEEKLY_OFF_EFFECTIVE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -778,7 +778,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={editEmployeeForm.position}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, position: e.target.value as EmployeePosition | '' }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   <option value="">—</option>
                   {POSITIONS.map((p) => (
@@ -793,7 +793,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={editEmployeeForm.language}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, language: e.target.value as 'en' | 'ar' }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   <option value="en">{t('common.english')}</option>
                   <option value="ar">{t('common.arabic')}</option>
@@ -804,7 +804,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={editEmployeeForm.boutiqueId}
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, boutiqueId: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   <option value="">—</option>
                   {boutiquesForSelect.map((b) => (
@@ -815,10 +815,10 @@ export function AdminEmployeesClient() {
                 </select>
               </div>
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setEditEmployeeModal(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setEditEmployeeModal(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>
@@ -830,9 +830,9 @@ export function AdminEmployeesClient() {
       {teamChangeModal && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setTeamChangeModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg max-h-[90vh] overflow-y-auto">
             <h3 className="mb-4 text-lg font-semibold">{t('adminEmp.teamChangeTitle')}</h3>
-            <p className="mb-2 text-base text-slate-600">
+            <p className="mb-2 text-base text-muted">
               {teamChangeModal.name} (<span dir="ltr">{teamChangeModal.empId}</span>) — {t('adminEmp.currentTeam')}: <span dir="ltr">{teamChangeModal.currentTeam}</span>
             </p>
             <p className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
@@ -846,9 +846,9 @@ export function AdminEmployeesClient() {
                 return msg.replace('{date}', dateVal);
               })()}
             </p>
-            {teamPreviewLoading && <p className="mb-2 text-sm text-slate-500">{t('adminEmp.checkingImbalance')}</p>}
+            {teamPreviewLoading && <p className="mb-2 text-sm text-muted">{t('adminEmp.checkingImbalance')}</p>}
             {teamPreview && !teamPreviewLoading && (
-              <p className="mb-2 text-sm text-slate-600">
+              <p className="mb-2 text-sm text-muted">
                 {t('adminEmp.weekTeamCounts')}: <span dir="ltr">A = {teamPreview.teamACount}, B = {teamPreview.teamBCount}</span>
                 → {t('adminEmp.afterChange')}: <span dir="ltr">A = {teamPreview.afterTeamACount}, B = {teamPreview.afterTeamBCount}</span>
               </p>
@@ -872,7 +872,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={teamChangeForm.newTeam}
                   onChange={(e) => setTeamChangeForm((f) => ({ ...f, newTeam: e.target.value as 'A' | 'B' }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   <option value="A">A</option>
                   <option value="B">B</option>
@@ -884,7 +884,7 @@ export function AdminEmployeesClient() {
                   type="date"
                   value={teamChangeForm.effectiveFrom}
                   onChange={(e) => setTeamChangeForm((f) => ({ ...f, effectiveFrom: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -893,7 +893,7 @@ export function AdminEmployeesClient() {
                 <textarea
                   value={teamChangeForm.reason}
                   onChange={(e) => setTeamChangeForm((f) => ({ ...f, reason: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base min-h-[80px]"
+                  className="w-full rounded border border-border px-3 py-2 text-base min-h-[80px]"
                   required
                 />
               </div>
@@ -906,11 +906,11 @@ export function AdminEmployeesClient() {
                     !teamChangeForm.effectiveFrom ||
                     !teamChangeForm.reason.trim()
                   }
-                  className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:opacity-50"
+                  className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90 disabled:opacity-50"
                 >
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setTeamChangeModal(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setTeamChangeModal(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>
@@ -922,16 +922,16 @@ export function AdminEmployeesClient() {
       {boutiqueChangeModal && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setBoutiqueChangeModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('admin.changeBoutique')}</h3>
-            <p className="mb-2 text-sm text-slate-600">{boutiqueChangeModal.name} ({boutiqueChangeModal.empId})</p>
+            <p className="mb-2 text-sm text-muted">{boutiqueChangeModal.name} ({boutiqueChangeModal.empId})</p>
             <form onSubmit={handleBoutiqueChange} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium">{t('admin.boutiques.boutique')}</label>
                 <select
                   value={boutiqueChangeToId}
                   onChange={(e) => setBoutiqueChangeToId(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 >
                   <option value="">—</option>
@@ -944,10 +944,10 @@ export function AdminEmployeesClient() {
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:opacity-50">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90 disabled:opacity-50">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setBoutiqueChangeModal(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setBoutiqueChangeModal(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>
@@ -965,9 +965,9 @@ export function AdminEmployeesClient() {
       {editModal && editModal.user && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setEditModal(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('adminEmp.editAccount')}</h3>
-            <p className="mb-2 text-base text-slate-600">
+            <p className="mb-2 text-base text-muted">
               {editModal.name} ({editModal.empId})
             </p>
             <form onSubmit={handleEditAccount} className="space-y-3">
@@ -976,7 +976,7 @@ export function AdminEmployeesClient() {
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as Role)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -994,10 +994,10 @@ export function AdminEmployeesClient() {
                 {t('adminEmp.mustChangePassword')}
               </label>
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setEditModal(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setEditModal(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>

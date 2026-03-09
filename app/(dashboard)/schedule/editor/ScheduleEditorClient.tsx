@@ -61,7 +61,7 @@ export function ScheduleEditorClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <Link href="/schedule" className="mb-4 inline-block text-base text-sky-600 hover:underline">
+        <Link href="/schedule" className="mb-4 inline-block text-base text-accent hover:underline">
           ← {t('common.back')}
         </Link>
         <div className="mb-4">
@@ -70,7 +70,7 @@ export function ScheduleEditorClient() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
         </div>
 
@@ -137,10 +137,10 @@ export function ScheduleEditorClient() {
               </ul>
             </OpsCard>
             <OpsCard title={t('schedule.overrides')}>
-              <p className="mb-2 text-base text-slate-600">
+              <p className="mb-2 text-base text-muted">
                 {t('schedule.coverRashidBoutique')} — {t('schedule.move')} / {t('schedule.swap')} via day override.
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted">
                 Use API POST /api/overrides with empId, date, overrideShift (MORNING|EVENING|NONE), reason.
               </p>
             </OpsCard>

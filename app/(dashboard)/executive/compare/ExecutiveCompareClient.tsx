@@ -99,37 +99,37 @@ export function ExecutiveCompareClient() {
   return (
     <div className="min-w-0 p-4 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold text-slate-900 truncate min-w-0">{t('executive.compare.title')}</h1>
+        <h1 className="text-xl font-semibold text-foreground truncate min-w-0">{t('executive.compare.title')}</h1>
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex rounded-lg border border-slate-300 bg-slate-50 p-0.5">
+            <div className="flex rounded-lg border border-border bg-surface-subtle p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('scope')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewScope')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('global')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewGlobal')}
               </button>
             </div>
           )}
-          <button type="button" onClick={prevMonth} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+          <button type="button" onClick={prevMonth} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle">
             ‹
           </button>
-          <span className="text-sm font-medium text-slate-800 tabular-nums min-w-0 truncate">{month}</span>
-          <button type="button" onClick={nextMonth} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+          <span className="text-sm font-medium text-foreground tabular-nums min-w-0 truncate">{month}</span>
+          <button type="button" onClick={nextMonth} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle">
             ›
           </button>
         </div>
       </div>
 
-      {loading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {loading && <p className="text-sm text-muted">{t('common.loading')}</p>}
       {!loading && !data && <p className="text-sm text-amber-700">{t('executive.compare.error')}</p>}
 
       {!loading && data && (
@@ -143,7 +143,7 @@ export function ExecutiveCompareClient() {
                     <span className="shrink-0 text-emerald-700 font-medium">{b.achievementPct ?? 0}%</span>
                   </li>
                 ))}
-                {top3.length === 0 && <li className="text-slate-500 text-sm">{t('executive.compare.noData')}</li>}
+                {top3.length === 0 && <li className="text-muted text-sm">{t('executive.compare.noData')}</li>}
               </ul>
             </OpsCard>
             <OpsCard title={t('executive.compare.bottom3')}>
@@ -154,7 +154,7 @@ export function ExecutiveCompareClient() {
                     <span className="shrink-0 text-amber-700 font-medium">{b.achievementPct ?? 0}%</span>
                   </li>
                 ))}
-                {bottom3.length === 0 && <li className="text-slate-500 text-sm">{t('executive.compare.noData')}</li>}
+                {bottom3.length === 0 && <li className="text-muted text-sm">{t('executive.compare.noData')}</li>}
               </ul>
             </OpsCard>
           </div>
@@ -178,13 +178,13 @@ export function ExecutiveCompareClient() {
                     <AdminTd className="truncate min-w-0">{b.regionName ?? b.regionCode ?? '—'}</AdminTd>
                     <AdminTd className="tabular-nums">{formatSar(b.sales)}</AdminTd>
                     <AdminTd className="tabular-nums">{formatSar(b.target)}</AdminTd>
-                    <AdminTd className={`tabular-nums ${b.achievementPct != null && b.achievementPct < 20 ? 'text-amber-700' : 'text-slate-900'}`}>{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</AdminTd>
-                    <AdminTd className="tabular-nums text-slate-900">{b.overduePct}%</AdminTd>
+                    <AdminTd className={`tabular-nums ${b.achievementPct != null && b.achievementPct < 20 ? 'text-amber-700' : 'text-foreground'}`}>{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</AdminTd>
+                    <AdminTd className="tabular-nums text-foreground">{b.overduePct}%</AdminTd>
                     <AdminTd className="tabular-nums">{b.riskScore}</AdminTd>
                     <AdminTd>
                       <Link
                         href={`/executive/insights?boutiqueId=${encodeURIComponent(b.boutiqueId)}`}
-                        className="text-sky-600 hover:underline text-sm truncate block min-w-0"
+                        className="text-accent hover:underline text-sm truncate block min-w-0"
                       >
                         {t('executive.compare.drilldown')}
                       </Link>
@@ -210,7 +210,7 @@ export function ExecutiveCompareClient() {
                       <AdminTd className="truncate min-w-0">{r.regionName ?? r.regionCode ?? '—'}</AdminTd>
                       <AdminTd className="tabular-nums">{formatSar(r.sales)}</AdminTd>
                       <AdminTd className="tabular-nums">{formatSar(r.target)}</AdminTd>
-                      <AdminTd className={`tabular-nums ${r.achievementPct != null && r.achievementPct < 20 ? 'text-amber-700' : 'text-slate-900'}`}>{r.achievementPct != null ? `${r.achievementPct}%` : '—'}</AdminTd>
+                      <AdminTd className={`tabular-nums ${r.achievementPct != null && r.achievementPct < 20 ? 'text-amber-700' : 'text-foreground'}`}>{r.achievementPct != null ? `${r.achievementPct}%` : '—'}</AdminTd>
                     </tr>
                   ))}
                 </AdminTableBody>
@@ -233,7 +233,7 @@ export function ExecutiveCompareClient() {
                       <AdminTd className="truncate min-w-0" title={g.groupName}>{g.groupName}</AdminTd>
                       <AdminTd className="tabular-nums">{formatSar(g.sales)}</AdminTd>
                       <AdminTd className="tabular-nums">{formatSar(g.target)}</AdminTd>
-                      <AdminTd className={`tabular-nums ${g.achievementPct != null && g.achievementPct < 20 ? 'text-amber-700' : 'text-slate-900'}`}>{g.achievementPct != null ? `${g.achievementPct}%` : '—'}</AdminTd>
+                      <AdminTd className={`tabular-nums ${g.achievementPct != null && g.achievementPct < 20 ? 'text-amber-700' : 'text-foreground'}`}>{g.achievementPct != null ? `${g.achievementPct}%` : '—'}</AdminTd>
                     </tr>
                   ))}
                 </AdminTableBody>

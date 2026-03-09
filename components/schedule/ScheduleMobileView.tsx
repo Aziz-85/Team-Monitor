@@ -51,48 +51,48 @@ export function ScheduleMobileView({
       {dayCards.map((card) => (
         <div
           key={card.date}
-          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="rounded-xl border border-border bg-surface p-4 shadow-sm"
         >
-          <h3 className="mb-3 border-b border-slate-100 pb-2 text-sm font-semibold text-slate-800">
+          <h3 className="mb-3 border-b border-border pb-2 text-sm font-semibold text-foreground">
             {formatDDMM(card.date)} — {card.dayName}
           </h3>
           <div className="space-y-3">
             <div>
-              <div className="mb-1 text-xs font-medium text-slate-500">
+              <div className="mb-1 text-xs font-medium text-muted">
                 {t('schedule.morning')} — {t('schedule.amCount')}: {card.morning.length}
               </div>
-              <div className="min-h-[38px] rounded-lg border border-slate-200 bg-blue-50/50 px-3 py-2 text-sm text-slate-800">
+              <div className="min-h-[38px] rounded-lg border border-border bg-blue-50/50 px-3 py-2 text-sm text-foreground">
                 {card.morning.length > 0 ? card.morning.join(', ') : '—'}
               </div>
             </div>
             <div>
-              <div className="mb-1 text-xs font-medium text-slate-500">
+              <div className="mb-1 text-xs font-medium text-muted">
                 {t('schedule.evening')} — {t('schedule.pmCount')}: {card.evening.length}
               </div>
-              <div className="min-h-[38px] rounded-lg border border-slate-200 bg-amber-50/50 px-3 py-2 text-sm text-slate-800">
+              <div className="min-h-[38px] rounded-lg border border-border bg-amber-50/50 px-3 py-2 text-sm text-foreground">
                 {card.evening.length > 0 ? card.evening.join(', ') : '—'}
               </div>
             </div>
             {(card.rashidAm.length > 0 || card.rashidPm.length > 0) && (
               <div>
-                <div className="mb-1 text-xs font-medium text-slate-500">
+                <div className="mb-1 text-xs font-medium text-muted">
                   {t('schedule.externalCoverage')}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {card.rashidAm.map((name) => (
                     <span
                       key={name}
-                      className="rounded border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                      className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                     >
-                      {name} <span className="text-slate-500">AM</span>
+                      {name} <span className="text-muted">AM</span>
                     </span>
                   ))}
                   {card.rashidPm.map((name) => (
                     <span
                       key={name}
-                      className="rounded border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                      className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                     >
-                      {name} <span className="text-slate-500">PM</span>
+                      {name} <span className="text-muted">PM</span>
                     </span>
                   ))}
                 </div>
@@ -104,24 +104,24 @@ export function ScheduleMobileView({
               if (!hasGuests) return null;
               return (
                 <div>
-                  <div className="mb-1 text-xs font-medium text-slate-500">
+                  <div className="mb-1 text-xs font-medium text-muted">
                     {t('schedule.externalCoverage') ?? 'External Coverage'}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(dayGuests.am ?? []).map((g) => (
                       <span
                         key={g.id}
-                        className="rounded border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                        className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                       >
-                        {g.name} <span className="text-slate-500">AM</span>
+                        {g.name} <span className="text-muted">AM</span>
                       </span>
                     ))}
                     {(dayGuests.pm ?? []).map((g) => (
                       <span
                         key={g.id}
-                        className="rounded border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+                        className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                       >
-                        {g.name} <span className="text-slate-500">PM</span>
+                        {g.name} <span className="text-muted">PM</span>
                       </span>
                     ))}
                   </div>

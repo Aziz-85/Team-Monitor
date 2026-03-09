@@ -16,7 +16,7 @@ import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { syncSummaryToSalesEntry } from '@/lib/sales/syncLedgerToSalesEntry';
 import type { Role } from '@prisma/client';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;

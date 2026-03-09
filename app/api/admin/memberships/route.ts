@@ -5,7 +5,7 @@ import { writeAdminAudit } from '@/lib/admin/audit';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 
-const ROLES: Role[] = ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN'];
+const ROLES: Role[] = ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'];
 
 export async function GET(request: NextRequest) {
   try {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'userId and boutiqueId required' }, { status: 400 });
   }
   if (!ROLES.includes(role as Role)) {
-    return NextResponse.json({ error: 'role must be one of EMPLOYEE, MANAGER, ASSISTANT_MANAGER, ADMIN' }, { status: 400 });
+    return NextResponse.json({ error: 'role must be one of EMPLOYEE, MANAGER, ASSISTANT_MANAGER, ADMIN, AREA_MANAGER' }, { status: 400 });
   }
 
   const [userExists, boutiqueExists] = await Promise.all([

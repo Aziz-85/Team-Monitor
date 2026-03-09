@@ -482,11 +482,11 @@ export function NetworkExecutiveClient() {
         ]}
       >
         {BOUTIQUES.map((r) => (
-          <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-            <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">Boutique {r.boutique}</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.netSales.toLocaleString()} SAR</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.achPct}%</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.gap >= 0 ? '+' : ''}{r.gap.toLocaleString()} SAR</td>
+          <tr key={r.boutique} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+            <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">Boutique {r.boutique}</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.netSales.toLocaleString()} SAR</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.achPct}%</td>
+            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.gap >= 0 ? '+' : ''}{r.gap.toLocaleString()} SAR</td>
           </tr>
         ))}
       </ExecSimpleTable>
@@ -498,23 +498,23 @@ export function NetworkExecutiveClient() {
       <div className="min-w-0 overflow-hidden">
         <table className="w-full min-w-0 table-fixed border-collapse text-sm">
           <thead>
-            <tr className="bg-slate-50">
-              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Base Forecast</th>
-              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Low</th>
-              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">High</th>
-              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Forecast Ach%</th>
-              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Risk note</th>
+            <tr className="bg-surface-subtle">
+              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Base Forecast</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Low</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">High</th>
+              <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Forecast Ach%</th>
+              <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Risk note</th>
             </tr>
           </thead>
           <tbody>
             {forecastRows.map((r) => (
-              <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{r.boutique}</td>
-                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.base).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.low).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(r.high).toLocaleString()} SAR</td>
-                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.forecastAchPct.toFixed(1)}%</td>
+              <tr key={r.boutique} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{r.boutique}</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{Math.round(r.base).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{Math.round(r.low).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{Math.round(r.high).toLocaleString()} SAR</td>
+                <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.forecastAchPct.toFixed(1)}%</td>
                 <td className="max-w-0 py-3 px-3 truncate">
                   <ExecBadge status={forecastAchStatus(r.forecastAchPct)} />
                 </td>
@@ -523,7 +523,7 @@ export function NetworkExecutiveClient() {
           </tbody>
         </table>
       </div>
-      <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+      <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
         RunRateForecast = (MTD Sales / dayOfMonth) × daysInMonth. Base = RunRate; Low = Base×0.95; High = Base×1.05. Forecast Ach% = Base / MonthlyTarget. ok ≥90%, watch 75–89%, action &lt;75%.
       </p>
     </ExecPanel>
@@ -535,15 +535,15 @@ export function NetworkExecutiveClient() {
         {actions.map((a) => (
           <li
             key={a.id}
-            className="flex min-w-0 flex-wrap items-start gap-2 rounded border border-slate-200 bg-white py-2 px-3 text-sm"
+            className="flex min-w-0 flex-wrap items-start gap-2 rounded border border-border bg-surface py-2 px-3 text-sm"
           >
             <ExecBadge status="action" label={a.type} />
-            <span className="min-w-0 flex-1 text-slate-900">{a.text}</span>
+            <span className="min-w-0 flex-1 text-foreground">{a.text}</span>
           </li>
         ))}
       </ul>
       {actions.length === 0 && (
-        <p className="text-sm text-slate-500">No actions from rules.</p>
+        <p className="text-sm text-muted">No actions from rules.</p>
       )}
     </ExecPanel>
   );
@@ -552,20 +552,20 @@ export function NetworkExecutiveClient() {
     <div className="min-w-0 space-y-6">
       <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-slate-900">Network Executive Overview</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-foreground">Network Executive Overview</h1>
+          <p className="mt-0.5 text-sm text-muted">
             {boutiqueList.length > 0 ? `${boutiqueList.length} boutiques` : '2 boutiques'} · MTD · {viewMode === 'Investor' ? 'Board-ready' : 'Decision intelligence'}
           </p>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Historical month</span>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted">Historical month</span>
             <input
               type="text"
               value={historicalMonth}
               onChange={(e) => setHistoricalMonth(e.target.value)}
               placeholder="YYYY-MM"
-              className="w-28 min-w-0 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-900"
+              className="w-28 min-w-0 rounded border border-border px-2 py-1.5 text-sm text-foreground"
               dir="ltr"
             />
           </label>
@@ -589,26 +589,26 @@ export function NetworkExecutiveClient() {
             <ExecPanel title="Pace Analysis" subtitle="Expected progress vs actual achievement">
               <div className="grid min-w-0 grid-cols-12 gap-4">
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Ach%</p>
-                  <p className="mt-0.5 text-2xl font-semibold tabular-nums text-slate-900">{NETWORK_ACH_PCT}%</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Ach%</p>
+                  <p className="mt-0.5 text-2xl font-semibold tabular-nums text-foreground">{NETWORK_ACH_PCT}%</p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Expected Progress %</p>
-                  <p className="mt-0.5 text-2xl font-semibold tabular-nums text-slate-900">{EXPECTED_PCT.toFixed(0)}%</p>
-                  <p className="mt-0.5 text-[10px] text-slate-500">Day {CURRENT_DAY} of {DAYS_IN_MONTH}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Expected Progress %</p>
+                  <p className="mt-0.5 text-2xl font-semibold tabular-nums text-foreground">{EXPECTED_PCT.toFixed(0)}%</p>
+                  <p className="mt-0.5 text-[10px] text-muted">Day {CURRENT_DAY} of {DAYS_IN_MONTH}</p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Pace Gap %</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Pace Gap %</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <span className="text-2xl font-semibold tabular-nums text-slate-900">
+                    <span className="text-2xl font-semibold tabular-nums text-foreground">
                       {paceGapNetwork >= 0 ? '+' : ''}{paceGapNetwork.toFixed(1)}%
                     </span>
                     <ExecBadge status={paceGapStatus(paceGapNetwork)} />
                   </div>
-                  <p className="mt-0.5 text-[10px] text-slate-500">Ach% − Expected%</p>
+                  <p className="mt-0.5 text-[10px] text-muted">Ach% − Expected%</p>
                 </div>
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 Expected% = (currentDay / daysInMonth) × 100. Pace Gap = Ach% − Expected%. ok ≥−5%, watch −10% to −5%, action &lt;−10%.
               </p>
             </ExecPanel>
@@ -620,13 +620,13 @@ export function NetworkExecutiveClient() {
                 {BOUTIQUES.map((r) => {
                   const profile = MOCK_BRANCH_PROFILE[r.boutique as 'A' | 'B'];
                   return (
-                    <div key={r.boutique} className="min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Boutique {r.boutique}</p>
+                    <div key={r.boutique} className="min-w-0 rounded-lg border border-border bg-surface-subtle p-3">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Boutique {r.boutique}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700">{profile.sizeTier}</span>
-                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700">{profile.crowdIndex}</span>
-                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700">{profile.brandStrength}</span>
-                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700">{profile.productDepth}</span>
+                        <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-foreground">{profile.sizeTier}</span>
+                        <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-foreground">{profile.crowdIndex}</span>
+                        <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-foreground">{profile.brandStrength}</span>
+                        <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-foreground">{profile.productDepth}</span>
                       </div>
                     </div>
                   );
@@ -640,21 +640,21 @@ export function NetworkExecutiveClient() {
               <div className="min-w-0 overflow-hidden">
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Current MTD</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Same Month LY</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">YoY %</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
+                    <tr className="bg-surface-subtle">
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Current MTD</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Same Month LY</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">YoY %</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {yoyRowsForPanel.map((r) => (
-                      <tr key={r.boutique + (r.boutiqueId ?? '')} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                        <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.currentMTD.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.sameMonthLY.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{(r.yoyPct >= 0 ? '+' : '') + r.yoyPct.toFixed(1)}%</td>
+                      <tr key={r.boutique + (r.boutiqueId ?? '')} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                        <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{r.boutique}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.currentMTD.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.sameMonthLY.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{(r.yoyPct >= 0 ? '+' : '') + r.yoyPct.toFixed(1)}%</td>
                         <td className="max-w-0 py-3 px-3 truncate">
                           <ExecBadge status={yoyStatus(r.yoyPct)} />
                         </td>
@@ -663,7 +663,7 @@ export function NetworkExecutiveClient() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 YoY % = (Current MTD / Same Month LY) − 1. ok ≥+5%, watch −5% to +5%, action &lt;−5% (muted, no red).
               </p>
             </ExecPanel>
@@ -675,11 +675,11 @@ export function NetworkExecutiveClient() {
                 <div className="min-w-0 overflow-hidden">
                   <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                     <thead>
-                      <tr className="bg-slate-50">
-                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket (SAR)</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AIV (SAR)</th>
+                      <tr className="bg-surface-subtle">
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Avg Ticket (SAR)</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">UPT</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">AIV (SAR)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -691,11 +691,11 @@ export function NetworkExecutiveClient() {
                         const upt = t.invoices > 0 ? t.pieces / t.invoices : 0;
                         const aiv = t.pieces > 0 ? (t.netSales / 100) / t.pieces : 0;
                         return (
-                          <tr key={b.id} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                            <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{b.name || b.code}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{avgTicket.toFixed(2)}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{upt.toFixed(2)}</td>
-                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{aiv.toFixed(2)}</td>
+                          <tr key={b.id} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                            <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{b.name || b.code}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{avgTicket.toFixed(2)}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{upt.toFixed(2)}</td>
+                            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{aiv.toFixed(2)}</td>
                           </tr>
                         );
                       })}
@@ -711,41 +711,41 @@ export function NetworkExecutiveClient() {
               <div className="min-w-0 overflow-hidden">
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
-                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Return %</th>
+                    <tr className="bg-surface-subtle">
+                      <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Txn MTD</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">WoW</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Avg Ticket</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">WoW</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Sales/Staff</th>
+                      <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Return %</th>
                     </tr>
                   </thead>
                   <tbody>
                     {BOUTIQUES.map((r) => (
-                      <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                        <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">Boutique {r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
+                      <tr key={r.boutique} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                        <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">Boutique {r.boutique}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.txnMTD.toLocaleString()}</td>
                         <td className="max-w-0 py-3 px-3 truncate text-end">
-                          <span className="tabular-nums text-slate-600">{(r.wowTxnGrowth >= 0 ? '+' : '') + r.wowTxnGrowth}%</span>
+                          <span className="tabular-nums text-muted">{(r.wowTxnGrowth >= 0 ? '+' : '') + r.wowTxnGrowth}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={wowStatus(r.wowTxnGrowth)} /></span>
                         </td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.avgTicketMTD} SAR</td>
                         <td className="max-w-0 py-3 px-3 truncate text-end">
-                          <span className="tabular-nums text-slate-600">{(r.wowAvgTicketGrowth >= 0 ? '+' : '') + r.wowAvgTicketGrowth}%</span>
+                          <span className="tabular-nums text-muted">{(r.wowAvgTicketGrowth >= 0 ? '+' : '') + r.wowAvgTicketGrowth}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={wowStatus(r.wowAvgTicketGrowth)} /></span>
                         </td>
                         <td className="max-w-0 py-3 px-3 truncate text-end">
-                          <span className="tabular-nums text-slate-900">{r.salesPerStaff.toLocaleString()}</span>
+                          <span className="tabular-nums text-foreground">{r.salesPerStaff.toLocaleString()}</span>
                           <span className="ms-1 inline-block"><ExecBadge status={r.boutique === 'A' ? salesPerStaffStatusA : salesPerStaffStatusB} /></span>
                         </td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{MOCK_RETURN_RATE[r.boutique as 'A' | 'B']}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{MOCK_RETURN_RATE[r.boutique as 'A' | 'B']}%</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 Return % = returns/exchanges vs gross (mock). WoW = week-over-week growth. Status: ok/watch/action (muted).
               </p>
             </ExecPanel>
@@ -757,53 +757,53 @@ export function NetworkExecutiveClient() {
             <ExecPanel title="Target Rebalancing (scenario)" subtitle="Max shift 10%; no rebalance if days left &lt; 7. Uses ForecastAch%, PaceGap, Sales/Staff, YoY.">
               <div className="grid min-w-0 grid-cols-12 gap-4">
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Max shift %</label>
+                  <label className="text-[10px] font-medium uppercase tracking-wider text-muted">Max shift %</label>
                   <input
                     type="number"
                     min={1}
                     max={30}
                     value={maxShiftPct}
                     onChange={(e) => setMaxShiftPct(Number(e.target.value) || 10)}
-                    className="mt-1 w-full min-w-0 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-900"
+                    className="mt-1 w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm text-foreground"
                   />
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <label className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Lock if days left &lt;</label>
+                  <label className="text-[10px] font-medium uppercase tracking-wider text-muted">Lock if days left &lt;</label>
                   <input
                     type="number"
                     min={0}
                     max={31}
                     value={lockIfDaysLeftLessThan}
                     onChange={(e) => setLockIfDaysLeftLessThan(Number(e.target.value) || 7)}
-                    className="mt-1 w-full min-w-0 rounded border border-slate-200 px-2 py-1.5 text-sm text-slate-900"
+                    className="mt-1 w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm text-foreground"
                   />
                 </div>
               </div>
-              <p className="mt-2 text-[10px] text-slate-500">Guardrails: max shift 10%; no rebalance when days left &lt; 7. Logic: ForecastAch%, PaceGap, Sales/Staff relative gap, YoY trend.</p>
+              <p className="mt-2 text-[10px] text-muted">Guardrails: max shift 10%; no rebalance when days left &lt; 7. Logic: ForecastAch%, PaceGap, Sales/Staff relative gap, YoY trend.</p>
 
               {rebalancingSuggestion ? (
-                <div className="mt-4 space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-                  <p className="text-xs font-medium text-slate-700">Suggested target adjustments</p>
+                <div className="mt-4 space-y-3 rounded-lg border border-border bg-surface-subtle p-3">
+                  <p className="text-xs font-medium text-foreground">Suggested target adjustments</p>
                   <div className="grid min-w-0 grid-cols-12 gap-2 text-sm">
                     <div className="col-span-12 min-w-0 md:col-span-4">
-                      <span className="text-slate-500">Current targets:</span> A: {MOCK_A.target.toLocaleString()} SAR, B: {MOCK_B.target.toLocaleString()} SAR
+                      <span className="text-muted">Current targets:</span> A: {MOCK_A.target.toLocaleString()} SAR, B: {MOCK_B.target.toLocaleString()} SAR
                     </div>
                     <div className="col-span-12 min-w-0 md:col-span-4">
-                      <span className="text-slate-500">Suggested:</span> Boutique {rebalancingSuggestion.from}: {Math.round(rebalancingSuggestion.newTargetOk).toLocaleString()} SAR; Boutique {rebalancingSuggestion.to}: {Math.round(rebalancingSuggestion.newTargetAction).toLocaleString()} SAR
+                      <span className="text-muted">Suggested:</span> Boutique {rebalancingSuggestion.from}: {Math.round(rebalancingSuggestion.newTargetOk).toLocaleString()} SAR; Boutique {rebalancingSuggestion.to}: {Math.round(rebalancingSuggestion.newTargetAction).toLocaleString()} SAR
                     </div>
                     <div className="col-span-12 min-w-0 md:col-span-4">
-                      <span className="text-slate-500">Delta:</span> {Math.round(rebalancingSuggestion.amount).toLocaleString()} SAR shift
+                      <span className="text-muted">Delta:</span> {Math.round(rebalancingSuggestion.amount).toLocaleString()} SAR shift
                     </div>
                   </div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Reasoning</p>
-                  <ul className="list-inside list-disc space-y-0.5 text-xs text-slate-600">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Reasoning</p>
+                  <ul className="list-inside list-disc space-y-0.5 text-xs text-muted">
                     {rebalancingReasoning.map((r, i) => (
                       <li key={i}>{r}</li>
                     ))}
                   </ul>
                 </div>
               ) : (
-                <p className="mt-3 text-sm text-slate-500">
+                <p className="mt-3 text-sm text-muted">
                   No rebalance (both ok, or days left &lt; {lockIfDaysLeftLessThan}, or gap to 75% covered).
                 </p>
               )}
@@ -815,22 +815,22 @@ export function NetworkExecutiveClient() {
               <div className="min-w-0 overflow-hidden">
                 <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Txn MTD</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Ticket MTD</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Txn Growth</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW Avg Ticket</th>
+                    <tr className="bg-surface-subtle">
+                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Txn MTD</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Avg Ticket MTD</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">WoW Txn Growth</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">WoW Avg Ticket</th>
                     </tr>
                   </thead>
                   <tbody>
                     {BOUTIQUES.map((r) => (
-                      <tr key={r.boutique} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                        <td className="max-w-0 py-3 px-3 font-medium text-slate-900">Boutique {r.boutique}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.txnMTD.toLocaleString()}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.avgTicketMTD} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.wowTxnGrowth >= 0 ? '+' : ''}{r.wowTxnGrowth}%</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{r.wowAvgTicketGrowth >= 0 ? '+' : ''}{r.wowAvgTicketGrowth}%</td>
+                      <tr key={r.boutique} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                        <td className="max-w-0 py-3 px-3 font-medium text-foreground">Boutique {r.boutique}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.txnMTD.toLocaleString()}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.avgTicketMTD} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.wowTxnGrowth >= 0 ? '+' : ''}{r.wowTxnGrowth}%</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.wowAvgTicketGrowth >= 0 ? '+' : ''}{r.wowAvgTicketGrowth}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -843,18 +843,18 @@ export function NetworkExecutiveClient() {
             <div className="col-span-12 min-w-0 md:col-span-6">
               <ExecPanel title="Boutique Score" subtitle="Weighted: Ach%, Compliance, Pace, Backlog">
                 <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 bg-emerald-50/50 px-3 py-2">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Leading branch</span>
-                    <span className="font-semibold text-slate-900">Boutique {leading}</span>
-                    <span className="text-lg font-semibold tabular-nums text-slate-900">{leading === 'A' ? scoreA : scoreB}/100</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-emerald-50/50 px-3 py-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted">Leading branch</span>
+                    <span className="font-semibold text-foreground">Boutique {leading}</span>
+                    <span className="text-lg font-semibold tabular-nums text-foreground">{leading === 'A' ? scoreA : scoreB}/100</span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-200 bg-amber-50/30 px-3 py-2">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Priority branch</span>
-                    <span className="font-semibold text-slate-900">Boutique {priority}</span>
-                    <span className="text-lg font-semibold tabular-nums text-slate-900">{priority === 'A' ? scoreA : scoreB}/100</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-amber-50/30 px-3 py-2">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted">Priority branch</span>
+                    <span className="font-semibold text-foreground">Boutique {priority}</span>
+                    <span className="text-lg font-semibold tabular-nums text-foreground">{priority === 'A' ? scoreA : scoreB}/100</span>
                   </div>
                 </div>
-                <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+                <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                   Score = 0.4×Ach% + 0.3×Compliance% + 0.2×Pace + 0.1×Backlog norm (0–100).
                 </p>
               </ExecPanel>
@@ -878,26 +878,26 @@ export function NetworkExecutiveClient() {
                     <col style={{ width: '6%' }} />
                   </colgroup>
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Boutique</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach%</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">WoW%</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales/Staff</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Compliance%</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Backlog</th>
-                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Avg Age</th>
+                    <tr className="bg-surface-subtle">
+                      <th className="py-3 px-3 text-start text-[11px] font-medium uppercase tracking-wide text-muted">Boutique</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Target</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Net Sales</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Ach%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Gap</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">WoW%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Sales/Staff</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Compliance%</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Backlog</th>
+                      <th className="py-3 px-3 text-end text-[11px] font-medium uppercase tracking-wide text-muted">Avg Age</th>
                     </tr>
                   </thead>
                   <tbody>
                     {BOUTIQUES.map((row) => (
                       <tr
                         key={row.boutique}
-                        className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50"
+                        className="border-b border-border last:border-b-0 hover:bg-surface-subtle"
                       >
-                        <td className="max-w-0 py-3 px-3 text-start font-medium text-slate-900">
+                        <td className="max-w-0 py-3 px-3 text-start font-medium text-foreground">
                           <span className="min-w-0 truncate">Boutique {row.boutique}</span>
                         </td>
                         <ExecDataCell value={`${row.target.toLocaleString()} SAR`} align="right" />
@@ -949,7 +949,7 @@ export function NetworkExecutiveClient() {
           const watch = staffRows.filter((r) => r.status === 'watch').length;
           return (
             <ExecPanel key={b.id} title={`Staff — ${b.name || b.code}`} subtitle="Investor view: aggregated only">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 Above target: {above} · Watch: {watch} · Below target: {below}
               </p>
             </ExecPanel>
@@ -963,31 +963,31 @@ export function NetworkExecutiveClient() {
             <div className="min-w-0 overflow-hidden">
               <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                 <thead>
-                  <tr className="bg-slate-50">
-                    <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Net Sales</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Pieces</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution%</th>
-                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Achievement%</th>
+                  <tr className="bg-surface-subtle">
+                    <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Employee</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Net Sales</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Invoices</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Pieces</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">AvgTicket</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">UPT</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Contribution%</th>
+                    <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Achievement%</th>
                   </tr>
                 </thead>
                 <tbody>
                   {staffRows.map((srow) => {
                     const upt = srow.txnCount > 0 ? srow.pieces / srow.txnCount : 0;
                     return (
-                      <tr key={srow.employee} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                        <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{srow.employee}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.netSales.toLocaleString()} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.txnCount}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.pieces}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.avgTicket} SAR</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{upt.toFixed(2)}</td>
-                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{srow.contributionPct.toFixed(1)}%</td>
+                      <tr key={srow.employee} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                        <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{srow.employee}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{srow.netSales.toLocaleString()} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{srow.txnCount}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{srow.pieces}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{srow.avgTicket} SAR</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{upt.toFixed(2)}</td>
+                        <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{srow.contributionPct.toFixed(1)}%</td>
                         <td className="max-w-0 py-3 px-3 truncate text-end">
-                          <span className="tabular-nums text-slate-900">{srow.achievementPct.toFixed(1)}%</span>
+                          <span className="tabular-nums text-foreground">{srow.achievementPct.toFixed(1)}%</span>
                           <span className="ms-1 inline-block"><ExecBadge status={srow.status} /></span>
                         </td>
                       </tr>
@@ -1028,13 +1028,13 @@ export function NetworkExecutiveClient() {
               ]}
             >
               {staff.map((s) => (
-                <tr key={s.employee} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                  <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{s.employee}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.netSales.toLocaleString()} SAR</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.txnCount.toLocaleString()}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{s.avgTicket} SAR</td>
+                <tr key={s.employee} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                  <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{s.employee}</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.netSales.toLocaleString()} SAR</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.txnCount.toLocaleString()}</td>
+                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.avgTicket} SAR</td>
                   <td className="max-w-0 py-3 px-3 truncate text-end">
-                    <span className="tabular-nums text-slate-900">{s.contributionPct.toFixed(1)}%</span>
+                    <span className="tabular-nums text-foreground">{s.contributionPct.toFixed(1)}%</span>
                     {s.status !== 'ok' && <span className="ms-1 inline-block"><ExecBadge status={s.status} /></span>}
                   </td>
                 </tr>
@@ -1054,9 +1054,9 @@ export function NetworkExecutiveClient() {
         );
       })}
 
-      <footer className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Definitions & formulas</h3>
-        <ul className="mt-2 space-y-1 text-[10px] text-slate-600">
+      <footer className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h3 className="text-[10px] font-medium uppercase tracking-wider text-muted">Definitions & formulas</h3>
+        <ul className="mt-2 space-y-1 text-[10px] text-muted">
           <li><strong>Net Sales</strong> = SUM(netAmount)</li>
           <li><strong>Ach%</strong> = Net Sales / Monthly Target</li>
           <li><strong>WoW</strong> = (last7d / prev7d) − 1</li>

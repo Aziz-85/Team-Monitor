@@ -95,7 +95,7 @@ export function MonthlySalesMatrixClient() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-6">
-      <h1 className="text-xl font-bold text-slate-900">
+      <h1 className="text-xl font-bold text-foreground">
         {t('sales.monthlyMatrix.title') ?? 'Monthly Sales Matrix'}
       </h1>
 
@@ -104,23 +104,23 @@ export function MonthlySalesMatrixClient() {
           <button
             type="button"
             onClick={() => setMonthKey(addMonth(monthKey, -1))}
-            className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
           >
             ←
           </button>
-          <span className="min-w-[100px] text-center font-medium text-slate-800">
+          <span className="min-w-[100px] text-center font-medium text-foreground">
             {t('sales.monthlyMatrix.month') ?? 'Month'}: {monthKey}
           </span>
           <button
             type="button"
             onClick={() => setMonthKey(addMonth(monthKey, 1))}
-            className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
           >
             →
           </button>
         </div>
         {data?.scopeId && (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted">
             {t('common.workingOnBoutique') ?? 'Working on'}: {data.scopeId}
           </p>
         )}
@@ -132,27 +132,27 @@ export function MonthlySalesMatrixClient() {
           placeholder={t('common.search') ?? 'Search'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
         />
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             checked={onlyNonZero}
             onChange={(e) => setOnlyNonZero(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
           />
           {t('sales.monthlyMatrix.onlyNonZero') ?? 'Only with sales'}
         </label>
       </div>
 
       {loading && (
-        <p className="mt-4 text-sm text-slate-500">{t('common.loading') ?? 'Loading…'}</p>
+        <p className="mt-4 text-sm text-muted">{t('common.loading') ?? 'Loading…'}</p>
       )}
 
       {!loading && data && (
         <>
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-muted">
               {t('sales.monthlyMatrix.daysWindow') ?? 'Days'}:
             </span>
             {Array.from({ length: maxWindow + 1 }, (_, i) => {
@@ -165,8 +165,8 @@ export function MonthlySalesMatrixClient() {
                   onClick={() => setDayWindow(i)}
                   className={`rounded px-2 py-1 text-xs font-medium ${
                     currentWindow === i
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-accent text-white'
+                      : 'bg-surface-subtle text-foreground hover:bg-surface-subtle'
                   }`}
                 >
                   {a}–{b}
@@ -175,74 +175,74 @@ export function MonthlySalesMatrixClient() {
             })}
           </div>
 
-          <div className="mt-4 overflow-x-auto overflow-y-visible rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="mt-4 overflow-x-auto overflow-y-visible rounded-xl border border-border bg-surface shadow-sm">
             <table className="w-full min-w-0 border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="sticky left-0 z-10 min-w-[140px] border-r border-slate-200 bg-slate-50 px-3 py-2 text-start font-semibold text-slate-700">
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="sticky left-0 z-10 min-w-[140px] border-r border-border bg-surface-subtle px-3 py-2 text-start font-semibold text-foreground">
                     {t('sales.monthlyMatrix.employee') ?? 'Employee'}
                   </th>
                   {windowDays.map((dateStr) => (
                     <th
                       key={dateStr}
-                      className="w-14 border-r border-slate-200 px-2 py-2 text-center font-semibold text-slate-700 last:border-r-0"
+                      className="w-14 border-r border-border px-2 py-2 text-center font-semibold text-foreground last:border-r-0"
                     >
                       {dateStr.slice(8, 10)}
                     </th>
                   ))}
-                  <th className="sticky right-0 z-10 min-w-[80px] border-l border-slate-200 bg-slate-50 px-3 py-2 text-end font-semibold text-slate-700">
+                  <th className="sticky right-0 z-10 min-w-[80px] border-l border-border bg-surface-subtle px-3 py-2 text-end font-semibold text-foreground">
                     {t('sales.monthlyMatrix.total') ?? 'Total'}
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmployees.map((emp) => (
-                  <tr key={emp.employeeId} className="border-b border-slate-100 hover:bg-slate-50/50">
-                    <td className="sticky left-0 z-10 border-r border-slate-200 bg-white px-3 py-2 font-medium text-slate-800">
+                  <tr key={emp.employeeId} className="border-b border-border hover:bg-surface-subtle/50">
+                    <td className="sticky left-0 z-10 border-r border-border bg-surface px-3 py-2 font-medium text-foreground">
                       {emp.name || emp.empId}
                     </td>
                     {windowDays.map((dateStr) => (
                       <td
                         key={dateStr}
-                        className="w-14 border-r border-slate-100 px-2 py-1.5 text-end tabular-nums text-slate-700 last:border-r-0"
+                        className="w-14 border-r border-border px-2 py-1.5 text-end tabular-nums text-foreground last:border-r-0"
                       >
                         {cellDisplay(dateStr, emp.employeeId)}
                       </td>
                     ))}
-                    <td className="sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-2 text-end font-medium tabular-nums text-slate-800">
+                    <td className="sticky right-0 z-10 border-l border-border bg-surface px-3 py-2 text-end font-medium tabular-nums text-foreground">
                       {(rowTotalByEmpId.get(emp.employeeId) ?? 0).toLocaleString('en-SA')}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-slate-300 bg-slate-100 font-semibold">
-                  <td className="sticky left-0 z-10 border-r border-slate-200 bg-slate-100 px-3 py-2 text-start text-slate-800">
+                <tr className="border-t-2 border-border bg-surface-subtle font-semibold">
+                  <td className="sticky left-0 z-10 border-r border-border bg-surface-subtle px-3 py-2 text-start text-foreground">
                     {t('sales.monthlyMatrix.dayTotal') ?? 'Day total'}
                   </td>
                   {windowDays.map((dateStr) => (
                     <td
                       key={dateStr}
-                      className="w-14 border-r border-slate-200 px-2 py-2 text-end tabular-nums text-slate-800 last:border-r-0"
+                      className="w-14 border-r border-border px-2 py-2 text-end tabular-nums text-foreground last:border-r-0"
                     >
                       {(colTotalByDate.get(dateStr) ?? 0).toLocaleString('en-SA')}
                     </td>
                   ))}
-                  <td className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-2 text-end tabular-nums text-slate-900">
+                  <td className="sticky right-0 z-10 border-l border-border bg-surface-subtle px-3 py-2 text-end tabular-nums text-foreground">
                     {data.grandTotalSar.toLocaleString('en-SA')}
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted">
             {t('sales.monthlyMatrix.grandTotal') ?? 'Grand total'}: {data.grandTotalSar.toLocaleString('en-SA')} SAR
           </p>
         </>
       )}
 
       {!loading && !data && (
-        <p className="mt-4 text-sm text-slate-500">{t('schedule.filteredByBoutiqueHint') ?? 'No data or select a boutique.'}</p>
+        <p className="mt-4 text-sm text-muted">{t('schedule.filteredByBoutiqueHint') ?? 'No data or select a boutique.'}</p>
       )}
     </div>
   );

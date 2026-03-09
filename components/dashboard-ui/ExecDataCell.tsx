@@ -21,7 +21,7 @@ export function ExecDataCell({
   const alignClass = align === 'right' ? 'text-end tabular-nums' : 'text-start';
 
   return (
-    <td className={`max-w-0 py-3 px-3 text-slate-900 ${alignClass}`}>
+    <td className={`max-w-0 py-3 px-3 text-foreground ${alignClass}`}>
       <div
         className={`flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 ${align === 'right' ? 'justify-end' : ''}`}
       >

@@ -93,7 +93,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
       .finally(() => setKpiLoading(false));
   }, [empId, kpiPeriod]);
 
-  if (loading) return <div className="p-4 text-sm text-slate-500">{t('common.loading')}</div>;
+  if (loading) return <div className="p-4 text-sm text-muted">{t('common.loading')}</div>;
   if (!data) return <div className="p-4 text-sm text-amber-700">{t('executive.employees.error')}</div>;
 
   const monthLabels = data.monthlySeries.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
@@ -102,23 +102,23 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
     <div className="min-w-0 p-4 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href={`/executive/employees${viewMode === 'global' ? '?global=true' : ''}`} className="text-sky-600 hover:underline text-sm">‹ {t('executive.employees.back')}</Link>
-          <h1 className="text-xl font-semibold text-slate-900 truncate min-w-0">{data.name}</h1>
+          <Link href={`/executive/employees${viewMode === 'global' ? '?global=true' : ''}`} className="text-accent hover:underline text-sm">‹ {t('executive.employees.back')}</Link>
+          <h1 className="text-xl font-semibold text-foreground truncate min-w-0">{data.name}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex rounded-lg border border-slate-300 bg-slate-50 p-0.5">
+            <div className="flex rounded-lg border border-border bg-surface-subtle p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('scope')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewScope')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('global')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewGlobal')}
               </button>
@@ -127,7 +127,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
           <select
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
           >
             {[0, 1, 2, 3].map((i) => {
               const y = new Date().getFullYear() - i;
@@ -139,13 +139,13 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
         <OpsCard title={t('executive.employees.annualTotal')}>
-          <p className="text-2xl font-semibold text-slate-900 tabular-nums">{formatSar(data.annualTotal)} SAR</p>
+          <p className="text-2xl font-semibold text-foreground tabular-nums">{formatSar(data.annualTotal)} SAR</p>
         </OpsCard>
         <OpsCard title={t('executive.compare.achPct')}>
-          <p className="text-2xl font-semibold text-slate-900 tabular-nums">{data.achievementPct != null ? `${data.achievementPct}%` : '—'}</p>
+          <p className="text-2xl font-semibold text-foreground tabular-nums">{data.achievementPct != null ? `${data.achievementPct}%` : '—'}</p>
         </OpsCard>
         <OpsCard title={t('executive.employees.consistency')}>
-          <p className="text-2xl font-semibold text-slate-900 tabular-nums">{data.consistencyScore}</p>
+          <p className="text-2xl font-semibold text-foreground tabular-nums">{data.consistencyScore}</p>
         </OpsCard>
       </div>
 
@@ -170,7 +170,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
         <div className="overflow-x-hidden min-w-0">
           <table className="w-full table-fixed text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-700">
+              <tr className="border-b border-border text-foreground">
                 {monthLabels.map((m) => (
                   <th key={m} className="py-2 px-1 text-center truncate">{m.slice(5)}</th>
                 ))}
@@ -212,33 +212,33 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
 
       <OpsCard title={t('kpi.appraisalTab')} className="mt-6">
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <label className="text-sm font-medium text-slate-700">{t('kpi.periodKey')}:</label>
+          <label className="text-sm font-medium text-foreground">{t('kpi.periodKey')}:</label>
           <input
             type="text"
             value={kpiPeriod}
             onChange={(e) => setKpiPeriod(e.target.value)}
             placeholder="YYYY or YYYY-MM"
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 w-28"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground w-28"
           />
         </div>
-        {kpiLoading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
-        {!kpiLoading && !kpiSnapshot && <p className="text-sm text-slate-500">{t('kpi.noSnapshot')}</p>}
+        {kpiLoading && <p className="text-sm text-muted">{t('common.loading')}</p>}
+        {!kpiLoading && !kpiSnapshot && <p className="text-sm text-muted">{t('kpi.noSnapshot')}</p>}
         {!kpiLoading && kpiSnapshot && (
           <div className="space-y-3 text-sm overflow-x-hidden">
             <div className="grid grid-cols-2 gap-2 max-w-md">
-              <div><span className="text-slate-600">{t('kpi.overall')}:</span> <span className="font-medium tabular-nums">{kpiSnapshot.overallOutOf5}/5</span></div>
-              <div><span className="text-slate-600">{t('kpi.salesKpi')}:</span> <span className="tabular-nums">{kpiSnapshot.salesKpiOutOf5}/5</span></div>
-              <div><span className="text-slate-600">{t('kpi.skills')}:</span> <span className="tabular-nums">{kpiSnapshot.skillsOutOf5}/5</span></div>
-              <div><span className="text-slate-600">{t('kpi.company')}:</span> <span className="tabular-nums">{kpiSnapshot.companyOutOf5}/5</span></div>
+              <div><span className="text-muted">{t('kpi.overall')}:</span> <span className="font-medium tabular-nums">{kpiSnapshot.overallOutOf5}/5</span></div>
+              <div><span className="text-muted">{t('kpi.salesKpi')}:</span> <span className="tabular-nums">{kpiSnapshot.salesKpiOutOf5}/5</span></div>
+              <div><span className="text-muted">{t('kpi.skills')}:</span> <span className="tabular-nums">{kpiSnapshot.skillsOutOf5}/5</span></div>
+              <div><span className="text-muted">{t('kpi.company')}:</span> <span className="tabular-nums">{kpiSnapshot.companyOutOf5}/5</span></div>
             </div>
             {Array.isArray(kpiSnapshot.sectionsJson) && kpiSnapshot.sectionsJson.length > 0 && (
-              <ul className="list-disc list-inside text-slate-700">
+              <ul className="list-disc list-inside text-foreground">
                 {(kpiSnapshot.sectionsJson as { name: string; totalScore: number }[]).map((s: { name: string; totalScore: number }, i: number) => (
                   <li key={i}>{s.name}: {s.totalScore}/5</li>
                 ))}
               </ul>
             )}
-            {kpiSnapshot.fileName && <p className="text-xs text-slate-500">{t('kpi.source')}: {kpiSnapshot.fileName}</p>}
+            {kpiSnapshot.fileName && <p className="text-xs text-muted">{t('kpi.source')}: {kpiSnapshot.fileName}</p>}
           </div>
         )}
       </OpsCard>

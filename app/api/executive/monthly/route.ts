@@ -11,6 +11,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getMonthRange, normalizeMonthKey, getCurrentMonthKeyRiyadh } from '@/lib/time';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
+import { calculateRiskScore } from '@/lib/executive/risk';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import type { Role } from '@prisma/client';
 
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'AREA_MANAGER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -45,9 +46,11 @@ export async function GET(request: NextRequest) {
 
   const [
     boutiqueTarget,
-    salesAgg,
+    ledgerAgg,
     ledgerLineCount,
+    ledgerLinesBySource,
     salesSample,
+    salesBySource,
     employeeTargets,
     leaveCount,
     approvedLeaveCount,
@@ -61,13 +64,12 @@ export async function GET(request: NextRequest) {
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { month: monthKey, ...boutiqueFilter },
     }),
-    prisma.salesEntry.aggregate({
+    prisma.boutiqueSalesSummary.aggregate({
       where: {
         ...boutiqueFilter,
-        month: monthKey,
         date: { gte: monthStart, lt: monthEnd },
       },
-      _sum: { amount: true },
+      _sum: { totalSar: true },
       _count: { id: true },
     }),
     prisma.boutiqueSalesLine.count({
@@ -78,15 +80,38 @@ export async function GET(request: NextRequest) {
         },
       },
     }),
+    // Breakdown BoutiqueSalesLine by source (MANUAL = hand-entered, IMPORT = imported)
+    prisma.boutiqueSalesLine.groupBy({
+      by: ['source'],
+      where: {
+        summary: {
+          ...boutiqueFilter,
+          date: { gte: monthStart, lt: monthEnd },
+        },
+      },
+      _sum: { amountSar: true },
+      _count: { id: true },
+    }),
     prisma.salesEntry.findMany({
       where: {
         ...boutiqueFilter,
         month: monthKey,
         date: { gte: monthStart, lt: monthEnd },
       },
-      select: { id: true, boutiqueId: true, date: true, amount: true },
+      select: { id: true, boutiqueId: true, date: true, amount: true, source: true },
       orderBy: { date: 'desc' },
       take: 3,
+    }),
+    // Breakdown SalesEntry by source
+    prisma.salesEntry.groupBy({
+      by: ['source'],
+      where: {
+        ...boutiqueFilter,
+        month: monthKey,
+        date: { gte: monthStart, lt: monthEnd },
+      },
+      _sum: { amount: true },
+      _count: { id: true },
     }),
     prisma.employeeMonthlyTarget.findMany({
       where: { month: monthKey, ...boutiqueFilter },
@@ -145,7 +170,12 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const revenue = salesAgg._sum.amount ?? 0;
+  // Revenue: use only MANUAL-source ledger lines (hand-entered by manager, not imported)
+  const manualLineRow = ledgerLinesBySource.find((r) => r.source === 'MANUAL');
+  const manualLinesTotal = manualLineRow?._sum?.amountSar ?? 0;
+  const ledgerSummaryTotal = ledgerAgg._sum.totalSar ?? 0;
+  // Use the lower of: manual lines total vs summary totalSar (guards against import inflation)
+  const revenue = manualLinesTotal > 0 ? manualLinesTotal : ledgerSummaryTotal;
   const target = boutiqueTarget?.amount ?? 0;
   const achievementPct = target > 0 ? Math.round((revenue / target) * 100) : 0;
   const totalEmployeeTarget = employeeTargets.reduce((s, e) => s + e.amount, 0);
@@ -154,7 +184,22 @@ export async function GET(request: NextRequest) {
       ? Math.round((zoneCompletedCount / zoneRunsCount) * 100)
       : 100;
 
-  const salesEntryCount = salesAgg._count.id;
+  const salesEntryCount = ledgerAgg._count.id;
+
+  // Source breakdown for transparency
+  const sourceBreakdown = {
+    ledgerSummaryTotal,
+    ledgerLinesBySource: ledgerLinesBySource.map((r) => ({
+      source: r.source,
+      total: r._sum.amountSar ?? 0,
+      count: r._count.id,
+    })),
+    salesEntryBySource: salesBySource.map((r) => ({
+      source: r.source,
+      total: r._sum.amount ?? 0,
+      count: r._count.id,
+    })),
+  };
 
   // Guard rail: never return data that could include another boutique
   const badSample = salesSample.some((r) => r.boutiqueId !== operationalBoutiqueId);
@@ -165,6 +210,21 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ error: 'Data scope error' }, { status: 403 });
   }
+
+  // Independent risk score — NOT a copy of boutique performance score
+  const riskResult = calculateRiskScore({
+    revenue,
+    target,
+    achievementPct,
+    pendingLeaves: leaveCount,
+    approvedLeaves: approvedLeaveCount,
+    employeeCount: employeeTargets.length,
+    taskCompletions: taskCompletionsCount,
+    burstCount: scoreResult.burstCount,
+    zoneCompliancePct,
+    scheduleEdits: scheduleEditCount,
+    rosterSize: scoreResult.rosterSize,
+  });
 
   return NextResponse.json({
     monthKey,
@@ -195,7 +255,8 @@ export async function GET(request: NextRequest) {
       target,
       achievementPct,
       totalEmployeeTarget,
-      entryCount: salesAgg._count.id,
+      entryCount: salesEntryCount,
+      sourceBreakdown,
     },
     workforceStability: {
       pendingLeaves: leaveCount,
@@ -209,8 +270,10 @@ export async function GET(request: NextRequest) {
       zoneCompliancePct,
     },
     riskScore: {
-      score: scoreResult.score,
-      classification: scoreResult.classification,
+      score: riskResult.score,
+      classification: riskResult.classification,
+      factors: riskResult.factors,
+      reasons: riskResult.reasons,
     },
   });
 }

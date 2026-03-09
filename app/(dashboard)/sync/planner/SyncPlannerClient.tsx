@@ -201,9 +201,9 @@ export function SyncPlannerClient() {
   const currentRows = compareResult ? TABS[activeTab].getRows(compareResult) : [];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4">
+    <div className="min-h-screen bg-surface-subtle p-4">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-800">{t('sync.plannerSyncTitle')}</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">{t('sync.plannerSyncTitle')}</h1>
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -216,15 +216,15 @@ export function SyncPlannerClient() {
           </div>
         )}
 
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">{t('sync.period')}</h2>
+        <section className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">{t('sync.period')}</h2>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2">
               <input
                 type="radio"
                 checked={periodType === 'WEEK'}
                 onChange={() => setPeriodType('WEEK')}
-                className="rounded border-slate-300"
+                className="rounded border-border"
               />
               <span className="text-sm">{t('sync.periodWeek')}</span>
             </label>
@@ -233,38 +233,38 @@ export function SyncPlannerClient() {
                 type="radio"
                 checked={periodType === 'MONTH'}
                 onChange={() => setPeriodType('MONTH')}
-                className="rounded border-slate-300"
+                className="rounded border-border"
               />
               <span className="text-sm">{t('sync.periodMonth')}</span>
             </label>
           </div>
           <div className="mt-3 space-y-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label className="mb-1 block text-xs font-medium text-muted">
                 {t('sync.referenceDate')}
               </label>
               <input
                 type="date"
                 value={referenceDate}
                 onChange={(e) => setReferenceDate(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-border px-2 py-1.5 text-sm"
               />
             </div>
             {generatedKey && (
               <>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted">
                     {t('sync.generatedKey')}
                   </label>
                   <span
-                    className="inline-block rounded border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-800"
+                    className="inline-block rounded border border-border bg-surface-subtle px-2 py-1.5 font-mono text-sm text-foreground"
                     aria-readonly
                   >
                     {generatedKey}
                   </span>
                 </div>
                 {periodType === 'WEEK' && weekRange && (
-                  <div className="text-sm text-slate-600">
+                  <div className="text-sm text-muted">
                     {t('sync.weekLabel')}: {weekRange.start} – {weekRange.end}
                   </div>
                 )}
@@ -273,10 +273,10 @@ export function SyncPlannerClient() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">{t('sync.exportSiteTitle')}</h2>
-          <p className="mb-3 text-xs text-slate-600">{t('sync.exportSiteHint')}</p>
-          <p className="mb-1 text-xs text-slate-500">
+        <section className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">{t('sync.exportSiteTitle')}</h2>
+          <p className="mb-3 text-xs text-muted">{t('sync.exportSiteHint')}</p>
+          <p className="mb-1 text-xs text-muted">
             {periodType === 'WEEK' ? t('sync.exportFormatV2Hint') : t('sync.exportFormatMonthHint')}
           </p>
           <div className="flex flex-col gap-2">
@@ -284,7 +284,7 @@ export function SyncPlannerClient() {
               type="button"
               onClick={handleExport}
               disabled={loading || !generatedKey}
-              className="w-fit rounded bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="w-fit rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {loading ? t('common.loading') : t('sync.downloadCsv')}
             </button>
@@ -292,27 +292,27 @@ export function SyncPlannerClient() {
               type="button"
               onClick={handleExportLegacy}
               disabled={loading || !generatedKey}
-              className="w-fit rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="w-fit rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
             >
               {t('sync.downloadLegacy')}
             </button>
           </div>
         </section>
 
-        <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-700">{t('sync.uploadPlannerTitle')}</h2>
-          <p className="mb-2 text-xs text-slate-600">{t('sync.uploadPlannerHint')}</p>
+        <section className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <h2 className="mb-2 text-sm font-semibold text-foreground">{t('sync.uploadPlannerTitle')}</h2>
+          <p className="mb-2 text-xs text-muted">{t('sync.uploadPlannerHint')}</p>
           <input
             type="file"
             accept=".xlsx,.csv"
             onChange={handleFileChange}
-            className="block w-full max-w-md text-sm text-slate-600 file:me-2 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm"
+            className="block w-full max-w-md text-sm text-muted file:me-2 file:rounded file:border-0 file:bg-surface-subtle file:px-3 file:py-1 file:text-sm"
           />
           <button
             type="button"
             onClick={handleCompare}
             disabled={loading || !generatedKey || !plannerFile}
-            className="mt-3 rounded bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="mt-3 rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('sync.compare')}
           </button>
@@ -326,7 +326,7 @@ export function SyncPlannerClient() {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(i)}
-                  className={`rounded px-2 py-1 text-sm ${activeTab === i ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-700'}`}
+                  className={`rounded px-2 py-1 text-sm ${activeTab === i ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground'}`}
                 >
                   {t(tab.labelKey)} ({tab.getRows(compareResult).length})
                 </button>
@@ -344,14 +344,14 @@ export function SyncPlannerClient() {
                 </button>
               </div>
             )}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface">
               {currentRows.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">{t('tasks.emptyList')}</p>
+                <p className="p-4 text-sm text-muted">{t('tasks.emptyList')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-start text-slate-700">
+                      <tr className="border-b border-border bg-surface-subtle text-start text-foreground">
                         <th className="px-2 py-2 text-xs font-semibold">{t('sync.matchStatus')}</th>
                         <th className="px-2 py-2 text-xs font-semibold">taskKey</th>
                         <th className="px-2 py-2 text-xs font-semibold">{t('tasks.colTitle')}</th>
@@ -364,8 +364,8 @@ export function SyncPlannerClient() {
                     </thead>
                     <tbody>
                       {currentRows.map((row, i) => (
-                        <tr key={i} className="border-b border-slate-100">
-                          <td className="px-2 py-2 text-slate-600">{row.matchStatus}</td>
+                        <tr key={i} className="border-b border-border">
+                          <td className="px-2 py-2 text-muted">{row.matchStatus}</td>
                           <td className="px-2 py-2 font-mono text-xs">{row.taskKey ?? '—'}</td>
                           <td className="max-w-[180px] truncate px-2 py-2" title={row.title}>{row.title}</td>
                           <td className="px-2 py-2">{row.assignee ?? '—'}</td>

@@ -32,7 +32,7 @@ import {
   getAllocationStatus,
 } from '@/lib/targets/reconcile';
 
-const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
+const ADMIN_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
 export async function GET(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;

@@ -19,7 +19,7 @@ import { formatMonthKey, normalizeMonthKey } from '@/lib/time';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
 const ALLOWED_EXTENSIONS = ['.xlsx', '.xlsm'];
 
 export async function POST(request: NextRequest) {

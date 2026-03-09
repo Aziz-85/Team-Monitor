@@ -34,11 +34,11 @@ export function ControlAlertsCard({
     <SnapshotCard title="Control & Alerts">
       <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="text-sm text-slate-500">No alerts</p>
+          <p className="text-sm text-muted">No alerts</p>
         ) : (
           <ul className="space-y-1.5">
             {items.map((text, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
+              <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                 <span className="text-amber-500" aria-hidden>⚠</span>
                 {text}
               </li>

@@ -85,13 +85,13 @@ function levelColor(level: string): string {
   if (level === 'HIGH' || level === 'Critical' || level === 'At Risk') return 'text-amber-700';
   if (level === 'MED' || level === 'Watch') return 'text-amber-600';
   if (level === 'Strong' || level === 'Dominant') return 'text-emerald-600';
-  return 'text-slate-700';
+  return 'text-foreground';
 }
 
 function severityColor(s: string): string {
   if (s === 'high') return 'border-l-amber-500 bg-amber-50/50';
   if (s === 'medium') return 'border-l-amber-400 bg-amber-50/40';
-  return 'border-l-slate-400 bg-slate-50/50';
+  return 'border-l-slate-400 bg-surface-subtle/50';
 }
 
 function getSaturday(dateStr: string): string {
@@ -152,8 +152,8 @@ export function ExecutiveInsightsClient() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-6 shadow-sm">
-          <p className="text-slate-600">{t('executive.insights.failedToLoad')}</p>
+        <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-6 shadow-sm">
+          <p className="text-muted">{t('executive.insights.failedToLoad')}</p>
         </div>
       </div>
     );
@@ -162,7 +162,7 @@ export function ExecutiveInsightsClient() {
   if (loading && !insights) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-gray-500">{t('executive.insights.loading')}</p>
+        <p className="text-muted">{t('executive.insights.loading')}</p>
       </div>
     );
   }
@@ -170,14 +170,14 @@ export function ExecutiveInsightsClient() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-gray-800">{t('executive.insights.pageTitle')}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{t('executive.insights.pageTitle')}</h1>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">{t('executive.insights.week')}</label>
+          <label className="text-sm text-muted">{t('executive.insights.week')}</label>
           <input
             type="date"
             value={weekStart}
             onChange={(e) => setWeekStart(getSaturday(e.target.value))}
-            className="rounded border border-[#E8DFC8] bg-white px-2 py-1.5 text-sm"
+            className="rounded border border-[#E8DFC8] bg-surface px-2 py-1.5 text-sm"
           />
         </div>
       </div>
@@ -186,39 +186,39 @@ export function ExecutiveInsightsClient() {
         <>
           {/* Top KPI row */}
           <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.salesSar')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.revenue.toLocaleString()}</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.salesSar')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.revenue.toLocaleString()}</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.target')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.target.toLocaleString()}</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.target')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.target.toLocaleString()}</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.achievementPct')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.achievementPct}%</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.achievementPct')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.achievementPct}%</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.overduePct')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.overduePct}%</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.overduePct')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.overduePct}%</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.zoneCompliancePct')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.zoneCompliancePct}%</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.zoneCompliancePct')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.zoneCompliancePct}%</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <p className="text-sm text-gray-500">{t('executive.insights.scheduleBalancePct')}</p>
-              <p className="text-2xl font-semibold text-gray-800">{insights.kpis.scheduleBalancePct}%</p>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <p className="text-sm text-muted">{t('executive.insights.scheduleBalancePct')}</p>
+              <p className="text-2xl font-semibold text-foreground">{insights.kpis.scheduleBalancePct}%</p>
             </div>
           </section>
 
           {/* Risk card */}
-          <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-            <h2 className="mb-2 text-sm font-medium text-gray-500">{t('executive.insights.riskIndex')}</h2>
+          <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+            <h2 className="mb-2 text-sm font-medium text-muted">{t('executive.insights.riskIndex')}</h2>
             <p className={`text-2xl font-semibold ${levelColor(insights.risk.level)}`}>
               {insights.risk.score} — {levelLabel(insights.risk.level)}
             </p>
-            <ul className="mt-2 list-inside list-disc text-sm text-gray-600">
+            <ul className="mt-2 list-inside list-disc text-sm text-muted">
               {insights.risk.reasons.map((r, i) => (
                 <li key={i}>{t(r)}</li>
               ))}
@@ -227,12 +227,12 @@ export function ExecutiveInsightsClient() {
 
           {/* Sales Risk (revenue-centric) */}
           {insights.salesRisk != null && (
-            <div className="rounded-2xl border-2 border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-2 text-sm font-medium text-gray-500">{t('executive.salesRisk.title')}</h2>
+            <div className="rounded-2xl border-2 border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-medium text-muted">{t('executive.salesRisk.title')}</h2>
               <p className={`text-2xl font-semibold ${levelColor(insights.salesRisk.level)}`}>
                 {insights.salesRisk.score} — {levelLabel(insights.salesRisk.level)}
               </p>
-              <ul className="mt-2 list-inside list-disc text-sm text-gray-600">
+              <ul className="mt-2 list-inside list-disc text-sm text-muted">
                 {insights.salesRisk.reasons.map((r, i) => (
                   <li key={i}>{t(r)}</li>
                 ))}
@@ -242,32 +242,32 @@ export function ExecutiveInsightsClient() {
 
           {/* Sales Momentum */}
           {insights.salesMomentum != null && (
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.salesMomentum.title')}</h2>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.salesMomentum.title')}</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
-                  <p className="text-xs text-gray-500">{t('executive.salesMomentum.weekOverWeek')}</p>
-                  <p className="text-xl font-semibold text-gray-800">{insights.salesMomentum.weekOverWeekGrowthPct}%</p>
+                  <p className="text-xs text-muted">{t('executive.salesMomentum.weekOverWeek')}</p>
+                  <p className="text-xl font-semibold text-foreground">{insights.salesMomentum.weekOverWeekGrowthPct}%</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('executive.salesMomentum.movingAverage4')}</p>
-                  <p className="text-xl font-semibold text-gray-800">{insights.salesMomentum.movingAverage4Weeks.toLocaleString()}</p>
+                  <p className="text-xs text-muted">{t('executive.salesMomentum.movingAverage4')}</p>
+                  <p className="text-xl font-semibold text-foreground">{insights.salesMomentum.movingAverage4Weeks.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('executive.salesMomentum.volatilityIndex')}</p>
-                  <p className="text-xl font-semibold text-gray-800">{insights.salesMomentum.volatilityIndex}</p>
+                  <p className="text-xs text-muted">{t('executive.salesMomentum.volatilityIndex')}</p>
+                  <p className="text-xl font-semibold text-foreground">{insights.salesMomentum.volatilityIndex}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('executive.salesMomentum.bestDay')}</p>
-                  <p className="text-lg font-semibold text-gray-800">
+                  <p className="text-xs text-muted">{t('executive.salesMomentum.bestDay')}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {insights.salesMomentum.bestPerformingDay
                       ? `${insights.salesMomentum.bestPerformingDay.dateStr} (${insights.salesMomentum.bestPerformingDay.amount.toLocaleString()})`
                       : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('executive.salesMomentum.weakestDay')}</p>
-                  <p className="text-lg font-semibold text-gray-800">
+                  <p className="text-xs text-muted">{t('executive.salesMomentum.weakestDay')}</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {insights.salesMomentum.weakestPerformingDay
                       ? `${insights.salesMomentum.weakestPerformingDay.dateStr} (${insights.salesMomentum.weakestPerformingDay.amount.toLocaleString()})`
                       : '—'}
@@ -275,12 +275,12 @@ export function ExecutiveInsightsClient() {
                 </div>
               </div>
               {insights.revenueTrendDirection != null && (
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-muted">
                   {t('executive.salesMomentum.trendLabel')}: {t(`executive.salesMomentum.trend.${insights.revenueTrendDirection}`)}
                 </p>
               )}
               {insights.targetGapMomentum != null && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted">
                   {t('executive.salesMomentum.gapLabel')}: {t(`executive.salesMomentum.gap.${insights.targetGapMomentum}`)}
                 </p>
               )}
@@ -289,9 +289,9 @@ export function ExecutiveInsightsClient() {
 
           {/* 2-week projection */}
           {insights.projectionNext2Weeks != null && insights.projectionNext2Weeks.length > 0 && (
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-2 text-sm font-medium text-gray-500">{t('executive.salesMomentum.projectionTitle')}</h2>
-              <ul className="text-sm text-gray-700">
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-medium text-muted">{t('executive.salesMomentum.projectionTitle')}</h2>
+              <ul className="text-sm text-foreground">
                 {insights.projectionNext2Weeks.map((p) => (
                   <li key={p.weekOffset}>
                     {t('executive.salesMomentum.projectionWeek')} {p.weekOffset}: {p.projectedRevenue.toLocaleString()}
@@ -302,14 +302,14 @@ export function ExecutiveInsightsClient() {
           )}
 
           {/* Employee Intelligence */}
-          <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm overflow-x-auto">
-            <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.employeeIntelligence.title')}</h2>
+          <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm overflow-x-auto">
+            <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.employeeIntelligence.title')}</h2>
             {employeeIntelligence.length === 0 ? (
-              <p className="text-sm text-gray-500">No employee targets for this week’s month.</p>
+              <p className="text-sm text-muted">No employee targets for this week’s month.</p>
             ) : (
               <table className="w-full min-w-[640px] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#E8DFC8] text-start text-gray-600">
+                  <tr className="border-b border-[#E8DFC8] text-start text-muted">
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.name')}</th>
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.revenueMTD')}</th>
                     <th className="py-2 pr-2 font-medium">{t('executive.employeeIntelligence.target')}</th>
@@ -332,13 +332,13 @@ export function ExecutiveInsightsClient() {
                         key={row.userId}
                         className={`border-b border-[#E8DFC8] ${rowBg}`}
                       >
-                        <td className="py-2 pr-2 font-medium text-gray-800">{row.name}</td>
-                        <td className="py-2 pr-2 text-gray-700">{row.revenueMTD.toLocaleString()}</td>
-                        <td className="py-2 pr-2 text-gray-700">{row.employeeMonthlyTarget.toLocaleString()}</td>
-                        <td className={`py-2 pr-2 tabular-nums ${row.achievementPercent < 20 ? 'text-amber-700' : 'text-slate-900'}`}>{row.achievementPercent}%</td>
-                        <td className="py-2 pr-2 text-gray-700">{t(`executive.salesMomentum.trend.${row.trend}`)}</td>
-                        <td className="py-2 pr-2 text-gray-700">{row.consistency}</td>
-                        <td className="py-2 pr-2 font-medium text-gray-800">{row.ersScore}</td>
+                        <td className="py-2 pr-2 font-medium text-foreground">{row.name}</td>
+                        <td className="py-2 pr-2 text-foreground">{row.revenueMTD.toLocaleString()}</td>
+                        <td className="py-2 pr-2 text-foreground">{row.employeeMonthlyTarget.toLocaleString()}</td>
+                        <td className={`py-2 pr-2 tabular-nums ${row.achievementPercent < 20 ? 'text-amber-700' : 'text-foreground'}`}>{row.achievementPercent}%</td>
+                        <td className="py-2 pr-2 text-foreground">{t(`executive.salesMomentum.trend.${row.trend}`)}</td>
+                        <td className="py-2 pr-2 text-foreground">{row.consistency}</td>
+                        <td className="py-2 pr-2 font-medium text-foreground">{row.ersScore}</td>
                         <td className={`py-2 pr-2 font-medium ${levelColor(row.ersLabel)}`}>{levelLabel(row.ersLabel)}</td>
                         <td className="py-2">
                           <button
@@ -359,9 +359,9 @@ export function ExecutiveInsightsClient() {
               <div className="mt-3 border-t border-[#E8DFC8] pt-2">
                 {employeeIntelligence.map((row) =>
                   expandedEmployeeId === row.userId ? (
-                    <div key={row.userId} className="mb-2 rounded bg-gray-50 p-2 text-sm">
-                      <p className="font-medium text-gray-700 mb-1">{row.name} — {t('executive.employeeIntelligence.reasons')}</p>
-                      <ul className="list-inside list-disc text-gray-600">
+                    <div key={row.userId} className="mb-2 rounded bg-surface-subtle p-2 text-sm">
+                      <p className="font-medium text-foreground mb-1">{row.name} — {t('executive.employeeIntelligence.reasons')}</p>
+                      <ul className="list-inside list-disc text-muted">
                         {row.reasons.map((r, i) => (
                           <li key={i}>{t(r)}</li>
                         ))}
@@ -374,10 +374,10 @@ export function ExecutiveInsightsClient() {
           </div>
 
           {/* Alerts */}
-          <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.alerts')}</h2>
+          <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.alerts')}</h2>
             {alerts.length === 0 ? (
-              <p className="text-sm text-gray-500">{t('executive.insights.noAlerts')}</p>
+              <p className="text-sm text-muted">{t('executive.insights.noAlerts')}</p>
             ) : (
               <ul className="space-y-2">
                 {alerts.map((a) => {
@@ -401,8 +401,8 @@ export function ExecutiveInsightsClient() {
                       key={a.id}
                       className={`rounded-r border-l-4 py-2 pl-3 pr-2 ${severityColor(a.severity)}`}
                     >
-                      <span className="text-sm font-medium text-gray-800">{t(a.titleKey)}</span>
-                      <p className="text-xs text-gray-600">{t(a.evidenceKey)}: {evidenceStr}</p>
+                      <span className="text-sm font-medium text-foreground">{t(a.titleKey)}</span>
+                      <p className="text-xs text-muted">{t(a.evidenceKey)}: {evidenceStr}</p>
                       {a.deepLink && (
                         <Link href={a.deepLink} className="text-xs text-[#C6A756] hover:underline">
                           {t('executive.insights.viewLink')}
@@ -417,24 +417,24 @@ export function ExecutiveInsightsClient() {
 
           {/* Trends */}
           <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.revenueLast4Weeks')}</h2>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.revenueLast4Weeks')}</h2>
               <ExecutiveLineChart
                 height={180}
                 data={trends.map((tr) => ({ label: tr.weekStart.slice(5), value: tr.revenue }))}
                 valueFormat={(n) => (n / 1000).toFixed(0) + 'k'}
               />
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.achievementPctLast4Weeks')}</h2>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.achievementPctLast4Weeks')}</h2>
               <ExecutiveLineChart
                 height={180}
                 data={trends.map((tr) => ({ label: tr.weekStart.slice(5), value: tr.achievementPct }))}
                 valueFormat={(n) => n + '%'}
               />
             </div>
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.zoneComplianceLast4Weeks')}</h2>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.zoneComplianceLast4Weeks')}</h2>
               <ExecutiveLineChart
                 height={180}
                 data={trends.map((tr) => ({ label: tr.weekStart.slice(5), value: tr.zoneCompliancePct }))}
@@ -445,16 +445,16 @@ export function ExecutiveInsightsClient() {
 
           {/* Anomalies */}
           {anomalies.length > 0 && (
-            <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.anomalies')}</h2>
+            <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.anomalies')}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {anomalies.map((a, i) => (
                   <div
                     key={i}
                     className={`rounded-lg border-l-4 py-2 pl-3 ${severityColor(a.severity)}`}
                   >
-                    <p className="text-sm font-medium text-gray-800">{t(a.titleKey)}</p>
-                    <p className="text-xs text-gray-600">{t(a.evidenceKey)}: {Object.entries(a.evidence).map(([k, v]) => `${k}: ${v}`).join(', ')}</p>
+                    <p className="text-sm font-medium text-foreground">{t(a.titleKey)}</p>
+                    <p className="text-xs text-muted">{t(a.evidenceKey)}: {Object.entries(a.evidence).map(([k, v]) => `${k}: ${v}`).join(', ')}</p>
                     {a.deepLink && (
                       <Link href={a.deepLink} className="text-xs text-[#C6A756] hover:underline">
                         {t('executive.insights.viewLink')}
@@ -467,28 +467,28 @@ export function ExecutiveInsightsClient() {
           )}
 
           {/* Narrative: What changed / Why / Next actions */}
-          <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-medium text-gray-500">{t('executive.insights.summary')}</h2>
+          <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.insights.summary')}</h2>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <p className="text-xs font-medium uppercase text-gray-500">{t('executive.insights.whatChanged')}</p>
-                <ul className="mt-1 list-inside list-disc text-sm text-gray-700">
+                <p className="text-xs font-medium uppercase text-muted">{t('executive.insights.whatChanged')}</p>
+                <ul className="mt-1 list-inside list-disc text-sm text-foreground">
                   {insights.narrative.whatChanged.map((w, i) => (
                     <li key={i}>{t(w)}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase text-gray-500">{t('executive.insights.why')}</p>
-                <ul className="mt-1 list-inside list-disc text-sm text-gray-700">
+                <p className="text-xs font-medium uppercase text-muted">{t('executive.insights.why')}</p>
+                <ul className="mt-1 list-inside list-disc text-sm text-foreground">
                   {insights.narrative.why.length > 0
                     ? insights.narrative.why.map((y, i) => <li key={i}>{t(y)}</li>)
                     : <li>—</li>}
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase text-gray-500">{t('executive.insights.nextActions')}</p>
-                <ul className="mt-1 list-inside list-disc text-sm text-gray-700">
+                <p className="text-xs font-medium uppercase text-muted">{t('executive.insights.nextActions')}</p>
+                <ul className="mt-1 list-inside list-disc text-sm text-foreground">
                   {insights.narrative.nextActions.map((a, i) => (
                     <li key={i}>{t(a)}</li>
                   ))}

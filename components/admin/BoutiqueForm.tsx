@@ -50,32 +50,32 @@ export function BoutiqueForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{titleLabel} (name)</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">{titleLabel} (name)</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
           required
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Code</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">Code</label>
         <input
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm uppercase text-foreground"
           required
           disabled={!!initial?.code}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Region</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">Region</label>
         <select
           value={regionId ?? ''}
           onChange={(e) => setRegionId(e.target.value || null)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
         >
           <option value="">—</option>
           {regions.map((r) => (
@@ -91,12 +91,12 @@ export function BoutiqueForm({
           id="boutique-active"
           checked={isActive}
           onChange={(e) => setIsActive(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300"
+          className="h-4 w-4 rounded border-border"
         />
-        <label htmlFor="boutique-active" className="text-sm text-slate-700">Active</label>
+        <label htmlFor="boutique-active" className="text-sm text-foreground">Active</label>
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground">
           Cancel
         </button>
         <button type="submit" disabled={saving} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700 disabled:opacity-50">

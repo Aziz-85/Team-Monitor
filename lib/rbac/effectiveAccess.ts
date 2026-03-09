@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db';
 import { canEditSchedule, canApproveWeek } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
-const ROLE_ORDER: Role[] = ['DEMO_VIEWER', 'EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'AREA_MANAGER', 'SUPER_ADMIN'];
+const ROLE_ORDER: Role[] = ['DEMO_VIEWER', 'EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'AREA_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 function roleLevel(r: Role): number {
   const i = ROLE_ORDER.indexOf(r);
   return i >= 0 ? i : -1;
@@ -49,8 +49,8 @@ function baselineFlags(user: UserLike): EffectiveFlags {
   }
   const canEdit = user.canEditSchedule ?? canEditSchedule(role);
   const canApprove = canApproveWeek(role);
-  const canApproveLeave = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
-  const canApproveReq = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const canApproveLeave = role === 'MANAGER' || role === 'AREA_MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const canApproveReq = role === 'MANAGER' || role === 'AREA_MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
   return {
     canEditSchedule: canEdit,
     canApproveWeek: canApprove,
@@ -127,8 +127,8 @@ export async function getEffectiveAccess(
       ...effectiveFlags,
       canEditSchedule: effectiveFlags.canEditSchedule || canEditSchedule(effectiveRole),
       canApproveWeek: effectiveFlags.canApproveWeek || canApproveWeek(effectiveRole),
-      canApproveLeaveRequests: effectiveFlags.canApproveLeaveRequests ?? (effectiveRole === 'MANAGER' || effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN'),
-      canApproveRequests: effectiveFlags.canApproveRequests ?? (effectiveRole === 'MANAGER' || effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN'),
+      canApproveLeaveRequests: effectiveFlags.canApproveLeaveRequests ?? (effectiveRole === 'MANAGER' || effectiveRole === 'AREA_MANAGER' || effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN'),
+      canApproveRequests: effectiveFlags.canApproveRequests ?? (effectiveRole === 'MANAGER' || effectiveRole === 'AREA_MANAGER' || effectiveRole === 'ADMIN' || effectiveRole === 'SUPER_ADMIN'),
     };
   }
 

@@ -24,9 +24,9 @@ export function SalesPerformanceCard({
     <SnapshotCard title="Monthly Sales Performance">
       <div className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold text-slate-900">
+          <span className="text-2xl font-semibold text-foreground">
             {formatSarInt(currentMonthActual)}
-            <span className="ms-1 text-base font-normal text-slate-500">
+            <span className="ms-1 text-base font-normal text-muted">
               / {formatSarInt(currentMonthTarget)}
             </span>
           </span>
@@ -36,14 +36,14 @@ export function SalesPerformanceCard({
                 ? 'text-red-600'
                 : variant === 'orange'
                   ? 'text-amber-600'
-                  : 'text-slate-900'
+                  : 'text-foreground'
             }`}
           >
             {completionPct}%
           </span>
         </div>
         <ProgressBar valuePct={completionPct} variant={variant} />
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           Remaining gap: <strong>{formatSarInt(remainingGap)}</strong>
         </p>
       </div>

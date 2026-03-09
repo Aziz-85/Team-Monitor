@@ -120,7 +120,7 @@ export function ExecutiveDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-slate-500">Loading dashboard…</p>
+        <p className="text-muted">Loading dashboard…</p>
       </div>
     );
   }

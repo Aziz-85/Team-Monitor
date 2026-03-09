@@ -72,7 +72,7 @@ export function ScheduleExcelViewClient({
   const cellDate = `${SCHEDULE_UI.dateCell} ${SCHEDULE_UI.borderL2} text-center`;
   const headerCell = `${SCHEDULE_UI.headerCell} text-center`;
   const headerDate = `${headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.dateExcel}`;
-  const headerDayEnd = `${headerCell} border-r-2 border-slate-400 ${SCHEDULE_COLS.dayExcel}`;
+  const headerDayEnd = `${headerCell} border-r-2 border-border ${SCHEDULE_COLS.dayExcel}`;
   const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
   const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300`;
   const headerRashid = `${headerCell} ${SCHEDULE_UI.borderL2}`;
@@ -107,28 +107,28 @@ export function ScheduleExcelViewClient({
           return (
             <div
               key={day.date}
-              className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden"
+              className="rounded-lg border border-border bg-surface shadow-sm overflow-hidden"
             >
-              <div className="border-b border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800">
+              <div className="border-b border-border bg-surface-subtle px-3 py-2 text-sm font-semibold text-foreground">
                 {formatDDMM(day.date)} — {getDayName(day.date)}
               </div>
               <div className="px-3 py-2 space-y-2 text-sm">
                 <div>
-                  <div className="text-xs font-medium text-slate-500 mb-1">{t('schedule.morning')}</div>
+                  <div className="text-xs font-medium text-muted mb-1">{t('schedule.morning')}</div>
                   <div className="bg-blue-50 rounded border border-blue-200 px-2 py-1.5 text-blue-900">
                     {morning.length > 0 ? morning.join(', ') : '—'}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{t('schedule.amCount')}: {amCount}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('schedule.amCount')}: {amCount}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-slate-500 mb-1">{t('schedule.evening')}</div>
+                  <div className="text-xs font-medium text-muted mb-1">{t('schedule.evening')}</div>
                   <div className="bg-amber-50 rounded border border-amber-200 px-2 py-1.5 text-amber-900">
                     {evening.length > 0 ? evening.join(', ') : '—'}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{t('schedule.pmCount')}: {pmCount}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('schedule.pmCount')}: {pmCount}</div>
                 </div>
                 {guestLines.length > 0 && (
-                  <div className="text-xs text-slate-600">
+                  <div className="text-xs text-muted">
                     {coverageLabel}: {guestLines.slice(0, MAX_COVERAGE_LINES).join(', ')}
                     {guestLines.length > MAX_COVERAGE_LINES && ` +${guestLines.length - MAX_COVERAGE_LINES}`}
                   </div>
@@ -199,8 +199,8 @@ export function ScheduleExcelViewClient({
             const pmCount = counts[dayIdx]?.pmCount ?? 0;
             return (
               <tr key={day.date}>
-                <td className={`${cellDate} border-r-2 border-slate-400`} title={formatDDMM(day.date)}>{formatDDMM(day.date)}</td>
-                <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-slate-400 whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(day.date)}>
+                <td className={`${cellDate} border-r-2 border-border`} title={formatDDMM(day.date)}>{formatDDMM(day.date)}</td>
+                <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-border whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(day.date)}>
                   {dayShort(day.date)}
                 </td>
                 {Array.from({ length: visibleSlots }, (_, i) => (

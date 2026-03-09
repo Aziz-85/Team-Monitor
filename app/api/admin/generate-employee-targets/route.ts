@@ -11,7 +11,7 @@ import {
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
 import { getPresenceForMonth } from '@/lib/sales-target-presence';
 
-const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
+const ADMIN_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
 const VALID_ROLES: SalesTargetRole[] = [
   'MANAGER',

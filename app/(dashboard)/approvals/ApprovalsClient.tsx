@@ -138,19 +138,19 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">
+        <h1 className="mb-4 text-xl font-semibold text-foreground">
           {t('governance.approvalsTitle')}
         </h1>
 
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-slate-900">{t('governance.filters')}</p>
+        <div className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <p className="mb-3 text-sm font-semibold text-foreground">{t('governance.filters')}</p>
           <div className="flex flex-wrap gap-3">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterModule')}</span>
+              <span className="text-muted">{t('governance.filterModule')}</span>
               <select
                 value={filters.module}
                 onChange={(e) => setFilters((f) => ({ ...f, module: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">All</option>
                 <option value="SCHEDULE">{t('governance.moduleSchedule')}</option>
@@ -160,28 +160,28 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.weekOptional') ?? t('governance.filterWeek')}</span>
+              <span className="text-muted">{t('governance.weekOptional') ?? t('governance.filterWeek')}</span>
               <input
                 type="date"
                 value={filters.weekStart}
                 onChange={(e) => setFilters((f) => ({ ...f, weekStart: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.effectiveDate')}</span>
+              <span className="text-muted">{t('governance.effectiveDate')}</span>
               <input
                 type="date"
                 value={filters.effectiveDate}
                 onChange={(e) => setFilters((f) => ({ ...f, effectiveDate: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <div className="flex items-end">
               <button
                 type="button"
                 onClick={fetchList}
-                className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {t('common.refresh')}
               </button>
@@ -190,67 +190,67 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-500">{t('common.loading')}</p>
+          <p className="text-sm text-muted">{t('common.loading')}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full border-separate border-spacing-0 text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.requested')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.module')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.action')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.requestedBy')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.effectiveOrWeek')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.summary')}
                   </th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground">
                     {t('governance.actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white">
+              <tbody className="bg-surface">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-600">
+                    <td colSpan={7} className="px-4 py-6 text-center text-sm text-muted">
                       {t('governance.noPendingApprovals')}
                     </td>
                   </tr>
                 ) : (
                   items.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-3 py-2 text-xs text-slate-600">
+                    <tr key={row.id} className="border-b border-border hover:bg-surface-subtle">
+                      <td className="px-3 py-2 text-xs text-muted">
                         {new Date(row.requestedAt).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 font-medium text-slate-700">
+                      <td className="px-3 py-2 font-medium text-foreground">
                         {MODULE_KEYS[row.module] ? t(MODULE_KEYS[row.module]) : row.module}
                       </td>
-                      <td className="px-3 py-2 font-medium text-slate-900">
+                      <td className="px-3 py-2 font-medium text-foreground">
                         {ACTION_KEYS[row.actionType] ? t(ACTION_KEYS[row.actionType]) : row.actionType}
                       </td>
-                      <td className="px-3 py-2 text-slate-700">
+                      <td className="px-3 py-2 text-foreground">
                         {row.requestedBy ? (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium">
+                          <span className="inline-flex items-center rounded-full border border-border bg-surface-subtle px-2 py-0.5 text-xs font-medium">
                             {row.requestedBy.name} ({getRoleDisplayLabel(row.requestedBy.role as Role, null, t)})
                           </span>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="px-3 py-2 text-slate-600">
+                      <td className="px-3 py-2 text-muted">
                         {row.effectiveDate ?? row.weekStart ?? '—'}
                       </td>
-                      <td className="px-3 py-2 text-slate-600 max-w-[200px] truncate" title={payloadSummary(row.payload, row.actionType)}>
+                      <td className="px-3 py-2 text-muted max-w-[200px] truncate" title={payloadSummary(row.payload, row.actionType)}>
                         {payloadSummary(row.payload, row.actionType)}
                       </td>
                       <td className="px-3 py-2">

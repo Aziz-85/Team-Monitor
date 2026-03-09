@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
 import { getRiyadhNow } from '@/lib/time';
 
-const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
+const ADMIN_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
 /** After 3 days from distribution, only ADMIN can edit targets and must provide a reason. */
 function isTargetLockedForNonAdmin(existing: { month: string; generatedAt: Date | null }): {

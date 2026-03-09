@@ -306,15 +306,15 @@ export function SalesSummaryClient() {
               { label: t('sales.summary.year'), data: targets.year, sub: targets.year.key },
             ].map(({ label, data, sub }) => (
               <div key={label} className="rounded-lg border border-border bg-surface p-4 shadow-sm">
-                <p className="text-sm font-medium text-slate-700">{label}</p>
-                {sub && <p className="text-xs text-slate-500">{sub}</p>}
-                <p className="mt-1 text-xs text-slate-600">{t('sales.summary.target')}: {formatSarInt(data.targetSar)}</p>
-                <p className="text-xs text-slate-600">{t('sales.summary.achieved')}: {formatSarInt(data.achievedSar)}</p>
-                <p className="text-xs text-slate-600">{t('sales.summary.remaining')}: {formatSarInt(data.remainingSar)}</p>
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                {sub && <p className="text-xs text-muted">{sub}</p>}
+                <p className="mt-1 text-xs text-muted">{t('sales.summary.target')}: {formatSarInt(data.targetSar)}</p>
+                <p className="text-xs text-muted">{t('sales.summary.achieved')}: {formatSarInt(data.achievedSar)}</p>
+                <p className="text-xs text-muted">{t('sales.summary.remaining')}: {formatSarInt(data.remainingSar)}</p>
                 <p className="mt-1 text-sm font-medium">{t('sales.summary.progress')}: {data.pct}%</p>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-100">
+                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-surface-subtle">
                   <div
-                    className="h-full rounded bg-slate-400 transition-[width]"
+                    className="h-full rounded bg-surface-subtle transition-[width]"
                     style={{ width: `${Math.min(data.pct, 100)}%` }}
                   />
                 </div>

@@ -66,10 +66,10 @@ export function MatrixImportClient() {
   return (
     <div className="mx-auto max-w-4xl">
       <OpsCard className="mb-6">
-        <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">
+        <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
           Monthly Import Template (TeamMonitor_Monthly_Import_Template_Matrix)
         </h3>
-        <p className="mb-3 text-xs text-slate-500">
+        <p className="mb-3 text-xs text-muted">
           Upload .xlsx with sheet <strong>DATA_MATRIX</strong>: columns ScopeId (A), Date (B), Day (C), then employee
           columns. Uses operational boutique scope. Preview (dry run) first; Apply writes to DB when there are no
           blocking errors.
@@ -90,21 +90,21 @@ export function MatrixImportClient() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
           >
             {file ? file.name : 'Choose .xlsx file'}
           </button>
           <div>
-            <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+            <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
             <input
               type="text"
               placeholder="YYYY-MM"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
             />
           </div>
-          <label className="flex items-center gap-1.5 text-sm text-slate-700">
+          <label className="flex items-center gap-1.5 text-sm text-foreground">
             <input
               type="checkbox"
               checked={includePreviousMonth}
@@ -116,7 +116,7 @@ export function MatrixImportClient() {
             type="button"
             disabled={!file || !month.trim() || loading}
             onClick={() => runRequest(true)}
-            className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
           >
             {loading ? '…' : 'Preview'}
           </button>
@@ -124,7 +124,7 @@ export function MatrixImportClient() {
             type="button"
             disabled={!file || !month.trim() || loading || (result != null && result.applyAllowed === false)}
             onClick={() => runRequest(false)}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
           >
             Apply
           </button>
@@ -134,7 +134,7 @@ export function MatrixImportClient() {
           <div className="mt-4 space-y-2">
             {result.error && <p className="text-sm text-red-600">{result.error}</p>}
             {result.success && (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-foreground">
                 {result.dryRun ? 'Preview (dry run)' : 'Applied'} — inserted: {result.inserted ?? 0}, updated:{' '}
                 {result.updated ?? 0}, skipped empty: {result.skippedEmpty ?? 0}
               </p>
@@ -169,7 +169,7 @@ export function MatrixImportClient() {
                 </div>
               </>
             ) : null}
-            <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800">
+            <div className="rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
               <p>Mapped employees: {result.mappedEmployees?.length ?? 0}</p>
               <p>Unmapped employees: {result.unmappedEmployees?.length ?? 0}</p>
               {result.diagnostic && (

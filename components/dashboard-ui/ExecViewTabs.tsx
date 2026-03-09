@@ -20,7 +20,7 @@ export function ExecViewTabs({
   ];
   return (
     <nav
-      className="flex min-w-0 border-b border-slate-200"
+      className="flex min-w-0 border-b border-border"
       role="tablist"
       aria-label={ariaLabel}
     >
@@ -35,8 +35,8 @@ export function ExecViewTabs({
             onClick={() => onChange(tab.id)}
             className={`min-w-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? 'border-slate-900 font-semibold text-slate-900'
-                : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-foreground font-semibold text-foreground'
+                : 'border-transparent text-muted hover:border-border hover:text-foreground'
             }`}
           >
             {tab.label}

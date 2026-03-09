@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
   if (!empId || !password) {
     return NextResponse.json({ error: 'empId and password required' }, { status: 400 });
   }
-  if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN'].includes(role)) {
-    return NextResponse.json({ error: 'role must be EMPLOYEE, MANAGER, ASSISTANT_MANAGER, or ADMIN' }, { status: 400 });
+  if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'].includes(role)) {
+    return NextResponse.json({ error: 'role must be EMPLOYEE, MANAGER, ASSISTANT_MANAGER, ADMIN, or AREA_MANAGER' }, { status: 400 });
   }
 
   const creatingUser = await getSessionUser();
@@ -124,7 +124,7 @@ export async function PATCH(request: NextRequest) {
   const update: { role?: Role; disabled?: boolean; mustChangePassword?: boolean; canEditSchedule?: boolean } = {};
   if (body.role !== undefined) {
     const role = String(body.role).toUpperCase() as Role;
-    if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN'].includes(role)) {
+    if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'].includes(role)) {
       return NextResponse.json({ error: 'invalid role' }, { status: 400 });
     }
     update.role = role;

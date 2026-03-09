@@ -236,33 +236,33 @@ export function InventoryDailyClient() {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
           />
-          <Link href="/inventory/zones" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10 inline-flex items-center">
+          <Link href="/inventory/zones" className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent md:h-10 inline-flex items-center">
             {t('inventory.zones')}
           </Link>
           {run?.isManagerOrAdmin && (
-            <Link href="/inventory/daily/history" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10 inline-flex items-center">
+            <Link href="/inventory/daily/history" className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent md:h-10 inline-flex items-center">
               {t('inventory.history')}
             </Link>
           )}
         </div>
 
-        {loading && <p className="text-slate-600">{t('common.loading')}</p>}
+        {loading && <p className="text-muted">{t('common.loading')}</p>}
         {!loading && run && (
           <OpsCard title={t('inventory.todayCard')}>
             <dl className="space-y-2 text-base">
               <div>
-                <dt className="font-medium text-slate-700">{t('inventory.assignee')}</dt>
-                <dd className="text-slate-900">
+                <dt className="font-medium text-foreground">{t('inventory.assignee')}</dt>
+                <dd className="text-foreground">
                   {run.assigneeName ?? '—'}
                   {run.isMe && run.assignedEmpId && (
-                    <span className="ms-2 text-sm text-sky-600">({t('inventory.isMe')})</span>
+                    <span className="ms-2 text-sm text-accent">({t('inventory.isMe')})</span>
                   )}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-700">{t('inventory.status')}</dt>
+                <dt className="font-medium text-foreground">{t('inventory.status')}</dt>
                 <dd className="flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -270,7 +270,7 @@ export function InventoryDailyClient() {
                         ? 'border-emerald-200 bg-emerald-100 text-emerald-900'
                         : effective === 'LATE'
                           ? 'border-red-200 bg-red-100 text-red-900'
-                          : 'border-slate-200 bg-slate-100 text-slate-700'
+                          : 'border-border bg-surface-subtle text-foreground'
                     }`}
                   >
                     {statusLabel}
@@ -282,7 +282,7 @@ export function InventoryDailyClient() {
                           ? 'border-purple-200 bg-purple-100 text-purple-900'
                           : run.assignmentSource === 'ROTATION'
                             ? 'border-sky-200 bg-sky-100 text-sky-900'
-                            : 'border-slate-200 bg-slate-100 text-slate-700'
+                            : 'border-border bg-surface-subtle text-foreground'
                       }`}
                     >
                       {run.assignmentSource === 'QUEUE'
@@ -296,7 +296,7 @@ export function InventoryDailyClient() {
                     <button
                       type="button"
                       onClick={copyDailyReminder}
-                      className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                     >
                       {t('inventory.copyReminder')}
                     </button>
@@ -311,10 +311,10 @@ export function InventoryDailyClient() {
               )}
               {run.decisionExplanation && (
                 <div>
-                  <dt className="font-medium text-slate-700">
+                  <dt className="font-medium text-foreground">
                     {t('inventory.assignmentExplanation')}
                   </dt>
-                  <dd className="text-sm text-slate-700">{run.decisionExplanation}</dd>
+                  <dd className="text-sm text-foreground">{run.decisionExplanation}</dd>
                 </div>
               )}
             </dl>
@@ -324,14 +324,14 @@ export function InventoryDailyClient() {
                   type="button"
                   onClick={handleMarkComplete}
                   disabled={completing}
-                  className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-10"
+                  className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 md:h-10"
                 >
                   {completing ? '…' : t('inventory.markCompleted')}
                 </button>
               </div>
             )}
             {run.isManagerOrAdmin && run.skips && run.skips.length > 0 && (
-              <div className="mt-4 border-t border-slate-200 pt-4 space-y-3">
+              <div className="mt-4 border-t border-border pt-4 space-y-3">
                 {(() => {
                   const shortSkips = run.skips!.filter((s) => s.skipCategory !== 'LONG');
                   const longSkips = run.skips!.filter((s) => s.skipCategory === 'LONG');
@@ -339,16 +339,16 @@ export function InventoryDailyClient() {
                     <>
                       {shortSkips.length > 0 && (
                         <div>
-                          <h3 className="text-sm font-semibold text-slate-700">
+                          <h3 className="text-sm font-semibold text-foreground">
                             {t('inventory.skippedShortAbsences')}
                           </h3>
-                          <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                          <ul className="mt-1 space-y-1 text-sm text-muted">
                             {shortSkips.map((s) => (
                               <li key={`${s.empId}-${s.skipReason}`}>
-                                <span className="font-medium text-slate-800">
+                                <span className="font-medium text-foreground">
                                   {s.employeeName ?? s.empId}
                                 </span>
-                                <span className="ms-1 text-slate-500">
+                                <span className="ms-1 text-muted">
                                   – {t(SKIP_LABELS[s.skipReason])}
                                 </span>
                               </li>
@@ -358,20 +358,20 @@ export function InventoryDailyClient() {
                       )}
                       {longSkips.length > 0 && (
                         <div>
-                          <h3 className="text-sm font-semibold text-slate-700">
+                          <h3 className="text-sm font-semibold text-foreground">
                             {t('inventory.skippedLongAbsences')}
                           </h3>
-                          <ul className="mt-1 space-y-1 text-sm text-slate-600">
+                          <ul className="mt-1 space-y-1 text-sm text-muted">
                             {longSkips.map((s) => (
                               <li key={`${s.empId}-${s.skipReason}`}>
-                                <span className="font-medium text-slate-800">
+                                <span className="font-medium text-foreground">
                                   {s.employeeName ?? s.empId}
                                 </span>
-                                <span className="ms-1 text-slate-500">
+                                <span className="ms-1 text-muted">
                                   – {t(SKIP_LABELS[s.skipReason])}
                                 </span>
                                 {s.expectedReturnDate && (
-                                  <span className="ms-2 text-xs text-slate-500">
+                                  <span className="ms-2 text-xs text-muted">
                                     ({t('inventory.expectedReturn')} {s.expectedReturnDate})
                                   </span>
                                 )}
@@ -394,11 +394,11 @@ export function InventoryDailyClient() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-end gap-2">
                 <div>
-                  <label className="mb-1 block text-sm text-slate-600">{t('inventory.excludeEmployee')}</label>
+                  <label className="mb-1 block text-sm text-muted">{t('inventory.excludeEmployee')}</label>
                   <select
                     value={excludeEmpId}
                     onChange={(e) => setExcludeEmpId(e.target.value)}
-                    className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                    className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                   >
                     <option value="">—</option>
                     {employees
@@ -411,36 +411,36 @@ export function InventoryDailyClient() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">{t('common.reason')}</label>
                   <input
                     type="text"
                     value={excludeReason}
                     onChange={(e) => setExcludeReason(e.target.value)}
                     placeholder={t('inventory.absentOptional')}
-                    className="h-9 w-48 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                    className="h-9 w-48 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleAddExclusion}
                   disabled={!excludeEmpId || savingExclusion}
-                  className="h-9 rounded-lg bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-10"
+                  className="h-9 rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 md:h-10"
                 >
                   {savingExclusion ? '…' : t('common.save')}
                 </button>
               </div>
               {exclusions.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-slate-700">{t('inventory.todaysExclusions')}</h4>
+                  <h4 className="text-sm font-medium text-foreground">{t('inventory.todaysExclusions')}</h4>
                   <ul className="mt-1 space-y-1">
                     {exclusions.map((x) => (
-                      <li key={x.id} className="flex items-center gap-2 text-sm text-slate-800">
+                      <li key={x.id} className="flex items-center gap-2 text-sm text-foreground">
                         <span>{x.employeeName}</span>
-                        {x.reason && <span className="text-slate-500">({x.reason})</span>}
+                        {x.reason && <span className="text-muted">({x.reason})</span>}
                         <button
                           type="button"
                           onClick={() => handleRemoveExclusion(x.empId)}
-                          className="text-sky-600 hover:underline"
+                          className="text-accent hover:underline"
                         >
                           {t('inventory.remove')}
                         </button>
@@ -451,7 +451,7 @@ export function InventoryDailyClient() {
               )}
             </div>
               {run && run.status !== 'COMPLETED' && (
-              <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="mt-4 border-t border-border pt-4">
                 <button
                   type="button"
                   onClick={handleRecompute}
@@ -460,7 +460,7 @@ export function InventoryDailyClient() {
                 >
                   {recomputing ? '…' : t('inventory.recomputeAssignee')}
                 </button>
-                <p className="mt-1 text-xs text-slate-500">{t('inventory.recomputeHint')}</p>
+                <p className="mt-1 text-xs text-muted">{t('inventory.recomputeHint')}</p>
               </div>
             )}
           </OpsCard>
@@ -469,11 +469,11 @@ export function InventoryDailyClient() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-end gap-2">
                 <div>
-                  <label className="mb-1 block text-sm text-slate-600">{t('inventory.excludeEmployee')}</label>
+                  <label className="mb-1 block text-sm text-muted">{t('inventory.excludeEmployee')}</label>
                   <select
                     value={absentEmpId}
                     onChange={(e) => setAbsentEmpId(e.target.value)}
-                    className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                    className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                   >
                     <option value="">—</option>
                     {employees
@@ -486,36 +486,36 @@ export function InventoryDailyClient() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">{t('common.reason')}</label>
                   <input
                     type="text"
                     value={absentReason}
                     onChange={(e) => setAbsentReason(e.target.value)}
                     placeholder={t('inventory.absentOptional')}
-                    className="h-9 w-48 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                    className="h-9 w-48 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleAddAbsent}
                   disabled={!absentEmpId || savingAbsent}
-                  className="h-9 rounded-lg bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-10"
+                  className="h-9 rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 md:h-10"
                 >
                   {savingAbsent ? '…' : t('inventory.addAbsent')}
                 </button>
               </div>
               {absents.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-slate-700">{t('inventory.absentForToday')}</h4>
+                  <h4 className="text-sm font-medium text-foreground">{t('inventory.absentForToday')}</h4>
                   <ul className="mt-1 space-y-1">
                     {absents.map((a) => (
-                      <li key={a.id} className="flex items-center gap-2 text-sm text-slate-800">
+                      <li key={a.id} className="flex items-center gap-2 text-sm text-foreground">
                         <span>{a.empName}</span>
-                        {a.reason && <span className="text-slate-500">({a.reason})</span>}
+                        {a.reason && <span className="text-muted">({a.reason})</span>}
                         <button
                           type="button"
                           onClick={() => handleRemoveAbsent(a.empId)}
-                          className="text-sky-600 hover:underline"
+                          className="text-accent hover:underline"
                         >
                           {t('inventory.removeAbsent')}
                         </button>
@@ -532,7 +532,7 @@ export function InventoryDailyClient() {
                 <div className="overflow-x-auto">
                   <table className="min-w-full table-auto text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-start text-xs font-semibold text-slate-700">
+                      <tr className="border-b border-border bg-surface-subtle text-start text-xs font-semibold text-foreground">
                         <th className="px-2 py-1.5">{t('common.name')}</th>
                         <th className="px-2 py-1.5">{t('common.reason')}</th>
                         <th className="px-2 py-1.5">{t('inventory.queueSince')}</th>
@@ -541,13 +541,13 @@ export function InventoryDailyClient() {
                     </thead>
                     <tbody>
                       {run.waitingQueue.map((q) => (
-                        <tr key={`${q.empId}-${q.queuedAt}`} className="border-b border-slate-100">
-                          <td className="px-2 py-1.5 text-slate-800">{q.employeeName}</td>
-                          <td className="px-2 py-1.5 text-slate-600">{q.reason ?? '—'}</td>
-                          <td className="px-2 py-1.5 text-slate-600">
+                        <tr key={`${q.empId}-${q.queuedAt}`} className="border-b border-border">
+                          <td className="px-2 py-1.5 text-foreground">{q.employeeName}</td>
+                          <td className="px-2 py-1.5 text-muted">{q.reason ?? '—'}</td>
+                          <td className="px-2 py-1.5 text-muted">
                             {formatBusinessDate(q.queuedAt)}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-600">
+                          <td className="px-2 py-1.5 text-muted">
                             {formatBusinessDate(q.expiresAt)}
                           </td>
                         </tr>

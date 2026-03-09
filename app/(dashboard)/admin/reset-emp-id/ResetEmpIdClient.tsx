@@ -83,28 +83,28 @@ export function ResetEmpIdClient() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">
+      <h1 className="text-xl font-semibold text-foreground">
         {t('nav.admin.resetEmpId')}
       </h1>
 
-      <OpsCard title={t('admin.resetEmpId.formTitle') || 'إعادة تعيين الرقم السني (رقم الموظف)'} className="rounded-2xl border border-slate-200 shadow-sm">
-        <p className="mb-4 text-sm text-slate-600">
+      <OpsCard title={t('admin.resetEmpId.formTitle') || 'إعادة تعيين الرقم السني (رقم الموظف)'} className="rounded-2xl border border-border shadow-sm">
+        <p className="mb-4 text-sm text-muted">
           {t('admin.resetEmpId.hint') || 'اختر الموظف ثم أدخل الرقم السني الجديد. الرقم الحالي سيُستبدل في النظام (User + Employee).'}
         </p>
 
         {loading ? (
-          <p className="text-slate-500">{t('common.loading')}</p>
+          <p className="text-muted">{t('common.loading')}</p>
         ) : (
           <>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetEmpId.currentNumber') || 'الرقم الحالي'}
                 </span>
                 <select
                   value={oldEmpId}
                   onChange={(e) => handleSelectEmployee(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded border border-border px-3 py-2 text-sm"
                 >
                   <option value="">— {t('common.search')} / اختر —</option>
                   {users
@@ -117,7 +117,7 @@ export function ResetEmpIdClient() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetEmpId.employeeName') || 'الاسم (للتحقق، اختياري)'}
                 </span>
                 <input
@@ -125,11 +125,11 @@ export function ResetEmpIdClient() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder={t('admin.resetEmpId.namePlaceholder') || 'مطابق للرقم المختار'}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded border border-border px-3 py-2 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetEmpId.newNumber') || 'الرقم السني الجديد'}
                 </span>
                 <input
@@ -138,10 +138,10 @@ export function ResetEmpIdClient() {
                   value={newEmpId}
                   onChange={(e) => setNewEmpId(e.target.value.replace(/\D/g, ''))}
                   placeholder="مثال: 2011"
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded border border-border px-3 py-2 text-sm"
                   maxLength={20}
                 />
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   {t('admin.resetEmpId.newNumberHint') || 'أرقام فقط، 3 خانات على الأقل'}
                 </p>
               </label>
@@ -158,7 +158,7 @@ export function ResetEmpIdClient() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting || !oldEmpId || !newEmpId}
-                className="rounded bg-slate-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {submitting ? t('common.loading') : (t('admin.resetEmpId.submit') || 'تنفيذ إعادة التعيين')}
               </button>

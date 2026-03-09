@@ -171,7 +171,7 @@ export function AdminBoutiquesClient() {
           <select
             value={filterRegion}
             onChange={(e) => setFilterRegion(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
           >
             <option value="">{t('admin.boutiques.allRegions')}</option>
             {regions.map((r) => (
@@ -181,7 +181,7 @@ export function AdminBoutiquesClient() {
           <select
             value={filterActive}
             onChange={(e) => setFilterActive(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
           >
             <option value="">{t('common.all')}</option>
             <option value="true">{t('adminEmp.active')}</option>
@@ -190,14 +190,14 @@ export function AdminBoutiquesClient() {
           <button
             type="button"
             onClick={() => { setEditing(null); setModal('add'); }}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-700"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
           >
             {t('common.add')}
           </button>
           <button
             type="button"
             onClick={() => { setEditing(null); setWizardStep(1); setWizardForm({ name: '', code: '', regionId: null, isActive: true, managerUserId: null, canManageSales: true, canManageTasks: true, canManageLeaves: true, createCurrentMonthTarget: false, monthTargetAmount: 0 }); setModal('wizard'); }}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
           >
             {t('admin.boutiques.createWithWizard')}
           </button>
@@ -215,7 +215,7 @@ export function AdminBoutiquesClient() {
             {list.map((b) => (
               <tr key={b.id}>
                 <AdminTd>
-                  <Link href={`/admin/boutiques/${b.id}`} className="text-sky-600 hover:underline truncate block">
+                  <Link href={`/admin/boutiques/${b.id}`} className="text-accent hover:underline truncate block">
                     {b.name}
                   </Link>
                 </AdminTd>
@@ -228,7 +228,7 @@ export function AdminBoutiquesClient() {
                     <button
                       type="button"
                       onClick={() => { setEditing(b); setModal('edit'); }}
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                     >
                       {t('common.edit')}
                     </button>
@@ -243,7 +243,7 @@ export function AdminBoutiquesClient() {
                     )}
                     <Link
                       href={`/admin/boutiques/${b.id}`}
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                     >
                       {t('admin.boutiques.details')}
                     </Link>
@@ -293,18 +293,18 @@ export function AdminBoutiquesClient() {
         <div className="space-y-3">
           {wizardStep === 1 && (
             <>
-              <p className="text-sm text-slate-600">1. {t('admin.boutiques.wizardStep1')}</p>
+              <p className="text-sm text-muted">1. {t('admin.boutiques.wizardStep1')}</p>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">{t('common.name')}</label>
-                <input type="text" value={wizardForm.name} onChange={(e) => setWizardForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm min-w-0" required />
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('common.name')}</label>
+                <input type="text" value={wizardForm.name} onChange={(e) => setWizardForm((f) => ({ ...f, name: e.target.value }))} className="w-full rounded-lg border border-border px-3 py-2 text-sm min-w-0" required />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Code</label>
-                <input type="text" value={wizardForm.code} onChange={(e) => setWizardForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase min-w-0" required />
+                <label className="mb-1 block text-sm font-medium text-foreground">Code</label>
+                <input type="text" value={wizardForm.code} onChange={(e) => setWizardForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} className="w-full rounded-lg border border-border px-3 py-2 text-sm uppercase min-w-0" required />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">{t('admin.boutiques.region')}</label>
-                <select value={wizardForm.regionId ?? ''} onChange={(e) => setWizardForm((f) => ({ ...f, regionId: e.target.value || null }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm min-w-0">
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('admin.boutiques.region')}</label>
+                <select value={wizardForm.regionId ?? ''} onChange={(e) => setWizardForm((f) => ({ ...f, regionId: e.target.value || null }))} className="w-full rounded-lg border border-border px-3 py-2 text-sm min-w-0">
                   <option value="">—</option>
                   {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
@@ -313,25 +313,25 @@ export function AdminBoutiquesClient() {
                 <input type="checkbox" checked={wizardForm.isActive} onChange={(e) => setWizardForm((f) => ({ ...f, isActive: e.target.checked }))} />
                 <span className="text-sm">{t('adminEmp.active')}</span>
               </label>
-              <div className="flex justify-end"><button type="button" onClick={() => setWizardStep(2)} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white">Next</button></div>
+              <div className="flex justify-end"><button type="button" onClick={() => setWizardStep(2)} className="rounded-lg bg-accent px-3 py-2 text-sm text-white">Next</button></div>
             </>
           )}
           {wizardStep === 2 && (
             <>
-              <p className="text-sm text-slate-600">2. {t('admin.boutiques.wizardStep2')}</p>
-              <select value={wizardForm.managerUserId ?? ''} onChange={(e) => setWizardForm((f) => ({ ...f, managerUserId: e.target.value || null }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm min-w-0">
+              <p className="text-sm text-muted">2. {t('admin.boutiques.wizardStep2')}</p>
+              <select value={wizardForm.managerUserId ?? ''} onChange={(e) => setWizardForm((f) => ({ ...f, managerUserId: e.target.value || null }))} className="w-full rounded-lg border border-border px-3 py-2 text-sm min-w-0">
                 <option value="">— {t('admin.boutiques.noManager')} —</option>
                 {users.map((u) => <option key={u.id} value={u.id}>{u.empId} {u.employee?.name ? `— ${u.employee.name}` : ''}</option>)}
               </select>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setWizardStep(1)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Back</button>
-                <button type="button" onClick={() => setWizardStep(3)} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white">Next</button>
+                <button type="button" onClick={() => setWizardStep(1)} className="rounded-lg border border-border px-3 py-2 text-sm">Back</button>
+                <button type="button" onClick={() => setWizardStep(3)} className="rounded-lg bg-accent px-3 py-2 text-sm text-white">Next</button>
               </div>
             </>
           )}
           {wizardStep === 3 && (
             <>
-              <p className="text-sm text-slate-600">3. {t('admin.boutiques.wizardStep3')}</p>
+              <p className="text-sm text-muted">3. {t('admin.boutiques.wizardStep3')}</p>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={wizardForm.canManageSales} onChange={(e) => setWizardForm((f) => ({ ...f, canManageSales: e.target.checked }))} />
                 <span className="text-sm truncate">{t('admin.boutiques.canManageSales')}</span>
@@ -345,30 +345,30 @@ export function AdminBoutiquesClient() {
                 <span className="text-sm truncate">{t('admin.boutiques.canManageLeaves')}</span>
               </label>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setWizardStep(2)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Back</button>
-                <button type="button" onClick={() => setWizardStep(4)} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white">Next</button>
+                <button type="button" onClick={() => setWizardStep(2)} className="rounded-lg border border-border px-3 py-2 text-sm">Back</button>
+                <button type="button" onClick={() => setWizardStep(4)} className="rounded-lg bg-accent px-3 py-2 text-sm text-white">Next</button>
               </div>
             </>
           )}
           {wizardStep === 4 && (
             <>
-              <p className="text-sm text-slate-600">4. {t('admin.boutiques.wizardStep4')}</p>
+              <p className="text-sm text-muted">4. {t('admin.boutiques.wizardStep4')}</p>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={wizardForm.createCurrentMonthTarget} onChange={(e) => setWizardForm((f) => ({ ...f, createCurrentMonthTarget: e.target.checked }))} />
                 <span className="text-sm truncate">{t('admin.boutiques.createCurrentMonthTarget')}</span>
               </label>
               {wizardForm.createCurrentMonthTarget && (
-                <input type="number" min={0} value={wizardForm.monthTargetAmount} onChange={(e) => setWizardForm((f) => ({ ...f, monthTargetAmount: parseInt(e.target.value, 10) || 0 }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm min-w-0" placeholder="SAR" />
+                <input type="number" min={0} value={wizardForm.monthTargetAmount} onChange={(e) => setWizardForm((f) => ({ ...f, monthTargetAmount: parseInt(e.target.value, 10) || 0 }))} className="w-full rounded-lg border border-border px-3 py-2 text-sm min-w-0" placeholder="SAR" />
               )}
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setWizardStep(3)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Back</button>
-                <button type="button" onClick={() => setWizardStep(5)} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white">Next</button>
+                <button type="button" onClick={() => setWizardStep(3)} className="rounded-lg border border-border px-3 py-2 text-sm">Back</button>
+                <button type="button" onClick={() => setWizardStep(5)} className="rounded-lg bg-accent px-3 py-2 text-sm text-white">Next</button>
               </div>
             </>
           )}
           {wizardStep === 5 && (
             <>
-              <p className="text-sm text-slate-600">5. {t('admin.boutiques.wizardStep5')}</p>
+              <p className="text-sm text-muted">5. {t('admin.boutiques.wizardStep5')}</p>
               <ul className="list-inside list-disc text-sm space-y-1 min-w-0 truncate">
                 <li className="truncate">Boutique: {wizardForm.name} ({wizardForm.code})</li>
                 <li>{t('adminEmp.active')}: {wizardForm.isActive ? t('adminEmp.active') : t('adminEmp.inactive')}</li>
@@ -377,8 +377,8 @@ export function AdminBoutiquesClient() {
                 <li>{t('admin.boutiques.createCurrentMonthTarget')}: {wizardForm.createCurrentMonthTarget ? wizardForm.monthTargetAmount : 'No'}</li>
               </ul>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setWizardStep(4)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Back</button>
-                <button type="button" onClick={handleBootstrap} disabled={wizardSaving || !wizardForm.name || !wizardForm.code} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white disabled:opacity-50">{wizardSaving ? '…' : t('common.save')}</button>
+                <button type="button" onClick={() => setWizardStep(4)} className="rounded-lg border border-border px-3 py-2 text-sm">Back</button>
+                <button type="button" onClick={handleBootstrap} disabled={wizardSaving || !wizardForm.name || !wizardForm.code} className="rounded-lg bg-accent px-3 py-2 text-sm text-white disabled:opacity-50">{wizardSaving ? '…' : t('common.save')}</button>
               </div>
             </>
           )}

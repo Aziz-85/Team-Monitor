@@ -11,10 +11,10 @@ export type BadgeProps = {
 };
 
 const variantStyles: Record<BadgeVariant, string> = {
-  neutral: 'bg-slate-100 text-slate-700',
+  neutral: 'bg-surface-subtle text-foreground',
   success: 'bg-blue-50 text-blue-700',
-  warning: 'bg-amber-50 text-slate-700',
-  danger: 'bg-slate-100 text-slate-800',
+  warning: 'bg-amber-50 text-foreground',
+  danger: 'bg-surface-subtle text-foreground',
 };
 
 export function Badge({ children, variant = 'neutral', className = '' }: BadgeProps) {

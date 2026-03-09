@@ -19,5 +19,5 @@ export function canEditSchedule(user: UserWithSchedulePermission): boolean {
 
 
 export function canApproveWeek(user: UserWithSchedulePermission): boolean {
-  return user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'MANAGER';
+  return user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'MANAGER' || user.role === 'AREA_MANAGER';
 }

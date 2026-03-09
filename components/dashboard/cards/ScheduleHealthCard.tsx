@@ -25,18 +25,18 @@ export function ScheduleHealthCard({
             }`}
             aria-hidden
           />
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-foreground">
             Current week: {weekApproved ? 'Approved' : 'Not approved'}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <span className="text-slate-500">Today AM</span>
-            <p className="text-lg font-semibold text-slate-900">{todayAmCount}</p>
+            <span className="text-muted">Today AM</span>
+            <p className="text-lg font-semibold text-foreground">{todayAmCount}</p>
           </div>
           <div>
-            <span className="text-slate-500">Today PM</span>
-            <p className="text-lg font-semibold text-slate-900">{todayPmCount}</p>
+            <span className="text-muted">Today PM</span>
+            <p className="text-lg font-semibold text-foreground">{todayPmCount}</p>
           </div>
         </div>
         {coverageViolationsCount > 0 && (

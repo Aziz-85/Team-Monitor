@@ -77,17 +77,17 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
       {/* View mode toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col">
-          <h2 className="text-base font-semibold text-slate-900">{t('inventory.zonesMapTitle')}</h2>
-          <p className="mt-1 text-xs text-slate-600">{modeHint}</p>
+          <h2 className="text-base font-semibold text-foreground">{t('inventory.zonesMapTitle')}</h2>
+          <p className="mt-1 text-xs text-muted">{modeHint}</p>
         </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+        <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5">
           <button
             type="button"
             onClick={() => setViewMode('monthly')}
             className={`rounded-md px-3 py-1 text-xs font-medium ${
               viewMode === 'monthly'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-surface text-foreground shadow-sm'
+                : 'text-muted hover:text-foreground'
             }`}
           >
             {t('inventory.zonesViewMonthly')}
@@ -97,8 +97,8 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
             onClick={() => setViewMode('quarterly')}
             className={`rounded-md px-3 py-1 text-xs font-medium ${
               viewMode === 'quarterly'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-surface text-foreground shadow-sm'
+                : 'text-muted hover:text-foreground'
             }`}
           >
             {t('inventory.zonesViewQuarterly')}
@@ -107,9 +107,9 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
       </div>
 
       {/* Map container */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+      <div className="rounded-lg border border-border bg-surface-subtle p-2">
         <div
-          className="relative mx-auto aspect-[4/3] max-h-[70vh] w-full overflow-auto rounded-md bg-slate-100"
+          className="relative mx-auto aspect-[4/3] max-h-[70vh] w-full overflow-auto rounded-md bg-surface-subtle"
           onClick={(e) => {
             // Click on background clears selection
             if ((e.target as HTMLElement).dataset.zoneKey == null) {
@@ -161,7 +161,7 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
                 >
                   {isActive && (
                     <div
-                      className={`pointer-events-none absolute left-1 top-1 inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold ${zone.textClass}`}
+                      className={`pointer-events-none absolute left-1 top-1 inline-flex items-center rounded-full bg-surface/80 px-2 py-0.5 text-[10px] font-semibold ${zone.textClass}`}
                     >
                       {zone.label}
                     </div>
@@ -174,8 +174,8 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
       </div>
 
       {/* Selected zone details */}
-      <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
           {t('inventory.selectedZoneDetails')}
         </div>
         {selected ? (
@@ -185,14 +185,14 @@ export function ZonesMapDialog(props: ZonesMapDialogProps) {
                 {selected.label}
               </span>
               {selected.note && (
-                <span className="text-xs text-slate-600">
+                <span className="text-xs text-muted">
                   {selected.note}
                 </span>
               )}
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-500">{t('inventory.selectedZoneNone')}</p>
+          <p className="text-xs text-muted">{t('inventory.selectedZoneNone')}</p>
         )}
       </div>
     </div>

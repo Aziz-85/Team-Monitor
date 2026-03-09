@@ -136,7 +136,7 @@ export function BoutiqueLeavesClient() {
     <div className="min-w-0 p-4 md:p-6">
       <OpsCard title={t('nav.boutiqueLeaves')}>
         <div className="mb-3">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900">
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground">
             {STATUS_OPTIONS.map((s) => (
               <option key={s || 'all'} value={s}>{s || 'All'}</option>
             ))}

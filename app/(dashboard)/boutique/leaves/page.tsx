@@ -5,7 +5,7 @@ import { BoutiqueLeavesClient } from './BoutiqueLeavesClient';
 export default async function BoutiqueLeavesPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') redirect('/');
+  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'AREA_MANAGER') redirect('/');
 
   return <BoutiqueLeavesClient />;
 }

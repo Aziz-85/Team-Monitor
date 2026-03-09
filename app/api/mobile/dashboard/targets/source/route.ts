@@ -5,7 +5,7 @@ import { getDaysInMonth, normalizeDateOnlyRiyadh } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
 import { getDefaultDashboardDate } from '@/lib/dashboard/managerDashboard';
 
-const ALLOWED_ROLES = ['MANAGER', 'ADMIN'] as const;
+const ALLOWED_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
 export type TargetSourceResponse = {
   date: string;

@@ -52,8 +52,8 @@ export function BoutiqueTasksClient() {
   return (
     <div className="min-w-0 p-4 md:p-6">
       <OpsCard title={t('nav.boutiqueTasks')}>
-        <p className="mb-3 text-sm text-slate-600">
-          <Link href="/tasks/setup" className="text-sky-600 hover:underline">
+        <p className="mb-3 text-sm text-muted">
+          <Link href="/tasks/setup" className="text-accent hover:underline">
             {t('tasks.setup')} — {t('admin.boutiques.details')}
           </Link>
         </p>
@@ -67,7 +67,7 @@ export function BoutiqueTasksClient() {
             {list.map((task) => (
               <tr key={task.id}>
                 <AdminTd>
-                  <Link href={`/tasks/setup?taskId=${task.id}`} className="text-sky-600 hover:underline truncate block">
+                  <Link href={`/tasks/setup?taskId=${task.id}`} className="text-accent hover:underline truncate block">
                     {task.name}
                   </Link>
                 </AdminTd>

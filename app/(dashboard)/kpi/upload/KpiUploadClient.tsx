@@ -78,20 +78,20 @@ export function KpiUploadClient() {
       .finally(() => setUploading(false));
   }, [file, boutiqueId, empId, periodKey]);
 
-  if (loading) return <div className="p-4 text-sm text-slate-500">{t('common.loading')}</div>;
+  if (loading) return <div className="p-4 text-sm text-muted">{t('common.loading')}</div>;
 
   return (
     <div className="min-w-0 p-4 md:p-6">
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">{t('kpi.uploadTitle')}</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">{t('kpi.uploadTitle')}</h1>
 
       <OpsCard title={t('kpi.uploadForm')} className="mb-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('kpi.boutique')}</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('kpi.boutique')}</label>
             <select
               value={boutiqueId}
               onChange={(e) => setBoutiqueId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
             >
               {boutiques.map((b) => (
                 <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
@@ -99,11 +99,11 @@ export function KpiUploadClient() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('kpi.employee')}</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('kpi.employee')}</label>
             <select
               value={empId}
               onChange={(e) => setEmpId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
             >
               <option value="">—</option>
               {employees.map((e) => (
@@ -112,22 +112,22 @@ export function KpiUploadClient() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('kpi.periodKey')}</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('kpi.periodKey')}</label>
             <input
               type="text"
               value={periodKey}
               onChange={(e) => setPeriodKey(e.target.value)}
               placeholder="YYYY or YYYY-MM"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('kpi.file')}</label>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('kpi.file')}</label>
             <input
               type="file"
               accept=".xlsx,.xlsm,.xls"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-slate-700"
+              className="w-full text-sm text-foreground"
             />
           </div>
         </div>
@@ -136,7 +136,7 @@ export function KpiUploadClient() {
             type="button"
             onClick={submit}
             disabled={uploading || !file || !empId}
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {uploading ? t('common.loading') : t('kpi.upload')}
           </button>
@@ -164,7 +164,7 @@ export function KpiUploadClient() {
 
       <OpsCard title={t('kpi.uploadHistory')}>
         <ul className="space-y-2 text-sm">
-          {uploads.length === 0 && <li className="text-slate-500">{t('kpi.noUploads')}</li>}
+          {uploads.length === 0 && <li className="text-muted">{t('kpi.noUploads')}</li>}
           {uploads.slice(0, 20).map((u) => (
             <li key={u.id} className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{u.empId}</span>

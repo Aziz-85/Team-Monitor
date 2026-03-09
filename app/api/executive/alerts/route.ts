@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN') {
+  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'AREA_MANAGER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

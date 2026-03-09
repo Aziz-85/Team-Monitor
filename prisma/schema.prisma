@@ -127,6 +127,8 @@ model Boutique {
   compDayLedgers        CompDayLedger[]
   boutiqueKeys          BoutiqueKey[]
   keyHandovers          KeyHandover[]
+  boutiqueMonthlyTargets BoutiqueMonthlyTarget[]
+  employeeMonthlyTargets  EmployeeMonthlyTarget[]
 
   @@index([regionId])
   @@index([isActive])
@@ -996,9 +998,12 @@ model BoutiqueMonthlyTarget {
   boutiqueId    String   // required (DB NOT NULL), default from migration backfill
   month         String   // "YYYY-MM"
   amount        Int      // SAR (integer)
+  source        String?  // e.g. OFFICIAL, IMPORT; optional
+  notes         String?  // optional
   createdById   String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  boutique      Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
   createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
   employeeTargets EmployeeMonthlyTarget[]
 
@@ -1024,8 +1029,11 @@ model EmployeeMonthlyTarget {
   presenceFactor             Float?   // snapshot: present / scheduled (0 if scheduled=0)
   effectiveWeightAtGeneration Float?   // snapshot: roleWeight * presenceFactor
   distributionMethod         String?  // e.g. ROLE_WEIGHTED_LEAVE_ADJUSTED_V1
+  source                      String?  // e.g. OFFICIAL, IMPORT; optional
+  notes                       String?  // optional
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
+  boutique                   Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
   user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceBoutiqueTarget       BoutiqueMonthlyTarget? @relation(fields: [sourceBoutiqueTargetId], references: [id], onDelete: SetNull)
   generatedBy                User?    @relation("GeneratedTargets", fields: [generatedById], references: [id], onDelete: SetNull)

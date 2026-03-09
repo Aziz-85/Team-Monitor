@@ -70,13 +70,13 @@ export function AdminFilterBar({ filterLabel, onFilterChange, t }: Props) {
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="text-sm font-medium text-slate-600">{filterLabel}:</span>
-      <span className="rounded bg-slate-100 px-2 py-0.5 text-sm text-slate-800">{filter.kind === 'ALL' ? t('admin.filterAll') : filter.kind}</span>
+      <span className="text-sm font-medium text-muted">{filterLabel}:</span>
+      <span className="rounded bg-surface-subtle px-2 py-0.5 text-sm text-foreground">{filter.kind === 'ALL' ? t('admin.filterAll') : filter.kind}</span>
       <div className="flex flex-wrap items-center gap-1">
         <button
           type="button"
           onClick={() => apply({ kind: 'ALL' })}
-          className={`rounded border px-2 py-1 text-xs ${filter.kind === 'ALL' ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+          className={`rounded border px-2 py-1 text-xs ${filter.kind === 'ALL' ? 'border-sky-500 bg-sky-50 text-sky-800' : 'border-border bg-surface text-foreground hover:bg-surface-subtle'}`}
         >
           {t('admin.filterAll')}
         </button>
@@ -90,7 +90,7 @@ export function AdminFilterBar({ filterLabel, onFilterChange, t }: Props) {
                   if (id) apply({ kind: 'BOUTIQUE', boutiqueId: id });
                   else apply({ kind: 'ALL' });
                 }}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800"
+                className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground"
               >
                 <option value="">{t('admin.filterByBoutique')}</option>
                 {boutiques.map((b) => (
@@ -108,7 +108,7 @@ export function AdminFilterBar({ filterLabel, onFilterChange, t }: Props) {
                   if (id) apply({ kind: 'REGION', regionId: id });
                   else apply({ kind: 'ALL' });
                 }}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800"
+                className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground"
               >
                 <option value="">{t('admin.filterByRegion')}</option>
                 {regions.map((r) => (
@@ -126,7 +126,7 @@ export function AdminFilterBar({ filterLabel, onFilterChange, t }: Props) {
                   if (id) apply({ kind: 'GROUP', groupId: id });
                   else apply({ kind: 'ALL' });
                 }}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800"
+                className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground"
               >
                 <option value="">{t('admin.filterByGroup')}</option>
                 {groups.map((g) => (

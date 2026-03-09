@@ -8,7 +8,7 @@ import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
 
-const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
+const ADMIN_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;

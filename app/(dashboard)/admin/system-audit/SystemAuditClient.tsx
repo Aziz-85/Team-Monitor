@@ -49,26 +49,26 @@ export function SystemAuditClient() {
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-4">
       <OpsCard title="System audit docs">
-        <p className="text-sm text-slate-600 mb-4">
-          Read-only view of docs in <code className="bg-slate-100 px-1 rounded">docs/audit/</code>. Use for plan, scope, and gap review.
+        <p className="text-sm text-muted mb-4">
+          Read-only view of docs in <code className="bg-surface-subtle px-1 rounded">docs/audit/</code>. Use for plan, scope, and gap review.
         </p>
         {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-4">
-          <label htmlFor="audit-doc" className="text-sm font-medium text-slate-700">Document:</label>
+          <label htmlFor="audit-doc" className="text-sm font-medium text-foreground">Document:</label>
           <select
             id="audit-doc"
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm bg-white min-w-[200px]"
+            className="rounded border border-border px-3 py-1.5 text-sm bg-surface min-w-[200px]"
           >
             {docs.map((d) => (
               <option key={d.name} value={d.name}>{d.name}</option>
             ))}
           </select>
         </div>
-        {loading && <p className="text-slate-500 text-sm">Loading…</p>}
+        {loading && <p className="text-muted text-sm">Loading…</p>}
         {content && (
-          <pre className="bg-slate-50 border border-slate-200 rounded p-4 text-xs overflow-x-auto whitespace-pre-wrap max-h-[70vh] overflow-y-auto">
+          <pre className="bg-surface-subtle border border-border rounded p-4 text-xs overflow-x-auto whitespace-pre-wrap max-h-[70vh] overflow-y-auto">
             {content}
           </pre>
         )}

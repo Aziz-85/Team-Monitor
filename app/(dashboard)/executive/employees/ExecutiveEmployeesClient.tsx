@@ -53,21 +53,21 @@ export function ExecutiveEmployeesClient() {
   return (
     <div className="min-w-0 p-4 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold text-slate-900 truncate min-w-0">{t('executive.employees.title')}</h1>
+        <h1 className="text-xl font-semibold text-foreground truncate min-w-0">{t('executive.employees.title')}</h1>
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex rounded-lg border border-slate-300 bg-slate-50 p-0.5">
+            <div className="flex rounded-lg border border-border bg-surface-subtle p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('scope')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewScope')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('global')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-white text-slate-900 shadow' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewGlobal')}
               </button>
@@ -76,7 +76,7 @@ export function ExecutiveEmployeesClient() {
           <select
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 min-w-0"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground min-w-0"
           >
             {[0, 1, 2, 3].map((i) => {
               const y = new Date().getFullYear() - i;
@@ -86,7 +86,7 @@ export function ExecutiveEmployeesClient() {
         </div>
       </div>
 
-      {loading && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {loading && <p className="text-sm text-muted">{t('common.loading')}</p>}
       {!loading && data && (
         <OpsCard title={t('executive.employees.annualTotals')}>
           <AdminDataTable>
@@ -103,13 +103,13 @@ export function ExecutiveEmployeesClient() {
                 <tr key={row.empId}>
                   <AdminTd className="truncate min-w-0" title={row.name}>{row.name}</AdminTd>
                   <AdminTd className="tabular-nums">{formatSar(row.annualTotal)}</AdminTd>
-                  <AdminTd className={`tabular-nums ${row.achievementPct != null && row.achievementPct < 20 ? 'text-amber-700' : 'text-slate-900'}`}>{row.achievementPct != null ? `${row.achievementPct}%` : '—'}</AdminTd>
+                  <AdminTd className={`tabular-nums ${row.achievementPct != null && row.achievementPct < 20 ? 'text-amber-700' : 'text-foreground'}`}>{row.achievementPct != null ? `${row.achievementPct}%` : '—'}</AdminTd>
                   <AdminTd className="tabular-nums">{row.consistencyScore}</AdminTd>
                   <AdminTd className="truncate min-w-0" title={row.byBoutique.map((b) => `${b.boutiqueName}: ${formatSar(b.total)}`).join(', ')}>
                     {row.byBoutique.length} {t('executive.employees.boutiques')}
                   </AdminTd>
                   <AdminTd>
-                    <Link href={`/executive/employees/${encodeURIComponent(row.empId)}?year=${year}${viewMode === 'global' ? '&global=true' : ''}`} className="text-sky-600 hover:underline text-sm truncate block min-w-0">
+                    <Link href={`/executive/employees/${encodeURIComponent(row.empId)}?year=${year}${viewMode === 'global' ? '&global=true' : ''}`} className="text-accent hover:underline text-sm truncate block min-w-0">
                       {t('executive.employees.detail')}
                     </Link>
                   </AdminTd>

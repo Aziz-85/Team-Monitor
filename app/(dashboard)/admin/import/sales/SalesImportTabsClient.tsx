@@ -36,7 +36,7 @@ export function SalesImportTabsClient({ canResolve }: { canResolve: boolean }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       {/* Internal sidebar */}
-      <aside className="w-full border-b border-slate-200 bg-slate-50 md:w-52 md:flex-shrink-0 md:border-b-0 md:border-r md:border-slate-200">
+      <aside className="w-full border-b border-border bg-surface-subtle md:w-52 md:flex-shrink-0 md:border-b-0 md:border-r md:border-border">
         <nav className="p-2 md:p-3">
           <ul className="space-y-0.5">
             {SECTIONS.map((s) => {
@@ -48,8 +48,8 @@ export function SalesImportTabsClient({ canResolve }: { canResolve: boolean }) {
                     onClick={() => setSection(s.id)}
                     className={`w-full rounded-lg px-3 py-2 text-start text-sm transition-colors ${
                       active
-                        ? 'border-l-4 border-l-sky-500 bg-slate-100 font-medium text-slate-900'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                        ? 'border-l-4 border-l-accent bg-surface-subtle font-medium text-foreground'
+                        : 'text-foreground hover:bg-surface-subtle hover:text-foreground'
                     }`}
                   >
                     {s.label}
@@ -64,8 +64,8 @@ export function SalesImportTabsClient({ canResolve }: { canResolve: boolean }) {
       {/* Content panel */}
       <main className="min-w-0 flex-1">
         <div className="p-4 md:p-6">
-          <p className="mb-1 text-sm text-slate-600">Import &gt; Sales</p>
-          <h1 className="mb-4 text-xl font-semibold text-slate-900">Sales Import</h1>
+          <p className="mb-1 text-sm text-muted">Import &gt; Sales</p>
+          <h1 className="mb-4 text-xl font-semibold text-foreground">Sales Import</h1>
 
           <div className="min-h-0">
             {section === 'import' && <ImportSalesPanel />}

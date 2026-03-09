@@ -49,6 +49,14 @@ type MonthlyData = {
   riskScore: {
     score: number;
     classification: string;
+    factors: {
+      revenueGap: number;
+      workforceExposure: number;
+      taskIntegrity: number;
+      operationalGaps: number;
+      scheduleVolatility: number;
+    };
+    reasons: string[];
   };
 };
 
@@ -63,10 +71,24 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md ${className}`}
+      className={`rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm transition hover:shadow-md ${className}`}
     >
-      <h2 className="mb-3 text-sm font-medium text-gray-500">{title}</h2>
+      <h2 className="mb-3 text-sm font-medium text-muted">{title}</h2>
       {children}
+    </div>
+  );
+}
+
+function RiskBar({ label, value, max }: { label: string; value: number; max: number }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  const color = pct <= 30 ? 'bg-emerald-500' : pct <= 60 ? 'bg-amber-500' : 'bg-red-500';
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-28 shrink-0 text-muted">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-subtle">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-8 text-end font-medium text-foreground">{value}</span>
     </div>
   );
 }
@@ -125,8 +147,8 @@ export function MonthlyBoardClient() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-6 shadow-sm">
-          <p className="text-slate-600">{error}</p>
+        <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-6 shadow-sm">
+          <p className="text-muted">{error}</p>
         </div>
       </div>
     );
@@ -135,7 +157,7 @@ export function MonthlyBoardClient() {
   if (loading && !data) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-gray-500">{t('executive.monthly.loading')}</p>
+        <p className="text-muted">{t('executive.monthly.loading')}</p>
       </div>
     );
   }
@@ -145,15 +167,15 @@ export function MonthlyBoardClient() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-gray-800">
+        <h1 className="text-xl font-semibold text-foreground">
           {t('executive.monthly.title')}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded border border-[#E8DFC8] bg-white">
+          <div className="flex items-center rounded border border-[#E8DFC8] bg-surface">
             <button
               type="button"
               onClick={goPrev}
-              className="rounded-s border-e border-[#E8DFC8] px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              className="rounded-s border-e border-[#E8DFC8] px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
               title={t('executive.monthly.previousMonth')}
               aria-label={t('executive.monthly.previousMonth')}
             >
@@ -175,7 +197,7 @@ export function MonthlyBoardClient() {
             <button
               type="button"
               onClick={goNext}
-              className="rounded-e border-s border-[#E8DFC8] px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+              className="rounded-e border-s border-[#E8DFC8] px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
               title={t('executive.monthly.nextMonth')}
               aria-label={t('executive.monthly.nextMonth')}
             >
@@ -185,7 +207,7 @@ export function MonthlyBoardClient() {
           <button
             type="button"
             onClick={goThisMonth}
-            className="rounded border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded border border-[#E8DFC8] bg-surface px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
           >
             {t('executive.monthly.thisMonth')}
           </button>
@@ -193,7 +215,7 @@ export function MonthlyBoardClient() {
       </div>
 
       {data.dataScope && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+        <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-sm text-muted">
           <strong>{t('executive.monthly.dataScope')}:</strong>{' '}
           {t('executive.monthly.boutiqueLabel')}: {data.dataScope.boutiqueName ?? data.dataScope.boutiqueId}
           {data.dataScope.boutiqueCode != null && ` (${data.dataScope.boutiqueCode})`}
@@ -207,18 +229,18 @@ export function MonthlyBoardClient() {
       )}
 
       {/* Boutique Performance Score */}
-      <div className="rounded-2xl border-2 border-[#E8DFC8] bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-medium text-gray-500">
+      <div className="rounded-2xl border-2 border-[#E8DFC8] bg-surface p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-medium text-muted">
           {t('executive.monthly.boutiquePerformanceScore')}
         </h2>
         <p className="text-3xl font-semibold text-[#C6A756]">
           {data.boutiqueScore.score}
-          <span className="ms-2 text-lg font-normal text-gray-600">
+          <span className="ms-2 text-lg font-normal text-muted">
             ({data.boutiqueScore.classification})
           </span>
         </p>
         {data.boutiqueScore.components && (
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
             <span>{t('executive.monthly.sales')}: {data.boutiqueScore.components.revenue}</span>
             <span>{t('executive.monthly.tasks')}: {data.boutiqueScore.components.tasks}</span>
             <span>{t('executive.monthly.schedule')}: {data.boutiqueScore.components.schedule}</span>
@@ -259,8 +281,26 @@ export function MonthlyBoardClient() {
         <Card title={t('executive.monthly.riskScore')}>
           <p className="text-2xl font-semibold text-[#C6A756]">
             {data.riskScore.score}
+            <span className="ms-2 text-lg font-normal text-muted">
+              ({data.riskScore.classification})
+            </span>
           </p>
-          <p className="text-sm text-gray-600">{data.riskScore.classification}</p>
+          {data.riskScore.factors && (
+            <div className="mt-3 space-y-1.5">
+              <RiskBar label={t('executive.monthly.riskRevenueGap')} value={data.riskScore.factors.revenueGap} max={30} />
+              <RiskBar label={t('executive.monthly.riskWorkforce')} value={data.riskScore.factors.workforceExposure} max={20} />
+              <RiskBar label={t('executive.monthly.riskTaskIntegrity')} value={data.riskScore.factors.taskIntegrity} max={20} />
+              <RiskBar label={t('executive.monthly.riskOperational')} value={data.riskScore.factors.operationalGaps} max={15} />
+              <RiskBar label={t('executive.monthly.riskSchedule')} value={data.riskScore.factors.scheduleVolatility} max={15} />
+            </div>
+          )}
+          {data.riskScore.reasons.length > 0 && (
+            <ul className="mt-3 space-y-0.5 text-xs text-muted">
+              {data.riskScore.reasons.map((r) => (
+                <li key={r}>• {t(`executive.risk.${r}`)}</li>
+              ))}
+            </ul>
+          )}
         </Card>
       </div>
     </div>

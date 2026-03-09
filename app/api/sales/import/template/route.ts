@@ -12,7 +12,7 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getMonthRangeDayKeys } from '@/lib/time';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'AREA_MANAGER'] as const;
 const SHEET_NAME = 'DATA_MATRIX';
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

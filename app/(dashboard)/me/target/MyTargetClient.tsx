@@ -255,7 +255,7 @@ export function MyTargetClient() {
   if (loading && !data) {
     return (
       <div className="p-4">
-        <p className="text-slate-600">{t('common.loading')}</p>
+        <p className="text-muted">{t('common.loading')}</p>
       </div>
     );
   }
@@ -267,7 +267,7 @@ export function MyTargetClient() {
         <button
           type="button"
           onClick={() => { setApiError(null); loadTargets(); }}
-          className="mt-2 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="mt-2 rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
         >
           {t('common.retry') ?? 'Retry'}
         </button>
@@ -296,13 +296,13 @@ export function MyTargetClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">{t('targets.myTargetTitle')}</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">{t('targets.myTargetTitle')}</h1>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={goPrevMonth}
-            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
             aria-label="Previous month"
           >
             ←
@@ -311,12 +311,12 @@ export function MyTargetClient() {
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
+            className="rounded border border-border px-3 py-2 text-sm"
           />
           <button
             type="button"
             onClick={goNextMonth}
-            className="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
             aria-label="Next month"
           >
             →
@@ -324,14 +324,14 @@ export function MyTargetClient() {
           <button
             type="button"
             onClick={goThisMonth}
-            className="rounded border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            className="rounded border border-border bg-surface-subtle px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
           >
             {t('targets.thisMonth')}
           </button>
         </div>
 
         {data && (data.scheduledDaysInMonth != null || data.leaveDaysInMonth != null) && (
-          <p className="mb-4 text-xs text-slate-500">
+          <p className="mb-4 text-xs text-muted">
             {t('targets.presenceInfo')}
             {data.scheduledDaysInMonth != null && ` ${data.scheduledDaysInMonth} ${t('targets.scheduledDays')}`}
             {data.leaveDaysInMonth != null && data.leaveDaysInMonth > 0 && `, ${data.leaveDaysInMonth} ${t('targets.leaveDays')}`}
@@ -346,26 +346,26 @@ export function MyTargetClient() {
             )}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.dailyTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.todaySales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctDaily)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.dailyTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.todaySales)}</td></tr>
+                <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctDaily)}</td></tr>
               </tbody>
             </table>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-sky-600 transition-all" style={{ width: `${progress(d.pctDaily)}%` }} />
+            <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress(d.pctDaily)}%` }} />
             </div>
           </OpsCard>
 
           <OpsCard title={t('targets.weekProgress')}>
-            {d.weekRangeLabel && <p className="mb-2 text-xs text-slate-500">{d.weekRangeLabel}</p>}
+            {d.weekRangeLabel && <p className="mb-2 text-xs text-muted">{d.weekRangeLabel}</p>}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekSales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctWeek)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekSales)}</td></tr>
+                <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctWeek)}</td></tr>
               </tbody>
             </table>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
               <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${progress(d.pctWeek)}%` }} />
             </div>
           </OpsCard>
@@ -373,25 +373,25 @@ export function MyTargetClient() {
           <OpsCard title={t('targets.monthProgress')}>
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-slate-600">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.monthTarget)}</td></tr>
-                <tr><td className="p-1 text-slate-600">MTD</td><td className="p-1 text-end font-medium">{formatMoney(d.mtdSales)}</td></tr>
-                <tr><td className="p-1 text-slate-600">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctMonth)}</td></tr>
-                <tr><td className="p-1 text-slate-600">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatMoney(d.remaining)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.monthTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">MTD</td><td className="p-1 text-end font-medium">{formatMoney(d.mtdSales)}</td></tr>
+                <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctMonth)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatMoney(d.remaining)}</td></tr>
               </tbody>
             </table>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+            <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
               <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${progress(d.pctMonth)}%` }} />
             </div>
           </OpsCard>
         </div>
 
         <OpsCard title={t('targets.enterSales')} className="mb-4">
-          <p className="mb-2 text-xs text-slate-500">{t('targets.salesEntryPolicyTooltip')}</p>
+          <p className="mb-2 text-xs text-muted">{t('targets.salesEntryPolicyTooltip')}</p>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={goPrevDay}
-              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-2 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
               aria-label="Previous day"
             >
               ←
@@ -404,12 +404,12 @@ export function MyTargetClient() {
                 setDate(v);
                 if (monthKeyFromDate(v) !== month) setMonth(monthKeyFromDate(v));
               }}
-              className="rounded border border-slate-300 px-3 py-2 text-sm"
+              className="rounded border border-border px-3 py-2 text-sm"
             />
             <button
               type="button"
               onClick={goNextDay}
-              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-2 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
               aria-label="Next day"
             >
               →
@@ -417,27 +417,27 @@ export function MyTargetClient() {
             <button
               type="button"
               onClick={goToday}
-              className="rounded border border-slate-200 bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              className="rounded border border-border bg-surface-subtle px-2 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
             >
               {t('targets.today')}
             </button>
           </div>
           <form onSubmit={submitSales} className="flex flex-wrap items-end gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">{t('targets.amount')}</label>
+              <label className="mb-1 block text-xs font-medium text-muted">{t('targets.amount')}</label>
               <input
                 type="number"
                 min={0}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-28 rounded border border-slate-300 px-3 py-2 text-sm"
+                className="w-28 rounded border border-border px-3 py-2 text-sm"
                 placeholder="0"
               />
             </div>
             <button
               type="submit"
               disabled={submitting || !canEditSelected}
-              className="rounded bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
               title={!canEditSelected ? t('targets.salesEntryPolicyTooltip') : undefined}
             >
               {submitting ? t('common.loading') : t('common.save')}
@@ -466,7 +466,7 @@ export function MyTargetClient() {
               <thead>
                 <tr>
                   {WEEKDAY_LABELS.map((w) => (
-                    <th key={w} className="border border-slate-200 p-1 font-medium text-slate-600">{w}</th>
+                    <th key={w} className="border border-border p-1 font-medium text-muted">{w}</th>
                   ))}
                 </tr>
               </thead>
@@ -493,29 +493,29 @@ export function MyTargetClient() {
                   return rows.map((r, ri) => (
                     <tr key={ri}>
                       {r.map((cell, ci) => {
-                        if (!cell) return <td key={ci} className="border border-slate-100 p-1" />;
+                        if (!cell) return <td key={ci} className="border border-border p-1" />;
                         const entry = entriesByDate[cell.dateStr];
                         const isSelected = date === cell.dateStr;
                         const isToday = today === cell.dateStr;
                         const isPending = pendingDates.has(cell.dateStr);
                         return (
-                          <td key={ci} className="border border-slate-200 p-1">
+                          <td key={ci} className="border border-border p-1">
                             <button
                               type="button"
                               onClick={() => selectDay(cell.dateStr)}
                               className={`min-h-[2.5rem] w-full rounded border text-start transition ${
                                 isSelected
-                                  ? 'border-sky-500 bg-sky-50 font-medium'
+                                  ? 'border-accent bg-accent/10 font-medium'
                                   : isToday
                                     ? 'border-amber-400 bg-amber-50'
-                                    : 'border-transparent hover:bg-slate-100'
+                                    : 'border-transparent hover:bg-surface-subtle'
                               }`}
                             >
-                              <span className="block text-xs text-slate-500">{cell.day}</span>
+                              <span className="block text-xs text-muted">{cell.day}</span>
                               {entry ? (
-                                <span className="block font-medium text-slate-800">{formatSar(entry.amount)}</span>
+                                <span className="block font-medium text-foreground">{formatSar(entry.amount)}</span>
                               ) : (
-                                <span className="block text-xs text-slate-400">—</span>
+                                <span className="block text-xs text-muted">—</span>
                               )}
                               {isPending && (
                                 <span className="block text-[10px] text-amber-600">{t('targets.editPending')}</span>
@@ -530,7 +530,7 @@ export function MyTargetClient() {
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
+          <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted">
             <span>{t('targets.enteredDays')}: {monthEntries.length} / {getDaysInMonth(month)}</span>
             <span>{t('targets.missingDays')}: {Math.max(0, getDaysInMonth(month) - monthEntries.length)}</span>
             <span className="font-medium">{t('targets.monthTotal')}: {formatSar(monthEntries.reduce((s, e) => s + e.amount, 0))}</span>
@@ -544,7 +544,7 @@ export function MyTargetClient() {
             return (
               <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
                 {isCurrentMonth ? (
-                  <span className="text-sm text-slate-500" title={t('targets.cannotClearCurrentMonth')}>
+                  <span className="text-sm text-muted" title={t('targets.cannotClearCurrentMonth')}>
                     {t('targets.cannotClearCurrentMonth')}
                   </span>
                 ) : (
@@ -576,7 +576,7 @@ export function MyTargetClient() {
             );
           })()}
           <ul className="space-y-2">
-            {monthEntries.length === 0 && <li className="text-slate-500">—</li>}
+            {monthEntries.length === 0 && <li className="text-muted">—</li>}
                 {monthEntries
               .slice()
               .sort((a, b) => a.date.localeCompare(b.date))
@@ -589,10 +589,10 @@ export function MyTargetClient() {
                   className="flex flex-wrap items-center justify-between gap-2 text-sm"
                   title={!e.canEdit ? t('targets.salesEntryPolicyTooltip') : isCurrentMonth ? t('targets.cannotClearCurrentMonth') : undefined}
                 >
-                  <span className={!e.canEdit ? 'text-slate-500' : ''}>
+                  <span className={!e.canEdit ? 'text-muted' : ''}>
                     {e.date} — {formatSar(e.amount)}
                     {!e.canEdit && (
-                      <span className="ms-1 text-xs text-slate-400" title={t('targets.salesEntryPolicyTooltip')}>
+                      <span className="ms-1 text-xs text-muted" title={t('targets.salesEntryPolicyTooltip')}>
                         (read-only)
                       </span>
                     )}
@@ -607,7 +607,7 @@ export function MyTargetClient() {
                       {deletingId === e.id ? t('common.loading') : t('common.delete')}
                     </button>
                   ) : isCurrentMonth ? (
-                    <span className="text-xs text-slate-400">{t('targets.cannotClearCurrentMonth')}</span>
+                    <span className="text-xs text-muted">{t('targets.cannotClearCurrentMonth')}</span>
                   ) : null}
                 </li>
               );

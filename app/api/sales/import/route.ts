@@ -20,7 +20,7 @@ import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { validateSarInteger } from '@/lib/sales/reconcile';
 import * as XLSX from 'xlsx';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
 const ALLOWED_EXTENSIONS = /\.(xlsx|xlsm|xls)$/i;
 const MAX_ROWS = 500;
 

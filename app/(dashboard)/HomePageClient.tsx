@@ -208,7 +208,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         {loadError ? (
           <p className="text-red-600">{loadError}</p>
         ) : (
-          <p className="text-slate-600">Loading…</p>
+          <p className="text-muted">Loading…</p>
         )}
       </div>
     );
@@ -271,12 +271,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <label className="text-base font-medium text-slate-700">{t('common.date')}</label>
+            <label className="text-base font-medium text-foreground">{t('common.date')}</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="rounded border border-slate-300 px-3 py-2 text-base"
+              className="rounded border border-border px-3 py-2 text-base"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -291,7 +291,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               <button
                 type="button"
                 onClick={() => setZoneDialogOpen(true)}
-                className="inline-flex items-center rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-800 hover:bg-slate-50"
+                className="inline-flex items-center rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
               >
                 {t('inventory.openMap')}
               </button>
@@ -302,28 +302,28 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
-                  className="h-full rounded-full bg-sky-600"
+                  className="h-full rounded-full bg-accent"
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-slate-700">{targetsData.todayPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.todayPct.toFixed(1)}%</p>
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarInt(targetsData.remaining)}
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
                   className="h-full rounded-full bg-emerald-600"
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.mtdPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-slate-700">{targetsData.mtdPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.mtdPct.toFixed(1)}%</p>
             </OpsCard>
           </div>
         )}
@@ -335,12 +335,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                 {coverageValidation.map((v, i) => (
                   <li key={i}>{v.message}</li>
                 ))}
-                <li className="mt-1 font-medium text-slate-700">
+                <li className="mt-1 font-medium text-foreground">
                   AM: {roster.amEmployees.length}, PM: {roster.pmEmployees.length}
                 </li>
               </ul>
             ) : (
-              <p className="text-base font-medium text-slate-600">{t('coverage.noWarnings')}</p>
+              <p className="text-base font-medium text-muted">{t('coverage.noWarnings')}</p>
             )}
           </OpsCard>
         </div>
@@ -351,7 +351,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               <p className="text-base text-amber-900">
                 {(t('coverage.moveSuggestion') as string).replace('{name}', coverageSuggestion.employeeName)}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted">
                 {(t('coverage.beforeAfter') as string)
                   .replace('{amBefore}', String(coverageSuggestion.impact.amBefore))
                   .replace('{pmBefore}', String(coverageSuggestion.impact.pmBefore))
@@ -372,7 +372,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         {coverageSuggestionExplanation && !coverageSuggestion && coverageValidation.some((v) => v.type === 'AM_GT_PM') && (
           <div className="mb-4">
             <OpsCard title={t('coverage.suggestedFix')} className="!p-3">
-              <p className="text-sm text-slate-600">{coverageSuggestionExplanation}</p>
+              <p className="text-sm text-muted">{coverageSuggestionExplanation}</p>
             </OpsCard>
           </div>
         )}
@@ -387,7 +387,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                       <span className="font-medium">{d.dayName} {d.date.slice(8)}/{d.date.slice(5, 7)}:</span>{' '}
                       {d.messages.join('; ')}
                       {d.suggestion && (
-                        <span className="ms-1 text-slate-700">
+                        <span className="ms-1 text-foreground">
                           — {(t('coverage.moveSuggestion') as string).replace('{name}', d.suggestion.employeeName)}
                         </span>
                       )}
@@ -442,7 +442,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                 <li key={e.empId}>{e.name}</li>
               ))}
               {roster.amEmployees.length === 0 && (
-                <li className="text-slate-500">—</li>
+                <li className="text-muted">—</li>
               )}
             </ul>
           </ShiftCard>
@@ -452,7 +452,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                 <li key={e.empId}>{e.name}</li>
               ))}
               {roster.pmEmployees.length === 0 && (
-                <li className="text-slate-500">—</li>
+                <li className="text-muted">—</li>
               )}
             </ul>
           </ShiftCard>
@@ -462,8 +462,8 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
           <ul className="space-y-2">
             {todayTasks.map((task) => (
               <li key={task.taskName} className="flex flex-wrap items-center gap-2 text-base">
-                <span className="font-medium text-slate-900">{task.taskName}</span>
-                <span className="text-slate-600">→ {task.assignedTo ?? t('tasks.unassigned')}</span>
+                <span className="font-medium text-foreground">{task.taskName}</span>
+                <span className="text-muted">→ {task.assignedTo ?? t('tasks.unassigned')}</span>
                 <StatusPill
                   variant={
                     task.reason === 'Primary'
@@ -484,31 +484,31 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                         : t('tasks.unassigned')}
                 </StatusPill>
                 {task.reasonNotes.length > 0 && (
-                  <span className="text-slate-500">({task.reasonNotes.join('; ')})</span>
+                  <span className="text-muted">({task.reasonNotes.join('; ')})</span>
                 )}
               </li>
             ))}
             {todayTasks.length === 0 && (
-              <li className="text-slate-500">—</li>
+              <li className="text-muted">—</li>
             )}
           </ul>
         </OpsCard>
 
         <OpsCard title={t('home.todayTasksTitle')} className="mt-6">
           {myTodayTasksLoading && (
-            <p className="text-slate-600">{t('common.loading')}</p>
+            <p className="text-muted">{t('common.loading')}</p>
           )}
           {!myTodayTasksLoading && myTodayTasksError && (
             <p className="text-red-600 text-sm">{myTodayTasksError}</p>
           )}
           {!myTodayTasksLoading && myTodayTasks && myTodayTasks.length === 0 && !myTodayTasksError && (
-            <p className="text-slate-500">{t('home.noTasksToday')}</p>
+            <p className="text-muted">{t('home.noTasksToday')}</p>
           )}
           {!myTodayTasksLoading && myTodayTasks && myTodayTasks.length > 0 && (
             <ul className="mt-2 space-y-2">
               {myTodayTasks.map((task) => (
                 <li key={task.id} className="flex flex-wrap items-center gap-2 text-base">
-                  <span className="font-medium text-slate-900">{task.title}</span>
+                  <span className="font-medium text-foreground">{task.title}</span>
                   {task.isCompleted && (
                     <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                       {t('tasks.done')}
@@ -542,8 +542,8 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                       disabled={updatingTaskId === task.id}
                       className={
                         task.isCompleted
-                          ? 'rounded border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50'
-                          : 'rounded bg-sky-600 px-3 py-1 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50'
+                          ? 'rounded border border-border bg-surface px-3 py-1 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50'
+                          : 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
                       }
                     >
                       {updatingTaskId === task.id
@@ -566,15 +566,15 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               aria-hidden
               onClick={() => setZoneDialogOpen(false)}
             />
-            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
+            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-base font-semibold text-slate-900">
+                <h3 className="text-base font-semibold text-foreground">
                   {t('inventory.zonesMapTitle')}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setZoneDialogOpen(false)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 text-sm text-slate-600 hover:bg-slate-100"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-sm text-muted hover:bg-surface-subtle"
                   aria-label={t('common.close') ?? 'Close'}
                 >
                   ×

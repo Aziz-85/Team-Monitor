@@ -103,11 +103,11 @@ export function ImportMatrixClient() {
   return (
     <div className="overflow-x-hidden p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">Monthly Import (Matrix) → SalesEntry</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">Monthly Import (Matrix) → SalesEntry</h1>
 
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Upload</h3>
-          <p className="mb-3 text-xs text-slate-500">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Upload</h3>
+          <p className="mb-3 text-xs text-muted">
             Upload an Excel file with DATA_MATRIX sheet (ScopeId, Date, Day, then employee columns like &quot;1205 - Name&quot;). Preview first, then Apply to persist to SalesEntry. ScopeId in file must match your current boutique.
           </p>
           <input
@@ -126,20 +126,20 @@ export function ImportMatrixClient() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               {file ? file.name : 'Choose .xlsx file'}
             </button>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <span>Import month:</span>
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
+                className="rounded border border-border px-2 py-1 text-sm"
               />
             </label>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
               Force overwrite (including LEDGER)
             </label>
@@ -147,11 +147,11 @@ export function ImportMatrixClient() {
               type="button"
               disabled={!file || previewLoading}
               onClick={runPreview}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
             >
               {previewLoading ? '…' : 'Preview'}
             </button>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={confirmApply}
@@ -163,7 +163,7 @@ export function ImportMatrixClient() {
               type="button"
               disabled={!file || !confirmApply || applyLoading}
               onClick={runApply}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {applyLoading ? '…' : 'Apply'}
             </button>
@@ -179,8 +179,8 @@ export function ImportMatrixClient() {
         {previewData && (
           <>
             <OpsCard className="mb-4">
-              <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Preview summary</h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-700 sm:grid-cols-3">
+              <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Preview summary</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-foreground sm:grid-cols-3">
                 <span>Boutique:</span><span>{previewData.boutiqueId}</span>
                 <span>Scope (code):</span><span>{previewData.scopeId}</span>
                 <span>Month range:</span><span>{previewData.monthDetectedRange.minMonth} → {previewData.monthDetectedRange.maxMonth}</span>
@@ -192,18 +192,18 @@ export function ImportMatrixClient() {
 
             {previewData.totalsByEmp.length > 0 && (
               <OpsCard className="mb-4">
-                <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Totals by employee</h3>
+                <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Totals by employee</h3>
                 <div className="max-h-48 overflow-auto">
                   <table className="w-full min-w-0 border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-start">
+                      <tr className="border-b border-border text-start">
                         <th className="p-1 font-medium">Emp ID</th>
                         <th className="p-1 font-medium text-end">Sum (SAR)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {previewData.totalsByEmp.map((r, i) => (
-                        <tr key={i} className="border-b border-slate-100">
+                        <tr key={i} className="border-b border-border">
                           <td className="p-1">{r.empId}</td>
                           <td className="p-1 text-end">{r.amountSum.toLocaleString()}</td>
                         </tr>
@@ -216,11 +216,11 @@ export function ImportMatrixClient() {
 
             {previewData.sample.length > 0 && (
               <OpsCard className="mb-4">
-                <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Sample rows</h3>
+                <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Sample rows</h3>
                 <div className="max-h-40 overflow-auto">
                   <table className="w-full min-w-0 border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-start">
+                      <tr className="border-b border-border text-start">
                         <th className="p-1 font-medium">Date</th>
                         <th className="p-1 font-medium">Emp ID</th>
                         <th className="p-1 font-medium text-end">Amount</th>
@@ -228,7 +228,7 @@ export function ImportMatrixClient() {
                     </thead>
                     <tbody>
                       {previewData.sample.map((s, i) => (
-                        <tr key={i} className="border-b border-slate-100">
+                        <tr key={i} className="border-b border-border">
                           <td className="p-1">{s.dateKey}</td>
                           <td className="p-1">{s.empId}</td>
                           <td className="p-1 text-end">{s.amount}</td>
@@ -244,8 +244,8 @@ export function ImportMatrixClient() {
 
         {applyData && (
           <OpsCard className="mb-4">
-            <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Apply result</h3>
-            <div className="text-sm text-slate-700">
+            <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Apply result</h3>
+            <div className="text-sm text-foreground">
               Inserted: {applyData.inserted} · Updated: {applyData.updated} · Skipped: {applyData.skipped} · Issues: {applyData.issuesCount}
             </div>
           </OpsCard>
@@ -253,11 +253,11 @@ export function ImportMatrixClient() {
 
         {issues.length > 0 && (
           <OpsCard>
-            <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">Issues</h3>
+            <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Issues</h3>
             <div className="max-h-64 overflow-auto">
               <table className="w-full min-w-0 border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 text-start">
+                  <tr className="border-b border-border text-start">
                     <th className="p-1 font-medium">Code</th>
                     <th className="p-1 font-medium">Message</th>
                     <th className="p-1 font-medium">Row</th>
@@ -267,7 +267,7 @@ export function ImportMatrixClient() {
                 </thead>
                 <tbody>
                   {issues.slice(0, 100).map((iss, i) => (
-                    <tr key={i} className="border-b border-slate-100">
+                    <tr key={i} className="border-b border-border">
                       <td className="p-1">{iss.code}</td>
                       <td className="max-w-[12rem] truncate p-1" title={iss.message}>{iss.message}</td>
                       <td className="p-1">{iss.rowIndex ?? '—'}</td>
@@ -278,7 +278,7 @@ export function ImportMatrixClient() {
                 </tbody>
               </table>
             </div>
-            {issues.length > 100 && <p className="mt-1 text-xs text-slate-500">Showing first 100 of {issues.length} issues.</p>}
+            {issues.length > 100 && <p className="mt-1 text-xs text-muted">Showing first 100 of {issues.length} issues.</p>}
           </OpsCard>
         )}
       </div>

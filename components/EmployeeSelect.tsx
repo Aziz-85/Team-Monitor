@@ -27,12 +27,12 @@ export function EmployeeSelect({
   const allNames = employees.map((e) => e.name);
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-foreground">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded border border-slate-300 px-3 py-2 text-base text-slate-900"
+        className="w-full rounded border border-border px-3 py-2 text-base text-foreground"
       >
         {allowEmpty && <option value="">—</option>}
         {employees.map((emp) => (

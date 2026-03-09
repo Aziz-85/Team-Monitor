@@ -560,20 +560,20 @@ export function ScheduleViewClient({
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-7xl px-3 md:px-4">
         {!fullGrid && (
-          <div className="mt-3 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700" role="status">
+          <div className="mt-3 mb-4 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground" role="status">
             {t('governance.viewOnlyBanner') ?? 'This schedule is view-only.'}
           </div>
         )}
         {/* Week/Month scope + view mode tabs */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <div className="inline-flex h-9 rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="tablist" aria-label={t('schedule.week') ?? 'Week'}>
+          <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist" aria-label={t('schedule.week') ?? 'Week'}>
             <button
               type="button"
               role="tab"
               aria-selected={timeScope === 'week'}
               onClick={() => setTimeScope('week')}
               className={`h-full rounded-md px-3 text-sm font-medium transition-colors ${
-                timeScope === 'week' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                timeScope === 'week' ? 'bg-surface text-foreground shadow-sm border border-border' : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
               }`}
             >
               {t('schedule.week')}
@@ -584,14 +584,14 @@ export function ScheduleViewClient({
               aria-selected={timeScope === 'month'}
               onClick={() => setTimeScope('month')}
               className={`h-full rounded-md px-3 text-sm font-medium transition-colors ${
-                timeScope === 'month' ? 'bg-white text-slate-900 shadow-sm border border-slate-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                timeScope === 'month' ? 'bg-surface text-foreground shadow-sm border border-border' : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
               }`}
             >
               {t('schedule.month')}
             </button>
           </div>
           {timeScope === 'week' && (
-            <div className="inline-flex h-9 rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="tablist">
+            <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist">
               {VIEW_MODES.map((mode) => (
                 <button
                   key={mode}
@@ -601,8 +601,8 @@ export function ScheduleViewClient({
                   onClick={() => setViewMode(mode)}
                   className={`min-w-[5rem] h-full rounded-md px-3 text-sm font-medium transition-colors ${
                     viewMode === mode
-                      ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-surface text-foreground shadow-sm border border-border'
+                      : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
                   }`}
                 >
                   {mode === 'excel'
@@ -626,12 +626,12 @@ export function ScheduleViewClient({
                   onClick={() => setWeekStart(addDays(weekStart, -7))}
                   disabled={gridLoading}
                   title={t('schedule.previousWeek')}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.previousWeek')}
                 >
                   <span aria-hidden>◀</span>
                 </button>
-                <span className="text-lg font-bold text-slate-900">
+                <span className="text-lg font-bold text-foreground">
                   {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
                     .replace('{start}', formatWeekRangeLabel(weekStart, locale).start)
                     .replace('{end}', formatWeekRangeLabel(weekStart, locale).end)}
@@ -641,7 +641,7 @@ export function ScheduleViewClient({
                   onClick={() => setWeekStart(addDays(weekStart, 7))}
                   disabled={gridLoading}
                   title={t('schedule.nextWeek')}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.nextWeek')}
                 >
                   <span aria-hidden>▶</span>
@@ -650,7 +650,7 @@ export function ScheduleViewClient({
                   type="date"
                   value={weekStart}
                   onChange={(e) => setWeekStart(weekStartSaturday(e.target.value))}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   aria-label={t('schedule.week')}
                 />
                 {timeScope === 'week' && fullGrid && ramadanRange && (() => {
@@ -664,7 +664,7 @@ export function ScheduleViewClient({
                 {timeScope === 'week' && fullGrid && weekGovernance && (
                   <>
                     <span
-                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${weekGovernance.status === 'APPROVED' ? 'border-emerald-200 bg-emerald-100 text-emerald-900' : 'border-slate-200 bg-slate-100 text-slate-700'}`}
+                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium ${weekGovernance.status === 'APPROVED' ? 'border-emerald-200 bg-emerald-100 text-emerald-900' : 'border-border bg-surface-subtle text-foreground'}`}
                       title={
                         weekGovernance.status === 'DRAFT'
                           ? (t('governance.tooltipDraft') ?? 'Draft')
@@ -698,12 +698,12 @@ export function ScheduleViewClient({
                   onClick={() => setMonth(addMonths(month, -1))}
                   disabled={monthExcelLoading}
                   title={t('schedule.previousMonth')}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.previousMonth')}
                 >
                   <span aria-hidden>◀</span>
                 </button>
-                <span className="min-w-[180px] text-lg font-bold text-slate-900">
+                <span className="min-w-[180px] text-lg font-bold text-foreground">
                   {formatMonthYear(month, locale)}
                 </span>
                 <button
@@ -711,7 +711,7 @@ export function ScheduleViewClient({
                   onClick={() => setMonth(addMonths(month, 1))}
                   disabled={monthExcelLoading}
                   title={t('schedule.nextMonth')}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.nextMonth')}
                 >
                   <span aria-hidden>▶</span>
@@ -720,7 +720,7 @@ export function ScheduleViewClient({
                   type="month"
                   value={month}
                   onChange={(e) => setMonth(e.target.value)}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   aria-label={t('schedule.month')}
                 />
               </>
@@ -732,15 +732,15 @@ export function ScheduleViewClient({
                 <button
                   type="button"
                   onClick={() => setRemindersOpen((o) => !o)}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="rounded-lg border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
                 >
                   {t('schedule.reminders') ?? 'Reminders'} ({reminders.length})
                 </button>
                 {remindersOpen && (
                   <>
-                    <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-3">
+                    <div className="absolute right-0 top-full z-20 mt-1 w-72 rounded-lg border border-border bg-surface p-3">
                       {reminders.map((r, i) => (
-                        <p key={i} className="border-b border-slate-100 py-1 text-xs text-slate-700 last:border-0">
+                        <p key={i} className="border-b border-border py-1 text-xs text-foreground last:border-0">
                           {r.message}
                         </p>
                       ))}
@@ -751,7 +751,7 @@ export function ScheduleViewClient({
                           void navigator.clipboard.writeText(text);
                           setRemindersOpen(false);
                         }}
-                        className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        className="mt-2 w-full rounded-lg border border-border bg-surface-subtle py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
                       >
                         {t('schedule.copyReminders') ?? 'Copy all (WhatsApp)'}
                       </button>
@@ -763,13 +763,13 @@ export function ScheduleViewClient({
             )}
             {timeScope === 'week' && fullGrid && (
               <>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-sky-800">
+                <span className="rounded-lg border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-accent">
                   {t('schedule.totalAm')}: {weekTotals.totalAm}
                 </span>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-amber-800">
+                <span className="rounded-lg border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-amber-800">
                   {t('schedule.totalPm')}: {weekTotals.totalPm}
                 </span>
-                <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700">
+                <span className="rounded-lg border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-foreground">
                   {`Total ${coverageHeaderLabel}`}: {externalGuests.length}
                 </span>
                 {process.env.NODE_ENV === 'development' && (
@@ -783,22 +783,22 @@ export function ScheduleViewClient({
         </div>
 
         {timeScope === 'week' && fullGrid && weeklyInsights && (
-          <div className="mt-4 mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <span className="text-xs font-semibold uppercase text-slate-500">{t('schedule.insights') ?? 'Insights'}</span>
-            <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+          <div className="mt-4 mb-4 flex flex-wrap gap-3 rounded-xl border border-border bg-surface-subtle p-3">
+            <span className="text-xs font-semibold uppercase text-muted">{t('schedule.insights') ?? 'Insights'}</span>
+            <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground">
               {t('schedule.insightsAvgAm') ?? 'Avg AM'}: {weeklyInsights.avgAm}
             </span>
-            <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+            <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground">
               {t('schedule.insightsAvgPm') ?? 'Avg PM'}: {weeklyInsights.avgPm}
             </span>
-            <span className={`rounded-lg border px-3 py-1.5 text-sm ${weeklyInsights.daysWithViolations > 0 ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-700'}`}>
+            <span className={`rounded-lg border px-3 py-1.5 text-sm ${weeklyInsights.daysWithViolations > 0 ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-border bg-surface text-foreground'}`}>
               {t('schedule.insightsDaysViolations') ?? 'Days with violations'}: {weeklyInsights.daysWithViolations}
             </span>
-            <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+            <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground">
               {`Total ${coverageHeaderLabel}`}: {externalGuests.length}
             </span>
             {weeklyInsights.mostAdjustedEmployee && (
-              <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600" title={t('schedule.insightsMostAdjustedHint') ?? 'Most overrides this week'}>
+              <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-muted" title={t('schedule.insightsMostAdjustedHint') ?? 'Most overrides this week'}>
                 {t('schedule.insightsMostAdjusted') ?? 'Most adjusted'}: {weeklyInsights.mostAdjustedEmployee.name} ({weeklyInsights.mostAdjustedEmployee.overrideCount})
               </span>
             )}
@@ -808,7 +808,7 @@ export function ScheduleViewClient({
         {timeScope === 'month' && (
           <>
             {monthExcelLoading && (
-              <p className="text-slate-600">
+              <p className="text-muted">
                 {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
               </p>
             )}
@@ -828,7 +828,7 @@ export function ScheduleViewClient({
             <select
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
-              className="rounded border border-slate-300 px-3 py-2 text-base"
+              className="rounded border border-border px-3 py-2 text-base"
             >
               <option value="">{t('schedule.allTeams') ?? 'All teams'}</option>
               <option value="A">{t('schedule.teamA') ?? 'Team A'}</option>
@@ -845,24 +845,24 @@ export function ScheduleViewClient({
         )}
 
         {timeScope === 'week' && fullGrid && scopeLabel && (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted">
             <span className="font-medium">{t('schedule.dataScopeBanner') ?? 'Data scope'}:</span> Boutique: {scopeLabel}
           </p>
         )}
         {timeScope === 'week' && fullGrid && scopeLabel && (
-          <p className="mt-1 text-xs text-slate-500">{t('schedule.filteredByBoutiqueHint')}</p>
+          <p className="mt-1 text-xs text-muted">{t('schedule.filteredByBoutiqueHint')}</p>
         )}
 
         {timeScope === 'week' && !gridData && (
-          <p className="text-slate-600">
+          <p className="text-muted">
             {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
           </p>
         )}
 
         {timeScope === 'week' && gridData && (
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-            <span className="font-medium text-slate-500">{t('schedule.coverage') ?? 'Shifts'}:</span>
-            <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-sky-800">
+            <span className="font-medium text-muted">{t('schedule.coverage') ?? 'Shifts'}:</span>
+            <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-accent">
               <span className="h-4 w-4 rounded-full bg-sky-200" aria-hidden />
               {t('schedule.morning')}
             </span>
@@ -872,8 +872,8 @@ export function ScheduleViewClient({
             </span>
             {fullGrid && (
               <>
-                <span className="ms-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
-                <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{t('governance.draft')}</span>
+                <span className="ms-2 font-medium text-muted">{t('governance.weekStatus') ?? 'Status'}:</span>
+                <span className="rounded-full border border-border bg-surface-subtle px-2 py-0.5 font-medium text-foreground">{t('governance.draft')}</span>
                 <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">{t('governance.approved')}</span>
                 <span className="rounded-full border border-red-200 bg-red-100 px-2 py-0.5 font-medium text-red-900">🔒 {t('governance.locked')}</span>
               </>
@@ -975,8 +975,8 @@ function ScheduleGridView({
   }, [weekGuests]);
   return (
     <>
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900">{t('coverage.title')}</h3>
+      <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
         <div className="flex flex-wrap items-center gap-3">
           {days.map((day, i) => {
             const count = counts[i];
@@ -989,7 +989,7 @@ function ScheduleGridView({
             return (
               <div
                 key={day.date}
-                className={`rounded-lg border px-3 py-1.5 text-sm ${hasWarning ? 'border-amber-200 bg-amber-100 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
+                className={`rounded-lg border px-3 py-1.5 text-sm ${hasWarning ? 'border-amber-200 bg-amber-100 text-amber-900' : 'border-border bg-surface-subtle text-foreground'}`}
               >
                 <span className="font-semibold">{formatDDMM(day.date)}</span>
                 <span className="ms-2">
@@ -1011,8 +1011,8 @@ function ScheduleGridView({
           <thead>
             {/* Count row on top */}
             <tr className={`${SCHEDULE_UI.headerRow} text-center`}>
-              {fullGrid && <LuxuryTh className="sticky left-0 z-10 w-12 bg-slate-100 border-r border-slate-200"></LuxuryTh>}
-              <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-slate-100 border-r border-slate-200 font-medium">
+              {fullGrid && <LuxuryTh className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border"></LuxuryTh>}
+              <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border font-medium">
                 {t('schedule.amCount')} / {t('schedule.pmCount')}
               </LuxuryTh>
               {days.map((day, i) => (
@@ -1023,11 +1023,11 @@ function ScheduleGridView({
             </tr>
             <tr className={`${SCHEDULE_UI.headerRow} text-start`}>
               {fullGrid && (
-                <LuxuryTh className="sticky left-0 z-10 w-12 bg-slate-100 text-center border-r border-slate-200">
+                <LuxuryTh className="sticky left-0 z-10 w-12 bg-surface-subtle text-center border-r border-border">
                   {t('schedule.team') ?? 'Team'}
                 </LuxuryTh>
               )}
-              <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-slate-100 border-r border-slate-200">
+              <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border">
                 {fullGrid ? t('schedule.day') : t('schedule.employee') ?? 'Employee'}
               </LuxuryTh>
               {days.map((day) => (
@@ -1039,7 +1039,7 @@ function ScheduleGridView({
                   className="min-w-[88px] text-center"
                 >
                   <div className="font-medium">{getDayName(day.date)}</div>
-                  <div className="text-xs text-slate-500">{formatDDMM(day.date)}</div>
+                  <div className="text-xs text-muted">{formatDDMM(day.date)}</div>
                 </LuxuryTh>
               ))}
             </tr>
@@ -1048,11 +1048,11 @@ function ScheduleGridView({
             {rows.map((row) => (
               <tr key={row.empId}>
                 {fullGrid && (
-                  <LuxuryTd className="sticky left-0 z-10 w-12 bg-white text-center text-sm font-medium text-slate-600">
+                  <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface text-center text-sm font-medium text-muted">
                     {row.team}
                   </LuxuryTd>
                 )}
-                <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-white font-medium">
+                <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface font-medium">
                   <NameChip name={row.name} empId={row.empId} variant="rashid" />
                 </LuxuryTd>
                 {row.cells.map((cell) => {
@@ -1060,7 +1060,7 @@ function ScheduleGridView({
                   return (
                     <LuxuryTd key={cell.date} className="min-w-[88px] p-0 align-middle">
                       {locked ? (
-                        <div className={`flex h-9 items-center justify-center bg-slate-100 px-2 text-center ${SCHEDULE_UI.guestLine} text-slate-500`}>
+                        <div className={`flex h-9 items-center justify-center bg-surface-subtle px-2 text-center ${SCHEDULE_UI.guestLine} text-muted`}>
                           {cell.availability === 'LEAVE'
                             ? 'Leave'
                             : cell.availability === 'HOLIDAY'
@@ -1093,9 +1093,9 @@ function ScheduleGridView({
                 byDate.set(g.date, list);
               }
               return (
-                <tr key={sourceId || 'external'} className="border-t-2 border-slate-300 bg-slate-50">
-                  {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-slate-50 border-r border-slate-200" />}
-                  <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-slate-50 border-r border-slate-200 py-2 font-medium text-slate-700">
+                <tr key={sourceId || 'external'} className="border-t-2 border-border bg-surface-subtle">
+                  {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border" />}
+                  <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border py-2 font-medium text-foreground">
                     {sourceBoutiqueName} Coverage
                   </LuxuryTd>
                   {days.map((day) => {
@@ -1104,9 +1104,9 @@ function ScheduleGridView({
                       <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
                         <div className="space-y-1.5">
                           {guests.map((g) => (
-                            <div key={g.id} className="rounded border border-slate-200 bg-white px-2 py-1 text-xs">
-                              <span className="font-medium text-slate-800">{g.employee.name}</span>
-                              <span className="ms-1 font-medium text-slate-700">
+                            <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs">
+                              <span className="font-medium text-foreground">{g.employee.name}</span>
+                              <span className="ms-1 font-medium text-foreground">
                                 {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
                               </span>
                             </div>
@@ -1137,7 +1137,7 @@ function ScheduleGridView({
                     <button
                       type="button"
                       onClick={() => focusDay(date)}
-                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-start text-sm text-amber-900 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                      className="w-full rounded-lg border border-amber-200 bg-surface px-3 py-2 text-start text-sm text-amber-900 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                     >
                       <span className="font-medium">{formatDDMM(date)} {getDayName(date)}:</span>{' '}
                       {validations.map((v) => v.message).join('; ')}

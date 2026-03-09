@@ -18,13 +18,13 @@ function firstInitial(name: string): string {
 const CHIP_TEXT: Record<NameChipVariant, string> = {
   am: 'text-sky-800',
   pm: 'text-amber-900',
-  rashid: 'text-slate-700',
+  rashid: 'text-foreground',
 };
 
 const AVATAR_STYLES: Record<NameChipVariant, string> = {
   am: 'bg-sky-200 text-sky-900',
   pm: 'bg-amber-200 text-amber-900',
-  rashid: 'bg-slate-200 text-slate-800',
+  rashid: 'bg-surface-subtle text-foreground',
 };
 
 export function NameChip({
@@ -68,7 +68,7 @@ export function NameChip({
             setPopoverOpen((o) => !o);
           }
         }}
-        className={`inline-flex max-w-full min-w-0 cursor-default items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium transition-colors ${CHIP_TEXT[variant]}`}
+        className={`inline-flex max-w-full min-w-0 cursor-default items-center gap-1 rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium transition-colors ${CHIP_TEXT[variant]}`}
       >
         <span
           className={`h-4 w-4 shrink-0 rounded-full grid place-items-center text-[9px] font-bold leading-none ${AVATAR_STYLES[variant]}`}
@@ -81,14 +81,14 @@ export function NameChip({
       </span>
       {popoverOpen && (empId || name) && (
         <span
-          className="absolute start-0 top-full z-50 mt-1 min-w-[120px] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-start text-xs font-medium text-slate-800 shadow-lg"
+          className="absolute start-0 top-full z-50 mt-1 min-w-[120px] rounded-lg border border-border bg-surface px-2.5 py-1.5 text-start text-xs font-medium text-foreground shadow-lg"
           role="tooltip"
         >
           {name}
           {empId ? (
             <>
               <br />
-              <span className="text-slate-500" dir="ltr">
+              <span className="text-muted" dir="ltr">
                 {empId}
               </span>
             </>

@@ -22,7 +22,7 @@ const statusBadgeClasses: Record<ExecKpiBlockStatus, string> = {
   ok: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   watch: 'bg-amber-50 text-amber-800 border-amber-200',
   action: 'bg-amber-50 text-amber-800 border-amber-200',
-  neutral: 'bg-slate-50 text-slate-600 border-slate-200',
+  neutral: 'bg-surface-subtle text-muted border-border',
 };
 
 export function ExecKpiBlock({
@@ -45,9 +45,9 @@ export function ExecKpiBlock({
   const showStatusBadge = status !== 'neutral';
 
   return (
-    <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        <h3 className="text-[10px] font-medium uppercase tracking-wider text-muted">
           {title}
         </h3>
         {showStatusBadge && (
@@ -64,13 +64,13 @@ export function ExecKpiBlock({
       <div className="mt-2">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0">
           <div>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">{actualLabel}</span>
-            <p className="text-2xl font-semibold tabular-nums text-slate-900">{actual}</p>
+            <span className="text-[10px] uppercase tracking-wide text-muted">{actualLabel}</span>
+            <p className="text-2xl font-semibold tabular-nums text-foreground">{actual}</p>
           </div>
           {hasTarget && (
-            <div className="border-s border-slate-200 ps-3">
-              <span className="text-[10px] uppercase tracking-wide text-slate-400">{targetLabel}</span>
-              <p className="text-sm tabular-nums text-slate-600">{target}</p>
+            <div className="border-s border-border ps-3">
+              <span className="text-[10px] uppercase tracking-wide text-muted">{targetLabel}</span>
+              <p className="text-sm tabular-nums text-muted">{target}</p>
             </div>
           )}
         </div>
@@ -78,18 +78,18 @@ export function ExecKpiBlock({
 
       {(hasVariance || variancePct != null) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs tabular-nums">
-          <span className="text-slate-600">
+          <span className="text-muted">
             Δ {variance != null ? variance : '—'}
           </span>
           {variancePct != null && String(variancePct).trim() !== '' && (
-            <span className="text-slate-500">({variancePct})</span>
+            <span className="text-muted">({variancePct})</span>
           )}
         </div>
       )}
 
       {hasCompare && (
         <div className="mt-2">
-          <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+          <span className="inline-flex items-center rounded bg-surface-subtle px-2 py-0.5 text-[10px] text-muted">
             {compareLabel != null && compareLabel !== '' && (
               <span className="font-medium me-1">{compareLabel}</span>
             )}
@@ -101,7 +101,7 @@ export function ExecKpiBlock({
       {bullet != null && <div className="mt-3 min-w-0">{bullet}</div>}
 
       {footnote != null && footnote.trim() !== '' && (
-        <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+        <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
           {footnote}
         </p>
       )}

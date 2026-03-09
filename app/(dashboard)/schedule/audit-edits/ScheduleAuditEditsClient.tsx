@@ -44,49 +44,49 @@ export function ScheduleAuditEditsClient() {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="mb-4 text-xl font-semibold text-slate-800">{t('schedule.auditEditsTitle')}</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">{t('schedule.auditEditsTitle')}</h1>
 
       <div className="mb-4 flex flex-wrap gap-3 items-end">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-600">{t('schedule.weekStart')}</span>
+          <span className="text-muted">{t('schedule.weekStart')}</span>
           <input
             type="date"
             value={weekStart}
             onChange={(e) => setWeekStart(e.target.value)}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-border px-2 py-1.5 text-sm"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-600">From</span>
+          <span className="text-muted">From</span>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-border px-2 py-1.5 text-sm"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-slate-600">To</span>
+          <span className="text-muted">To</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-border px-2 py-1.5 text-sm"
           />
         </label>
         <button
           type="button"
           onClick={fetchList}
-          className="rounded border border-slate-400 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
         >
           {t('common.refresh')}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">{t('common.loading')}</p>
+        <p className="text-sm text-muted">{t('common.loading')}</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
           <LuxuryTable>
             <LuxuryTableHead>
               <LuxuryTh>{t('schedule.editedAt')}</LuxuryTh>
@@ -98,14 +98,14 @@ export function ScheduleAuditEditsClient() {
             <LuxuryTableBody>
               {list.length === 0 ? (
                 <tr>
-                  <LuxuryTd colSpan={5} className="text-center text-slate-500 py-4">
+                  <LuxuryTd colSpan={5} className="text-center text-muted py-4">
                     {t('tasks.emptyList')}
                   </LuxuryTd>
                 </tr>
               ) : (
                 list.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100">
-                    <LuxuryTd className="text-sm text-slate-700">
+                  <tr key={r.id} className="border-b border-border">
+                    <LuxuryTd className="text-sm text-foreground">
                       {new Date(r.editedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                     </LuxuryTd>
                     <LuxuryTd>{r.editorName}</LuxuryTd>
@@ -115,7 +115,7 @@ export function ScheduleAuditEditsClient() {
                       <button
                         type="button"
                         onClick={() => setDetailId(detailId === r.id ? null : r.id)}
-                        className="text-sky-600 hover:underline text-sm"
+                        className="text-accent hover:underline text-sm"
                       >
                         {t('schedule.viewDetails')}
                       </button>
@@ -136,20 +136,20 @@ export function ScheduleAuditEditsClient() {
           aria-modal="true"
         >
           <div
-            className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-lg"
+            className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-xl border border-border bg-surface p-4 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-slate-800">{t('schedule.changes')}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t('schedule.changes')}</h2>
               <button
                 type="button"
                 onClick={() => setDetailId(null)}
-                className="rounded border border-slate-300 px-2 py-1 text-sm"
+                className="rounded border border-border px-2 py-1 text-sm"
               >
                 {t('common.close')}
               </button>
             </div>
-            <pre className="whitespace-pre-wrap break-words text-xs bg-slate-50 p-3 rounded border border-slate-200 overflow-x-auto">
+            <pre className="whitespace-pre-wrap break-words text-xs bg-surface-subtle p-3 rounded border border-border overflow-x-auto">
               {JSON.stringify(detail.changesJson, null, 2)}
             </pre>
           </div>

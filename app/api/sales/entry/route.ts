@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   if (demoGuard) return demoGuard;
   let roleUser: Awaited<ReturnType<typeof getSessionUser>>;
   try {
-    roleUser = await requireRole(['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'EMPLOYEE']);
+    roleUser = await requireRole(['ADMIN', 'MANAGER', 'AREA_MANAGER', 'ASSISTANT_MANAGER', 'EMPLOYEE']);
   } catch (e) {
     const err = e as { code?: string };
     if (err?.code === 'UNAUTHORIZED') {
@@ -36,12 +36,12 @@ export async function POST(request: NextRequest) {
   if (!scopeResult.ok) return scopeResult.res;
   const scopeId = scopeResult.boutiqueId;
 
-  if (roleUser.role === 'MANAGER' || roleUser.role === 'ADMIN') {
+  if (roleUser.role === 'MANAGER' || roleUser.role === 'ADMIN' || roleUser.role === 'AREA_MANAGER') {
     const trustedId = await getTrustedOperationalBoutiqueId(roleUser, request);
     if (!trustedId || scopeId !== trustedId) {
       return NextResponse.json({ error: 'Boutique not in your operational scope' }, { status: 403 });
     }
-    if (roleUser.role === 'MANAGER') {
+    if (roleUser.role === 'MANAGER' || roleUser.role === 'AREA_MANAGER') {
       const canManage = await canManageSalesInBoutique(
         roleUser.id,
         roleUser.role as import('@prisma/client').Role,

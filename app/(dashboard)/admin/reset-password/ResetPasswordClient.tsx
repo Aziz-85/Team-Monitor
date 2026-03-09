@@ -71,28 +71,28 @@ export function ResetPasswordClient() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">
+      <h1 className="text-xl font-semibold text-foreground">
         {t('nav.admin.resetPassword')}
       </h1>
 
-      <OpsCard title={t('admin.resetPassword.formTitle') || 'إعادة تعيين كلمة المرور'} className="rounded-2xl border border-slate-200 shadow-sm">
-        <p className="mb-4 text-sm text-slate-600">
+      <OpsCard title={t('admin.resetPassword.formTitle') || 'إعادة تعيين كلمة المرور'} className="rounded-2xl border border-border shadow-sm">
+        <p className="mb-4 text-sm text-muted">
           {t('admin.resetPassword.hint') || 'اختر الموظف ثم أدخل كلمة المرور الجديدة. سيُطلب منه تغييرها عند أول دخول.'}
         </p>
 
         {loading ? (
-          <p className="text-slate-500">{t('common.loading')}</p>
+          <p className="text-muted">{t('common.loading')}</p>
         ) : (
           <>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetPassword.selectUser') || 'الموظف'}
                 </span>
                 <select
                   value={empId}
                   onChange={(e) => setEmpId(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded border border-border px-3 py-2 text-sm"
                 >
                   <option value="">— {t('common.search')} / اختر —</option>
                   {users.map((u) => (
@@ -103,7 +103,7 @@ export function ResetPasswordClient() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetPassword.newPassword') || 'كلمة المرور الجديدة'}
                 </span>
                 <div className="flex gap-2">
@@ -112,13 +112,13 @@ export function ResetPasswordClient() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder={t('admin.resetPassword.passwordPlaceholder') || '8 أحرف على الأقل'}
-                    className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+                    className="flex-1 rounded border border-border px-3 py-2 text-sm"
                     autoComplete="new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
-                    className="rounded border border-slate-300 px-2 text-xs text-slate-600"
+                    className="rounded border border-border px-2 text-xs text-muted"
                     title={showPassword ? (t('auth.hidePassword') || 'Hide') : (t('auth.showPassword') || 'Show')}
                   >
                     {showPassword ? 'إخفاء' : 'إظهار'}
@@ -126,7 +126,7 @@ export function ResetPasswordClient() {
                 </div>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">
+                <span className="mb-1 block text-sm font-medium text-foreground">
                   {t('admin.resetPassword.confirmPassword') || 'تأكيد كلمة المرور'}
                 </span>
                 <input
@@ -134,7 +134,7 @@ export function ResetPasswordClient() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder={t('admin.resetPassword.confirmPlaceholder') || 'أعد إدخال كلمة المرور'}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded border border-border px-3 py-2 text-sm"
                   autoComplete="new-password"
                 />
               </label>
@@ -151,7 +151,7 @@ export function ResetPasswordClient() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting || !empId || !newPassword || !confirmPassword}
-                className="rounded bg-slate-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {submitting ? t('common.loading') : (t('admin.resetPassword.submit') || 'إعادة تعيين كلمة المرور')}
               </button>

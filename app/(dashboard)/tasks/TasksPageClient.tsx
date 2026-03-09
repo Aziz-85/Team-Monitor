@@ -113,19 +113,19 @@ export function TasksPageClient({ role }: { role: Role }) {
       <div className="mx-auto max-w-4xl">
         {/* Header: title + primary action */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">{t('tasks.pageTitle')}</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('tasks.pageTitle')}</h1>
           {(role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN') && (
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleExport}
-                className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+                className="rounded border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
               >
                 {t('tasks.exportWeeklyPlanner')}
               </button>
               <Link
                 href="/tasks/setup"
-                className="rounded bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90"
               >
                 {t('tasks.addTask')}
               </Link>
@@ -140,7 +140,7 @@ export function TasksPageClient({ role }: { role: Role }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('tasks.searchPlaceholder')}
-            className="w-full max-w-sm rounded border border-slate-300 px-3 py-2 text-sm"
+            className="w-full max-w-sm rounded border border-border px-3 py-2 text-sm"
             aria-label={t('tasks.searchPlaceholder')}
           />
         </div>
@@ -160,7 +160,7 @@ export function TasksPageClient({ role }: { role: Role }) {
               type="button"
               onClick={() => setPeriod(value)}
               className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                period === value ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                period === value ? 'bg-accent text-white' : 'bg-surface-subtle text-foreground hover:bg-surface-subtle'
               }`}
             >
               {t(`tasks.${key}`)}
@@ -170,15 +170,15 @@ export function TasksPageClient({ role }: { role: Role }) {
 
         {/* Secondary: Status, Assigned */}
         <div className="mb-4 flex flex-wrap items-center gap-4">
-          <span className="text-sm font-medium text-slate-600">{t('tasks.colStatus')}:</span>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+          <span className="text-sm font-medium text-muted">{t('tasks.colStatus')}:</span>
+          <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5">
             {(['all', 'open', 'done'] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setStatus(s)}
                 className={`rounded-md px-2.5 py-1 text-sm ${
-                  status === s ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  status === s ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                 }`}
               >
                 {t(s === 'all' ? 'tasks.statusAll' : s === 'open' ? 'tasks.statusOpen' : 'tasks.statusDone')}
@@ -187,13 +187,13 @@ export function TasksPageClient({ role }: { role: Role }) {
           </div>
           {canSeeAllAssigned && (
             <>
-              <span className="text-sm font-medium text-slate-600">{t('tasks.colAssignee')}:</span>
-              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              <span className="text-sm font-medium text-muted">{t('tasks.colAssignee')}:</span>
+              <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5">
                 <button
                   type="button"
                   onClick={() => setAssigned('me')}
                   className={`rounded-md px-2.5 py-1 text-sm ${
-                    assigned === 'me' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    assigned === 'me' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                   }`}
                 >
                   {t('tasks.assignedMe')}
@@ -202,7 +202,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                   type="button"
                   onClick={() => setAssigned('all')}
                   className={`rounded-md px-2.5 py-1 text-sm ${
-                    assigned === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    assigned === 'all' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                   }`}
                 >
                   {t('tasks.assignedAll')}
@@ -216,20 +216,20 @@ export function TasksPageClient({ role }: { role: Role }) {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-100">
-                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
+              <tr className="border-b border-border bg-surface-subtle">
+                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
                   {t('tasks.colStatus')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
+                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
                   {t('tasks.colTitle')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
+                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
                   {t('tasks.colAssignee')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
+                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
                   {t('tasks.colDueDate')}
                 </th>
-                <th className="border border-slate-200 px-2 py-2 text-start font-semibold text-slate-800">
+                <th className="border border-border px-2 py-2 text-start font-semibold text-foreground">
                   {t('tasks.colActions')}
                 </th>
               </tr>
@@ -237,44 +237,44 @@ export function TasksPageClient({ role }: { role: Role }) {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} className="border border-slate-200 px-2 py-4 text-center text-slate-500">
+                  <td colSpan={5} className="border border-border px-2 py-4 text-center text-muted">
                     {t('common.loading')}
                   </td>
                 </tr>
               )}
               {!loading && tasks.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="border border-slate-200 px-2 py-6 text-center text-slate-500">
+                  <td colSpan={5} className="border border-border px-2 py-6 text-center text-muted">
                     {t('tasks.emptyList')}
                   </td>
                 </tr>
               )}
               {!loading &&
                 tasks.map((row) => (
-                  <tr key={`${row.taskId}-${row.dueDate}`} className="border-b border-slate-200">
-                    <td className="border border-slate-200 px-2 py-2">
+                  <tr key={`${row.taskId}-${row.dueDate}`} className="border-b border-border">
+                    <td className="border border-border px-2 py-2">
                       {row.isCompleted ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                           {t('tasks.done')}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs text-muted">
                           {t('tasks.statusOpen')}
                         </span>
                       )}
                     </td>
-                    <td className="max-w-[200px] border border-slate-200 px-2 py-2">
-                      <span className="line-clamp-2 break-words text-slate-900">{row.title}</span>
+                    <td className="max-w-[200px] border border-border px-2 py-2">
+                      <span className="line-clamp-2 break-words text-foreground">{row.title}</span>
                     </td>
-                    <td className="border border-slate-200 px-2 py-2 text-slate-700">
+                    <td className="border border-border px-2 py-2 text-foreground">
                       {row.assigneeName ? getFirstName(row.assigneeName) : '—'}
                     </td>
                     <td
-                      className={`border border-slate-200 px-2 py-2 ${isOverdue(row.dueDate) ? 'font-medium text-red-600' : 'text-slate-700'}`}
+                      className={`border border-border px-2 py-2 ${isOverdue(row.dueDate) ? 'font-medium text-red-600' : 'text-foreground'}`}
                     >
                       {formatDDMM(row.dueDate)}
                     </td>
-                    <td className="border border-slate-200 px-2 py-2">
+                    <td className="border border-border px-2 py-2">
                       <div className="flex flex-wrap gap-1">
                         {row.isMine && row.dueDate === todayStr && (
                           <button
@@ -283,8 +283,8 @@ export function TasksPageClient({ role }: { role: Role }) {
                             onClick={() => toggleCompletion(row.taskId, row.isCompleted ? 'undo' : 'done')}
                             className={
                               row.isCompleted
-                                ? 'rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50'
-                                : 'rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50'
+                                ? 'rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50'
+                                : 'rounded bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50'
                             }
                           >
                             {updatingId === row.taskId ? t('common.loading') : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
@@ -293,7 +293,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                         {(role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN') && (
                           <Link
                             href="/tasks/setup"
-                            className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
                           >
                             {t('tasks.edit')}
                           </Link>

@@ -137,7 +137,7 @@ export function ScheduleEditExcelViewClient({
   const cellDate = `${SCHEDULE_UI.dateCell} ${SCHEDULE_UI.borderL2} text-center`;
   const headerCell = `${SCHEDULE_UI.headerCell} text-center`;
   const headerDate = `${headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.dateExcel}`;
-  const headerDayEnd = `${headerCell} border-r-2 border-slate-400 ${SCHEDULE_COLS.dayExcel}`;
+  const headerDayEnd = `${headerCell} border-r-2 border-border ${SCHEDULE_COLS.dayExcel}`;
   const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
   const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300`;
   const headerRashid = `${headerCell} ${SCHEDULE_UI.borderL2}`;
@@ -216,8 +216,8 @@ export function ScheduleEditExcelViewClient({
 
             return (
               <tr key={date}>
-                <td className={`${cellDate} border-r-2 border-slate-400`} title={formatDDMM(date)}>{formatDDMM(date)}</td>
-                <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-slate-400 whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(date)}>
+                <td className={`${cellDate} border-r-2 border-border`} title={formatDDMM(date)}>{formatDDMM(date)}</td>
+                <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-border whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(date)}>
                   {dayShort(date)}
                 </td>
                 {Array.from({ length: visibleSlots }, (_, i) => {
@@ -229,7 +229,7 @@ export function ScheduleEditExcelViewClient({
                       className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`}
                     >
                       {isFriday ? (
-                        <span className="text-slate-500">—</span>
+                        <span className="text-muted">—</span>
                       ) : editable ? (
                         <ScheduleCellSelect
                           compact
@@ -269,7 +269,7 @@ export function ScheduleEditExcelViewClient({
                 <td className={rashidCell}>
                   <div className="space-y-1">
                     {(guestsByDate.get(date) ?? []).length === 0 ? (
-                      <div className="h-[10px] w-[60px] border-b border-slate-200 opacity-70" aria-hidden="true" />
+                      <div className="h-[10px] w-[60px] border-b border-border opacity-70" aria-hidden="true" />
                     ) : (
                       <div className="flex flex-col gap-1 items-start">
                         {(guestsByDate.get(date) ?? []).map((g) => {

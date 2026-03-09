@@ -20,10 +20,10 @@ export function TaskControlCard({
   return (
     <SnapshotCard title="Task Control">
       <div className="space-y-3">
-        <div className="text-2xl font-semibold text-slate-900">
-          {totalWeekly} <span className="text-base font-normal text-slate-500">weekly tasks</span>
+        <div className="text-2xl font-semibold text-foreground">
+          {totalWeekly} <span className="text-base font-normal text-muted">weekly tasks</span>
         </div>
-        <ul className="space-y-1 text-sm text-slate-700">
+        <ul className="space-y-1 text-sm text-foreground">
           <li>
             <strong>{completed}</strong> completed
           </li>
@@ -36,7 +36,7 @@ export function TaskControlCard({
             </li>
           )}
         </ul>
-        <p className="border-t border-slate-100 pt-2 text-xs text-slate-500">
+        <p className="border-t border-border pt-2 text-xs text-muted">
           Zone inventory: {zoneStatusSummary}
         </p>
       </div>

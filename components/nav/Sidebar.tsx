@@ -4,13 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
-import { useI18n } from '@/app/providers';
-import { APP_VERSION } from '@/lib/version';
 import { getNavGroupsForUser } from '@/lib/navConfig';
 import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBoutiqueSelector';
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
-import { getRoleDisplayLabel } from '@/lib/roleLabel';
 
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
   DASHBOARD: true,
@@ -26,8 +23,6 @@ const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
 
 export function Sidebar({
   role,
-  name,
-  position,
   canEditSchedule,
   canApproveWeek,
 }: {
@@ -38,8 +33,7 @@ export function Sidebar({
   canApproveWeek: boolean;
 }) {
   const pathname = usePathname();
-  const { t, locale: localeFromT, isRtl } = useT();
-  const { setLocale } = useI18n();
+  const { t, isRtl } = useT();
 
   const groups = useMemo(
     () => getNavGroupsForUser({ role, canEditSchedule, canApproveWeek }),
@@ -159,43 +153,6 @@ export function Sidebar({
             })}
           </ul>
         </nav>
-
-        {/* Footer */}
-        <div className="shrink-0 border-t border-border px-2.5 py-3 min-w-0">
-          {name && (
-            <div className="mb-3 min-w-0">
-              <div className="truncate text-sm font-medium text-foreground">{name}</div>
-              <div className="truncate text-xs text-muted">{getRoleDisplayLabel(role, position ?? null, t)}</div>
-            </div>
-          )}
-          <div className="space-y-2">
-            <select
-              value={localeFromT}
-              onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-              className="h-9 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="en">{t('common.english')}</option>
-              <option value="ar">{t('common.arabic')}</option>
-            </select>
-            <Link
-              href="/change-password"
-              className="flex h-9 items-center rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle truncate min-w-0"
-            >
-              {t('nav.changePassword')}
-            </Link>
-            <button
-              type="button"
-              onClick={async () => {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                window.location.href = '/login';
-              }}
-              className="w-full text-start h-9 rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle min-w-0"
-            >
-              {t('common.logout')}
-            </button>
-          </div>
-          <div className="mt-4 text-xs text-muted truncate min-w-0">{t('nav.appTitle')} v{APP_VERSION}</div>
-        </div>
       </div>
     </aside>
   );

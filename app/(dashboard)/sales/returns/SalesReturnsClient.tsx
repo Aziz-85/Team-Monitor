@@ -130,36 +130,36 @@ export function SalesReturnsClient() {
       <h1 className="text-xl font-semibold">{t('sales.returns.title')}</h1>
 
       {canAdd && (
-        <section className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-medium text-slate-700">{t('sales.returns.addReturnOrExchange')}</h2>
+        <section className="rounded-lg border bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-medium text-foreground">{t('sales.returns.addReturnOrExchange')}</h2>
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.type')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.type')}</span>
               <select
                 value={formType}
                 onChange={(e) => setFormType(e.target.value as 'RETURN' | 'EXCHANGE')}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-border px-2 py-1.5 text-sm"
               >
                 <option value="RETURN">{t('sales.returns.return')}</option>
                 <option value="EXCHANGE">{t('sales.returns.exchange')}</option>
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.date')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.date')}</span>
               <input
                 type="date"
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-border px-2 py-1.5 text-sm"
                 required
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.employee')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.employee')}</span>
               <select
                 value={formEmployeeId}
                 onChange={(e) => setFormEmployeeId(e.target.value)}
-                className="min-w-[140px] rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="min-w-[140px] rounded border border-border px-2 py-1.5 text-sm"
                 required
               >
                 <option value="">{t('sales.returns.selectPlaceholder')}</option>
@@ -171,7 +171,7 @@ export function SalesReturnsClient() {
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.amountSar')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.amountSar')}</span>
               <input
                 type="number"
                 min="0"
@@ -179,32 +179,32 @@ export function SalesReturnsClient() {
                 value={formAmount}
                 onChange={(e) => setFormAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-24 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-24 rounded border border-border px-2 py-1.5 text-sm"
                 required
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.referenceOptional')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.referenceOptional')}</span>
               <input
                 type="text"
                 value={formReferenceNo}
                 onChange={(e) => setFormReferenceNo(e.target.value)}
-                className="w-32 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-32 rounded border border-border px-2 py-1.5 text-sm"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{t('sales.returns.originalTxnIdOptional')}</span>
+              <span className="text-xs text-muted">{t('sales.returns.originalTxnIdOptional')}</span>
               <input
                 type="text"
                 value={formOriginalTxnId}
                 onChange={(e) => setFormOriginalTxnId(e.target.value)}
-                className="w-36 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-36 rounded border border-border px-2 py-1.5 text-sm"
               />
             </label>
             <button
               type="submit"
               disabled={submitLoading}
-              className="rounded bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {submitLoading ? t('sales.returns.adding') : t('sales.returns.add')}
             </button>
@@ -230,7 +230,7 @@ export function SalesReturnsClient() {
           type="button"
           onClick={load}
           disabled={loading}
-          className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-white disabled:opacity-50"
         >
           {loading ? t('sales.returns.loading') : t('sales.returns.apply')}
         </button>

@@ -238,14 +238,14 @@ export function TaskSetupClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <Link href="/tasks" className="mb-4 inline-block text-base text-sky-600 hover:underline">
+        <Link href="/tasks" className="mb-4 inline-block text-base text-accent hover:underline">
           ← {t('common.back')}
         </Link>
         <OpsCard title={t('tasks.setup')} className="mb-6">
           <button
             type="button"
             onClick={openAdd}
-            className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700"
+            className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90"
           >
             {t('tasks.addTask')}
           </button>
@@ -255,12 +255,12 @@ export function TaskSetupClient() {
           {tasks.map((task) => (
             <li key={task.id}>
               <OpsCard title={task.name}>
-                <p className="text-base text-slate-600">
+                <p className="text-base text-muted">
                   {task.taskPlans[0]
                     ? `${t('tasks.primary')}: ${task.taskPlans[0].primary.name}, ${t('tasks.backup1')}: ${task.taskPlans[0].backup1.name}, ${t('tasks.backup2')}: ${task.taskPlans[0].backup2.name}`
                     : 'No plan set'}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-muted">
                   {task.taskSchedules.length > 0
                     ? task.taskSchedules
                         .map(
@@ -274,7 +274,7 @@ export function TaskSetupClient() {
                   <button
                     type="button"
                     onClick={() => openEdit(task)}
-                    className="text-base text-sky-600 hover:underline"
+                    className="text-base text-accent hover:underline"
                   >
                     {t('common.edit')}
                   </button>
@@ -296,25 +296,25 @@ export function TaskSetupClient() {
       {modalOpen === 'add' && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={closeModal} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-surface p-6 shadow-lg">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">
               {editingTask ? t('tasks.editTask') : t('tasks.addTask')}
             </h3>
             <form onSubmit={saveTask} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">{t('common.name')}</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">{t('common.name')}</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base text-slate-900"
+                  className="w-full rounded border border-border px-3 py-2 text-base text-foreground"
                   placeholder={t('common.name')}
                   required
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">{t('tasks.frequency')}</label>
+                <label className="mb-2 block text-sm font-medium text-foreground">{t('tasks.frequency')}</label>
                 <div className="flex gap-4">
                   {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map((freq) => (
                     <label key={freq} className="flex items-center gap-2 text-base">
@@ -332,7 +332,7 @@ export function TaskSetupClient() {
 
               {form.frequency === 'WEEKLY' && (
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">{t('schedule.day')}</label>
+                  <label className="mb-2 block text-sm font-medium text-foreground">{t('schedule.day')}</label>
                   <div className="flex flex-wrap gap-3">
                     {WEEKLY_DAY_KEYS.map((key, i) => (
                       <label key={key} className="flex items-center gap-1 text-base">
@@ -351,14 +351,14 @@ export function TaskSetupClient() {
               {form.frequency === 'MONTHLY' && (
                 <div className="flex flex-wrap items-center gap-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">{t('schedule.day')} (1–31)</label>
+                    <label className="mb-1 block text-sm font-medium text-foreground">{t('schedule.day')} (1–31)</label>
                     <input
                       type="number"
                       min={1}
                       max={31}
                       value={form.monthlyDay}
                       onChange={(e) => setForm((f) => ({ ...f, monthlyDay: Math.max(1, Math.min(31, Number(e.target.value) || 1)) }))}
-                      className="w-24 rounded border border-slate-300 px-3 py-2 text-base"
+                      className="w-24 rounded border border-border px-3 py-2 text-base"
                     />
                   </div>
                   <label className="flex items-center gap-2 text-base">
@@ -372,8 +372,8 @@ export function TaskSetupClient() {
                 </div>
               )}
 
-              <div className="border-t border-slate-200 pt-4">
-                <p className="mb-3 text-sm font-medium text-slate-700">Assignment</p>
+              <div className="border-t border-border pt-4">
+                <p className="mb-3 text-sm font-medium text-foreground">Assignment</p>
                 <div className="space-y-3">
                   <EmployeeSelect
                     label={t('tasks.primary')}
@@ -405,11 +405,11 @@ export function TaskSetupClient() {
                 <button
                   type="submit"
                   disabled={!canSave || loading}
-                  className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                  className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90 disabled:opacity-50"
                 >
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={closeModal} className="rounded border border-slate-300 px-4 py-2 text-base hover:bg-slate-50">
+                <button type="button" onClick={closeModal} className="rounded border border-border px-4 py-2 text-base hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>

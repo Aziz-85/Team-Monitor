@@ -157,19 +157,19 @@ export function InventoryFollowUpClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl px-4 md:px-6">
-        <Link href="/inventory/daily" className="mb-4 inline-block text-base text-sky-600 hover:underline">
+        <Link href="/inventory/daily" className="mb-4 inline-block text-base text-accent hover:underline">
           ← {t('common.back')}
         </Link>
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">{t('inventory.followUp')}</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">{t('inventory.followUp')}</h1>
 
-        <div className="mb-4 inline-flex h-9 rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="tablist">
+        <div className="mb-4 inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={tab === 'daily'}
             onClick={() => setTab('daily')}
             className={`h-full rounded-md px-3 text-sm font-medium transition-colors ${
-              tab === 'daily' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              tab === 'daily' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
             }`}
           >
             {t('inventory.followUpDaily')}
@@ -180,7 +180,7 @@ export function InventoryFollowUpClient() {
             aria-selected={tab === 'weekly'}
             onClick={() => setTab('weekly')}
             className={`h-full rounded-md px-3 text-sm font-medium transition-colors ${
-              tab === 'weekly' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              tab === 'weekly' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
             }`}
           >
             {t('inventory.followUpWeeklyZones')}
@@ -191,7 +191,7 @@ export function InventoryFollowUpClient() {
             aria-selected={tab === 'audit'}
             onClick={() => setTab('audit')}
             className={`h-full rounded-md px-3 text-sm font-medium transition-colors ${
-              tab === 'audit' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              tab === 'audit' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
             }`}
           >
             {t('governance.auditTitle') ?? 'Audit'}
@@ -214,10 +214,10 @@ export function InventoryFollowUpClient() {
                   </div>
                 )}
                 {dailyData.absentsByDate?.[todayStr] && dailyData.absentsByDate[todayStr].length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm shadow-sm">
-                    <span className="font-medium text-slate-700">{t('inventory.absent')}:</span>
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm shadow-sm">
+                    <span className="font-medium text-foreground">{t('inventory.absent')}:</span>
                     {dailyData.absentsByDate[todayStr].map((a) => (
-                      <span key={a.empId} className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
+                      <span key={a.empId} className="inline-flex items-center rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground">
                         {a.name}
                         {a.reason ? ` (${a.reason})` : ''}
                       </span>
@@ -231,7 +231,7 @@ export function InventoryFollowUpClient() {
             {dailyData?.today && (
               <OpsCard title={t('inventory.followUpToday')} className="mb-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-slate-800">{dailyData.today.assignedName ?? '—'}</span>
+                  <span className="font-medium text-foreground">{dailyData.today.assignedName ?? '—'}</span>
                   <StatusPill
                     status={dailyData.today.status}
                     effectiveStatus={dailyData.today.effectiveStatus}
@@ -246,7 +246,7 @@ export function InventoryFollowUpClient() {
                     }
                   />
                   {dailyData.today.status === 'COMPLETED' && dailyData.today.completedByName && (
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-muted">
                       {t('inventory.followUpCompletedBy')}: {dailyData.today.completedByName}
                       {dailyData.today.completedAt && (
                         <span className="ms-1">
@@ -265,19 +265,19 @@ export function InventoryFollowUpClient() {
             {/* Range + History */}
             <OpsCard title={t('inventory.followUpHistory')} className="mb-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-slate-700">{t('inventory.followUpRange')}</span>
+                <span className="text-sm font-medium text-foreground">{t('inventory.followUpRange')}</span>
                 <input
                   type="date"
                   value={dailyFrom}
                   onChange={(e) => setDailyFrom(e.target.value)}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 />
-                <span className="text-slate-400">–</span>
+                <span className="text-muted">–</span>
                 <input
                   type="date"
                   value={dailyTo}
                   onChange={(e) => setDailyTo(e.target.value)}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 />
               </div>
               <ul className="space-y-2">
@@ -292,13 +292,13 @@ export function InventoryFollowUpClient() {
                     <li
                       key={day.date}
                       className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                        day.effectiveStatus === 'LATE' ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'
+                        day.effectiveStatus === 'LATE' ? 'border-red-200 bg-red-50' : 'border-border bg-surface-subtle'
                       }`}
                     >
-                      <span className="font-medium text-slate-800">
+                      <span className="font-medium text-foreground">
                         {formatDDMM(day.date)} {dayName(day.date)}
                       </span>
-                      <span className="text-slate-600">{day.assignedName ?? '—'}</span>
+                      <span className="text-muted">{day.assignedName ?? '—'}</span>
                       <StatusPill
                         status={day.status}
                         effectiveStatus={day.effectiveStatus}
@@ -313,17 +313,17 @@ export function InventoryFollowUpClient() {
                         }
                       />
                       {day.status === 'COMPLETED' && day.completedByName && (
-                        <span className="text-slate-500">
+                        <span className="text-muted">
                           {t('inventory.followUpCompletedBy')} {day.completedByName}
                         </span>
                       )}
                       {day.skipCount > 0 && (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted">
                           {day.skipCount} skipped
                         </span>
                       )}
                       {dailyData?.absentsByDate?.[day.date] && dailyData.absentsByDate[day.date].length > 0 && (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted">
                           {t('inventory.absent')}: {dailyData.absentsByDate[day.date].map((a) => a.name).join(', ')}
                         </span>
                       )}
@@ -335,29 +335,29 @@ export function InventoryFollowUpClient() {
             {/* Next up */}
             <OpsCard title={t('inventory.followUpNextUp')} className="mb-4">
               <div className="mb-2 flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-700">{t('inventory.followUpRange')}</label>
+                <label className="text-sm font-medium text-foreground">{t('inventory.followUpRange')}</label>
                 <select
                   value={nextDaysCount}
                   onChange={(e) => setNextDaysCount(Number(e.target.value))}
-                  className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                  className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 >
                   <option value={7}>7 days</option>
                   <option value={14}>14 days</option>
                 </select>
               </div>
-              <p className="mb-2 text-xs text-slate-500">{t('inventory.followUpMayChange')}</p>
+              <p className="mb-2 text-xs text-muted">{t('inventory.followUpMayChange')}</p>
               <ul className="space-y-2">
                 {(nextData?.projections ?? []).map((p) => (
                   <li
                     key={p.date}
-                    className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-subtle px-3 py-2 text-sm"
                   >
-                    <span className="font-medium text-slate-800">
+                    <span className="font-medium text-foreground">
                       {formatDDMM(p.date)} {dayName(p.date)}
                     </span>
-                    <span className="text-slate-700">{p.projectedName ?? '—'}</span>
+                    <span className="text-foreground">{p.projectedName ?? '—'}</span>
                     {p.note && (
-                      <span className="text-xs text-slate-500">{p.note}</span>
+                      <span className="text-xs text-muted">{p.note}</span>
                     )}
                   </li>
                 ))}
@@ -369,12 +369,12 @@ export function InventoryFollowUpClient() {
         {tab === 'weekly' && (
           <>
             <div className="mb-4 flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-700">{t('inventory.weekStart')}</label>
+              <label className="text-sm font-medium text-foreground">{t('inventory.weekStart')}</label>
               <input
                 type="date"
                 value={weekStart}
                 onChange={(e) => setWeekStart(e.target.value)}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
               />
             </div>
 
@@ -382,7 +382,7 @@ export function InventoryFollowUpClient() {
               <>
                 <OpsCard title={t('inventory.followUpWeekSummary')} className="mb-4">
                   <div className="flex flex-wrap gap-4">
-                    <span className="text-sm text-slate-700">
+                    <span className="text-sm text-foreground">
                       {t('inventory.followUpTotalZones')}: <strong>{weeklyData.summary.totalZones}</strong>
                     </span>
                     <span className="text-sm text-green-700">
@@ -397,9 +397,9 @@ export function InventoryFollowUpClient() {
                 <OpsCard title={t('inventory.followUpByEmployee')} className="mb-4">
                   <ul className="space-y-3">
                     {weeklyData.byEmployee.map((emp) => (
-                      <li key={emp.empId} className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                        <div className="font-medium leading-6 text-slate-900">{emp.name}</div>
-                        <div className="mt-1 text-sm text-slate-600">
+                      <li key={emp.empId} className="rounded-lg border border-border bg-surface px-3 py-2 shadow-sm">
+                        <div className="font-medium leading-6 text-foreground">{emp.name}</div>
+                        <div className="mt-1 text-sm text-muted">
                           {emp.completed} / {emp.total} completed
                           {emp.pendingZoneCodes.length > 0 && (
                             <span className="ms-2">
@@ -423,11 +423,11 @@ export function InventoryFollowUpClient() {
                             z.effectiveStatus === 'LATE' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'
                           }`}
                         >
-                          <span className="text-lg font-semibold text-slate-900">{z.zoneCode}</span>
+                          <span className="text-lg font-semibold text-foreground">{z.zoneCode}</span>
                           {z.zoneName && (
-                            <span className="ms-1 text-sm text-slate-600">({z.zoneName})</span>
+                            <span className="ms-1 text-sm text-muted">({z.zoneName})</span>
                           )}
-                          <span className="ms-2 text-sm font-medium leading-6 text-slate-700">→ {z.name}</span>
+                          <span className="ms-2 text-sm font-medium leading-6 text-foreground">→ {z.name}</span>
                           {z.effectiveStatus === 'LATE' && (
                             <span className="ms-2 inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-xs font-medium text-red-900">
                               {t('inventory.late')}
@@ -437,7 +437,7 @@ export function InventoryFollowUpClient() {
                       ))}
                   </ul>
                   {(weeklyData.pendingZones?.length ?? 0) === 0 && (
-                    <p className="text-sm text-slate-500">All zones completed for this week.</p>
+                    <p className="text-sm text-muted">All zones completed for this week.</p>
                   )}
                 </OpsCard>
               </>
@@ -531,43 +531,43 @@ function InventoryAuditTab({ t }: { t: (key: string) => string }) {
 
   return (
     <>
-      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-3 text-sm font-semibold text-slate-900">{t('governance.filters') ?? 'Filters'}</p>
+      <div className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <p className="mb-3 text-sm font-semibold text-foreground">{t('governance.filters') ?? 'Filters'}</p>
         <div className="flex flex-wrap gap-3 overflow-x-auto pb-1">
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-slate-600">{t('governance.dateFrom') ?? 'From'}</span>
+            <span className="text-muted">{t('governance.dateFrom') ?? 'From'}</span>
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-slate-600">{t('governance.dateTo') ?? 'To'}</span>
+            <span className="text-muted">{t('governance.dateTo') ?? 'To'}</span>
             <input
               type="date"
               value={filters.dateTo}
               onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-slate-600">{t('governance.filterEmployee') ?? 'Employee (ID)'}</span>
+            <span className="text-muted">{t('governance.filterEmployee') ?? 'Employee (ID)'}</span>
             <input
               type="text"
               value={filters.employeeId}
               onChange={(e) => setFilters((f) => ({ ...f, employeeId: e.target.value.trim() }))}
               placeholder="empId"
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="text-slate-600">{t('governance.filterActionType') ?? 'Action'}</span>
+            <span className="text-muted">{t('governance.filterActionType') ?? 'Action'}</span>
             <select
               value={filters.actionType}
               onChange={(e) => setFilters((f) => ({ ...f, actionType: e.target.value }))}
-              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{t('common.all') ?? 'All'}</option>
               {Object.entries(INVENTORY_ACTION_LABELS).map(([value, label]) => (
@@ -581,7 +581,7 @@ function InventoryAuditTab({ t }: { t: (key: string) => string }) {
             <button
               type="button"
               onClick={fetchAudit}
-              className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent"
             >
               {t('common.refresh') ?? 'Apply'}
             </button>
@@ -590,63 +590,63 @@ function InventoryAuditTab({ t }: { t: (key: string) => string }) {
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">{t('common.loading') ?? 'Loading…'}</p>
+        <p className="text-sm text-muted">{t('common.loading') ?? 'Loading…'}</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Time</th>
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Action</th>
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Target</th>
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
-                <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
+              <tr className="border-b border-border bg-surface-subtle">
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Time</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Action</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Actor</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Target</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Summary</th>
+                <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Reason</th>
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody className="bg-surface">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-3 text-center text-sm text-slate-600">
+                  <td colSpan={6} className="px-4 py-3 text-center text-sm text-muted">
                     {t('governance.noAuditEntries') ?? 'No audit entries.'}
                   </td>
                 </tr>
               ) : (
                 items.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-200 hover:bg-slate-50 border-l-4 border-l-purple-400 bg-purple-50/50">
-                    <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                  <tr key={item.id} className="border-b border-border hover:bg-surface-subtle border-l-4 border-l-purple-400 bg-purple-50/50">
+                    <td className="px-3 py-2 text-xs text-muted md:text-sm">
                       {new Date(item.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-3 py-2 text-xs font-medium text-slate-900 md:text-sm">
+                    <td className="px-3 py-2 text-xs font-medium text-foreground md:text-sm">
                       {INVENTORY_ACTION_LABELS[item.action] ?? item.action}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-700 md:text-sm">
+                    <td className="px-3 py-2 text-xs text-foreground md:text-sm">
                       {item.actor ? (
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium">
+                        <span className="inline-flex items-center rounded-full border border-border bg-surface-subtle px-2 py-0.5 text-xs font-medium">
                           {item.actor.name} ({getRoleDisplayLabel(item.actor.role as Role, null, t)})
                         </span>
                       ) : (
                         '—'
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-700 md:text-sm">
+                    <td className="px-3 py-2 text-xs text-foreground md:text-sm">
                       <div className="space-y-0.5">
                         {item.targetEmployeeName && (
                           <div className="font-medium">{item.targetEmployeeName}</div>
                         )}
                         {item.targetDate && (
-                          <div className="text-slate-500">Date: {item.targetDate}</div>
+                          <div className="text-muted">Date: {item.targetDate}</div>
                         )}
                         {item.weekStart && (
-                          <div className="text-slate-500">Week: {item.weekStart}</div>
+                          <div className="text-muted">Week: {item.weekStart}</div>
                         )}
                         {!item.targetEmployeeName && !item.targetDate && !item.weekStart && '—'}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                    <td className="px-3 py-2 text-xs text-muted md:text-sm">
                       {formatInventorySummary(item.beforeJson, item.afterJson) || '—'}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                    <td className="px-3 py-2 text-xs text-muted md:text-sm">
                       {item.reason || '—'}
                     </td>
                   </tr>

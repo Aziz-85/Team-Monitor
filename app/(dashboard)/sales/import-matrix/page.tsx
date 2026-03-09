@@ -4,7 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 export default async function ImportMatrixPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  const allowed = ['ADMIN', 'SUPER_ADMIN', 'MANAGER'];
+  const allowed = ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'];
   if (!allowed.includes(user.role)) redirect('/');
 
   redirect('/admin/import/sales?section=matrix');

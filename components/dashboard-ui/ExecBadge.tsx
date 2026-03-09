@@ -13,7 +13,7 @@ const statusClasses: Record<ExecBadgeStatus, string> = {
   ok: 'bg-emerald-50 text-emerald-800 border-emerald-200',
   watch: 'bg-amber-50 text-amber-800 border-amber-200',
   action: 'bg-amber-50 text-amber-800 border-amber-200',
-  neutral: 'bg-slate-50 text-slate-600 border-slate-200',
+  neutral: 'bg-surface-subtle text-muted border-border',
 };
 
 const defaultLabels: Record<ExecBadgeStatus, string> = {

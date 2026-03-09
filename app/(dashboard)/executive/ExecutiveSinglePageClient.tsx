@@ -570,8 +570,8 @@ export function ExecutiveSinglePageClient() {
   if (error) {
     return (
       <div className="min-w-0 p-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-600">{error}</p>
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <p className="text-muted">{error}</p>
         </div>
       </div>
     );
@@ -586,8 +586,8 @@ export function ExecutiveSinglePageClient() {
     <div className="min-w-0 space-y-6">
       <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-slate-900">Executive</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-foreground">Executive</h1>
+          <p className="mt-0.5 text-sm text-muted">
             {view === 'Executive' && 'Revenue health & hybrid forecast'}
             {view === 'Operator' && 'Employee performance'}
             {view === 'Investor' && 'Branch-only view'}
@@ -596,25 +596,25 @@ export function ExecutiveSinglePageClient() {
         <ExecViewTabs value={view} onChange={setView} />
       </header>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-2 text-[11px] text-slate-600">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface-subtle/70 px-4 py-2 text-[11px] text-muted">
         <span className="shrink-0">
-          <span className="font-medium text-slate-500">Snapshot:</span>{' '}
+          <span className="font-medium text-muted">Snapshot:</span>{' '}
           {monthSnapshot ? (
             <span className="text-emerald-700">Present</span>
           ) : (
-            <span className="text-slate-500">Missing</span>
+            <span className="text-muted">Missing</span>
           )}
         </span>
         <span className="shrink-0">
-          <span className="font-medium text-slate-500">YoY:</span>{' '}
+          <span className="font-medium text-muted">YoY:</span>{' '}
           {yoyData ? (
             <span className="text-emerald-700">Present</span>
           ) : (
-            <span className="text-slate-500">Missing</span>
+            <span className="text-muted">Missing</span>
           )}
         </span>
         <span className="shrink-0">
-          <span className="font-medium text-slate-500">Last refresh:</span>{' '}
+          <span className="font-medium text-muted">Last refresh:</span>{' '}
           {lastRefreshRef.current
             ? lastRefreshRef.current.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
             : '—'}
@@ -623,8 +623,8 @@ export function ExecutiveSinglePageClient() {
 
       {(loading || !kpis) && (
         <section className="min-w-0">
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <p className="text-slate-500">Loading executive data…</p>
+          <div className="rounded-xl border border-border bg-surface p-6">
+            <p className="text-muted">Loading executive data…</p>
           </div>
         </section>
       )}
@@ -687,38 +687,38 @@ export function ExecutiveSinglePageClient() {
                   />
                 </div>
               </div>
-              <div className="mt-4 grid min-w-0 grid-cols-12 gap-4 border-t border-slate-100 pt-4">
+              <div className="mt-4 grid min-w-0 grid-cols-12 gap-4 border-t border-border pt-4">
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Forecast (Low / Base / High)</p>
-                  <p className="mt-1 text-sm tabular-nums text-slate-900">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Forecast (Low / Base / High)</p>
+                  <p className="mt-1 text-sm tabular-nums text-foreground">
                     {fmtSar0(Math.round(metrics.forecast.low * 100))} / {fmtSar0(Math.round(metrics.forecast.base * 100))} / {fmtSar0(Math.round(metrics.forecast.high * 100))}
                   </p>
-                  <p className="mt-0.5 text-[10px] text-slate-500">Base = {metrics.forecast.source}; Low = Base×0.93, High = Base×1.07.</p>
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Trend confidence: <span className={last7Prev7.trendConfidence === 'High' ? 'text-emerald-600 font-medium' : last7Prev7.trendConfidence === 'Medium' ? 'text-amber-600 font-medium' : 'text-slate-500'}>{last7Prev7.trendConfidence}</span>
+                  <p className="mt-0.5 text-[10px] text-muted">Base = {metrics.forecast.source}; Low = Base×0.93, High = Base×1.07.</p>
+                  <p className="mt-1 text-[10px] text-muted">
+                    Trend confidence: <span className={last7Prev7.trendConfidence === 'High' ? 'text-emerald-600 font-medium' : last7Prev7.trendConfidence === 'Medium' ? 'text-amber-600 font-medium' : 'text-muted'}>{last7Prev7.trendConfidence}</span>
                   </p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">WoW</p>
-                  <p className="mt-1 text-sm text-slate-900">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">WoW</p>
+                  <p className="mt-1 text-sm text-foreground">
                     {kpis.revenueDelta != null ? `${kpis.revenueDelta >= 0 ? '+' : ''}${kpis.revenueDelta}% vs prev month` : '—'}
                   </p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">YoY</p>
-                  <p className="mt-1 text-sm text-slate-900">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">YoY</p>
+                  <p className="mt-1 text-sm text-foreground">
                     {metrics.yoyPct != null ? `${(metrics.yoyPct >= 0 ? '+' : '')}${metrics.yoyPct.toFixed(1)}% vs same period LY` : '—'}
                   </p>
-                  <p className="mt-0.5 text-[10px] text-slate-500">When available, forecast uses 55% trend + 45% YoY.</p>
+                  <p className="mt-0.5 text-[10px] text-muted">When available, forecast uses 55% trend + 45% YoY.</p>
                 </div>
                 {yoyData && (
                   <div className="col-span-12 min-w-0 md:col-span-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Revenue Index</p>
-                    <p className="mt-1 text-sm text-slate-900">{kpis.achievementPct}% of target</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Revenue Index</p>
+                    <p className="mt-1 text-sm text-foreground">{kpis.achievementPct}% of target</p>
                   </div>
                 )}
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 <strong>MIS:</strong> Ach% = revenue vs target. Pace = run-rate to EOM (MTD/days passed × total days). Forecast = Hybrid D: 55% trend + 45% YoY when both available; trend uses last 7 vs prev 7 days (Asia/Riyadh); otherwise pace or trend only. Trend comparator window: 7+7 days; trend used only when ≥14 days passed and ≥14 daily rows. Low/Medium/High confidence when trend inputs insufficient / partial / full.
               </p>
             </ExecPanel>
@@ -730,7 +730,7 @@ export function ExecutiveSinglePageClient() {
                 title="Executive Narrative"
                 subtitle="Board-ready brief. Neutral tone."
               >
-                <div className="space-y-3 text-sm leading-relaxed text-slate-700">
+                <div className="space-y-3 text-sm leading-relaxed text-foreground">
                   {executiveBriefLines.map((line, i) => (
                     <p key={i} className="min-w-0">
                       {line}
@@ -749,11 +749,11 @@ export function ExecutiveSinglePageClient() {
               >
                 <div className="flex min-w-0 flex-wrap items-start gap-6">
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Risk Score</p>
-                    <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-900">{riskScoreResult.score}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Risk Score</p>
+                    <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">{riskScoreResult.score}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Risk Level</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Risk Level</p>
                     <p className="mt-1">
                       <span
                         className={
@@ -761,7 +761,7 @@ export function ExecutiveSinglePageClient() {
                             ? 'inline-block rounded bg-emerald-50 px-2 py-1 text-sm font-medium text-emerald-800 border border-emerald-200'
                             : riskScoreResult.level === 'Moderate' || riskScoreResult.level === 'Elevated'
                               ? 'inline-block rounded bg-amber-50 px-2 py-1 text-sm font-medium text-amber-800 border border-amber-200'
-                              : 'inline-block rounded bg-slate-100 px-2 py-1 text-sm font-medium text-slate-800 border border-slate-300'
+                              : 'inline-block rounded bg-surface-subtle px-2 py-1 text-sm font-medium text-foreground border border-border'
                         }
                       >
                         {riskScoreResult.level}
@@ -772,19 +772,19 @@ export function ExecutiveSinglePageClient() {
                 <div className="mt-4 min-w-0 overflow-x-auto">
                   <table className="w-full min-w-0 table-fixed border-collapse text-[11px]">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className="py-2 px-3 text-start font-medium text-slate-500">Component</th>
-                        <th className="py-2 px-3 text-end font-medium text-slate-500">Weight</th>
-                        <th className="py-2 px-3 text-end font-medium text-slate-500">Contribution</th>
+                      <tr className="border-b border-border bg-surface-subtle">
+                        <th className="py-2 px-3 text-start font-medium text-muted">Component</th>
+                        <th className="py-2 px-3 text-end font-medium text-muted">Weight</th>
+                        <th className="py-2 px-3 text-end font-medium text-muted">Contribution</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Achievement</td><td className="py-2 px-3 text-end text-slate-500">25%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Forecast</td><td className="py-2 px-3 text-end text-slate-500">20%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Trend</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">YoY</td><td className="py-2 px-3 text-end text-slate-500">10%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Pace pressure</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
-                      <tr className="border-b border-slate-100"><td className="py-2 px-3 text-slate-700">Concentration</td><td className="py-2 px-3 text-end text-slate-500">15%</td><td className="py-2 px-3 text-end tabular-nums text-slate-700">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">Achievement</td><td className="py-2 px-3 text-end text-muted">25%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">Forecast</td><td className="py-2 px-3 text-end text-muted">20%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">Trend</td><td className="py-2 px-3 text-end text-muted">15%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">YoY</td><td className="py-2 px-3 text-end text-muted">10%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">Pace pressure</td><td className="py-2 px-3 text-end text-muted">15%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
+                      <tr className="border-b border-border"><td className="py-2 px-3 text-foreground">Concentration</td><td className="py-2 px-3 text-end text-muted">15%</td><td className="py-2 px-3 text-end tabular-nums text-foreground">—</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -798,13 +798,13 @@ export function ExecutiveSinglePageClient() {
               subtitle="Suggested target range by scenario. Client state only; no persistence."
             >
               {!kpis || !metrics ? (
-                <p className="text-sm text-slate-500">—</p>
+                <p className="text-sm text-muted">—</p>
               ) : (
                 <>
                   <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-12">
                     <div className="min-w-0 sm:col-span-4">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Scenario</p>
-                      <div className="mt-1 flex min-w-0 rounded border border-slate-300 bg-slate-50/50 p-0.5" role="tablist">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Scenario</p>
+                      <div className="mt-1 flex min-w-0 rounded border border-border bg-surface-subtle/50 p-0.5" role="tablist">
                         {(['Conservative', 'Base', 'Aggressive'] as const).map((s) => (
                           <button
                             key={s}
@@ -814,8 +814,8 @@ export function ExecutiveSinglePageClient() {
                             onClick={() => setCalibrationScenario(s)}
                             className={`min-w-0 flex-1 truncate rounded px-2 py-2 text-center text-sm font-medium transition-colors ${
                               calibrationScenario === s
-                                ? 'bg-white text-slate-900 shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-surface text-foreground shadow-sm'
+                                : 'text-muted hover:text-foreground'
                             }`}
                           >
                             {s}
@@ -824,34 +824,34 @@ export function ExecutiveSinglePageClient() {
                       </div>
                     </div>
                     <div className="min-w-0 sm:col-span-2">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Max adj %</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Max adj %</p>
                       <input
                         type="number"
                         min={1}
                         max={20}
                         value={calibrationMaxAdjPct}
                         onChange={(e) => setCalibrationMaxAdjPct(Number(e.target.value) || 8)}
-                        className="mt-1 block w-full min-w-0 rounded border border-slate-300 bg-white px-3 py-2 text-sm tabular-nums text-slate-900 focus:border-slate-500 focus:outline-none"
+                        className="mt-1 block w-full min-w-0 rounded border border-border bg-surface px-3 py-2 text-sm tabular-nums text-foreground focus:border-accent focus:outline-none"
                       />
                     </div>
                     <div className="min-w-0 sm:col-span-2">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Lock if days left &lt;</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Lock if days left &lt;</p>
                       <input
                         type="number"
                         min={0}
                         max={31}
                         value={calibrationLockDaysLeft}
                         onChange={(e) => setCalibrationLockDaysLeft(Number(e.target.value) ?? 7)}
-                        className="mt-1 block w-full min-w-0 rounded border border-slate-300 bg-white px-3 py-2 text-sm tabular-nums text-slate-900 focus:border-slate-500 focus:outline-none"
+                        className="mt-1 block w-full min-w-0 rounded border border-border bg-surface px-3 py-2 text-sm tabular-nums text-foreground focus:border-accent focus:outline-none"
                       />
                     </div>
                     <div className="flex min-w-0 items-end sm:col-span-4">
-                      <label className="flex min-w-0 cursor-pointer items-center gap-2 text-sm text-slate-700">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-2 text-sm text-foreground">
                         <input
                           type="checkbox"
                           checked={calibrationUseYoY}
                           onChange={(e) => setCalibrationUseYoY(e.target.checked)}
-                          className="rounded border-slate-300"
+                          className="rounded border-border"
                         />
                         Use YoY weighting
                       </label>
@@ -864,28 +864,28 @@ export function ExecutiveSinglePageClient() {
                           Locked (end of month)
                         </p>
                       )}
-                      <div className={`mt-4 grid min-w-0 grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-12 ${targetCalibration.locked ? 'opacity-60' : ''}`}>
+                      <div className={`mt-4 grid min-w-0 grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-12 ${targetCalibration.locked ? 'opacity-60' : ''}`}>
                         <div className="min-w-0 sm:col-span-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Current Target</p>
-                          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{fmtSar0(targetCalibration.currentTargetHalalas)}</p>
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Current Target</p>
+                          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{fmtSar0(targetCalibration.currentTargetHalalas)}</p>
                         </div>
                         <div className="min-w-0 sm:col-span-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Suggested Target (selected)</p>
-                          <p className="mt-1 text-sm tabular-nums text-slate-900">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Suggested Target (selected)</p>
+                          <p className="mt-1 text-sm tabular-nums text-foreground">
                             {targetCalibration.locked ? '—' : fmtSar0(Math.round(targetCalibration.scenarioValue * 100))}
                           </p>
                         </div>
                         <div className="min-w-0 sm:col-span-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Suggested Range (Low / Base / High)</p>
-                          <p className="mt-1 text-sm tabular-nums text-slate-900">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Suggested Range (Low / Base / High)</p>
+                          <p className="mt-1 text-sm tabular-nums text-foreground">
                             {targetCalibration.locked
                               ? '—'
                               : `${fmtSar0(Math.round(targetCalibration.suggestedLow * 100))} / ${fmtSar0(Math.round(targetCalibration.suggestedBase * 100))} / ${fmtSar0(Math.round(targetCalibration.suggestedHigh * 100))}`}
                           </p>
                         </div>
                         <div className="min-w-0 sm:col-span-3">
-                          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Delta vs current</p>
-                          <p className="mt-1 text-sm tabular-nums text-slate-900">
+                          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Delta vs current</p>
+                          <p className="mt-1 text-sm tabular-nums text-foreground">
                             {targetCalibration.locked ? '—' : (() => {
                               const deltaSarInt = Math.round(targetCalibration.deltaHalalas / 100);
                               if (deltaSarInt > 0) return `+SAR ${deltaSarInt.toLocaleString()}`;
@@ -895,12 +895,12 @@ export function ExecutiveSinglePageClient() {
                           </p>
                         </div>
                       </div>
-                      <ul className="mt-3 list-inside list-disc space-y-1 text-[11px] text-slate-600">
+                      <ul className="mt-3 list-inside list-disc space-y-1 text-[11px] text-muted">
                         {targetCalibration.reasoning.map((r, i) => (
                           <li key={i}>{r}</li>
                         ))}
                       </ul>
-                      <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+                      <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                         <strong>MIS:</strong> Suggested base = 0.55×LY EOM + 0.45×Forecast base when YoY available; else Forecast base. Conservative = base×0.97, Aggressive = base×1.03. Clamped to current target ± max adj %. Lock when days left &lt; threshold.
                       </p>
                     </>
@@ -914,24 +914,24 @@ export function ExecutiveSinglePageClient() {
             <ExecPanel title="Demand Engine" subtitle="Traffic and conversion proxy (from MTD). From monthly snapshot when available.">
               <div className="grid min-w-0 grid-cols-12 gap-4">
                 <div className="col-span-12 min-w-0 md:col-span-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Txn MTD</p>
-                  <p className="mt-1 text-sm tabular-nums text-slate-900">{demandEngine ? demandEngine.invoicesMtd.toLocaleString() : '—'}</p>
-                  <p className="mt-0.5 text-[10px] text-slate-500">{demandEngine ? 'From snapshot.' : 'From ledger when available.'}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Txn MTD</p>
+                  <p className="mt-1 text-sm tabular-nums text-foreground">{demandEngine ? demandEngine.invoicesMtd.toLocaleString() : '—'}</p>
+                  <p className="mt-0.5 text-[10px] text-muted">{demandEngine ? 'From snapshot.' : 'From ledger when available.'}</p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Avg Ticket</p>
-                  <p className="mt-1 text-sm tabular-nums text-slate-900">{demandEngine ? fmtSar0(Math.round(demandEngine.avgTicket * 100)) : '—'}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Avg Ticket</p>
+                  <p className="mt-1 text-sm tabular-nums text-foreground">{demandEngine ? fmtSar0(Math.round(demandEngine.avgTicket * 100)) : '—'}</p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">UPT</p>
-                  <p className="mt-1 text-sm tabular-nums text-slate-900">{demandEngine ? demandEngine.upt.toFixed(2) : '—'}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">UPT</p>
+                  <p className="mt-1 text-sm tabular-nums text-foreground">{demandEngine ? demandEngine.upt.toFixed(2) : '—'}</p>
                 </div>
                 <div className="col-span-12 min-w-0 md:col-span-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">AIV</p>
-                  <p className="mt-1 text-sm tabular-nums text-slate-900">{demandEngine ? fmtSar0(Math.round(demandEngine.aiv * 100)) : '—'}</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">AIV</p>
+                  <p className="mt-1 text-sm tabular-nums text-foreground">{demandEngine ? fmtSar0(Math.round(demandEngine.aiv * 100)) : '—'}</p>
                 </div>
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 <strong>MIS:</strong> Txn MTD = transactions month-to-date. Avg Ticket = revenue / transactions (SAR). UPT = units per transaction. AIV = average item value (SAR per unit).
               </p>
             </ExecPanel>
@@ -968,7 +968,7 @@ export function ExecutiveSinglePageClient() {
                   />
                 </div>
               </div>
-              <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+              <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                 <strong>MIS:</strong> Schedule Balance = AM/PM balance. Overdue Tasks = weekly task completion. Risk Index = composite operational risk score.
               </p>
             </ExecPanel>
@@ -983,40 +983,40 @@ export function ExecutiveSinglePageClient() {
                 <>
                   <div className="grid min-w-0 grid-cols-12 gap-4">
                     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Invoices MTD</p>
-                      <p className="mt-1 text-sm tabular-nums text-slate-900">{driverSensitivity.invoicesMtd.toLocaleString()}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">WoW: {driverSensitivity.wowInvoices >= 0 ? '+' : ''}{driverSensitivity.wowInvoices.toFixed(1)}%</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Invoices MTD</p>
+                      <p className="mt-1 text-sm tabular-nums text-foreground">{driverSensitivity.invoicesMtd.toLocaleString()}</p>
+                      <p className="mt-0.5 text-[10px] text-muted">WoW: {driverSensitivity.wowInvoices >= 0 ? '+' : ''}{driverSensitivity.wowInvoices.toFixed(1)}%</p>
                     </div>
                     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Avg Ticket</p>
-                      <p className="mt-1 text-sm tabular-nums text-slate-900">{fmtSar0(Math.round(driverSensitivity.avgTicket * 100))}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">WoW: {driverSensitivity.wowAvgTicket >= 0 ? '+' : ''}{driverSensitivity.wowAvgTicket.toFixed(1)}%</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Avg Ticket</p>
+                      <p className="mt-1 text-sm tabular-nums text-foreground">{fmtSar0(Math.round(driverSensitivity.avgTicket * 100))}</p>
+                      <p className="mt-0.5 text-[10px] text-muted">WoW: {driverSensitivity.wowAvgTicket >= 0 ? '+' : ''}{driverSensitivity.wowAvgTicket.toFixed(1)}%</p>
                     </div>
                     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">UPT</p>
-                      <p className="mt-1 text-sm tabular-nums text-slate-900">{driverSensitivity.upt.toFixed(2)}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">WoW: {driverSensitivity.wowUpt >= 0 ? '+' : ''}{driverSensitivity.wowUpt.toFixed(1)}%</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">UPT</p>
+                      <p className="mt-1 text-sm tabular-nums text-foreground">{driverSensitivity.upt.toFixed(2)}</p>
+                      <p className="mt-0.5 text-[10px] text-muted">WoW: {driverSensitivity.wowUpt >= 0 ? '+' : ''}{driverSensitivity.wowUpt.toFixed(1)}%</p>
                     </div>
                     <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">AIV</p>
-                      <p className="mt-1 text-sm tabular-nums text-slate-900">{fmtSar0(Math.round(driverSensitivity.aiv * 100))}</p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">WoW: {driverSensitivity.wowAiv >= 0 ? '+' : ''}{driverSensitivity.wowAiv.toFixed(1)}%</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">AIV</p>
+                      <p className="mt-1 text-sm tabular-nums text-foreground">{fmtSar0(Math.round(driverSensitivity.aiv * 100))}</p>
+                      <p className="mt-0.5 text-[10px] text-muted">WoW: {driverSensitivity.wowAiv >= 0 ? '+' : ''}{driverSensitivity.wowAiv.toFixed(1)}%</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-[11px] text-slate-600">{driverSensitivity.driverNote}</p>
-                  <p className="mt-1 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+                  <p className="mt-3 text-[11px] text-muted">{driverSensitivity.driverNote}</p>
+                  <p className="mt-1 border-t border-border pt-2 text-[10px] text-muted">
                     <strong>MIS:</strong> Invoices = transactions MTD. Avg Ticket = revenue/invoices (SAR). UPT = pieces/invoice. AIV = revenue/piece (SAR). WoW = (last7/prev7) − 1.
                   </p>
                 </>
               ) : (
                 <>
                   <div className="grid min-w-0 grid-cols-12 gap-4">
-                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Invoices MTD</p><p className="mt-1 text-sm text-slate-500">—</p></div>
-                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Avg Ticket</p><p className="mt-1 text-sm text-slate-500">—</p></div>
-                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">UPT</p><p className="mt-1 text-sm text-slate-500">—</p></div>
-                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">AIV</p><p className="mt-1 text-sm text-slate-500">—</p></div>
+                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-muted">Invoices MTD</p><p className="mt-1 text-sm text-muted">—</p></div>
+                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-muted">Avg Ticket</p><p className="mt-1 text-sm text-muted">—</p></div>
+                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-muted">UPT</p><p className="mt-1 text-sm text-muted">—</p></div>
+                    <div className="col-span-12 min-w-0 md:col-span-3"><p className="text-[10px] font-medium uppercase tracking-wider text-muted">AIV</p><p className="mt-1 text-sm text-muted">—</p></div>
                   </div>
-                  <p className="mt-3 text-[11px] text-slate-500">Upload monthly snapshot to enable driver analysis.</p>
+                  <p className="mt-3 text-[11px] text-muted">Upload monthly snapshot to enable driver analysis.</p>
                 </>
               )}
             </ExecPanel>
@@ -1078,36 +1078,36 @@ export function ExecutiveSinglePageClient() {
               subtitle={useSnapshotStaff ? 'From monthly snapshot (real). Status: ≥90 Stable, 70–89 Watch, &lt;70 Coaching.' : 'Sales, % target, contribution. Status: ≥90 Stable, 70–89 Watch, &lt;70 Coaching.'}
             >
               {loading ? (
-                <p className="text-sm text-slate-500">Loading…</p>
+                <p className="text-sm text-muted">Loading…</p>
               ) : rows.length === 0 ? (
-                <p className="text-sm text-slate-500">No employee data.</p>
+                <p className="text-sm text-muted">No employee data.</p>
               ) : (
                 <div className="min-w-0 overflow-x-auto">
                   <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                     <thead>
-                      <tr className="bg-slate-50">
-                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Employee</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Sales</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">% Target</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Contribution</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Invoices</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">AvgTicket</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">UPT</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Gap</th>
-                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Status</th>
+                      <tr className="bg-surface-subtle">
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Employee</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Sales</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">% Target</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Contribution</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Invoices</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">AvgTicket</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">UPT</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Gap</th>
+                        <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((row) => (
-                        <tr key={row.key} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                          <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{row.name}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.salesSar === 'number' ? `${Math.round(row.salesSar).toLocaleString()} SAR` : row.salesSar}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.targetPct}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.contribution.toFixed(1)}%</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.invoices === 'number' ? row.invoices.toLocaleString() : row.invoices}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.avgTicket === 'number' ? `${Math.round(row.avgTicket).toLocaleString()} SAR` : row.avgTicket}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{typeof row.upt === 'number' ? row.upt.toFixed(2) : row.upt}</td>
-                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{row.gap}</td>
+                        <tr key={row.key} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                          <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{row.name}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{typeof row.salesSar === 'number' ? `${Math.round(row.salesSar).toLocaleString()} SAR` : row.salesSar}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{row.targetPct}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{row.contribution.toFixed(1)}%</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{typeof row.invoices === 'number' ? row.invoices.toLocaleString() : row.invoices}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{typeof row.avgTicket === 'number' ? `${Math.round(row.avgTicket).toLocaleString()} SAR` : row.avgTicket}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{typeof row.upt === 'number' ? row.upt.toFixed(2) : row.upt}</td>
+                          <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{row.gap}</td>
                           <td className="max-w-0 py-3 px-3 truncate">
                             <span
                               className={
@@ -1143,47 +1143,47 @@ export function ExecutiveSinglePageClient() {
               >
                 <div className="grid min-w-0 grid-cols-12 gap-4">
                   <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">High Value Builders (top quartile avg ticket)</p>
-                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{staffSegments.highValueBuilders.count} staff</p>
-                    <ul className="mt-1 list-inside list-disc text-[11px] text-slate-600">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">High Value Builders (top quartile avg ticket)</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{staffSegments.highValueBuilders.count} staff</p>
+                    <ul className="mt-1 list-inside list-disc text-[11px] text-muted">
                       {staffSegments.highValueBuilders.top3.map((name, i) => (
                         <li key={i} className="truncate">{name}</li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-[10px] text-slate-500">Focus on maintaining ticket quality and mix.</p>
+                    <p className="mt-2 text-[10px] text-muted">Focus on maintaining ticket quality and mix.</p>
                   </div>
                   <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Volume Drivers (top quartile invoices)</p>
-                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{staffSegments.volumeDrivers.count} staff</p>
-                    <ul className="mt-1 list-inside list-disc text-[11px] text-slate-600">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Volume Drivers (top quartile invoices)</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{staffSegments.volumeDrivers.count} staff</p>
+                    <ul className="mt-1 list-inside list-disc text-[11px] text-muted">
                       {staffSegments.volumeDrivers.top3.map((name, i) => (
                         <li key={i} className="truncate">{name}</li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-[10px] text-slate-500">Strong demand capture; consider basket expansion.</p>
+                    <p className="mt-2 text-[10px] text-muted">Strong demand capture; consider basket expansion.</p>
                   </div>
                   <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Basket Builders (top quartile UPT)</p>
-                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{staffSegments.basketBuilders.count} staff</p>
-                    <ul className="mt-1 list-inside list-disc text-[11px] text-slate-600">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Basket Builders (top quartile UPT)</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{staffSegments.basketBuilders.count} staff</p>
+                    <ul className="mt-1 list-inside list-disc text-[11px] text-muted">
                       {staffSegments.basketBuilders.top3.map((name, i) => (
                         <li key={i} className="truncate">{name}</li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-[10px] text-slate-500">Leverage for cross-sell and add-on.</p>
+                    <p className="mt-2 text-[10px] text-muted">Leverage for cross-sell and add-on.</p>
                   </div>
                   <div className="col-span-12 min-w-0 md:col-span-6 lg:col-span-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">At Risk (bottom quartile in 2+ metrics, contribution below median)</p>
-                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{staffSegments.atRisk.count} staff</p>
-                    <ul className="mt-1 list-inside list-disc text-[11px] text-slate-600">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">At Risk (bottom quartile in 2+ metrics, contribution below median)</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{staffSegments.atRisk.count} staff</p>
+                    <ul className="mt-1 list-inside list-disc text-[11px] text-muted">
                       {staffSegments.atRisk.top3.map((name, i) => (
                         <li key={i} className="truncate">{name}</li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-[10px] text-slate-500">Review support and priorities.</p>
+                    <p className="mt-2 text-[10px] text-muted">Review support and priorities.</p>
                   </div>
                 </div>
-                <p className="mt-3 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+                <p className="mt-3 border-t border-border pt-2 text-[10px] text-muted">
                   <strong>MIS:</strong> Quartiles from snapshot staff. High Value = top 25% avg ticket; Volume = top 25% invoices; Basket = top 25% UPT; At Risk = bottom quartile in ≥2 of (avg ticket, invoices, UPT) and contribution below median.
                 </p>
               </ExecPanel>
@@ -1201,7 +1201,7 @@ export function ExecutiveSinglePageClient() {
               title="Executive Narrative"
               subtitle="Board-ready brief. Neutral tone; no staff names."
             >
-              <div className="space-y-3 text-sm leading-relaxed text-slate-700">
+              <div className="space-y-3 text-sm leading-relaxed text-foreground">
                 {executiveBriefLines.map((line, i) => (
                   <p key={i} className="min-w-0">
                     {line}
@@ -1252,42 +1252,42 @@ export function ExecutiveSinglePageClient() {
               <div className="min-w-0 space-y-4">
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-12">
                   <div className="min-w-0 sm:col-span-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Branch MTD Revenue</p>
-                    <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{fmtSar0(Math.round(branchMtd * 100))}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Branch MTD Revenue</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{fmtSar0(Math.round(branchMtd * 100))}</p>
                   </div>
                   <div className="min-w-0 sm:col-span-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Growth vs LY</p>
-                    <p className="mt-1 text-lg tabular-nums text-slate-900">{growthVsLy != null ? `${(growthVsLy >= 0 ? '+' : '')}${growthVsLy.toFixed(1)}%` : '—'}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Growth vs LY</p>
+                    <p className="mt-1 text-lg tabular-nums text-foreground">{growthVsLy != null ? `${(growthVsLy >= 0 ? '+' : '')}${growthVsLy.toFixed(1)}%` : '—'}</p>
                   </div>
                   <div className="min-w-0 sm:col-span-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Forecast (Low / Base / High)</p>
-                    <p className="mt-1 text-sm tabular-nums text-slate-900">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Forecast (Low / Base / High)</p>
+                    <p className="mt-1 text-sm tabular-nums text-foreground">
                       {fmtSar0(Math.round(forecastLow * 100))} / {fmtSar0(Math.round(forecastBase * 100))} / {fmtSar0(Math.round(forecastHigh * 100))}
                     </p>
                   </div>
                 </div>
                 <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-12">
                   <div className="min-w-0 sm:col-span-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Required/day</p>
-                    <p className="mt-1 text-sm tabular-nums text-slate-900">{requiredPerDay != null ? `${fmtSar0(Math.max(0, Math.round(requiredPerDay * 100)))} / day` : '—'}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Required/day</p>
+                    <p className="mt-1 text-sm tabular-nums text-foreground">{requiredPerDay != null ? `${fmtSar0(Math.max(0, Math.round(requiredPerDay * 100)))} / day` : '—'}</p>
                   </div>
                   <div className="min-w-0 sm:col-span-8">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Risk flags</p>
-                    <p className="mt-1 text-sm text-slate-700">{riskFlags.length > 0 ? riskFlags.join(' · ') : 'None'}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Risk flags</p>
+                    <p className="mt-1 text-sm text-foreground">{riskFlags.length > 0 ? riskFlags.join(' · ') : 'None'}</p>
                   </div>
                 </div>
                 {riskScoreResult && (
-                  <div className="border-t border-slate-100 pt-4">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Risk Assessment</p>
+                  <div className="border-t border-border pt-4">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Risk Assessment</p>
                     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-4">
-                      <span className="text-2xl font-semibold tabular-nums text-slate-900">{riskScoreResult.score}</span>
+                      <span className="text-2xl font-semibold tabular-nums text-foreground">{riskScoreResult.score}</span>
                       <span
                         className={
                           riskScoreResult.level === 'Low'
                             ? 'rounded bg-emerald-50 px-2 py-0.5 text-sm font-medium text-emerald-800 border border-emerald-200'
                             : riskScoreResult.level === 'Moderate' || riskScoreResult.level === 'Elevated'
                               ? 'rounded bg-amber-50 px-2 py-0.5 text-sm font-medium text-amber-800 border border-amber-200'
-                              : 'rounded bg-slate-100 px-2 py-0.5 text-sm font-medium text-slate-800 border border-slate-300'
+                              : 'rounded bg-surface-subtle px-2 py-0.5 text-sm font-medium text-foreground border border-border'
                         }
                       >
                         {riskScoreResult.level}
@@ -1296,29 +1296,29 @@ export function ExecutiveSinglePageClient() {
                     <div className="mt-2 min-w-0 overflow-x-auto">
                       <table className="w-full min-w-0 table-fixed border-collapse text-[11px]">
                         <thead>
-                          <tr className="border-b border-slate-200 bg-slate-50">
-                            <th className="py-1.5 px-2 text-start font-medium text-slate-500">Component</th>
-                            <th className="py-1.5 px-2 text-end font-medium text-slate-500">Weight</th>
+                          <tr className="border-b border-border bg-surface-subtle">
+                            <th className="py-1.5 px-2 text-start font-medium text-muted">Component</th>
+                            <th className="py-1.5 px-2 text-end font-medium text-muted">Weight</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Achievement</td><td className="py-1.5 px-2 text-end text-slate-500">25%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Forecast</td><td className="py-1.5 px-2 text-end text-slate-500">20%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Trend</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">YoY</td><td className="py-1.5 px-2 text-end text-slate-500">10%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Pace pressure</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
-                          <tr className="border-b border-slate-100"><td className="py-1.5 px-2 text-slate-700">Concentration</td><td className="py-1.5 px-2 text-end text-slate-500">15%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">Achievement</td><td className="py-1.5 px-2 text-end text-muted">25%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">Forecast</td><td className="py-1.5 px-2 text-end text-muted">20%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">Trend</td><td className="py-1.5 px-2 text-end text-muted">15%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">YoY</td><td className="py-1.5 px-2 text-end text-muted">10%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">Pace pressure</td><td className="py-1.5 px-2 text-end text-muted">15%</td></tr>
+                          <tr className="border-b border-border"><td className="py-1.5 px-2 text-foreground">Concentration</td><td className="py-1.5 px-2 text-end text-muted">15%</td></tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
                 )}
-                <div className="border-t border-slate-100 pt-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Action plan (top 3)</p>
+                <div className="border-t border-border pt-3">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Action plan (top 3)</p>
                   <ul className="mt-2 space-y-2">
                     {packActionItems.map((text, i) => (
-                      <li key={i} className="flex min-w-0 items-start gap-2 rounded border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-700">
-                        <span className="shrink-0 font-medium tabular-nums text-slate-500">{i + 1}.</span>
+                      <li key={i} className="flex min-w-0 items-start gap-2 rounded border border-border bg-surface-subtle/50 px-3 py-2 text-sm text-foreground">
+                        <span className="shrink-0 font-medium tabular-nums text-muted">{i + 1}.</span>
                         <span className="min-w-0 flex-1">{text}</span>
                       </li>
                     ))}
@@ -1336,9 +1336,9 @@ export function ExecutiveSinglePageClient() {
             subtitle="Revenue, YoY, forecast, required pace. Branch comparison and action plan. No staff identifiers or operational metrics."
           >
             {compareBoutiques == null ? (
-              <p className="text-sm text-slate-500">Loading…</p>
+              <p className="text-sm text-muted">Loading…</p>
             ) : compareBoutiques.length === 0 ? (
-              <p className="text-sm text-slate-500">No branch data.</p>
+              <p className="text-sm text-muted">No branch data.</p>
             ) : (
               (() => {
                 const totalRevenue = compareBoutiques.reduce((s, b) => s + b.sales, 0);
@@ -1360,60 +1360,60 @@ export function ExecutiveSinglePageClient() {
                   <div className="min-w-0 space-y-4">
                     <div className="grid min-w-0 grid-cols-12 gap-4">
                       <div className="col-span-12 min-w-0 md:col-span-4">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Total Revenue (MTD)</p>
-                        <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{fmtSar0(Math.round(totalRevenue * 100))}</p>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Total Revenue (MTD)</p>
+                        <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{fmtSar0(Math.round(totalRevenue * 100))}</p>
                       </div>
                       <div className="col-span-12 min-w-0 md:col-span-4">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Growth vs LY</p>
-                        <p className="mt-1 text-lg text-slate-600">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Growth vs LY</p>
+                        <p className="mt-1 text-lg text-muted">
                           {growthVsLy != null ? `${(growthVsLy >= 0 ? '+' : '')}${growthVsLy.toFixed(1)}%` : '—'}
                         </p>
                       </div>
                       <div className="col-span-12 min-w-0 md:col-span-4">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Forecast EOM (Low / Base / High)</p>
-                        <p className="mt-1 text-sm tabular-nums text-slate-900">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Forecast EOM (Low / Base / High)</p>
+                        <p className="mt-1 text-sm tabular-nums text-foreground">
                           {fmtSar0(Math.round(forecastLow * 100))} / {fmtSar0(Math.round(paceEOM * 100))} / {fmtSar0(Math.round(forecastHigh * 100))}
                         </p>
                       </div>
                     </div>
                     <div className="grid min-w-0 grid-cols-12 gap-4">
                       <div className="col-span-12 min-w-0 md:col-span-4">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Required/day</p>
-                        <p className="mt-1 text-sm tabular-nums text-slate-900">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Required/day</p>
+                        <p className="mt-1 text-sm tabular-nums text-foreground">
                           {requiredPerDay != null ? `${fmtSar0(Math.max(0, Math.round(requiredPerDay * 100)))} / day` : '—'}
                         </p>
-                        <p className="mt-0.5 text-[10px] text-slate-500">To hit target from here to month end.</p>
+                        <p className="mt-0.5 text-[10px] text-muted">To hit target from here to month end.</p>
                       </div>
                     </div>
                     <div className="min-w-0 overflow-x-auto">
                       <table className="w-full min-w-0 table-fixed border-collapse text-sm">
                         <thead>
-                          <tr className="bg-slate-50">
-                            <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-slate-500">Branch</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Revenue</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Target</th>
-                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-slate-500">Ach %</th>
+                          <tr className="bg-surface-subtle">
+                            <th className="max-w-0 py-3 px-3 truncate text-start text-[11px] font-medium uppercase tracking-wide text-muted">Branch</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Revenue</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Target</th>
+                            <th className="max-w-0 py-3 px-3 truncate text-end text-[11px] font-medium uppercase tracking-wide text-muted">Ach %</th>
                           </tr>
                         </thead>
                         <tbody>
                           {compareBoutiques.map((b) => (
-                            <tr key={b.boutiqueId} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                              <td className="max-w-0 py-3 px-3 truncate font-medium text-slate-900">{b.name || b.code}</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(b.sales).toLocaleString()} SAR</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{Math.round(b.target).toLocaleString()} SAR</td>
-                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-slate-900">{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</td>
+                            <tr key={b.boutiqueId} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
+                              <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{b.name || b.code}</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{Math.round(b.sales).toLocaleString()} SAR</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{Math.round(b.target).toLocaleString()} SAR</td>
+                              <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{b.achievementPct != null ? `${b.achievementPct}%` : '—'}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
 
-                    <p className="border-t border-slate-100 pt-2 text-[10px] text-slate-500">
+                    <p className="border-t border-border pt-2 text-[10px] text-muted">
                       <strong>MIS:</strong> Forecast = pace EOM (run-rate). Required/day = (target − MTD) / days remaining. Ach% = branch revenue vs target.
                     </p>
 
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Action plan (top 3)</p>
+                    <div className="mt-4 border-t border-border pt-4">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Action plan (top 3)</p>
                       <ul className="mt-2 space-y-2">
                         {(() => {
                           const items = [
@@ -1424,11 +1424,11 @@ export function ExecutiveSinglePageClient() {
                             .filter((t): t is string => Boolean(t))
                             .slice(0, 3);
                           if (items.length === 0) {
-                            return <li className="text-sm text-slate-500">No priority actions.</li>;
+                            return <li className="text-sm text-muted">No priority actions.</li>;
                           }
                           return items.map((text, i) => (
-                            <li key={i} className="flex min-w-0 items-start gap-2 rounded border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm text-slate-700">
-                              <span className="shrink-0 font-medium tabular-nums text-slate-500">{i + 1}.</span>
+                            <li key={i} className="flex min-w-0 items-start gap-2 rounded border border-border bg-surface-subtle/50 px-3 py-2 text-sm text-foreground">
+                              <span className="shrink-0 font-medium tabular-nums text-muted">{i + 1}.</span>
                               <span className="min-w-0 flex-1">{text}</span>
                             </li>
                           ));

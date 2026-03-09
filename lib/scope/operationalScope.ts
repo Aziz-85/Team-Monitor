@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getUserAllowedBoutiqueIds } from '@/lib/scope/resolveScope';
 import { resolveEffectiveBoutiqueId } from '@/lib/scope/scopeContext';
 import type { Role } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth';
@@ -25,6 +26,7 @@ export type OperationalScopeResult = {
  * Trusted operational boutique ID for authorization (sales write, etc.).
  * Does NOT read user preference, stored scope, or any client-controlled scope.
  * - MANAGER / ADMIN: strictly session user.boutiqueId.
+ * - AREA_MANAGER: user.boutiqueId if in allowed set, else first allowed boutique from membership.
  * - SUPER_ADMIN with request: may use ?b= / X-Boutique-Code (validated by membership).
  * Use this for canManageSalesInBoutique and any write authorization.
  */
@@ -35,6 +37,11 @@ export async function getTrustedOperationalBoutiqueId(
   if (!user?.id) return null;
   const role = user.role as Role;
   if (role === 'MANAGER' || role === 'ADMIN') return user.boutiqueId ?? null;
+  if (role === 'AREA_MANAGER') {
+    const allowed = await getUserAllowedBoutiqueIds(user.id);
+    if (allowed.length === 0) return null;
+    return user.boutiqueId && allowed.includes(user.boutiqueId) ? user.boutiqueId : allowed[0];
+  }
   if (role === 'SUPER_ADMIN' && request) {
     const scope = await getOperationalScope(request);
     return scope?.boutiqueId ?? null;
@@ -45,11 +52,37 @@ export async function getTrustedOperationalBoutiqueId(
 /**
  * Get operational scope from session. When request is provided and user is SUPER_ADMIN,
  * effective boutique may come from ?b= or X-Boutique-Code (validated by membership). Otherwise session boutiqueId.
+ * AREA_MANAGER: returns all allowed boutique IDs from UserBoutiqueMembership (multi-boutique area).
  */
 export async function getOperationalScope(request?: NextRequest | null): Promise<OperationalScopeResult | null> {
   const user = await getSessionUser();
   if (!user?.id) return null;
   const role = user.role as Role;
+
+  if (role === 'AREA_MANAGER') {
+    const allowedIds = await getUserAllowedBoutiqueIds(user.id);
+    if (allowedIds.length === 0) return null;
+    const boutiqueId = user.boutiqueId && allowedIds.includes(user.boutiqueId ?? '')
+      ? (user.boutiqueId ?? allowedIds[0])
+      : allowedIds[0];
+    const boutique = await prisma.boutique.findUnique({
+      where: { id: boutiqueId },
+      select: { id: true, name: true, code: true },
+    });
+    const label = boutique
+      ? `${boutique.name} (${boutique.code})`
+      : allowedIds.length > 1
+        ? `${allowedIds.length} boutiques`
+        : boutiqueId;
+    return {
+      userId: user.id,
+      role,
+      empId: user.empId ?? null,
+      boutiqueId,
+      boutiqueIds: allowedIds,
+      label,
+    };
+  }
 
   let boutiqueId: string;
   if (role === 'SUPER_ADMIN' && request) {

@@ -5,7 +5,7 @@ import { MonthlyBoardClient } from './MonthlyBoardClient';
 export default async function ExecutiveMonthlyPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') redirect('/dashboard');
+  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'AREA_MANAGER') redirect('/dashboard');
 
   return (
     <div className="min-h-screen bg-[#F8F4E8]">

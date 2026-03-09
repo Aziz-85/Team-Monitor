@@ -14,20 +14,20 @@ export function TaskIntegritySection({
   top3SuspiciousUsers,
 }: Props) {
   return (
-    <OpsCard title="Task Integrity" className="rounded-2xl border border-slate-200 shadow-sm">
+    <OpsCard title="Task Integrity" className="rounded-2xl border border-border shadow-sm">
       <div className="space-y-3">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Burst flags: <strong>{burstFlagsCount}</strong>
         </p>
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Same-day bulk closures: <strong>{sameDayBulkCount}</strong>
         </p>
         {top3SuspiciousUsers?.length > 0 && (
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">
               Top 3 suspicious
             </p>
-            <ul className="list-inside list-disc text-sm text-slate-700">
+            <ul className="list-inside list-disc text-sm text-foreground">
               {top3SuspiciousUsers.map((name, i) => (
                 <li key={i}>{name}</li>
               ))}

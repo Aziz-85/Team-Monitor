@@ -62,9 +62,9 @@ export function AdminCoverageClient() {
   return (
     <div className="p-4 md:p-6">
       <OpsCard title={t('nav.admin.coverageRules')}>
-        <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">{t('coverage.effectivePolicyTitle')}</h3>
-          <ul className="list-inside list-disc space-y-1.5 text-sm text-slate-700">
+        <div className="mb-6 rounded-xl border border-border bg-surface-subtle/60 px-4 py-3">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">{t('coverage.effectivePolicyTitle')}</h3>
+          <ul className="list-inside list-disc space-y-1.5 text-sm text-foreground">
             <li>{t('coverage.effectivePolicyPmGteAm')}</li>
             <li>{t('coverage.effectivePolicyPmAtLeast2')}</li>
             <li>{t('coverage.effectivePolicyWeekSatFri')}</li>
@@ -87,22 +87,22 @@ export function AdminCoverageClient() {
               const requiredAm = requiredMinAm(r);
               const adjusted = isAdjustedByPolicy(r);
               return (
-                <tr key={r.id} className="border-b border-slate-200">
+                <tr key={r.id} className="border-b border-border">
                   <LuxuryTd className="py-2.5 pr-4 font-medium">{t(DAY_KEYS[r.dayOfWeek] ?? 'days.sun')}</LuxuryTd>
                   <LuxuryTd className="px-4 py-2.5">{r.minAM}{requiredAm !== null ? ` (req. ${requiredAm})` : ''}</LuxuryTd>
                   <LuxuryTd className="px-4 py-2.5">{r.minPM}</LuxuryTd>
                   <LuxuryTd className="px-4 py-2.5">
                     <span className="inline-flex items-center gap-2">
-                      <span className="text-slate-700">{requiredPm !== null ? requiredPm : '—'}</span>
+                      <span className="text-foreground">{requiredPm !== null ? requiredPm : '—'}</span>
                       {adjusted && (
-                        <span className="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-600 bg-slate-100 border border-slate-200">
+                        <span className="inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium text-muted bg-surface-subtle border border-border">
                           {t('coverage.adjustedByPolicy')}
                         </span>
                       )}
                     </span>
                   </LuxuryTd>
                   <LuxuryTd className="pl-4 py-2.5">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${r.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${r.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-subtle text-muted'}`}>
                       {r.enabled ? t('coverage.enabledYes') : t('coverage.enabledNo')}
                     </span>
                   </LuxuryTd>
@@ -112,7 +112,7 @@ export function AdminCoverageClient() {
           </LuxuryTableBody>
         </LuxuryTable>
 
-        <p className="mt-4 text-xs text-slate-500">{t('coverage.tableNote')}</p>
+        <p className="mt-4 text-xs text-muted">{t('coverage.tableNote')}</p>
       </OpsCard>
     </div>
   );

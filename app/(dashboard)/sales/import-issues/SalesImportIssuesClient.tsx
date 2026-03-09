@@ -73,7 +73,7 @@ export function SalesImportIssuesClient({ canResolve }: { canResolve: boolean })
           type="button"
           onClick={() => load(batchId)}
           disabled={loading || !batchId.trim()}
-          className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
+          className="rounded bg-accent px-3 py-1 text-white disabled:opacity-50"
         >
           {loading ? 'Loading…' : 'Load'}
         </button>
@@ -90,11 +90,11 @@ export function SalesImportIssuesClient({ canResolve }: { canResolve: boolean })
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="me-2 font-medium">{iss.severity}</span>
-                <span className="text-slate-600">{iss.status}</span>
-                {iss.rowIndex != null && <span className="ms-2 text-slate-500">Row {iss.rowIndex}</span>}
+                <span className="text-muted">{iss.status}</span>
+                {iss.rowIndex != null && <span className="ms-2 text-muted">Row {iss.rowIndex}</span>}
                 <p className="mt-1 text-sm">{iss.message}</p>
                 {iss.metadata != null && (
-                  <pre className="mt-1 text-xs text-slate-500">
+                  <pre className="mt-1 text-xs text-muted">
                     {JSON.stringify(iss.metadata)}
                   </pre>
                 )}
@@ -111,7 +111,7 @@ export function SalesImportIssuesClient({ canResolve }: { canResolve: boolean })
                   <button
                     type="button"
                     onClick={() => resolve(iss.id, 'IGNORED')}
-                    className="rounded bg-slate-500 px-2 py-1 text-xs text-white"
+                    className="rounded bg-surface-subtle0 px-2 py-1 text-xs text-white"
                   >
                     Ignore
                   </button>
@@ -122,7 +122,7 @@ export function SalesImportIssuesClient({ canResolve }: { canResolve: boolean })
         ))}
       </div>
       {issues.length === 0 && !loading && batchId.trim() && !error && (
-        <p className="text-slate-500">No issues for this batch.</p>
+        <p className="text-muted">No issues for this batch.</p>
       )}
     </div>
   );

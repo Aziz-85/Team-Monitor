@@ -23,7 +23,7 @@ export function ExecDelta({
   const isNegative = deltaValue < 0;
   const isWeak =
     invert ? isNegative === false : isNegative;
-  const colorClass = isWeak ? 'text-amber-700' : 'text-slate-600';
+  const colorClass = isWeak ? 'text-amber-700' : 'text-muted';
   const arrow = deltaValue > 0 ? '↑' : deltaValue < 0 ? '↓' : '';
 
   return (
@@ -31,7 +31,7 @@ export function ExecDelta({
       <span aria-hidden>{arrow}</span>
       <span>Δ {formatValue(deltaValue)}</span>
       {deltaPct != null && (
-        <span className="text-slate-500">
+        <span className="text-muted">
           ({deltaValue >= 0 ? '+' : ''}{deltaPct.toFixed(1)}%)
         </span>
       )}

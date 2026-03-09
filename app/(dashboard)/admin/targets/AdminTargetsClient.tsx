@@ -254,7 +254,7 @@ export function AdminTargetsClient() {
   if (loading && !data) {
     return (
       <div className="p-4">
-        <p className="text-slate-600">{t('common.loading')}</p>
+        <p className="text-muted">{t('common.loading')}</p>
       </div>
     );
   }
@@ -262,21 +262,21 @@ export function AdminTargetsClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">{t('targets.masterTitle')}</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">{t('targets.masterTitle')}</h1>
 
         {reconciliation && (
-          <div className="sticky top-0 z-10 mb-4 rounded-lg border border-slate-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur">
+          <div className="sticky top-0 z-10 mb-4 rounded-lg border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-md bg-slate-50 px-3 py-1">
-                  <div className="text-xs text-slate-500">{t('targets.branchTarget')}</div>
-                  <div className="text-sm font-semibold text-slate-800">
+                <div className="rounded-md bg-surface-subtle px-3 py-1">
+                  <div className="text-xs text-muted">{t('targets.branchTarget')}</div>
+                  <div className="text-sm font-semibold text-foreground">
                     {formatNum(reconciliation.boutiqueTargetSar)} {t('targets.sar')}
                   </div>
                 </div>
-                <div className="rounded-md bg-slate-50 px-3 py-1">
-                  <div className="text-xs text-slate-500">{t('targets.employeesTotal')}</div>
-                  <div className="text-sm font-semibold text-slate-800">
+                <div className="rounded-md bg-surface-subtle px-3 py-1">
+                  <div className="text-xs text-muted">{t('targets.employeesTotal')}</div>
+                  <div className="text-sm font-semibold text-foreground">
                     {formatNum(reconciliation.employeesTotalSar)} {t('targets.sar')}
                   </div>
                 </div>
@@ -289,10 +289,10 @@ export function AdminTargetsClient() {
                       : 'bg-red-50'
                   }`}
                 >
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-muted">
                     {reconciliation.diffSar >= 0 ? t('targets.remaining') : t('targets.excess')}
                   </div>
-                  <div className="text-sm font-semibold text-slate-800">
+                  <div className="text-sm font-semibold text-foreground">
                     {reconciliation.diffSar === 0
                       ? `${formatNum(0)} ${t('targets.sar')} (${t('targets.balanced')})`
                       : `${formatNum(Math.abs(reconciliation.diffSar))} ${t('targets.sar')}`}
@@ -319,12 +319,12 @@ export function AdminTargetsClient() {
         )}
 
         <div className="mb-4 flex flex-wrap items-center gap-4">
-          <label className="text-sm font-medium text-slate-700">{t('targets.month')}</label>
+          <label className="text-sm font-medium text-foreground">{t('targets.month')}</label>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
+            className="rounded border border-border px-3 py-2 text-sm"
           />
         </div>
 
@@ -332,7 +332,7 @@ export function AdminTargetsClient() {
           <div className="mb-2 flex items-center gap-2">
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                data?.boutiqueTarget ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                data?.boutiqueTarget ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-subtle text-foreground'
               }`}
             >
               {data?.boutiqueTarget ? t('targets.boutiqueStatusSet') : t('targets.boutiqueStatusNotSet')}
@@ -344,15 +344,15 @@ export function AdminTargetsClient() {
               min={0}
               value={boutiqueAmount}
               onChange={(e) => setBoutiqueAmount(e.target.value)}
-              className="w-32 rounded border border-slate-300 px-3 py-2 text-sm"
+              className="w-32 rounded border border-border px-3 py-2 text-sm"
               placeholder="0"
             />
-            <span className="text-slate-600">{t('targets.sar')}</span>
+            <span className="text-muted">{t('targets.sar')}</span>
             <button
               type="button"
               onClick={saveBoutique}
               disabled={savingBoutique}
-              className="rounded bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+              className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {savingBoutique ? t('common.loading') : t('common.save')}
             </button>
@@ -372,7 +372,7 @@ export function AdminTargetsClient() {
                   }
                 }}
                 disabled={clearingBoutique}
-                className="rounded border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                className="rounded border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
                 {clearingBoutique ? t('common.loading') : t('targets.clearBoutiqueTarget')}
               </button>
@@ -384,25 +384,25 @@ export function AdminTargetsClient() {
           <button
             type="button"
             onClick={() => setShowWeightHelp((v) => !v)}
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 underline-offset-2 hover:underline"
+            className="text-sm font-medium text-muted hover:text-foreground underline-offset-2 hover:underline"
             aria-expanded={showWeightHelp}
           >
             {showWeightHelp ? t('targets.hideWeightHelp') : t('targets.showWeightHelp')}
           </button>
           {showWeightHelp && (
-            <OpsCard title={t('targets.weightedExplanation')} className="mt-2 border-sky-100 bg-sky-50/50">
-              <p className="text-sm text-slate-700">{t('targets.weightedLeaveAdjusted')}</p>
+            <OpsCard title={t('targets.weightedExplanation')} className="mt-2 border-accent/20 bg-accent/5">
+              <p className="text-sm text-foreground">{t('targets.weightedLeaveAdjusted')}</p>
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full border-collapse text-start text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="p-2 font-medium text-slate-700">{t('targets.role')}</th>
-                      <th className="p-2 font-medium text-slate-700">{t('targets.weight')}</th>
+                    <tr className="border-b border-border">
+                      <th className="p-2 font-medium text-foreground">{t('targets.role')}</th>
+                      <th className="p-2 font-medium text-foreground">{t('targets.weight')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ROLE_KEYS.map((role) => (
-                      <tr key={role} className="border-b border-slate-100">
+                      <tr key={role} className="border-b border-border">
                         <td className="p-2">{SALES_TARGET_ROLE_LABELS[role]}</td>
                         <td className="p-2">
                           <input
@@ -413,7 +413,7 @@ export function AdminTargetsClient() {
                             onChange={(e) =>
                               setEditWeights((prev) => ({ ...prev, [role]: e.target.value }))
                             }
-                            className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+                            className="w-20 rounded border border-border px-2 py-1 text-sm"
                             aria-label={SALES_TARGET_ROLE_LABELS[role]}
                           />
                         </td>
@@ -445,7 +445,7 @@ export function AdminTargetsClient() {
                     }
                   }}
                   disabled={savingWeights}
-                  className="rounded bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                  className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
                 >
                   {savingWeights ? t('common.loading') : t('targets.saveWeights')}
                 </button>
@@ -484,7 +484,7 @@ export function AdminTargetsClient() {
             type="button"
             onClick={() => generateTargets(false)}
             disabled={generating || !data?.boutiqueTarget}
-            className="rounded bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {generating ? t('common.loading') : t('targets.generateTargets')}
           </button>
@@ -492,7 +492,7 @@ export function AdminTargetsClient() {
             type="button"
             onClick={() => setRegenerateModal(true)}
             disabled={generating || !data?.boutiqueTarget}
-            className="rounded border border-slate-400 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
           >
             {t('targets.recalculateUsingLeaves')}
           </button>
@@ -500,7 +500,7 @@ export function AdminTargetsClient() {
             type="button"
             onClick={resetTargets}
             disabled={resetting || generating}
-            className="rounded border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            className="rounded border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
           >
             {resetting ? t('common.loading') : t('targets.resetTargets')}
           </button>
@@ -521,7 +521,7 @@ export function AdminTargetsClient() {
               }
             }}
             disabled={clearingSales}
-            className="rounded border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            className="rounded border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
           >
             {clearingSales ? t('common.loading') : t('targets.clearMonthSales')}
           </button>
@@ -536,7 +536,7 @@ export function AdminTargetsClient() {
                   name="importMode"
                   checked={importMode === 'simple'}
                   onChange={() => setImportMode('simple')}
-                  className="rounded border-slate-300"
+                  className="rounded border-border"
                 />
                 {t('targets.importSimple')}
               </label>
@@ -546,21 +546,21 @@ export function AdminTargetsClient() {
                   name="importMode"
                   checked={importMode === 'msr'}
                   onChange={() => setImportMode('msr')}
-                  className="rounded border-slate-300"
+                  className="rounded border-border"
                 />
                 {t('targets.importMsr')}
               </label>
             </fieldset>
             {importMode === 'msr' && (
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-700">{t('targets.month')}</label>
+                <label className="text-sm font-medium text-foreground">{t('targets.month')}</label>
                 <input
                   type="month"
                   value={importMonth}
                   onChange={(e) => setImportMonth(e.target.value)}
-                  className="rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="rounded border border-border px-2 py-1 text-sm"
                 />
-                <span className="text-xs text-slate-500">{t('targets.importMsrMonthHint')}</span>
+                <span className="text-xs text-muted">{t('targets.importMsrMonthHint')}</span>
               </div>
             )}
           </div>
@@ -575,7 +575,7 @@ export function AdminTargetsClient() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="rounded bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+            className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {importing ? t('common.loading') : t('targets.uploadExcel')}
           </button>
@@ -588,14 +588,14 @@ export function AdminTargetsClient() {
               aria-hidden
               onClick={() => setRegenerateModal(false)}
             />
-            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-              <h3 className="mb-2 text-lg font-semibold text-slate-900">{t('targets.recalculateConfirmTitle')}</h3>
-              <p className="mb-4 text-sm text-slate-600">{t('targets.recalculateConfirmBody')}</p>
+            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg">
+              <h3 className="mb-2 text-lg font-semibold text-foreground">{t('targets.recalculateConfirmTitle')}</h3>
+              <p className="mb-4 text-sm text-muted">{t('targets.recalculateConfirmBody')}</p>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setRegenerateModal(false)}
-                  className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
                 >
                   {t('common.cancel')}
                 </button>
@@ -612,7 +612,7 @@ export function AdminTargetsClient() {
         )}
 
         {importResult != null && (
-          <div className="mb-4 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <div className="mb-4 rounded border border-border bg-surface-subtle px-3 py-2 text-sm text-foreground">
             <p>
               {t('targets.imported')}: {importResult.importedCount} · {t('targets.updated')}: {importResult.updatedCount} ·{' '}
               {t('targets.skipped')}: {importResult.skippedCount}
@@ -623,14 +623,14 @@ export function AdminTargetsClient() {
             <button
               type="button"
               onClick={() => setShowImportDetails(!showImportDetails)}
-              className="mt-1 text-sky-600 hover:underline"
+              className="mt-1 text-accent hover:underline"
             >
               {showImportDetails ? t('common.close') : t('targets.showDetails')}
             </button>
             {showImportDetails && (
-              <div className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-200 bg-white p-2 text-xs">
+              <div className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface p-2 text-xs">
                 {importResult.skipped.length > 0 && (
-                  <p className="font-medium text-slate-700">{t('targets.skipped')}:</p>
+                  <p className="font-medium text-foreground">{t('targets.skipped')}:</p>
                 )}
                 {importResult.skipped.slice(0, 50).map((s, i) => (
                   <div key={i} className="py-0.5">
@@ -640,12 +640,12 @@ export function AdminTargetsClient() {
                   </div>
                 ))}
                 {importResult.skipped.length > 50 && (
-                  <p className="text-slate-500">… and {importResult.skipped.length - 50} more</p>
+                  <p className="text-muted">… and {importResult.skipped.length - 50} more</p>
                 )}
                 {(importResult.ignoredColumns?.length ?? 0) > 0 && (
                   <>
-                    <p className="mt-2 font-medium text-slate-600">{t('targets.ignoredColumns')}:</p>
-                    <p className="py-0.5 text-slate-600">{importResult.ignoredColumns!.slice(0, 30).join(', ')}{importResult.ignoredColumns!.length > 30 ? '…' : ''}</p>
+                    <p className="mt-2 font-medium text-muted">{t('targets.ignoredColumns')}:</p>
+                    <p className="py-0.5 text-muted">{importResult.ignoredColumns!.slice(0, 30).join(', ')}{importResult.ignoredColumns!.length > 30 ? '…' : ''}</p>
                   </>
                 )}
                 {(importResult.warnings?.length ?? 0) > 0 && (
@@ -657,7 +657,7 @@ export function AdminTargetsClient() {
                       </div>
                     ))}
                     {importResult.warnings!.length > 20 && (
-                      <p className="text-slate-500">… and {importResult.warnings!.length - 20} more</p>
+                      <p className="text-muted">… and {importResult.warnings!.length - 20} more</p>
                     )}
                   </>
                 )}
@@ -668,34 +668,34 @@ export function AdminTargetsClient() {
 
         <OpsCard title={t('targets.employeesTable')}>
           {!data?.employees?.length ? (
-            <p className="text-slate-500">{t('targets.noEmployees')}</p>
+            <p className="text-muted">{t('targets.noEmployees')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-start text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="p-2 font-medium text-slate-700">{t('targets.empId')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('common.name')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.role')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.weight')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.active')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.scheduledDays')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.leaveDays')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.presenceFactor')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.effectiveWeight')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.monthlyTarget')}</th>
-                    <th className="p-2 font-medium text-slate-700">MTD Sales</th>
-                    <th className="p-2 font-medium text-slate-700">MTD %</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.todaySales')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.todayTarget')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.weekSales')}</th>
-                    <th className="p-2 font-medium text-slate-700">{t('targets.weekTarget')}</th>
+                  <tr className="border-b border-border">
+                    <th className="p-2 font-medium text-foreground">{t('targets.empId')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('common.name')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.role')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.weight')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.active')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.scheduledDays')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.leaveDays')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.presenceFactor')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.effectiveWeight')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.monthlyTarget')}</th>
+                    <th className="p-2 font-medium text-foreground">MTD Sales</th>
+                    <th className="p-2 font-medium text-foreground">MTD %</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.todaySales')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.todayTarget')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.weekSales')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.weekTarget')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.employees.map((row) => (
-                    <tr key={row.id} className="border-b border-slate-100">
-                      <td className="p-2 font-mono text-slate-600">{row.user.empId}</td>
+                    <tr key={row.id} className="border-b border-border">
+                      <td className="p-2 font-mono text-muted">{row.user.empId}</td>
                       <td className="p-2">{row.user.name}</td>
                       <td className="p-2">{row.roleLabel}</td>
                       <td className="p-2">{row.weight}</td>
@@ -727,7 +727,7 @@ export function AdminTargetsClient() {
                                     setTargetEditError(null);
                                   }
                                 }}
-                                className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+                                className="w-24 rounded border border-border px-2 py-1 text-sm"
                                 autoFocus
                                 disabled={savingTargetId === row.id}
                               />
@@ -739,7 +739,7 @@ export function AdminTargetsClient() {
                                   if (Number.isFinite(v) && v >= 0 && (!data?.targetEditRequiresReason || reason)) patchEmployeeTarget(row.id, v, reason);
                                 }}
                                 disabled={savingTargetId === row.id || (!!data?.targetEditRequiresReason && !editReason.trim())}
-                                className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                                className="rounded bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50"
                               >
                                 {savingTargetId === row.id ? t('common.loading') : t('common.save')}
                               </button>
@@ -751,7 +751,7 @@ export function AdminTargetsClient() {
                                   setEditReason('');
                                   setTargetEditError(null);
                                 }}
-                                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                                className="rounded border border-border px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                               >
                                 {t('common.cancel')}
                               </button>
@@ -762,7 +762,7 @@ export function AdminTargetsClient() {
                                 value={editReason}
                                 onChange={(e) => setEditReason(e.target.value)}
                                 placeholder={t('targets.editReasonPlaceholder')}
-                                className="w-full max-w-xs rounded border border-slate-300 px-2 py-1 text-sm placeholder:text-slate-400"
+                                className="w-full max-w-xs rounded border border-border px-2 py-1 text-sm placeholder:text-muted"
                                 disabled={savingTargetId === row.id}
                               />
                             )}

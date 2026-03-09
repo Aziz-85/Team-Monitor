@@ -46,7 +46,7 @@ export function SuperAdminBoutiqueContextPicker() {
     <select
       value={effectiveCode}
       onChange={(e) => handleChange(e.target.value)}
-      className="min-w-0 max-w-[160px] rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+      className="min-w-0 max-w-[160px] rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-slate-400"
       title="View data for boutique (URL only)"
     >
       {options.map((b) => (

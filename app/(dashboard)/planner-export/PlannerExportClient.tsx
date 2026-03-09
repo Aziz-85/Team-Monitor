@@ -137,7 +137,7 @@ export function PlannerExportClient() {
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
-                  className="rounded border border-slate-300 px-3 py-2 text-base"
+                  className="rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               <div>
@@ -146,18 +146,18 @@ export function PlannerExportClient() {
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
-                  className="rounded border border-slate-300 px-3 py-2 text-base"
+                  className="rounded border border-border px-3 py-2 text-base"
                 />
               </div>
             </div>
-            <p className="text-base text-slate-600">
+            <p className="text-base text-muted">
               {t('planner.preview')}: {from} → {to}. {t('planner.totalTasks')} per day; CSV includes Start/Due date and Notes.
             </p>
             <button
               type="button"
               onClick={handleExport}
               disabled={loading}
-              className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+              className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90 disabled:opacity-50"
             >
               {loading ? '…' : t('planner.download')}
             </button>
@@ -166,8 +166,8 @@ export function PlannerExportClient() {
 
         <OpsCard title={t('planner.scheduleExport') ?? 'Schedule shifts export'}>
           <div className="space-y-4">
-            <p className="text-sm font-medium text-slate-700">{t('planner.taskTemplatePreview') ?? 'Task naming template'}</p>
-            <ul className="list-inside list-disc text-sm text-slate-600">
+            <p className="text-sm font-medium text-foreground">{t('planner.taskTemplatePreview') ?? 'Task naming template'}</p>
+            <ul className="list-inside list-disc text-sm text-muted">
               <li>[Boutique] Morning – {'{{date}}'}</li>
               <li>[Boutique] Evening – {'{{date}}'}</li>
               <li>[Rashid] Morning Coverage – {'{{date}}'}</li>
@@ -180,7 +180,7 @@ export function PlannerExportClient() {
                   type="date"
                   value={scheduleFrom}
                   onChange={(e) => setScheduleFrom(e.target.value)}
-                  className="rounded border border-slate-300 px-3 py-2 text-base"
+                  className="rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               <div>
@@ -189,7 +189,7 @@ export function PlannerExportClient() {
                   type="date"
                   value={scheduleTo}
                   onChange={(e) => setScheduleTo(e.target.value)}
-                  className="rounded border border-slate-300 px-3 py-2 text-base"
+                  className="rounded border border-border px-3 py-2 text-base"
                 />
               </div>
             </div>
@@ -203,7 +203,7 @@ export function PlannerExportClient() {
                 <span className="text-sm">{t('planner.filterRashidOnly') ?? 'Rashid coverage only'}</span>
               </label>
             </div>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               {t('planner.scheduleExportHint') ?? 'Task titles: [Boutique] Morning/Evening Shift – date, [Rashid] Morning/Evening Coverage – date.'}
             </p>
             <div className="flex gap-2">
@@ -211,7 +211,7 @@ export function PlannerExportClient() {
                 type="button"
                 onClick={handleSchedulePreview}
                 disabled={scheduleLoading}
-                className="rounded border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded border border-border bg-surface px-4 py-2 text-base font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {scheduleLoading ? '…' : (t('planner.preview') ?? 'Preview')}
               </button>
@@ -219,7 +219,7 @@ export function PlannerExportClient() {
                 type="button"
                 onClick={handleScheduleDownload}
                 disabled={scheduleLoading}
-                className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {scheduleLoading ? '…' : t('planner.download')}
               </button>
@@ -238,18 +238,18 @@ export function PlannerExportClient() {
                     </span>
                   )}
                 </div>
-                <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-                  <p className="mb-2 font-semibold text-slate-800">{t('governance.exportHeader') ?? 'Export governance'}</p>
-                  <p className="text-slate-700">
+                <div className="rounded border border-border bg-surface-subtle p-3 text-sm">
+                  <p className="mb-2 font-semibold text-foreground">{t('governance.exportHeader') ?? 'Export governance'}</p>
+                  <p className="text-foreground">
                     <span className="font-medium">{t('governance.exportedBy') ?? 'Exported by'}:</span> {scheduleGovernance.exportedBy}
                   </p>
-                  <p className="text-slate-700">
+                  <p className="text-foreground">
                     <span className="font-medium">{t('governance.exportTimestamp') ?? 'Export timestamp'}:</span>{' '}
                     {scheduleGovernance.exportTimestampLocal ?? new Date(scheduleGovernance.exportedAt).toLocaleString()}
                   </p>
                   <ul className="mt-2 space-y-2">
                     {scheduleGovernance.weeks.map((w) => (
-                      <li key={w.weekStart} className="flex flex-wrap gap-x-3 gap-y-1 text-slate-600">
+                      <li key={w.weekStart} className="flex flex-wrap gap-x-3 gap-y-1 text-muted">
                         <span className="font-medium">{w.weekStart}</span>
                         <span>{t('governance.weekStatus') ?? 'Status'}: {w.status}</span>
                         <span>{t('governance.lockStatus') ?? 'Lock'}: {w.lockStatus ?? (w.lockedByName ? 'LOCKED' : 'UNLOCKED')}</span>
@@ -272,29 +272,29 @@ export function PlannerExportClient() {
               </>
             )}
             {schedulePreview && schedulePreview.length > 0 && (
-              <div className="overflow-x-auto rounded border border-slate-200">
+              <div className="overflow-x-auto rounded border border-border">
                 <table className="w-full min-w-[500px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Title</th>
-                      <th className="px-2 py-2 text-start font-semibold text-slate-700">AssignedTo</th>
-                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Start / Due</th>
-                      <th className="px-2 py-2 text-start font-semibold text-slate-700">Notes</th>
+                    <tr className="border-b border-border bg-surface-subtle">
+                      <th className="px-2 py-2 text-start font-semibold text-foreground">Title</th>
+                      <th className="px-2 py-2 text-start font-semibold text-foreground">AssignedTo</th>
+                      <th className="px-2 py-2 text-start font-semibold text-foreground">Start / Due</th>
+                      <th className="px-2 py-2 text-start font-semibold text-foreground">Notes</th>
                     </tr>
                   </thead>
                   <tbody>
                     {schedulePreview.slice(0, 50).map((row, i) => (
-                      <tr key={i} className="border-b border-slate-100">
-                        <td className="px-2 py-1.5 text-slate-800">{row.Title}</td>
-                        <td className="px-2 py-1.5 text-slate-600">{row.AssignedTo}</td>
-                        <td className="px-2 py-1.5 text-slate-600">{row['Start Date']} / {row['Due Date']}</td>
-                        <td className="px-2 py-1.5 text-slate-500">{row.Notes}</td>
+                      <tr key={i} className="border-b border-border">
+                        <td className="px-2 py-1.5 text-foreground">{row.Title}</td>
+                        <td className="px-2 py-1.5 text-muted">{row.AssignedTo}</td>
+                        <td className="px-2 py-1.5 text-muted">{row['Start Date']} / {row['Due Date']}</td>
+                        <td className="px-2 py-1.5 text-muted">{row.Notes}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {schedulePreview.length > 50 && (
-                  <p className="px-2 py-2 text-xs text-slate-500">Showing first 50 of {schedulePreview.length} rows.</p>
+                  <p className="px-2 py-2 text-xs text-muted">Showing first 50 of {schedulePreview.length} rows.</p>
                 )}
               </div>
             )}

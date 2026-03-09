@@ -87,7 +87,7 @@ export function AdminCalendarClient() {
   if (loading) {
     return (
       <div className="p-4 md:p-6">
-        <p className="text-slate-600">Loading…</p>
+        <p className="text-muted">Loading…</p>
       </div>
     );
   }
@@ -95,8 +95,8 @@ export function AdminCalendarClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-2 text-xl font-semibold text-slate-900">Calendar</h1>
-        <p className="mb-6 text-sm text-slate-600">
+        <h1 className="mb-2 text-xl font-semibold text-foreground">Calendar</h1>
+        <p className="mb-6 text-sm text-muted">
           Use the boutique selector in the sidebar to choose which branch to manage. Official holidays (closed = non-working; open = working) and event periods (suspend weekly off / force work) apply to the selected boutique.
         </p>
 
@@ -107,17 +107,17 @@ export function AdminCalendarClient() {
         )}
 
         <section className="mb-10">
-          <h2 className="mb-3 text-lg font-medium text-slate-800">Official Holidays</h2>
-          <p className="mb-3 text-xs text-slate-500">Closed = boutique non-working (HOLIDAY). Open = holiday but boutique working; normal weekly off rules apply.</p>
+          <h2 className="mb-3 text-lg font-medium text-foreground">Official Holidays</h2>
+          <p className="mb-3 text-xs text-muted">Closed = boutique non-working (HOLIDAY). Open = holiday but boutique working; normal weekly off rules apply.</p>
           {holidayForm ? (
-            <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-border bg-surface-subtle p-3">
               <label className="flex flex-col gap-1 text-sm">
                 Date
                 <input
                   type="date"
                   value={holidayForm.date}
                   onChange={(e) => setHolidayForm((f) => f && { ...f, date: e.target.value })}
-                  className="rounded border border-slate-300 px-2 py-1"
+                  className="rounded border border-border px-2 py-1"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -127,7 +127,7 @@ export function AdminCalendarClient() {
                   value={holidayForm.name}
                   onChange={(e) => setHolidayForm((f) => f && { ...f, name: e.target.value })}
                   placeholder="e.g. Eid AlFitr Day 1"
-                  className="min-w-[160px] rounded border border-slate-300 px-2 py-1"
+                  className="min-w-[160px] rounded border border-border px-2 py-1"
                 />
               </label>
               <label className="flex items-center gap-2 text-sm">
@@ -142,14 +142,14 @@ export function AdminCalendarClient() {
               <button
                 type="button"
                 onClick={saveHoliday}
-                className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+                className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
               >
                 {holidayEditId ? 'Update' : 'Add'}
               </button>
               <button
                 type="button"
                 onClick={() => { setHolidayForm(null); setHolidayEditId(null); }}
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                className="rounded border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
               >
                 Cancel
               </button>
@@ -158,27 +158,27 @@ export function AdminCalendarClient() {
             <button
               type="button"
               onClick={() => setHolidayForm({ date: '', name: '', isClosed: true })}
-              className="mb-3 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="mb-3 rounded border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               + Add holiday
             </button>
           )}
-          <div className="overflow-x-auto rounded border border-slate-200">
+          <div className="overflow-x-auto rounded border border-border">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-100">
+              <thead className="bg-surface-subtle">
                 <tr>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Date</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Name</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Closed</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-end font-medium text-slate-700">Actions</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Date</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Name</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Closed</th>
+                  <th className="border-b border-border px-3 py-2 text-end font-medium text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {holidays.length === 0 ? (
-                  <tr><td colSpan={4} className="px-3 py-4 text-slate-500">No holidays defined.</td></tr>
+                  <tr><td colSpan={4} className="px-3 py-4 text-muted">No holidays defined.</td></tr>
                 ) : (
                   holidays.map((h) => (
-                    <tr key={h.id} className="border-b border-slate-100">
+                    <tr key={h.id} className="border-b border-border">
                       <td className="px-3 py-2">{h.date}</td>
                       <td className="px-3 py-2">{h.name}</td>
                       <td className="px-3 py-2">{h.isClosed ? 'Yes' : 'No'}</td>
@@ -186,7 +186,7 @@ export function AdminCalendarClient() {
                         <button
                           type="button"
                           onClick={() => { setHolidayEditId(h.id); setHolidayForm({ date: h.date, name: h.name, isClosed: h.isClosed }); }}
-                          className="me-2 text-slate-600 underline hover:text-slate-800"
+                          className="me-2 text-muted underline hover:text-foreground"
                         >
                           Edit
                         </button>
@@ -208,10 +208,10 @@ export function AdminCalendarClient() {
 
         {/* Event Periods */}
         <section>
-          <h2 className="mb-3 text-lg font-medium text-slate-800">Event Periods</h2>
-          <p className="mb-3 text-xs text-slate-500">Suspend weekly off and/or treat days as workable (e.g. Bridal Week, Ramadan Peak). Day overrides and closed holidays still apply.</p>
+          <h2 className="mb-3 text-lg font-medium text-foreground">Event Periods</h2>
+          <p className="mb-3 text-xs text-muted">Suspend weekly off and/or treat days as workable (e.g. Bridal Week, Ramadan Peak). Day overrides and closed holidays still apply.</p>
           {eventForm ? (
-            <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-3 flex flex-wrap items-end gap-2 rounded border border-border bg-surface-subtle p-3">
               <label className="flex flex-col gap-1 text-sm">
                 Name
                 <input
@@ -219,7 +219,7 @@ export function AdminCalendarClient() {
                   value={eventForm.name}
                   onChange={(e) => setEventForm((f) => f && { ...f, name: e.target.value })}
                   placeholder="e.g. Ramadan Peak"
-                  className="min-w-[180px] rounded border border-slate-300 px-2 py-1"
+                  className="min-w-[180px] rounded border border-border px-2 py-1"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -228,7 +228,7 @@ export function AdminCalendarClient() {
                   type="date"
                   value={eventForm.startDate}
                   onChange={(e) => setEventForm((f) => f && { ...f, startDate: e.target.value })}
-                  className="rounded border border-slate-300 px-2 py-1"
+                  className="rounded border border-border px-2 py-1"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -237,7 +237,7 @@ export function AdminCalendarClient() {
                   type="date"
                   value={eventForm.endDate}
                   onChange={(e) => setEventForm((f) => f && { ...f, endDate: e.target.value })}
-                  className="rounded border border-slate-300 px-2 py-1"
+                  className="rounded border border-border px-2 py-1"
                 />
               </label>
               <label className="flex items-center gap-2 text-sm">
@@ -261,14 +261,14 @@ export function AdminCalendarClient() {
               <button
                 type="button"
                 onClick={saveEventPeriod}
-                className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+                className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
               >
                 {eventEditId ? 'Update' : 'Add'}
               </button>
               <button
                 type="button"
                 onClick={() => { setEventForm(null); setEventEditId(null); }}
-                className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                className="rounded border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
               >
                 Cancel
               </button>
@@ -277,29 +277,29 @@ export function AdminCalendarClient() {
             <button
               type="button"
               onClick={() => setEventForm({ name: '', startDate: '', endDate: '', suspendWeeklyOff: true, forceWork: false })}
-              className="mb-3 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="mb-3 rounded border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               + Add event period
             </button>
           )}
-          <div className="overflow-x-auto rounded border border-slate-200">
+          <div className="overflow-x-auto rounded border border-border">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-100">
+              <thead className="bg-surface-subtle">
                 <tr>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Name</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Start</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">End</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Suspend off</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-start font-medium text-slate-700">Force work</th>
-                  <th className="border-b border-slate-200 px-3 py-2 text-end font-medium text-slate-700">Actions</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Name</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Start</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">End</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Suspend off</th>
+                  <th className="border-b border-border px-3 py-2 text-start font-medium text-foreground">Force work</th>
+                  <th className="border-b border-border px-3 py-2 text-end font-medium text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {eventPeriods.length === 0 ? (
-                  <tr><td colSpan={6} className="px-3 py-4 text-slate-500">No event periods defined.</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-4 text-muted">No event periods defined.</td></tr>
                 ) : (
                   eventPeriods.map((s) => (
-                    <tr key={s.id} className="border-b border-slate-100">
+                    <tr key={s.id} className="border-b border-border">
                       <td className="px-3 py-2">{s.name}</td>
                       <td className="px-3 py-2">{s.startDate}</td>
                       <td className="px-3 py-2">{s.endDate}</td>
@@ -309,7 +309,7 @@ export function AdminCalendarClient() {
                         <button
                           type="button"
                           onClick={() => { setEventEditId(s.id); setEventForm({ name: s.name, startDate: s.startDate, endDate: s.endDate, suspendWeeklyOff: s.suspendWeeklyOff, forceWork: s.forceWork }); }}
-                          className="me-2 text-slate-600 underline hover:text-slate-800"
+                          className="me-2 text-muted underline hover:text-foreground"
                         >
                           Edit
                         </button>
@@ -329,7 +329,7 @@ export function AdminCalendarClient() {
           </div>
         </section>
 
-        <p className="mt-6 text-xs text-slate-500">
+        <p className="mt-6 text-xs text-muted">
           Day overrides (Force Work / Force Off) and comp day ledger are managed from the Schedule Editor: use the cell actions per employee/day and the comp balance badge per employee.
         </p>
       </div>

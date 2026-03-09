@@ -14,7 +14,7 @@ export function ExecutiveBarChart({
   height = 180,
   valueFormat = (n) => n.toLocaleString(),
 }: Props) {
-  if (!data.length) return <div style={{ height }} className="flex items-center justify-center text-gray-500 text-sm">No data</div>;
+  if (!data.length) return <div style={{ height }} className="flex items-center justify-center text-muted text-sm">No data</div>;
   const maxVal = Math.max(...data.map((d) => d.value), 1);
   const padding = { top: 8, right: 8, bottom: 28, left: 36 };
   const w = 320;

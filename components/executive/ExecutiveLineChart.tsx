@@ -16,7 +16,7 @@ export function ExecutiveLineChart({
   height = 200,
   valueFormat = (n) => n.toLocaleString(),
 }: Props) {
-  if (!data.length) return <div style={{ height }} className="flex items-center justify-center text-gray-500 text-sm">No data</div>;
+  if (!data.length) return <div style={{ height }} className="flex items-center justify-center text-muted text-sm">No data</div>;
   const values = data.map((d) => d.value);
   const targetValues = targetLine ?? [];
   const maxVal = Math.max(

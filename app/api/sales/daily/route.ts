@@ -15,7 +15,7 @@ import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { computeLinesTotal, computeDiff } from '@/lib/sales/reconcile';
 import type { Role } from '@prisma/client';
 
-const DAILY_SALES_VIEW_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+const DAILY_SALES_VIEW_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 
 export async function GET(request: NextRequest) {
   try {

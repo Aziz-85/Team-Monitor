@@ -11,10 +11,10 @@ export function OpsCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-6 ${className}`}
+      className={`rounded-xl border border-border bg-surface p-4 shadow-sm md:p-6 ${className}`}
     >
       {title ? (
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">{title}</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">{title}</h2>
       ) : null}
       {children}
     </div>

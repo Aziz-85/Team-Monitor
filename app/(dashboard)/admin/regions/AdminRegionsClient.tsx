@@ -76,7 +76,7 @@ export function AdminRegionsClient() {
           <button
             type="button"
             onClick={() => { setEditing(null); setModal('add'); }}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-700"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
           >
             {t('common.add')}
           </button>
@@ -100,7 +100,7 @@ export function AdminRegionsClient() {
                   <button
                     type="button"
                     onClick={() => { setEditing(r); setModal('edit'); }}
-                    className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                   >
                     {t('common.edit')}
                   </button>

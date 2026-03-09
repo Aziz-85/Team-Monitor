@@ -9,7 +9,7 @@ import type { Role } from '@prisma/client';
 import type { ScopeKind, ScopeSelectionJson, ResolvedScope } from './types';
 
 const SCOPE_BOUTIQUE_ONLY: Role[] = ['ASSISTANT_MANAGER', 'EMPLOYEE'];
-const SCOPE_FULL: Role[] = ['ADMIN', 'MANAGER'];
+const SCOPE_FULL: Role[] = ['ADMIN', 'MANAGER', 'AREA_MANAGER'];
 
 async function getDefaultBoutiqueId(): Promise<string | null> {
   const row = await prisma.systemConfig.findUnique({

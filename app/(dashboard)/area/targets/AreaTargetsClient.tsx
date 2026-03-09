@@ -182,9 +182,9 @@ export function AreaTargetsClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-gray-800">Targets (Global)</h1>
+      <h1 className="text-xl font-semibold text-foreground">Targets (Global)</h1>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-surface p-3">
         <label className="flex items-center gap-2 text-sm">
           Month
           <input
@@ -194,34 +194,34 @@ export function AreaTargetsClient() {
               const v = e.target.value;
               if (parseMonthKey(v)) setMonthKey(v);
             }}
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded border border-border px-2 py-1.5 text-sm"
           />
         </label>
         <button
           type="button"
           onClick={() => setMonthKey(addMonths(monthKey, -1))}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded border border-border px-2 py-1.5 text-sm"
         >
           ◀ Prev
         </button>
         <button
           type="button"
           onClick={() => setMonthKey(getCurrentMonthKeyRiyadh())}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded border border-border px-2 py-1.5 text-sm"
         >
           This month
         </button>
         <button
           type="button"
           onClick={() => setMonthKey(addMonths(monthKey, 1))}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded border border-border px-2 py-1.5 text-sm"
         >
           Next ▶
         </button>
         <button
           type="button"
           onClick={() => setAuditOpen(true)}
-          className="ms-auto rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="ms-auto rounded border border-border px-2 py-1.5 text-sm"
         >
           View audit
         </button>
@@ -229,21 +229,21 @@ export function AreaTargetsClient() {
 
       {error && <p className="text-red-600">{error}</p>}
 
-      <section className="rounded-lg border border-[#E8DFC8] bg-white p-4">
-        <h2 className="mb-3 text-sm font-medium text-gray-500">Boutique monthly targets</h2>
+      <section className="rounded-lg border border-[#E8DFC8] bg-surface p-4">
+        <h2 className="mb-3 text-sm font-medium text-muted">Boutique monthly targets</h2>
         {loadingSummary ? (
-          <p className="text-gray-500">Loading…</p>
+          <p className="text-muted">Loading…</p>
         ) : (
           <div className="space-y-2">
             {boutiques.map((b) => (
               <div
                 key={b.boutiqueId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-100 bg-gray-50 px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-surface-subtle px-3 py-2"
               >
-                <span className="font-medium text-gray-800">
+                <span className="font-medium text-foreground">
                   {b.name} ({b.code})
                 </span>
-                <span className="tabular-nums text-gray-600">
+                <span className="tabular-nums text-muted">
                   {b.monthlyTargetAmount != null ? formatSarInt(b.monthlyTargetAmount) : '—'}
                 </span>
                 <button
@@ -253,7 +253,7 @@ export function AreaTargetsClient() {
                     setEditBoutiqueAmount(String(b.monthlyTargetAmount ?? 0));
                     setEditBoutiqueReason('');
                   }}
-                  className="text-sky-600 hover:underline"
+                  className="text-accent hover:underline"
                 >
                   Edit
                 </button>
@@ -263,15 +263,15 @@ export function AreaTargetsClient() {
         )}
       </section>
 
-      <section className="rounded-lg border border-[#E8DFC8] bg-white p-4">
-        <h2 className="mb-3 text-sm font-medium text-gray-500">Employee monthly targets</h2>
-        <p className="mb-2 text-xs text-gray-500">
+      <section className="rounded-lg border border-[#E8DFC8] bg-surface p-4">
+        <h2 className="mb-3 text-sm font-medium text-muted">Employee monthly targets</h2>
+        <p className="mb-2 text-xs text-muted">
           Select a boutique to load employees and their targets for the selected month.
         </p>
         <select
           value={boutiqueFilter}
           onChange={(e) => setBoutiqueFilter(e.target.value)}
-          className="mb-3 rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="mb-3 rounded border border-border px-2 py-1.5 text-sm"
         >
           <option value="">Select boutique</option>
           {boutiques.map((b) => (
@@ -281,24 +281,24 @@ export function AreaTargetsClient() {
           ))}
         </select>
         {loadingEmployees ? (
-          <p className="text-gray-500">Loading…</p>
+          <p className="text-muted">Loading…</p>
         ) : boutiqueFilter ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-3 py-2 text-start font-medium text-gray-700">ID</th>
-                  <th className="px-3 py-2 text-start font-medium text-gray-700">Name</th>
-                  <th className="px-3 py-2 text-end font-medium text-gray-700">Target (SAR)</th>
-                  <th className="px-3 py-2 text-end font-medium text-gray-700">Actions</th>
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="px-3 py-2 text-start font-medium text-foreground">ID</th>
+                  <th className="px-3 py-2 text-start font-medium text-foreground">Name</th>
+                  <th className="px-3 py-2 text-end font-medium text-foreground">Target (SAR)</th>
+                  <th className="px-3 py-2 text-end font-medium text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {employeesWithTargets.map((e) => (
-                  <tr key={e.empId} className="border-b border-gray-100">
-                    <td className="px-3 py-2 font-mono text-gray-800">{e.empId}</td>
-                    <td className="px-3 py-2 text-gray-800">{e.name}</td>
-                    <td className="px-3 py-2 text-end tabular-nums text-gray-600">
+                  <tr key={e.empId} className="border-b border-border">
+                    <td className="px-3 py-2 font-mono text-foreground">{e.empId}</td>
+                    <td className="px-3 py-2 text-foreground">{e.name}</td>
+                    <td className="px-3 py-2 text-end tabular-nums text-muted">
                       {e.targetAmount != null ? formatSarInt(e.targetAmount) : '—'}
                     </td>
                     <td className="px-3 py-2 text-end">
@@ -314,7 +314,7 @@ export function AreaTargetsClient() {
                           setEditEmployeeAmount(String(e.targetAmount ?? 0));
                           setEditEmployeeReason('');
                         }}
-                        className="text-sky-600 hover:underline"
+                        className="text-accent hover:underline"
                       >
                         Edit
                       </button>
@@ -329,32 +329,32 @@ export function AreaTargetsClient() {
 
       {editBoutiqueModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">Edit boutique target</h2>
-            <p className="mb-2 text-sm text-gray-600">
+          <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold text-foreground">Edit boutique target</h2>
+            <p className="mb-2 text-sm text-muted">
               {editBoutiqueModal.name} ({editBoutiqueModal.code}) — {monthKey}
             </p>
-            <label className="mb-1 block text-sm text-gray-600">Amount (SAR, integer)</label>
+            <label className="mb-1 block text-sm text-muted">Amount (SAR, integer)</label>
             <input
               type="number"
               min={0}
               step={1}
               value={editBoutiqueAmount}
               onChange={(e) => setEditBoutiqueAmount(e.target.value)}
-              className="mb-3 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-3 w-full rounded border border-border px-2 py-1.5 text-sm"
             />
-            <label className="mb-1 block text-sm text-gray-600">Reason (optional)</label>
+            <label className="mb-1 block text-sm text-muted">Reason (optional)</label>
             <input
               type="text"
               value={editBoutiqueReason}
               onChange={(e) => setEditBoutiqueReason(e.target.value)}
-              className="mb-4 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-4 w-full rounded border border-border px-2 py-1.5 text-sm"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setEditBoutiqueModal(null)}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+                className="rounded border border-border px-3 py-1.5 text-sm"
               >
                 Cancel
               </button>
@@ -362,7 +362,7 @@ export function AreaTargetsClient() {
                 type="button"
                 onClick={handleSaveBoutiqueTarget}
                 disabled={submitting}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
               >
                 {submitting ? 'Saving…' : 'Save'}
               </button>
@@ -373,32 +373,32 @@ export function AreaTargetsClient() {
 
       {editEmployeeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">Edit employee target</h2>
-            <p className="mb-2 text-sm text-gray-600">
+          <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold text-foreground">Edit employee target</h2>
+            <p className="mb-2 text-sm text-muted">
               {editEmployeeModal.name} ({editEmployeeModal.empId}) — {monthKey}
             </p>
-            <label className="mb-1 block text-sm text-gray-600">Amount (SAR, integer)</label>
+            <label className="mb-1 block text-sm text-muted">Amount (SAR, integer)</label>
             <input
               type="number"
               min={0}
               step={1}
               value={editEmployeeAmount}
               onChange={(e) => setEditEmployeeAmount(e.target.value)}
-              className="mb-3 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-3 w-full rounded border border-border px-2 py-1.5 text-sm"
             />
-            <label className="mb-1 block text-sm text-gray-600">Reason (optional)</label>
+            <label className="mb-1 block text-sm text-muted">Reason (optional)</label>
             <input
               type="text"
               value={editEmployeeReason}
               onChange={(e) => setEditEmployeeReason(e.target.value)}
-              className="mb-4 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-4 w-full rounded border border-border px-2 py-1.5 text-sm"
             />
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setEditEmployeeModal(null)}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+                className="rounded border border-border px-3 py-1.5 text-sm"
               >
                 Cancel
               </button>
@@ -406,7 +406,7 @@ export function AreaTargetsClient() {
                 type="button"
                 onClick={handleSaveEmployeeTarget}
                 disabled={submitting}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
               >
                 {submitting ? 'Saving…' : 'Save'}
               </button>
@@ -417,14 +417,14 @@ export function AreaTargetsClient() {
 
       {auditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border border-gray-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">Target change audit</h2>
-            <p className="mb-2 text-sm text-gray-500">Month: {monthKey}</p>
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-lg border border-border bg-surface p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold text-foreground">Target change audit</h2>
+            <p className="mb-2 text-sm text-muted">Month: {monthKey}</p>
             <div className="space-y-2">
               {auditItems.map((a) => (
                 <div
                   key={a.id}
-                  className="rounded border border-gray-100 bg-gray-50 px-3 py-2 text-xs"
+                  className="rounded border border-border bg-surface-subtle px-3 py-2 text-xs"
                 >
                   <span className="font-medium">{a.actorEmpId}</span>
                   {' · '}
@@ -440,7 +440,7 @@ export function AreaTargetsClient() {
             <button
               type="button"
               onClick={() => setAuditOpen(false)}
-              className="mt-4 rounded border border-gray-300 px-3 py-1.5 text-sm"
+              className="mt-4 rounded border border-border px-3 py-1.5 text-sm"
             >
               Close
             </button>

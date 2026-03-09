@@ -14,7 +14,7 @@ export type ResolveOperationalBoutiqueResult = {
   label: string;
 };
 
-const CAN_SELECT_OPERATIONAL_BOUTIQUE: Role[] = ['ADMIN', 'MANAGER'];
+const CAN_SELECT_OPERATIONAL_BOUTIQUE: Role[] = ['ADMIN', 'MANAGER', 'AREA_MANAGER'];
 
 async function getDefaultBoutiqueId(): Promise<string | null> {
   const row = await prisma.systemConfig.findUnique({

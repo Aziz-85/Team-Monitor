@@ -306,13 +306,13 @@ export function SalesDailyClient() {
   return (
     <div className="overflow-x-hidden p-4 md:p-6">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">Daily Sales Ledger</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">Daily Sales Ledger</h1>
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setDate(addDays(date, -1))}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               ← Prev
             </button>
@@ -320,18 +320,18 @@ export function SalesDailyClient() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
             />
             <button
               type="button"
               onClick={() => setDate(addDays(date, 1))}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               Next →
             </button>
           </div>
           {data?.scope?.label && (
-            <span className="rounded bg-slate-200 px-2 py-1 text-sm text-slate-700">
+            <span className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground">
               Scope: {data.scope.label}
             </span>
           )}
@@ -347,14 +347,14 @@ export function SalesDailyClient() {
             <button
               type="button"
               onClick={() => setActionError(null)}
-              className="shrink-0 rounded border border-amber-300 bg-white px-2 py-1 text-xs text-amber-800 hover:bg-amber-100"
+              className="shrink-0 rounded border border-amber-300 bg-surface px-2 py-1 text-xs text-amber-800 hover:bg-amber-100"
             >
               Dismiss
             </button>
           </div>
         )}
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
             Yearly Excel Import (Import_2026)
           </h3>
           <div className="flex flex-wrap items-end gap-3">
@@ -373,21 +373,21 @@ export function SalesDailyClient() {
             <button
               type="button"
               onClick={() => yearlyFileInputRef.current?.click()}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
             >
               {yearlyFile ? yearlyFile.name : 'Choose file'}
             </button>
             <div>
-              <label className="me-1 text-xs text-slate-500">Month (optional)</label>
+              <label className="me-1 text-xs text-muted">Month (optional)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={yearlyMonth}
                 onChange={(e) => setYearlyMonth(e.target.value)}
-                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
               />
             </div>
-            <label className="flex items-center gap-1.5 text-sm text-slate-700">
+            <label className="flex items-center gap-1.5 text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={yearlyDryRun}
@@ -399,7 +399,7 @@ export function SalesDailyClient() {
               type="button"
               disabled={!yearlyFile || yearlyLoading}
               onClick={runYearlyImport}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {yearlyLoading ? '…' : yearlyDryRun ? 'Preview (Dry Run)' : 'Import Now'}
             </button>
@@ -409,12 +409,12 @@ export function SalesDailyClient() {
               Import will write to database. Keep Dry Run ON to preview.
             </p>
           )}
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted">
             If manager total is 0, import will auto-set it to lines total.
           </p>
           {yearlyResult && (
             <>
-              <pre className="mt-3 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800">
+              <pre className="mt-3 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
                 {yearlyResult.error
                   ? (yearlyResult.errors?.length
                       ? `${yearlyResult.error}\n\n${JSON.stringify(yearlyResult.errors, null, 2)}`
@@ -436,9 +436,9 @@ export function SalesDailyClient() {
               </pre>
               {!yearlyResult.error && yearlyResult.perDateSummary && yearlyResult.perDateSummary.length > 0 && (
                 <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-0 border-collapse text-xs text-slate-800">
+                  <table className="w-full min-w-0 border-collapse text-xs text-foreground">
                     <thead>
-                      <tr className="border-b border-slate-200 text-start font-medium text-slate-600">
+                      <tr className="border-b border-border text-start font-medium text-muted">
                         <th className="py-1.5 pr-2">Date</th>
                         <th className="py-1.5 pr-2 text-end">Inserted</th>
                         <th className="py-1.5 pr-2 text-end">Updated</th>
@@ -451,7 +451,7 @@ export function SalesDailyClient() {
                     </thead>
                     <tbody>
                       {yearlyResult.perDateSummary.map((row) => (
-                        <tr key={row.date} className="border-b border-slate-100">
+                        <tr key={row.date} className="border-b border-border">
                           <td className="py-1.5 pr-2 font-mono">{row.date}</td>
                           <td className="py-1.5 pr-2 text-end font-mono">{row.insertedLinesCount}</td>
                           <td className="py-1.5 pr-2 text-end font-mono">{row.updatedLinesCount}</td>
@@ -463,7 +463,7 @@ export function SalesDailyClient() {
                             <button
                               type="button"
                               onClick={() => setDate(row.date)}
-                              className="rounded border border-slate-300 bg-white px-2 py-0.5 text-slate-700 hover:bg-slate-50"
+                              className="rounded border border-border bg-surface px-2 py-0.5 text-foreground hover:bg-surface-subtle"
                             >
                               Jump to date
                             </button>
@@ -478,28 +478,28 @@ export function SalesDailyClient() {
           )}
         </OpsCard>
         <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-slate-200 pb-2 text-sm font-medium text-slate-900">
+          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
             Coverage (Smart Missing)
           </h3>
-          <p className="mb-2 text-xs text-slate-500">
+          <p className="mb-2 text-xs text-muted">
             Expected days = scheduled (not off, not leave). Missing only flagged when consecutive missing &gt; maxSalesGapDays.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="me-1 text-xs text-slate-500">Month (YYYY-MM)</label>
+              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={coverageMonth}
                 onChange={(e) => setCoverageMonth(e.target.value)}
-                className="w-28 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900"
+                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
               />
             </div>
             <button
               type="button"
               disabled={!coverageMonth.trim() || coverageLoading}
               onClick={loadCoverage}
-              className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
             >
               {coverageLoading ? '…' : 'Load Coverage'}
             </button>
@@ -510,14 +510,14 @@ export function SalesDailyClient() {
                 <p className="text-sm text-red-600">{coverageResult.error}</p>
               ) : (
                 <>
-                  <p className="text-sm font-medium text-slate-700">
+                  <p className="text-sm font-medium text-foreground">
                     Completeness: {coverageResult.completenessPct ?? 0}% ({coverageResult.recordedCountTotal ?? 0} / {coverageResult.expectedDaysCountTotal ?? 0} expected days)
                   </p>
-                  <p className="text-xs text-slate-500">Max gap days (grace): {coverageResult.maxSalesGapDays ?? 7}</p>
+                  <p className="text-xs text-muted">Max gap days (grace): {coverageResult.maxSalesGapDays ?? 7}</p>
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-0 table-auto border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-slate-200 text-start text-slate-600">
+                        <tr className="border-b border-border text-start text-muted">
                           <th className="py-1.5 pr-2">Employee</th>
                           <th className="py-1.5 pr-2 text-end">Expected</th>
                           <th className="py-1.5 pr-2 text-end">Recorded</th>
@@ -527,7 +527,7 @@ export function SalesDailyClient() {
                       </thead>
                       <tbody>
                         {(coverageResult.byEmployee ?? []).map((e) => (
-                          <tr key={e.employeeId} className="border-b border-slate-100">
+                          <tr key={e.employeeId} className="border-b border-border">
                             <td className="py-1.5 pr-2 font-medium">{e.name}</td>
                             <td className="py-1.5 pr-2 text-end">{e.expectedDaysCount ?? 0}</td>
                             <td className="py-1.5 pr-2 text-end">{e.recordedDaysCount ?? 0}</td>
@@ -538,9 +538,9 @@ export function SalesDailyClient() {
                       </tbody>
                     </table>
                   </div>
-                  <details className="text-xs text-slate-600">
+                  <details className="text-xs text-muted">
                     <summary>Gap ranges and missing days (per employee)</summary>
-                    <pre className="mt-1 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2">
+                    <pre className="mt-1 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2">
                       {JSON.stringify(
                         coverageResult.byEmployee?.map((e) => ({
                           name: e.name,
@@ -557,21 +557,21 @@ export function SalesDailyClient() {
             </div>
           )}
         </OpsCard>
-        {loading && <p className="text-slate-500">Loading…</p>}
+        {loading && <p className="text-muted">Loading…</p>}
         {!loading && data?.summaries?.length === 0 && (
-          <p className="text-slate-500">No summaries for this date. Set manager total per boutique below.</p>
+          <p className="text-muted">No summaries for this date. Set manager total per boutique below.</p>
         )}
         {!loading &&
           data?.summaries?.map((s) => (
             <OpsCard key={s.id ?? s.boutiqueId} className="mb-6">
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                  <h2 className="font-medium text-slate-900">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+                  <h2 className="font-medium text-foreground">
                     {s.boutique.name} ({s.boutique.code})
                   </h2>
                   <span
                     className={
-                      s.status === 'LOCKED' ? 'rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-800' : 'rounded bg-slate-100 px-2 py-0.5 text-sm text-slate-700'
+                      s.status === 'LOCKED' ? 'rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-800' : 'rounded bg-surface-subtle px-2 py-0.5 text-sm text-foreground'
                     }
                   >
                     {s.status}
@@ -579,7 +579,7 @@ export function SalesDailyClient() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div>
-                    <label className="text-xs text-slate-500">Manager total (SAR)</label>
+                    <label className="text-xs text-muted">Manager total (SAR)</label>
                     <ManagerTotalInput
                       summary={s}
                       saving={savingSummary === s.boutiqueId}
@@ -587,11 +587,11 @@ export function SalesDailyClient() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Lines total (SAR)</p>
-                    <p className="font-mono text-slate-900">{s.linesTotal.toLocaleString('en-SA')}</p>
+                    <p className="text-xs text-muted">Lines total (SAR)</p>
+                    <p className="font-mono text-foreground">{s.linesTotal.toLocaleString('en-SA')}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500">Diff</p>
+                    <p className="text-xs text-muted">Diff</p>
                     <p className={`font-mono ${diffClass(s.diff)}`}>{diffText(s.diff)}</p>
                   </div>
                   <div className="flex items-end">
@@ -599,7 +599,7 @@ export function SalesDailyClient() {
                       type="button"
                       disabled={!s.canLock || locking === s.boutiqueId}
                       onClick={() => lock(s.boutiqueId)}
-                      className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                      className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
                     >
                       {locking === s.boutiqueId ? 'Locking…' : 'Lock'}
                     </button>
@@ -611,7 +611,7 @@ export function SalesDailyClient() {
                 <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
                   <table className="w-full min-w-0 table-auto border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 text-start text-slate-600">
+                      <tr className="border-b border-border text-start text-muted">
                         <th className="py-2 pr-2">Employee ID</th>
                         <th className="py-2 pr-2">Amount (SAR)</th>
                         <th className="w-0" />
@@ -662,14 +662,14 @@ function ManagerTotalInput({
         value={val}
         onChange={(e) => setVal(e.target.value)}
         disabled={summary.status === 'LOCKED'}
-        className="w-28 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-slate-900"
+        className="w-28 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
       />
       {summary.status === 'DRAFT' && (
         <button
           type="button"
           disabled={saving || !valid}
           onClick={() => valid && onSave(num)}
-          className="rounded bg-slate-200 px-2 py-1 text-sm text-slate-700 disabled:opacity-50"
+          className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground disabled:opacity-50"
         >
           {saving ? '…' : 'Save'}
         </button>
@@ -696,8 +696,8 @@ function LineRow({
   const num = parseInt(amount, 10);
   const valid = Number.isInteger(num) && num >= 0;
   return (
-    <tr className="border-b border-slate-100">
-      <td className="py-1 pr-2 font-mono text-slate-900">{line.employeeId}</td>
+    <tr className="border-b border-border">
+      <td className="py-1 pr-2 font-mono text-foreground">{line.employeeId}</td>
       <td className="py-1 pr-2">
         <input
           type="number"
@@ -706,7 +706,7 @@ function LineRow({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           disabled={disabled}
-          className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-slate-900"
+          className="w-24 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
         />
       </td>
       <td className="py-1">
@@ -715,7 +715,7 @@ function LineRow({
             type="button"
             disabled={saving || !valid}
             onClick={() => valid && onSave(boutiqueId, line.employeeId, num)}
-            className="text-sm text-sky-600 hover:underline"
+            className="text-sm text-accent hover:underline"
           >
             {saving ? '…' : 'Save'}
           </button>
@@ -740,14 +740,14 @@ function NewLineRow({
   const num = parseInt(amount, 10);
   const valid = empId.trim() && Number.isInteger(num) && num >= 0;
   return (
-    <tr className="border-b border-slate-100 bg-slate-50/50">
+    <tr className="border-b border-border bg-surface-subtle/50">
       <td className="py-1 pr-2">
         <input
           type="text"
           placeholder="Emp ID"
           value={empId}
           onChange={(e) => setEmpId(e.target.value)}
-          className="w-28 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-slate-900"
+          className="w-28 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
         />
       </td>
       <td className="py-1 pr-2">
@@ -758,7 +758,7 @@ function NewLineRow({
           placeholder="0"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-24 rounded border border-slate-300 bg-white px-2 py-1 font-mono text-slate-900"
+          className="w-24 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
         />
       </td>
       <td className="py-1">
@@ -772,7 +772,7 @@ function NewLineRow({
               setAmount('');
             }
           }}
-          className="text-sm text-sky-600 hover:underline"
+          className="text-sm text-accent hover:underline"
         >
           Add
         </button>

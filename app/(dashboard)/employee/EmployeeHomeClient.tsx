@@ -109,7 +109,7 @@ export function EmployeeHomeClient() {
   if (!data) {
     return (
       <div className="p-4">
-        <p className="text-slate-600">Loading…</p>
+        <p className="text-muted">Loading…</p>
       </div>
     );
   }
@@ -118,58 +118,58 @@ export function EmployeeHomeClient() {
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-4">
-          <label className="me-2 text-base font-medium text-slate-700">{t('common.date')}</label>
+          <label className="me-2 text-base font-medium text-foreground">{t('common.date')}</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
         </div>
 
         {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
           <div className="mb-4 grid gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
-                  className="h-full rounded-full bg-sky-600"
+                  className="h-full rounded-full bg-accent"
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-slate-700">{targetsData.todayPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.todayPct.toFixed(1)}%</p>
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarInt(targetsData.remaining)}
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
                   className="h-full rounded-full bg-emerald-600"
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.mtdPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-slate-700">{targetsData.mtdPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.mtdPct.toFixed(1)}%</p>
             </OpsCard>
           </div>
         )}
 
         <OpsCard title="My Sales" className="mb-4">
-          <p className="mb-2 text-sm text-slate-600">Enter daily sales (SAR). Zero is valid.</p>
+          <p className="mb-2 text-sm text-muted">Enter daily sales (SAR). Zero is valid.</p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="me-1 text-xs text-slate-500">Date</label>
+              <label className="me-1 text-xs text-muted">Date</label>
               <input
                 type="date"
                 value={salesEntryDate}
                 onChange={(e) => setSalesEntryDate(e.target.value)}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-border px-2 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="me-1 text-xs text-slate-500">Amount (SAR)</label>
+              <label className="me-1 text-xs text-muted">Amount (SAR)</label>
               <input
                 type="number"
                 min={0}
@@ -177,21 +177,21 @@ export function EmployeeHomeClient() {
                 value={salesEntryAmount}
                 onChange={(e) => setSalesEntryAmount(e.target.value)}
                 placeholder="0"
-                className="w-28 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-28 rounded border border-border px-2 py-1.5 text-sm"
               />
             </div>
             <button
               type="button"
               disabled={salesEntrySaving}
               onClick={saveSalesEntry}
-              className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {salesEntrySaving ? 'Saving…' : 'Save'}
             </button>
           </div>
           {salesEntryError && <p className="mt-2 text-sm text-red-600">{salesEntryError}</p>}
-          <p className="mt-2 text-xs text-slate-500">Last 7 entries:</p>
-          <ul className="mt-1 list-inside list-disc text-sm text-slate-700">
+          <p className="mt-2 text-xs text-muted">Last 7 entries:</p>
+          <ul className="mt-1 list-inside list-disc text-sm text-foreground">
             {lastEntries.length === 0 && <li>—</li>}
             {lastEntries.map((e) => (
               <li key={e.id}>{e.date}: {formatSarInt(e.amount)}</li>
@@ -204,14 +204,14 @@ export function EmployeeHomeClient() {
             {data.todaySchedule.am ? (
               <p className="text-base">You are on shift</p>
             ) : (
-              <p className="text-base text-slate-500">Off</p>
+              <p className="text-base text-muted">Off</p>
             )}
           </ShiftCard>
           <ShiftCard variant="evening" title={t('schedule.evening')}>
             {data.todaySchedule.pm ? (
               <p className="text-base">You are on shift</p>
             ) : (
-              <p className="text-base text-slate-500">Off</p>
+              <p className="text-base text-muted">Off</p>
             )}
           </ShiftCard>
         </div>
@@ -220,19 +220,19 @@ export function EmployeeHomeClient() {
           <ul className="list-disc space-y-1 pl-4">
             {data.todayTasks.map((t) => (
               <li key={t.taskName}>
-                {t.taskName} <span className="text-slate-500">({t.reason})</span>
+                {t.taskName} <span className="text-muted">({t.reason})</span>
               </li>
             ))}
-            {data.todayTasks.length === 0 && <li className="text-slate-500">—</li>}
+            {data.todayTasks.length === 0 && <li className="text-muted">—</li>}
           </ul>
         </OpsCard>
 
         <OpsCard title={t('schedule.week')} className="mt-6">
-          <p className="mb-2 text-base text-slate-600">{t('schedule.morning')}</p>
+          <p className="mb-2 text-base text-muted">{t('schedule.morning')}</p>
           <p className="mb-2 text-base">
             {data.weekRoster.am.map((e) => e.name).join(', ') || '—'}
           </p>
-          <p className="mb-2 text-base text-slate-600">{t('schedule.evening')}</p>
+          <p className="mb-2 text-base text-muted">{t('schedule.evening')}</p>
           <p className="text-base">
             {data.weekRoster.pm.map((e) => e.name).join(', ') || '—'}
           </p>

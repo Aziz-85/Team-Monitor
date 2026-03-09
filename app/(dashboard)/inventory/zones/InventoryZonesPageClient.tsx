@@ -86,17 +86,17 @@ export function InventoryZonesPageClient({
       <div className="mx-auto max-w-3xl">
         <Link
           href="/inventory/daily"
-          className="mb-4 inline-block text-base text-sky-600 hover:underline"
+          className="mb-4 inline-block text-base text-accent hover:underline"
         >
           ← {t('common.back')} ({t('inventory.daily')})
         </Link>
 
         {isAdmin && (
-          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-            <h3 className="mb-2 text-sm font-semibold text-slate-800">
+          <div className="mb-4 rounded-xl border border-border bg-surface-subtle p-4 shadow-sm">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">
               {t('inventory.uploadZonesMap')} (Admin)
             </h3>
-            <p className="mb-3 text-xs text-slate-600">
+            <p className="mb-3 text-xs text-muted">
               {t('inventory.uploadZonesMapHint')}
             </p>
             <div className="flex flex-wrap items-center gap-3">
@@ -106,14 +106,14 @@ export function InventoryZonesPageClient({
                 accept="image/png"
                 onChange={handleUploadMap}
                 disabled={uploading || deletingMap}
-                className="text-sm text-slate-700 file:me-2 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white file:hover:bg-blue-700"
+                className="text-sm text-foreground file:me-2 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white file:hover:bg-accent/90"
                 aria-label={t('inventory.uploadZonesMap')}
               />
               <button
                 type="button"
                 onClick={handleDeleteMap}
                 disabled={uploading || deletingMap}
-                className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                className="rounded-lg border border-red-300 bg-surface px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
                 {deletingMap ? t('common.loading') : t('inventory.deleteZonesMap')}
               </button>
@@ -126,18 +126,18 @@ export function InventoryZonesPageClient({
                 </span>
               )}
               {uploading && (
-                <span className="text-sm text-slate-500">{t('common.loading')}</span>
+                <span className="text-sm text-muted">{t('common.loading')}</span>
               )}
             </div>
           </div>
         )}
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="text-xl font-semibold text-foreground">
             {t('inventory.zones')}
           </h1>
           <nav
-            className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5"
+            className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5"
             aria-label={t('inventory.zones')}
           >
             <button
@@ -145,8 +145,8 @@ export function InventoryZonesPageClient({
               onClick={() => setTab('weekly')}
               className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                 tab === 'weekly'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-surface text-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               {t('inventory.weekly')}
@@ -157,8 +157,8 @@ export function InventoryZonesPageClient({
                 onClick={() => setTab('assignments')}
                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                   tab === 'assignments'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-surface text-foreground shadow-sm'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {t('inventory.assignments')}
@@ -176,7 +176,7 @@ export function InventoryZonesPageClient({
 
         {/* Manager/Admin-only debug: confirms canonical page is served */}
         {isManagerOrAdmin && (
-          <p className="mt-6 border-t border-slate-200 pt-3 text-xs text-slate-400" aria-hidden>
+          <p className="mt-6 border-t border-border pt-3 text-xs text-muted" aria-hidden>
             [Debug] pathname: {pathname} · component: {ZONE_INVENTORY_COMPONENT_PATH}
           </p>
         )}

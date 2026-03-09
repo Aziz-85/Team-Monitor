@@ -26,7 +26,7 @@ import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { normalizeMonthKey } from '@/lib/time';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
 const ALLOWED_EXTENSIONS = ['.xlsx', '.xlsm'];
 
 /** Normalize for matching: trim, collapse space, lower, remove . - _, Arabic normalization. */

@@ -120,7 +120,7 @@ function auditActionColor(action: string): string {
   if (action.includes('UNLOCK') || action.includes('UNAPPROVED')) return 'border-l-4 border-emerald-400 bg-emerald-50/50';
   if (action.includes('OVERRIDE') || action.includes('COVERAGE')) return 'border-l-4 border-sky-400 bg-sky-50/50';
   if (action.includes('TEAM')) return 'border-l-4 border-amber-400 bg-amber-50/50';
-  return 'border-l-4 border-slate-300 bg-slate-50/50';
+  return 'border-l-4 border-border bg-surface-subtle';
 }
 
 const AUDIT_ACTION_KEYS: Record<string, string> = {
@@ -1048,7 +1048,7 @@ export function ScheduleEditClient({
             <button
               type="button"
               onClick={() => setTab('week')}
-              className={`h-9 md:h-10 rounded-lg px-4 font-medium ${tab === 'week' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white border border-slate-300 text-slate-800 hover:bg-slate-50'}`}
+              className={`h-9 md:h-10 rounded-lg px-4 font-medium ${tab === 'week' ? 'bg-accent text-white hover:bg-accent/90' : 'bg-surface border border-border text-foreground hover:bg-surface-subtle'}`}
             >
               {t('schedule.week')}
             </button>
@@ -1056,7 +1056,7 @@ export function ScheduleEditClient({
               <button
                 type="button"
                 onClick={() => setTab('month')}
-                className={`h-9 md:h-10 rounded-lg px-4 font-medium ${tab === 'month' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white border border-slate-300 text-slate-800 hover:bg-slate-50'}`}
+                className={`h-9 md:h-10 rounded-lg px-4 font-medium ${tab === 'month' ? 'bg-accent text-white hover:bg-accent/90' : 'bg-surface border border-border text-foreground hover:bg-surface-subtle'}`}
               >
                 {t('schedule.month')}
               </button>
@@ -1070,12 +1070,12 @@ export function ScheduleEditClient({
                   onClick={() => setWeekStart(addDays(weekStart, -7))}
                   disabled={gridLoading}
                   title={t('schedule.previousWeek')}
-                  className="h-9 md:h-10 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 md:h-10 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.previousWeek')}
                 >
                   <span aria-hidden>◀</span>
                 </button>
-                <span className="min-w-[200px] text-base font-medium text-slate-800">
+                <span className="min-w-[200px] text-base font-medium text-foreground">
                   {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
                     .replace('{start}', formatWeekRangeLabel(weekStart, locale).start)
                     .replace('{end}', formatWeekRangeLabel(weekStart, locale).end)}
@@ -1085,7 +1085,7 @@ export function ScheduleEditClient({
                   onClick={() => setWeekStart(addDays(weekStart, 7))}
                   disabled={gridLoading}
                   title={t('schedule.nextWeek')}
-                  className="h-9 md:h-10 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="h-9 md:h-10 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.nextWeek')}
                 >
                   <span aria-hidden>▶</span>
@@ -1094,11 +1094,11 @@ export function ScheduleEditClient({
                   type="date"
                   value={weekStart}
                   onChange={(e) => setWeekStart(weekStartSaturday(e.target.value))}
-                  className="rounded border border-slate-300 px-3 py-2 text-base"
+                  className="rounded border border-border px-3 py-2 text-base"
                   aria-label={t('schedule.week')}
                 />
                 {scopeLabel && (
-                  <span className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                  <span className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs text-muted">
                     {(t('schedule.scopeLabel') ?? 'Scope')}: {scopeLabel}
                   </span>
                 )}
@@ -1112,7 +1112,7 @@ export function ScheduleEditClient({
                         {t('schedule.ramadanModeBanner')}
                       </span>
                     )}
-                    <span className="rounded bg-slate-100 px-2 py-1 text-xs font-mono text-slate-600" title="Ramadan env range">
+                    <span className="rounded bg-surface-subtle px-2 py-1 text-xs font-mono text-muted" title="Ramadan env range">
                       {(t('schedule.ramadanDebug') ?? 'RamadanMode: {status} ({range}) · weekStart: {weekStart}')
                         .replace('{status}', ramadanMode ? 'ON' : 'OFF')
                         .replace('{range}', `${ramadanRange.start}–${ramadanRange.end}`)
@@ -1123,7 +1123,7 @@ export function ScheduleEditClient({
               })()}
               {weekGovernance && (
                 <span
-                  className={`rounded px-2 py-1 text-sm font-medium ${weekGovernance.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}
+                  className={`rounded px-2 py-1 text-sm font-medium ${weekGovernance.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-subtle text-muted'}`}
                   title={
                     weekGovernance.status === 'DRAFT'
                       ? (t('governance.tooltipDraft') ?? 'Draft — week not yet approved')
@@ -1151,7 +1151,7 @@ export function ScheduleEditClient({
                 <button
                   type="button"
                   onClick={() => setAddGuestOpen(true)}
-                  className="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
                 >
                   {t('schedule.addExternalCoverage') ?? 'Add External Coverage'}
                 </button>
@@ -1161,7 +1161,7 @@ export function ScheduleEditClient({
                   type="button"
                   onClick={() => setLockDayModal({ date: gridData?.days?.[0]?.date ?? weekStart, reason: '' })}
                   disabled={lockActionLoading}
-                  className="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
                 >
                   {t('governance.lockDay')}
                 </button>
@@ -1290,12 +1290,12 @@ export function ScheduleEditClient({
                 onClick={() => setMonth(addMonths(month, -1))}
                 disabled={monthLoading}
                 title={t('schedule.previousMonth')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.previousMonth')}
               >
                 <span aria-hidden>◀</span>
               </button>
-              <span className="min-w-[140px] text-base font-medium text-slate-800">
+              <span className="min-w-[140px] text-base font-medium text-foreground">
                 {formatMonthYear(month, locale)}
               </span>
               <button
@@ -1303,7 +1303,7 @@ export function ScheduleEditClient({
                 onClick={() => setMonth(addMonths(month, 1))}
                 disabled={monthLoading}
                 title={t('schedule.nextMonth')}
-                className="rounded border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+                className="rounded border border-border bg-surface p-2 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50"
                 aria-label={t('schedule.nextMonth')}
               >
                 <span aria-hidden>▶</span>
@@ -1312,15 +1312,15 @@ export function ScheduleEditClient({
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="rounded border border-slate-300 px-3 py-2 text-base"
+                className="rounded border border-border px-3 py-2 text-base"
                 aria-label={t('schedule.month')}
               />
-              <div className="inline-flex h-9 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5">
                 <button
                   type="button"
                   onClick={() => setMonthMode('summary')}
                   className={`rounded-md px-3 text-sm font-medium transition-colors ${
-                    monthMode === 'summary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    monthMode === 'summary' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                   }`}
                 >
                   {t('editor.monthSummary') ?? 'Summary'}
@@ -1329,7 +1329,7 @@ export function ScheduleEditClient({
                   type="button"
                   onClick={() => setMonthMode('excel')}
                   className={`rounded-md px-3 text-sm font-medium transition-colors ${
-                    monthMode === 'excel' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    monthMode === 'excel' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'
                   }`}
                 >
                   {t('editor.monthExcelView') ?? 'Excel View'}
@@ -1348,7 +1348,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => setSaveModalOpen(true)}
                 disabled={pendingCount === 0}
-                className="h-9 md:h-10 rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 md:h-10 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.saveChanges') ?? 'Save changes'}
               </button>
@@ -1356,7 +1356,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={discardAll}
                 disabled={pendingCount === 0}
-                className="h-9 md:h-10 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 md:h-10 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.discardChanges') ?? 'Discard changes'}
               </button>
@@ -1386,17 +1386,17 @@ export function ScheduleEditClient({
         )}
 
         {tab === 'week' && gridData && (
-          <div className="mb-4 rounded border border-slate-200 bg-slate-50 px-3 py-2">
+          <div className="mb-4 rounded border border-border bg-surface-subtle px-3 py-2">
             <div className="mb-2 flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-slate-700">
+              <span className="text-sm font-medium text-foreground">
                 {t('schedule.keys.keyStatus') ?? 'Key status'}: Key #1 → {keyPlan?.currentHolders?.key1HolderName ?? keyPlan?.currentHolders?.key1HolderEmployeeId ?? '—'}, Key #2 → {keyPlan?.currentHolders?.key2HolderName ?? keyPlan?.currentHolders?.key2HolderEmployeeId ?? '—'}
               </span>
-              {keyPlanLoading && <span className="text-xs text-slate-500">{t('common.loading') ?? 'Loading…'}</span>}
+              {keyPlanLoading && <span className="text-xs text-muted">{t('common.loading') ?? 'Loading…'}</span>}
               {(initialRole === 'ASSISTANT_MANAGER' || initialRole === 'MANAGER' || initialRole === 'ADMIN' || initialRole === 'SUPER_ADMIN') && (
                 <button
                   type="button"
                   onClick={() => setHandoverDialogOpen(true)}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
                 >
                   {t('schedule.keys.logHandover') ?? 'Log handover'}
                 </button>
@@ -1406,18 +1406,18 @@ export function ScheduleEditClient({
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="py-1 pr-2 text-left font-medium text-slate-600">{t('schedule.day') ?? 'Day'}</th>
+                    <tr className="border-b border-border">
+                      <th className="py-1 pr-2 text-left font-medium text-muted">{t('schedule.day') ?? 'Day'}</th>
                       {keyPlan.days.map((d) => (
-                        <th key={d.date} className="py-1 px-1 text-center font-medium text-slate-600">
+                        <th key={d.date} className="py-1 px-1 text-center font-medium text-muted">
                           {getDayShort(d.date, locale)} {formatDDMM(d.date)}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100">
-                      <td className="py-1 pr-2 text-slate-600">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
+                    <tr className="border-b border-border">
+                      <td className="py-1 pr-2 text-muted">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.amEligible ?? [];
@@ -1430,7 +1430,7 @@ export function ScheduleEditClient({
                                 setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, amHolderEmpId: v } : x)));
                                 setKeyPlanDirty(true);
                               }}
-                              className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs"
+                              className="w-full rounded border border-border bg-surface px-1 py-0.5 text-xs"
                             >
                               <option value="">—</option>
                               {options.map((o) => (
@@ -1442,7 +1442,7 @@ export function ScheduleEditClient({
                       })}
                     </tr>
                     <tr>
-                      <td className="py-1 pr-2 text-slate-600">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
+                      <td className="py-1 pr-2 text-muted">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.pmEligible ?? [];
@@ -1455,7 +1455,7 @@ export function ScheduleEditClient({
                                 setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, pmHolderEmpId: v } : x)));
                                 setKeyPlanDirty(true);
                               }}
-                              className="w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs"
+                              className="w-full rounded border border-border bg-surface px-1 py-0.5 text-xs"
                             >
                               <option value="">—</option>
                               {options.map((o) => (
@@ -1492,14 +1492,14 @@ export function ScheduleEditClient({
                           setTimeout(() => setToast(null), 5000);
                         }
                       }}
-                      className="rounded bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+                      className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
                     >
                       {t('schedule.keys.saveKeyPlan') ?? 'Save key plan'}
                     </button>
                     <button
                       type="button"
                       onClick={() => { setKeyPlanLocal(keyPlan.days.map((d) => ({ ...d }))); setKeyPlanDirty(false); }}
-                      className="rounded border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
                     >
                       {t('common.cancel') ?? 'Cancel'}
                     </button>
@@ -1513,13 +1513,13 @@ export function ScheduleEditClient({
         {tab === 'week' && gridData && (
           <>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="tablist">
+              <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={editorView === 'grid'}
                   onClick={() => setEditorView('grid')}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${editorView === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${editorView === 'grid' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'}`}
                 >
                   {t('editor.gridView') ?? 'Grid View'}
                 </button>
@@ -1528,18 +1528,18 @@ export function ScheduleEditClient({
                   role="tab"
                   aria-selected={editorView === 'excel'}
                   onClick={() => setEditorView('excel')}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${editorView === 'excel' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${editorView === 'excel' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground'}`}
                 >
                   {t('editor.excelView') ?? 'Excel View'}
                 </button>
               </div>
               {editorView === 'excel' && (
-                <div className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
-                  <span className="text-xs text-slate-600">{t('editor.teamFilter') ?? 'Team:'}</span>
+                <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-subtle px-2 py-1">
+                  <span className="text-xs text-muted">{t('editor.teamFilter') ?? 'Team:'}</span>
                   <select
                     value={teamFilterExcel}
                     onChange={(e) => setTeamFilterExcel(e.target.value as 'all' | 'A' | 'B')}
-                    className="rounded border border-slate-200 bg-white px-2 py-1 text-sm"
+                    className="rounded border border-border bg-surface px-2 py-1 text-sm"
                   >
                     <option value="all">{t('editor.allEmployees') ?? 'All employees'}</option>
                     <option value="A">{t('schedule.teamA') ?? 'Team A'}</option>
@@ -1556,18 +1556,18 @@ export function ScheduleEditClient({
             {editorView === 'grid' ? (
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
-                  <span className="font-medium text-slate-500">{t('schedule.coverage') ?? 'Shifts'}:</span>
+                  <span className="font-medium text-muted">{t('schedule.coverage') ?? 'Shifts'}:</span>
                   <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-sky-800">{t('schedule.morning')}</span>
                   <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 font-medium text-amber-900">{t('schedule.evening')}</span>
-                  <span className="ms-2 font-medium text-slate-500">{t('governance.weekStatus') ?? 'Status'}:</span>
-                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-700">{t('governance.draft')}</span>
+                  <span className="ms-2 font-medium text-muted">{t('governance.weekStatus') ?? 'Status'}:</span>
+                  <span className="rounded-full border border-border bg-surface-subtle px-2 py-0.5 font-medium text-foreground">{t('governance.draft')}</span>
                   <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">{t('governance.approved')}</span>
                   <span className="rounded-full border border-red-200 bg-red-100 px-2 py-0.5 font-medium text-red-900">🔒 {t('governance.locked')}</span>
                 </div>
                 <div className="max-w-full overflow-hidden">
                   <LuxuryTable noScroll>
                     <LuxuryTableHead>
-                      <LuxuryTh className="sticky left-0 z-10 w-[18%] min-w-0 bg-slate-100">
+                      <LuxuryTh className="sticky left-0 z-10 w-[18%] min-w-0 bg-surface-subtle">
                         {t('schedule.day')}
                       </LuxuryTh>
                       {gridData.days.map((day) => {
@@ -1581,7 +1581,7 @@ export function ScheduleEditClient({
                             className="w-[11.7%] min-w-0 text-center"
                           >
                             <div className="font-medium">{getDayName(day.date, locale)}</div>
-                            <div className="text-xs text-slate-500">{formatDDMM(day.date)}</div>
+                            <div className="text-xs text-muted">{formatDDMM(day.date)}</div>
                             {dayLock && (
                               <div className="mt-1 flex flex-col items-center gap-0.5 text-xs text-rose-600">
                                 <span
@@ -1631,7 +1631,7 @@ export function ScheduleEditClient({
                         })
                         .map((row) => (
                           <tr key={row.empId}>
-                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-white font-medium" title={`${row.name} (${row.empId})`}>
+                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-surface font-medium" title={`${row.name} (${row.empId})`}>
                               <span className="inline-flex items-center gap-2">
                                 <span
                                   className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full text-[10px] font-semibold ${row.team === 'A' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'}`}
@@ -1664,7 +1664,7 @@ export function ScheduleEditClient({
                                 'w-[11.7%] min-w-0 p-0 align-middle',
                                 isEdited && 'ring-1 ring-sky-400 ring-inset',
                                 highlightedCells?.has(key) && 'ring-2 ring-green-500 bg-green-50',
-                                isBase && 'bg-slate-50/60',
+                                isBase && 'bg-surface-subtle/60',
                                 hasOverride && !isEdited && 'border-l-2 border-sky-400 bg-sky-50/50',
                               ]
                                 .filter(Boolean)
@@ -1673,7 +1673,7 @@ export function ScheduleEditClient({
                               return (
                                 <LuxuryTd key={cell.date} className={cellClass}>
                                   {locked ? (
-                                    <div className={`flex h-9 flex-col items-center justify-center bg-slate-100 px-2 text-center ${SCHEDULE_UI.guestLine} text-slate-500`}>
+                                    <div className={`flex h-9 flex-col items-center justify-center bg-surface-subtle px-2 text-center ${SCHEDULE_UI.guestLine} text-muted`}>
                                       <span>
                                         {cell.availability === 'LEAVE'
                                           ? 'Leave'
@@ -1685,13 +1685,13 @@ export function ScheduleEditClient({
                                       </span>
                                       {gridData.compBalanceByEmpId && (
                                         <details className="mt-0.5 w-full text-center">
-                                          <summary className="cursor-pointer text-[10px] text-slate-500 hover:text-slate-700">
+                                          <summary className="cursor-pointer text-[10px] text-muted hover:text-foreground">
                                             {t('schedule.advanced') ?? 'Advanced'}
                                           </summary>
                                           <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1 text-[10px]">
                                             <button
                                               type="button"
-                                              className="rounded bg-slate-200 px-1 py-0.5 text-slate-700 hover:bg-slate-300"
+                                              className="rounded bg-surface-subtle px-1 py-0.5 text-foreground hover:bg-surface-subtle"
                                               onClick={async () => {
                                                 const res = await fetch('/api/admin/employees/day-override', {
                                                   method: 'POST',
@@ -1706,7 +1706,7 @@ export function ScheduleEditClient({
                                             </button>
                                             <button
                                               type="button"
-                                              className="rounded bg-slate-200 px-1 py-0.5 text-slate-700 hover:bg-slate-300"
+                                              className="rounded bg-surface-subtle px-1 py-0.5 text-foreground hover:bg-surface-subtle"
                                               onClick={async () => {
                                                 const res = await fetch('/api/admin/employees/day-override', {
                                                   method: 'POST',
@@ -1823,8 +1823,8 @@ export function ScheduleEditClient({
                           byDate.set(d, list);
                         }
                         return (
-                          <tr key={sourceId || 'external'} className="border-t-2 border-slate-300 bg-slate-50">
-                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-slate-50 border-r border-slate-200 py-2 font-medium text-slate-700">
+                          <tr key={sourceId || 'external'} className="border-t-2 border-border bg-surface-subtle">
+                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-surface-subtle border-r border-border py-2 font-medium text-foreground">
                               {sourceBoutiqueName} Coverage
                             </LuxuryTd>
                             {gridData.days.map((day) => {
@@ -1834,7 +1834,7 @@ export function ScheduleEditClient({
                                 <LuxuryTd key={day.date} className="w-[11.7%] min-w-0 align-top p-2">
                                   <div className="flex flex-col gap-1 items-start">
                                     {guests.length === 0 ? (
-                                      <select disabled className="min-w-0 w-full max-w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-500">
+                                      <select disabled className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-muted">
                                         <option value="">—</option>
                                       </select>
                                     ) : (
@@ -1846,7 +1846,7 @@ export function ScheduleEditClient({
                                             if (e.target.value === '__delete__') handleRemoveGuestShift(g.id);
                                           }}
                                           disabled={locked || removingGuestId === g.id}
-                                          className="min-w-0 w-full max-w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                          className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
                                         >
                                           <option value="__delete__">—</option>
                                           <option value={g.id}>
@@ -1862,8 +1862,8 @@ export function ScheduleEditClient({
                           </tr>
                         );
                       })}
-                      <tr className="bg-slate-50 font-medium">
-                        <LuxuryTd className="sticky left-0 z-10 bg-slate-100">AM</LuxuryTd>
+                      <tr className="bg-surface-subtle font-medium">
+                        <LuxuryTd className="sticky left-0 z-10 bg-surface-subtle">AM</LuxuryTd>
                         {displayCounts.map((c, i) => {
                           const day = gridData.days[i];
                           const am = c.amCount;
@@ -1881,8 +1881,8 @@ export function ScheduleEditClient({
                           );
                         })}
                       </tr>
-                      <tr className="bg-slate-50 font-medium">
-                        <LuxuryTd className="sticky left-0 z-10 bg-slate-100">PM</LuxuryTd>
+                      <tr className="bg-surface-subtle font-medium">
+                        <LuxuryTd className="sticky left-0 z-10 bg-surface-subtle">PM</LuxuryTd>
                         {displayCounts.map((c, i) => {
                           const am = c.amCount;
                           const pm = c.pmCount;
@@ -1933,8 +1933,8 @@ export function ScheduleEditClient({
         {tab === 'week' && gridData && (
           <div className="mt-4 space-y-4">
             {canEdit && effectiveSuggestions.length > 0 && (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="mb-2 text-sm font-semibold text-slate-800">
+              <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">
                   {t('schedule.suggestions') ?? 'Suggestions'}
                 </h3>
                 <div className="mb-2 flex flex-wrap gap-1">
@@ -1973,29 +1973,29 @@ export function ScheduleEditClient({
                   {effectiveSuggestions
                     .filter((s) => !dismissedSuggestionIds.has(s.id))
                     .map((s) => (
-                      <li key={s.id} className="rounded border border-slate-100 bg-slate-50 p-2 text-xs">
-                        <span className="font-medium text-slate-700">{formatDDMM(s.date)}</span>
-                        <span className="ms-1 rounded bg-slate-200 px-1 py-0.5">{t(SUGGESTION_TYPE_KEYS[s.type] ?? '') || s.type}</span>
-                        <p className="mt-1 text-slate-600">{s.reason}</p>
+                      <li key={s.id} className="rounded border border-border bg-surface-subtle p-2 text-xs">
+                        <span className="font-medium text-foreground">{formatDDMM(s.date)}</span>
+                        <span className="ms-1 rounded bg-surface-subtle px-1 py-0.5">{t(SUGGESTION_TYPE_KEYS[s.type] ?? '') || s.type}</span>
+                        <p className="mt-1 text-muted">{s.reason}</p>
                         <div className="mt-2 flex flex-wrap gap-1">
                           <button
                             type="button"
                             onClick={() => suggestionPreview(s)}
-                            className="rounded bg-slate-200 px-2 py-1 text-slate-700 hover:bg-slate-300"
+                            className="rounded bg-surface-subtle px-2 py-1 text-foreground hover:bg-surface-subtle"
                           >
                             {t('schedule.suggestionPreview') ?? 'Preview'}
                           </button>
                           <button
                             type="button"
                             onClick={() => setSuggestionConfirm(s)}
-                            className="rounded bg-sky-600 px-2 py-1 text-white hover:bg-sky-700"
+                            className="rounded bg-accent px-2 py-1 text-white hover:bg-accent/90"
                           >
                             {t('schedule.suggestionApply') ?? 'Apply'}
                           </button>
                           <button
                             type="button"
                             onClick={() => dismissSuggestion(s.id)}
-                            className="rounded bg-slate-300 px-2 py-1 text-slate-700 hover:bg-slate-400"
+                            className="rounded bg-surface-subtle px-2 py-1 text-foreground hover:bg-surface-subtle"
                           >
                             {t('schedule.suggestionDismiss') ?? 'Dismiss'}
                           </button>
@@ -2005,14 +2005,14 @@ export function ScheduleEditClient({
                 </ul>
               </div>
             )}
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-2 text-sm font-semibold text-slate-800">
+            <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {t('governance.auditThisWeek') ?? 'Audit (this week)'}
               </h3>
               {auditItems.length === 0 ? (
-                <p className="text-xs text-slate-500">{t('governance.noAuditEntries') ?? 'No entries.'}</p>
+                <p className="text-xs text-muted">{t('governance.noAuditEntries') ?? 'No entries.'}</p>
               ) : (
-                <ul className="space-y-1.5 text-xs text-slate-600">
+                <ul className="space-y-1.5 text-xs text-muted">
                   {auditItems.slice(0, 10).map((item) => {
                     const expanded = auditExpanded.has(item.id);
                     const summary = formatAuditBeforeAfter(item.beforeJson, item.afterJson, t);
@@ -2033,33 +2033,33 @@ export function ScheduleEditClient({
                             })
                           }
                         >
-                          <span className="font-medium text-slate-800">
+                          <span className="font-medium text-foreground">
                             {t(AUDIT_ACTION_KEYS[item.action] ?? '') || item.action}
                           </span>
-                          <span className="ms-1 text-slate-400">
+                          <span className="ms-1 text-muted">
                             {new Date(item.createdAt).toLocaleString(undefined, {
                               dateStyle: 'short',
                               timeStyle: 'short',
                             })}
                           </span>
-                          <span className="ms-1 text-slate-500">{expanded ? '▼' : '▶'}</span>
+                          <span className="ms-1 text-muted">{expanded ? '▼' : '▶'}</span>
                         </button>
                         {expanded && (
-                          <div className="mt-1.5 space-y-0.5 border-l-2 border-slate-200 pl-1">
+                          <div className="mt-1.5 space-y-0.5 border-l-2 border-border pl-1">
                             {item.actor && (
-                              <p className="text-slate-600">
+                              <p className="text-muted">
                                 {item.actor.name}{' '}
-                                <span className="text-slate-400">({getRoleDisplayLabel(item.actor.role as Role, null, t)})</span>
+                                <span className="text-muted">({getRoleDisplayLabel(item.actor.role as Role, null, t)})</span>
                               </p>
                             )}
                             {item.entityId && (
-                              <p className="text-slate-600">
+                              <p className="text-muted">
                                 {t('governance.affected') ?? 'Affected'}: {item.entityId}
                               </p>
                             )}
-                            {summary && <p className="text-slate-600">{summary}</p>}
+                            {summary && <p className="text-muted">{summary}</p>}
                             {item.reason != null && item.reason !== '' && (
-                              <p className="font-medium text-slate-700">{item.reason}</p>
+                              <p className="font-medium text-foreground">{item.reason}</p>
                             )}
                           </div>
                         )}
@@ -2070,16 +2070,16 @@ export function ScheduleEditClient({
               )}
               <a
                 href="/schedule/audit"
-                className="mt-2 inline-block text-xs font-medium text-sky-600 hover:text-sky-700"
+                className="mt-2 inline-block text-xs font-medium text-accent hover:text-accent"
               >
                 {t('governance.viewFullAudit') ?? 'View full audit →'}
               </a>
             </div>
 
             {canEdit && (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="mb-2 text-sm font-semibold text-slate-800">{t('coverage.title')}</h3>
-                <p className="mb-3 text-xs text-slate-600">
+              <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
+                <p className="mb-3 text-xs text-muted">
                   {(t('schedule.daysNeedingAttention') as string)?.replace?.(
                     '{n}',
                     String(daysNeedingAttention)
@@ -2115,7 +2115,7 @@ export function ScheduleEditClient({
                   )}
                 </ul>
                 {daysNeedingAttention === 0 && (
-                  <p className="text-sm text-slate-500">{t('coverage.noWarnings')}</p>
+                  <p className="text-sm text-muted">{t('coverage.noWarnings')}</p>
                 )}
               </div>
             )}
@@ -2160,7 +2160,7 @@ export function ScheduleEditClient({
         {tab === 'month' && monthMode === 'excel' && (
           <>
             {monthExcelLoading && (
-              <p className="text-slate-600">
+              <p className="text-muted">
                 {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
               </p>
             )}
@@ -2178,17 +2178,17 @@ export function ScheduleEditClient({
         )}
 
         {tab === 'week' && !gridData && (
-          <p className="text-slate-600">{typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}</p>
+          <p className="text-muted">{typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}</p>
         )}
       </div>
 
       {suggestionConfirm && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !saving && setSuggestionConfirm(null)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <h4 className="text-lg font-semibold text-slate-900">{t('schedule.suggestionApply') ?? 'Apply suggestion'}</h4>
-            <p className="mt-2 text-sm text-slate-600">{suggestionConfirm.reason}</p>
-            <ul className="mt-2 text-sm text-slate-700">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-foreground">{t('schedule.suggestionApply') ?? 'Apply suggestion'}</h4>
+            <p className="mt-2 text-sm text-muted">{suggestionConfirm.reason}</p>
+            <ul className="mt-2 text-sm text-foreground">
               {suggestionConfirm.affected.map((a) => (
                 <li key={a.empId}>
                   {a.name}: {a.fromShift} → {a.toShift}
@@ -2200,7 +2200,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => setSuggestionConfirm(null)}
                 disabled={saving}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('common.cancel')}
               </button>
@@ -2208,7 +2208,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => applySuggestion(suggestionConfirm)}
                 disabled={saving}
-                className="h-9 rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {saving ? '…' : (t('schedule.suggestionApply') ?? 'Apply')}
               </button>
@@ -2220,12 +2220,12 @@ export function ScheduleEditClient({
       {saveModalOpen && canEdit && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !saving && setSaveModalOpen(false)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <h4 className="text-lg font-semibold text-slate-900">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-foreground">
               {(t('schedule.saveConfirmTitle') as string)?.replace?.('{n}', String(pendingCount)) ?? `Apply ${pendingCount} changes?`}
             </h4>
-            <p className="mt-2 text-sm text-slate-600">{t('schedule.saveConfirmSubtitle') ?? 'Summary of changes:'}</p>
-            <ul className="mt-2 max-h-48 overflow-y-auto rounded border border-slate-100 bg-slate-50 p-2 text-sm">
+            <p className="mt-2 text-sm text-muted">{t('schedule.saveConfirmSubtitle') ?? 'Summary of changes:'}</p>
+            <ul className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface-subtle p-2 text-sm">
               {Array.from(pendingEdits.entries()).map(([key, edit]) => {
                 const [, date] = key.split('|');
                 const from =
@@ -2246,20 +2246,20 @@ export function ScheduleEditClient({
                         : 'NONE';
                 return (
                   <li key={key} className="flex justify-between gap-2 py-0.5">
-                    <span className="text-slate-800">{formatDDMM(date)} {edit.employeeName}</span>
-                    <span className="text-slate-600">{from} → {to}</span>
+                    <span className="text-foreground">{formatDDMM(date)} {edit.employeeName}</span>
+                    <span className="text-muted">{from} → {to}</span>
                   </li>
                 );
               })}
             </ul>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+              <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
               <input
                 type="text"
                 value={globalReason}
                 onChange={(e) => setGlobalReason(e.target.value)}
                 placeholder={t('editor.saveReasonPlaceholder') || DEFAULT_REASON}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 disabled={saving}
               />
             </div>
@@ -2268,7 +2268,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => !saving && setSaveModalOpen(false)}
                 disabled={saving}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('common.cancel')}
               </button>
@@ -2276,7 +2276,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={applyBatch}
                 disabled={saving}
-                className="h-9 rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {saving ? `${saveProgress.done} / ${saveProgress.total}…` : (t('schedule.saveChanges') ?? 'Save changes')}
               </button>
@@ -2288,15 +2288,15 @@ export function ScheduleEditClient({
       {addGuestOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !guestSubmitting && setAddGuestOpen(false)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <h4 className="text-lg font-semibold text-slate-900">{t('schedule.addExternalCoverage') ?? 'Add External Coverage'}</h4>
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-foreground">{t('schedule.addExternalCoverage') ?? 'Add External Coverage'}</h4>
             <div className="mt-3 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Source boutique</label>
+                  <label className="block text-sm font-medium text-foreground">Source boutique</label>
                   <select
                     value={selectedSourceBoutiqueId}
                     onChange={(e) => setSelectedSourceBoutiqueId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
                     <option value="">—</option>
@@ -2308,11 +2308,11 @@ export function ScheduleEditClient({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">{t('schedule.employee') ?? 'Employee'}</label>
+                  <label className="block text-sm font-medium text-foreground">{t('schedule.employee') ?? 'Employee'}</label>
                   <select
                     value={guestForm.empId}
                     onChange={(e) => setGuestForm((f) => ({ ...f, empId: e.target.value }))}
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting || guestLoading}
                   >
                     <option value="">{guestLoading ? '…' : '—'}</option>
@@ -2326,15 +2326,15 @@ export function ScheduleEditClient({
                     <p className="mt-1 text-xs text-red-600">{guestError}</p>
                   )}
                   {!guestLoading && !guestError && guestEmployees.length === 0 && selectedSourceBoutiqueId && (
-                    <p className="mt-1 text-xs text-slate-500">No external employees found.</p>
+                    <p className="mt-1 text-xs text-muted">No external employees found.</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">{t('schedule.day') ?? 'Day'}</label>
+                  <label className="block text-sm font-medium text-foreground">{t('schedule.day') ?? 'Day'}</label>
                   <select
                     value={weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0]}
                     onChange={(e) => setGuestForm((f) => ({ ...f, date: e.target.value }))}
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
                     {weekDates.map((d) => (
@@ -2343,11 +2343,11 @@ export function ScheduleEditClient({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">{t('schedule.shift') ?? 'Shift'}</label>
+                  <label className="block text-sm font-medium text-foreground">{t('schedule.shift') ?? 'Shift'}</label>
                   <select
                     value={guestForm.shift}
                     onChange={(e) => setGuestForm((f) => ({ ...f, shift: e.target.value as 'MORNING' | 'EVENING' }))}
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
                     <option value="MORNING">{t('schedule.morning') ?? 'Morning'}</option>
@@ -2355,13 +2355,13 @@ export function ScheduleEditClient({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+                  <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
                   <input
                     type="text"
                     value={guestForm.reason}
                     onChange={(e) => setGuestForm((f) => ({ ...f, reason: e.target.value }))}
                     placeholder={t('schedule.guestReasonPlaceholder') || 'Coverage / branch visit'}
-                    className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   />
                 </div>
@@ -2371,7 +2371,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => !guestSubmitting && setAddGuestOpen(false)}
                 disabled={guestSubmitting}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {t('common.cancel')}
               </button>
@@ -2409,7 +2409,7 @@ export function ScheduleEditClient({
                     setGuestSubmitting(false);
                   }
                 }}
-                className="h-9 rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="h-9 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {guestSubmitting ? '…' : (t('schedule.add') ?? 'Add')}
               </button>
@@ -2421,15 +2421,15 @@ export function ScheduleEditClient({
       {leaveConfirm && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <p className="text-sm font-medium leading-6 text-slate-800">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <p className="text-sm font-medium leading-6 text-foreground">
               {t('schedule.unsavedLeaveMessage') ?? 'You have unsaved changes. Leave anyway?'}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setLeaveConfirm(null)}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.stay') ?? 'Stay'}
               </button>
@@ -2453,26 +2453,26 @@ export function ScheduleEditClient({
       {lockDayModal && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !lockActionLoading && setLockDayModal(null)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <h4 className="text-lg font-semibold text-slate-900">{t('governance.lockDay')}</h4>
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-foreground">{t('governance.lockDay')}</h4>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700">{t('schedule.day')} (YYYY-MM-DD)</label>
+              <label className="block text-sm font-medium text-foreground">{t('schedule.day')} (YYYY-MM-DD)</label>
               <input
                 type="date"
                 value={lockDayModal.date}
                 onChange={(e) => setLockDayModal((m) => (m ? { ...m, date: e.target.value } : null))}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 disabled={lockActionLoading}
               />
             </div>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700">{t('common.reason')}</label>
+              <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
               <input
                 type="text"
                 value={lockDayModal.reason}
                 onChange={(e) => setLockDayModal((m) => (m ? { ...m, reason: e.target.value } : null))}
                 placeholder={t('governance.reasonOptional')}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 md:h-10"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
                 disabled={lockActionLoading}
               />
             </div>
@@ -2481,7 +2481,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => !lockActionLoading && setLockDayModal(null)}
                 disabled={lockActionLoading}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('common.cancel')}
               </button>
@@ -2521,14 +2521,14 @@ export function ScheduleEditClient({
       {handoverDialogOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !handoverSubmitting && setHandoverDialogOpen(false)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6">
-            <h4 className="text-lg font-semibold text-slate-900">{t('schedule.keys.logHandover') ?? 'Log handover'}</h4>
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <h4 className="text-lg font-semibold text-foreground">{t('schedule.keys.logHandover') ?? 'Log handover'}</h4>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.keyNumber') ?? 'Key'}</label>
+              <label className="block text-sm font-medium text-foreground">{t('schedule.keys.keyNumber') ?? 'Key'}</label>
               <select
                 value={handoverForm.keyNumber}
                 onChange={(e) => setHandoverForm((f) => ({ ...f, keyNumber: Number(e.target.value) as 1 | 2 }))}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 disabled={handoverSubmitting}
               >
                 <option value={1}>Key #1</option>
@@ -2536,11 +2536,11 @@ export function ScheduleEditClient({
               </select>
             </div>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.handoverTo') ?? 'Hand over to'}</label>
+              <label className="block text-sm font-medium text-foreground">{t('schedule.keys.handoverTo') ?? 'Hand over to'}</label>
               <select
                 value={handoverForm.toEmployeeId}
                 onChange={(e) => setHandoverForm((f) => ({ ...f, toEmployeeId: e.target.value }))}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 disabled={handoverSubmitting}
               >
                 <option value="">—</option>
@@ -2550,13 +2550,13 @@ export function ScheduleEditClient({
               </select>
             </div>
             <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700">{t('schedule.keys.note') ?? 'Note'}</label>
+              <label className="block text-sm font-medium text-foreground">{t('schedule.keys.note') ?? 'Note'}</label>
               <input
                 type="text"
                 value={handoverForm.note}
                 onChange={(e) => setHandoverForm((f) => ({ ...f, note: e.target.value }))}
                 placeholder={t('common.optional') ?? 'Optional'}
-                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
                 disabled={handoverSubmitting}
               />
             </div>
@@ -2565,7 +2565,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => !handoverSubmitting && setHandoverDialogOpen(false)}
                 disabled={handoverSubmitting}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-4 font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                className="h-9 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
               >
                 {t('common.cancel')}
               </button>
@@ -2599,7 +2599,7 @@ export function ScheduleEditClient({
                     setHandoverSubmitting(false);
                   }
                 }}
-                className="h-9 rounded-lg bg-slate-800 px-4 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                className="h-9 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:opacity-50"
               >
                 {handoverSubmitting ? '…' : (t('schedule.keys.submitHandover') ?? 'Submit')}
               </button>

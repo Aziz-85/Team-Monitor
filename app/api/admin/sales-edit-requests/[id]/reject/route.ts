@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { rejectRequest } from '@/lib/services/approvals';
 import type { Role } from '@prisma/client';
 
-const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN'];
+const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN', 'AREA_MANAGER'];
 
 export async function POST(
   request: NextRequest,

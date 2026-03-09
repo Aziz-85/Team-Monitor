@@ -5,7 +5,7 @@ import { AdminTargetsClient } from './AdminTargetsClient';
 export default async function AdminTargetsPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER') redirect('/');
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER' && user.role !== 'AREA_MANAGER') redirect('/');
 
   return <AdminTargetsClient />;
 }

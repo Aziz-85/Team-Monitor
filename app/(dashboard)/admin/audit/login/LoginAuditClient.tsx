@@ -115,7 +115,7 @@ export function LoginAuditClient() {
     <div className="p-4 md:p-6">
       <OpsCard title={t('admin.loginAudit.title')}>
         <div className="mb-2 flex flex-wrap gap-2 items-center">
-          <span className="text-slate-600 text-sm font-medium">Quick filters:</span>
+          <span className="text-muted text-sm font-medium">Quick filters:</span>
           <button
             type="button"
             onClick={() => {
@@ -124,7 +124,7 @@ export function LoginAuditClient() {
               setDateRange('');
               setPage(1);
             }}
-            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'last24h_failed' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'last24h_failed' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-border bg-surface text-foreground hover:bg-surface-subtle'}`}
           >
             Last 24h failed
           </button>
@@ -136,7 +136,7 @@ export function LoginAuditClient() {
               setDateRange('');
               setPage(1);
             }}
-            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'rate_limited' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'rate_limited' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-border bg-surface text-foreground hover:bg-surface-subtle'}`}
           >
             Rate limited
           </button>
@@ -148,7 +148,7 @@ export function LoginAuditClient() {
               setDateRange('');
               setPage(1);
             }}
-            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'security_alert' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}
+            className={`rounded border px-2 py-1 text-sm ${quickFilter === 'security_alert' ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-border bg-surface text-foreground hover:bg-surface-subtle'}`}
           >
             Security alerts
           </button>
@@ -158,14 +158,14 @@ export function LoginAuditClient() {
               setQuickFilter('');
               setPage(1);
             }}
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded border border-border bg-surface px-2 py-1 text-sm text-muted hover:bg-surface-subtle"
           >
             Clear quick filter
           </button>
         </div>
         <div className="mb-4 flex flex-wrap gap-3 items-end">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Event</span>
+            <span className="text-muted">Event</span>
             <select
               value={eventFilter}
               onChange={(e) => {
@@ -173,7 +173,7 @@ export function LoginAuditClient() {
                 setQuickFilter('');
                 setPage(1);
               }}
-              className="rounded border border-slate-300 px-2 py-1.5 text-sm min-w-[140px]"
+              className="rounded border border-border px-2 py-1.5 text-sm min-w-[140px]"
             >
               {EVENT_OPTIONS.map((o) => (
                 <option key={o.value || 'all'} value={o.value}>
@@ -183,7 +183,7 @@ export function LoginAuditClient() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Date range</span>
+            <span className="text-muted">Date range</span>
             <select
               value={dateRange}
               onChange={(e) => {
@@ -191,7 +191,7 @@ export function LoginAuditClient() {
                 setQuickFilter('');
                 setPage(1);
               }}
-              className="rounded border border-slate-300 px-2 py-1.5 text-sm min-w-[140px]"
+              className="rounded border border-border px-2 py-1.5 text-sm min-w-[140px]"
             >
               {DATE_RANGE_OPTIONS.map((o) => (
                 <option key={o.value || 'any'} value={o.value}>
@@ -201,33 +201,33 @@ export function LoginAuditClient() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600">Search (email / username)</span>
+            <span className="text-muted">Search (email / username)</span>
             <input
               type="text"
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (setPage(1), fetchList())}
               placeholder="Search…"
-              className="rounded border border-slate-300 px-2 py-1.5 text-sm w-48"
+              className="rounded border border-border px-2 py-1.5 text-sm w-48"
             />
           </label>
           <button
             type="button"
             onClick={() => fetchList()}
-            className="rounded border border-slate-400 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            className="rounded border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
           >
             {t('common.refresh')}
           </button>
         </div>
 
         {topEmails.length > 0 && (
-          <div className="mb-4 rounded border border-slate-200 bg-slate-50/50 p-3">
-            <p className="text-sm font-medium text-slate-700 mb-2">Top attempted emails (last 24h, failed logins)</p>
-            <ul className="text-sm text-slate-600 space-y-1">
+          <div className="mb-4 rounded border border-border bg-surface-subtle/50 p-3">
+            <p className="text-sm font-medium text-foreground mb-2">Top attempted emails (last 24h, failed logins)</p>
+            <ul className="text-sm text-muted space-y-1">
               {topEmails.slice(0, 10).map((row, i) => (
                 <li key={i}>
                   <span className="font-mono">{row.emailAttempted ?? '—'}</span>
-                  <span className="text-slate-500 ms-2">({row.count})</span>
+                  <span className="text-muted ms-2">({row.count})</span>
                 </li>
               ))}
             </ul>
@@ -235,14 +235,14 @@ export function LoginAuditClient() {
         )}
 
         {loading ? (
-          <p className="text-sm text-slate-500">{t('common.loading')}</p>
+          <p className="text-sm text-muted">{t('common.loading')}</p>
         ) : error ? (
-          <div className="py-6 text-center text-slate-600">
+          <div className="py-6 text-center text-muted">
             <p className="mb-2 text-sm">Failed to load audit log.</p>
             <button
               type="button"
               onClick={() => fetchList()}
-              className="rounded border border-slate-400 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              className="rounded border border-border bg-surface-subtle px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
             >
               Retry
             </button>
@@ -263,14 +263,14 @@ export function LoginAuditClient() {
               <LuxuryTableBody>
                 {list.length === 0 ? (
                   <tr>
-                    <LuxuryTd colSpan={8} className="text-center text-slate-500 py-4">
+                    <LuxuryTd colSpan={8} className="text-center text-muted py-4">
                       {t('tasks.emptyList')}
                     </LuxuryTd>
                   </tr>
                 ) : (
                   list.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-100">
-                      <LuxuryTd className="text-sm text-slate-700 whitespace-nowrap">
+                    <tr key={r.id} className="border-b border-border">
+                      <LuxuryTd className="text-sm text-foreground whitespace-nowrap">
                         {formatDateTimeEn(r.createdAt)}
                       </LuxuryTd>
                       <LuxuryTd>
@@ -280,19 +280,19 @@ export function LoginAuditClient() {
                               ? 'text-emerald-700'
                               : r.event === 'LOGIN_FAILED'
                                 ? 'text-amber-700'
-                                : 'text-slate-700'
+                                : 'text-foreground'
                           }
                         >
                           {r.event}
                         </span>
                       </LuxuryTd>
-                      <LuxuryTd className="text-slate-700">
+                      <LuxuryTd className="text-foreground">
                         {r.userName ? `${r.userName} (${r.userEmpId ?? ''})` : r.userEmpId ?? '—'}
                       </LuxuryTd>
-                      <LuxuryTd className="text-slate-700">{r.emailAttempted ?? '—'}</LuxuryTd>
-                      <LuxuryTd className="text-slate-700 font-mono text-xs">{r.ip ?? '—'}</LuxuryTd>
-                      <LuxuryTd className="text-slate-700">{r.deviceHint ?? '—'}</LuxuryTd>
-                      <LuxuryTd className="text-slate-700 max-w-[180px]">
+                      <LuxuryTd className="text-foreground">{r.emailAttempted ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="text-foreground font-mono text-xs">{r.ip ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="text-foreground">{r.deviceHint ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="text-foreground max-w-[180px]">
                         {r.userAgent ? (
                           <span
                             title={r.userAgent}
@@ -304,7 +304,7 @@ export function LoginAuditClient() {
                           '—'
                         )}
                       </LuxuryTd>
-                      <LuxuryTd className="text-slate-600 text-xs">{r.reason ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="text-muted text-xs">{r.reason ?? '—'}</LuxuryTd>
                     </tr>
                   ))
                 )}
@@ -312,12 +312,12 @@ export function LoginAuditClient() {
             </LuxuryTable>
 
             {totalPages > 1 && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted">
                 <button
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+                  className="rounded border border-border px-2 py-1 disabled:opacity-50"
                 >
                   Previous
                 </button>
@@ -328,7 +328,7 @@ export function LoginAuditClient() {
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded border border-slate-300 px-2 py-1 disabled:opacity-50"
+                  className="rounded border border-border px-2 py-1 disabled:opacity-50"
                 >
                   Next
                 </button>

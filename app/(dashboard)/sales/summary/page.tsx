@@ -5,7 +5,7 @@ import { SalesSummaryClient } from './SalesSummaryClient';
 export default async function SalesSummaryPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  if (!['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role)) redirect('/');
+  if (!['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'].includes(user.role)) redirect('/');
 
   return (
     <div className="min-h-screen bg-background p-4 pb-nav md:p-6">

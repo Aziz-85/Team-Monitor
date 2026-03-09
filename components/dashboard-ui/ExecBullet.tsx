@@ -29,13 +29,13 @@ export function ExecBullet({
       <div className="absolute inset-0 flex w-full">
         {thresholds != null && watchPct > 0 && (
           <div
-            className="h-full bg-slate-100"
+            className="h-full bg-surface-subtle"
             style={{ width: `${watchPct}%`, minWidth: watchPct > 0 ? 2 : 0 }}
           />
         )}
         {thresholds != null && goodPct > watchPct && (
           <div
-            className="h-full bg-slate-50"
+            className="h-full bg-surface-subtle"
             style={{
               width: `${goodPct - watchPct}%`,
               minWidth: goodPct > watchPct ? 2 : 0,
@@ -43,7 +43,7 @@ export function ExecBullet({
           />
         )}
         <div
-          className="h-full flex-1 bg-slate-200"
+          className="h-full flex-1 bg-surface-subtle"
           style={{ minWidth: 4 }}
         />
       </div>
@@ -53,7 +53,7 @@ export function ExecBullet({
       />
       {target > 0 && target <= max && (
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-slate-900"
+          className="absolute top-0 bottom-0 w-0.5 bg-foreground"
           style={{ left: `${targetPct}%`, marginLeft: -1 }}
           title={`Target: ${target}`}
         />

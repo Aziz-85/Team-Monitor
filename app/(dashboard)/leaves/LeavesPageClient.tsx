@@ -194,7 +194,7 @@ export function LeavesPageClient() {
           <select
             value={filterEmpId}
             onChange={(e) => setFilterEmpId(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           >
             <option value="">{t('leaves.employee')} (all)</option>
             {employees.map((e) => (
@@ -208,19 +208,19 @@ export function LeavesPageClient() {
             placeholder={t('common.from')}
             value={filterFrom}
             onChange={(e) => setFilterFrom(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
           <input
             type="date"
             placeholder={t('common.to')}
             value={filterTo}
             onChange={(e) => setFilterTo(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           />
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-2 text-base"
+            className="rounded border border-border px-3 py-2 text-base"
           >
             <option value="">{t('leaves.type')} (all)</option>
             {LEAVE_TYPES.map((type) => (
@@ -230,7 +230,7 @@ export function LeavesPageClient() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="rounded bg-sky-600 px-4 py-2 text-base font-medium text-white hover:bg-sky-700"
+            className="rounded bg-accent px-4 py-2 text-base font-medium text-white hover:bg-accent/90"
           >
             {t('leaves.addLeave')}
           </button>
@@ -259,7 +259,7 @@ export function LeavesPageClient() {
                   <button
                     type="button"
                     onClick={() => setEditLeave(row)}
-                    className="me-2 text-sky-600 hover:underline"
+                    className="me-2 text-accent hover:underline"
                   >
                     {t('common.edit')}
                   </button>
@@ -280,7 +280,7 @@ export function LeavesPageClient() {
       {addOpen && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setAddOpen(false)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('leaves.addLeave')}</h3>
             <form onSubmit={handleAdd} className="space-y-3">
               <div>
@@ -294,7 +294,7 @@ export function LeavesPageClient() {
                       setOverlapWarning(overlap ? t('leaves.overlapWarning') : '');
                     } else setOverlapWarning('');
                   }}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 >
                   <option value="">—</option>
@@ -308,7 +308,7 @@ export function LeavesPageClient() {
                 <select
                   value={addForm.type}
                   onChange={(e) => setAddForm((f) => ({ ...f, type: e.target.value as LeaveTypeValue }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   {LEAVE_TYPES.map((type) => (
                     <option key={type} value={type}>{leaveTypeLabel(type)}</option>
@@ -327,7 +327,7 @@ export function LeavesPageClient() {
                       setOverlapWarning(overlap ? t('leaves.overlapWarning') : '');
                     }
                   }}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -343,7 +343,7 @@ export function LeavesPageClient() {
                       setOverlapWarning(overlap ? t('leaves.overlapWarning') : '');
                     }
                   }}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -353,16 +353,16 @@ export function LeavesPageClient() {
                   type="text"
                   value={addForm.notes}
                   onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               {overlapWarning && <p className="text-sm text-amber-700">{overlapWarning}</p>}
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setAddOpen(false)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setAddOpen(false)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>
@@ -374,7 +374,7 @@ export function LeavesPageClient() {
       {editLeave && (
         <>
           <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setEditLeave(null)} aria-hidden />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-6 shadow-lg">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">{t('leaves.editLeave')}</h3>
             <form
               onSubmit={handleEdit}
@@ -382,7 +382,7 @@ export function LeavesPageClient() {
             >
               <div>
                 <label className="block text-sm font-medium">{t('leaves.employee')}</label>
-                <p className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-base">{editLeave.employee.name}</p>
+                <p className="rounded border border-border bg-surface-subtle px-3 py-2 text-base">{editLeave.employee.name}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium">{t('leaves.type')}</label>
@@ -390,7 +390,7 @@ export function LeavesPageClient() {
                   value={editLeave.type}
                   onChange={(e) => setEditLeave((l) => l ? { ...l, type: e.target.value } : null)}
                   name="type"
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 >
                   {LEAVE_TYPES.map((type) => (
                     <option key={type} value={type}>{leaveTypeLabel(type)}</option>
@@ -403,7 +403,7 @@ export function LeavesPageClient() {
                   type="date"
                   name="startDate"
                   defaultValue={editLeave.startDate.slice(0, 10)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -413,7 +413,7 @@ export function LeavesPageClient() {
                   type="date"
                   name="endDate"
                   defaultValue={editLeave.endDate.slice(0, 10)}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                   required
                 />
               </div>
@@ -423,15 +423,15 @@ export function LeavesPageClient() {
                   type="text"
                   name="notes"
                   defaultValue={editLeave.notes ?? ''}
-                  className="w-full rounded border border-slate-300 px-3 py-2 text-base"
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-2">
-                <button type="submit" disabled={loading} className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700">
+                <button type="submit" disabled={loading} className="rounded bg-accent px-4 py-2 text-white hover:bg-accent/90">
                   {t('common.save')}
                 </button>
-                <button type="button" onClick={() => setEditLeave(null)} className="rounded border border-slate-300 px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setEditLeave(null)} className="rounded border border-border px-4 py-2 hover:bg-surface-subtle">
                   {t('common.cancel')}
                 </button>
               </div>

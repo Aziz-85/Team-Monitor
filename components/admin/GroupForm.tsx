@@ -44,22 +44,22 @@ export function GroupForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{nameLabel}</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">{nameLabel}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
           required
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Code (optional)</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">Code (optional)</label>
         <input
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -68,12 +68,12 @@ export function GroupForm({
           id="group-active"
           checked={isActive}
           onChange={(e) => setIsActive(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300"
+          className="h-4 w-4 rounded border-border"
         />
-        <label htmlFor="group-active" className="text-sm text-slate-700">Active</label>
+        <label htmlFor="group-active" className="text-sm text-foreground">Active</label>
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground">
           Cancel
         </button>
         <button type="submit" disabled={saving} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700 disabled:opacity-50">

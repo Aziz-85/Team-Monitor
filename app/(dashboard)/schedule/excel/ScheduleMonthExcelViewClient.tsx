@@ -46,23 +46,23 @@ export function ScheduleMonthExcelViewClient({
   formatDDMM: (d: string) => string;
   t: (k: string) => string;
 }) {
-  const cellBase = 'border border-slate-200 px-2 py-1 text-center text-sm';
-  const headerCell = 'border border-slate-200 bg-slate-300 px-2 py-1 text-center text-sm font-semibold text-slate-800';
-  const headerDayEnd = `${headerCell} border-r-2 border-slate-400`;
+  const cellBase = 'border border-border px-2 py-1 text-center text-sm';
+  const headerCell = 'border border-border bg-surface-subtle px-2 py-1 text-center text-sm font-semibold text-foreground';
+  const headerDayEnd = `${headerCell} border-r-2 border-border`;
   const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
   const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300`;
-  const headerRashid = `${headerCell} border-l-2 border-slate-400`;
-  const headerAm = `${headerCell} border-l-2 border-slate-400`;
-  const headerPm = `${headerCell} border-l-2 border-slate-400`;
+  const headerRashid = `${headerCell} border-l-2 border-border`;
+  const headerAm = `${headerCell} border-l-2 border-border`;
+  const headerPm = `${headerCell} border-l-2 border-border`;
   const morningCell = `${cellBase} bg-blue-50 text-blue-900`;
   const morningFirst = `${morningCell} border-l-2 border-blue-300`;
   const morningLast = `${morningCell} border-r-2 border-blue-300`;
   const eveningCell = `${cellBase} bg-amber-50 text-amber-900`;
   const eveningFirst = `${eveningCell} border-l-2 border-amber-300`;
   const eveningLast = `${eveningCell} border-r-2 border-amber-300`;
-  const rashidCell = `${cellBase} bg-slate-50 text-slate-700 border-l-2 border-slate-400`;
-  const amCountCell = `${cellBase} bg-blue-100 font-semibold border-l-2 border-slate-400`;
-  const pmCountCell = `${cellBase} bg-amber-100 font-semibold border-l-2 border-slate-400`;
+  const rashidCell = `${cellBase} bg-surface-subtle text-foreground border-l-2 border-border`;
+  const amCountCell = `${cellBase} bg-blue-100 font-semibold border-l-2 border-border`;
+  const pmCountCell = `${cellBase} bg-amber-100 font-semibold border-l-2 border-border`;
 
   const rowsByDate = new Map(dayRows.map((r) => [r.date, r]));
 
@@ -89,7 +89,7 @@ export function ScheduleMonthExcelViewClient({
         const end = weekDates[6];
         return (
           <div key={start}>
-            <div className="mb-2 mt-4 flex items-center justify-between text-sm font-semibold text-slate-700">
+            <div className="mb-2 mt-4 flex items-center justify-between text-sm font-semibold text-foreground">
               <span>
                 {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
                   .replace('{start}', formatDDMM(start))
@@ -131,12 +131,12 @@ export function ScheduleMonthExcelViewClient({
                   const rashidFirst = row?.rashidCoverage[0];
                   const amCount = row?.amCount ?? null;
                   const pmCount = row?.pmCount ?? null;
-                  const mutedClass = inMonth ? '' : 'bg-slate-50 text-slate-400';
+                  const mutedClass = inMonth ? '' : 'bg-surface-subtle text-muted';
 
                   return (
                     <tr key={dateStr} className={mutedClass}>
                       <td className={cellBase}>{inMonth ? formatDDMM(dateStr) : ''}</td>
-                      <td className={`${cellBase} border-r-2 border-slate-400`} dir="auto">
+                      <td className={`${cellBase} border-r-2 border-border`} dir="auto">
                         {row?.dowLabel ?? ''}
                       </td>
                       {Array.from({ length: MORNING_SLOTS }, (_, i) => (

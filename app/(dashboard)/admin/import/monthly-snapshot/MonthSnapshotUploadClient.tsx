@@ -144,21 +144,21 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
 
   return (
     <div className="min-w-0 space-y-6 p-4 md:p-6">
-      <div className="rounded-lg border border-slate-200 bg-white p-6">
-        <h1 className="text-lg font-semibold text-slate-900">Monthly Snapshot Import</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <div className="rounded-lg border border-border bg-surface p-6">
+        <h1 className="text-lg font-semibold text-foreground">Monthly Snapshot Import</h1>
+        <p className="mt-1 text-sm text-muted">
           Uploads Excel snapshot to drive Executive analytics (Demand Engine, Drivers, Staff Intelligence).
         </p>
 
         <div className="mt-6 grid min-w-0 grid-cols-12 gap-4">
           <div className="col-span-12 min-w-0 md:col-span-4">
-            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <label className="block text-[10px] font-medium uppercase tracking-wider text-muted">
               Branch
             </label>
             <select
               value={branchCode}
               onChange={(e) => setBranchCode(e.target.value)}
-              className="mt-1 w-full min-w-0 rounded border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"
+              className="mt-1 w-full min-w-0 rounded border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
               dir="ltr"
             >
               <option value="">Select</option>
@@ -170,14 +170,14 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
             </select>
           </div>
           <div className="col-span-12 min-w-0 md:col-span-3">
-            <label className="block text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <label className="block text-[10px] font-medium uppercase tracking-wider text-muted">
               Month
             </label>
             <input
               type="month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="mt-1 w-full min-w-0 rounded border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"
+              className="mt-1 w-full min-w-0 rounded border border-border bg-surface px-2 py-1.5 text-sm text-foreground"
               dir="ltr"
             />
           </div>
@@ -188,11 +188,11 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
             type="button"
             onClick={downloadTemplate}
             disabled={loading}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
           >
             {loading ? 'Downloading…' : 'Download Template'}
           </button>
-          <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle">
             <input
               type="file"
               accept=".xlsx"
@@ -201,25 +201,25 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
             />
             {file ? file.name : 'Choose .xlsx'}
           </label>
-          <span className="min-w-0 text-[11px] text-slate-500">XLSX only (macros not allowed).</span>
+          <span className="min-w-0 text-[11px] text-muted">XLSX only (macros not allowed).</span>
           <button
             type="button"
             onClick={upload}
             disabled={uploading || !file || !branchCode || !/^\d{4}-\d{2}$/.test(month)}
-            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
           >
             {uploading ? 'Uploading…' : 'Upload & Validate'}
           </button>
         </div>
 
         <div className="mt-6 min-w-0 space-y-1">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Status</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Status</p>
           {status ? (
             <>
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-foreground">
                 <span className="font-medium">{status.exists ? 'Present' : 'Missing'}</span>
                 {status.path && (
-                  <span className="ms-2 text-slate-500" dir="ltr" title={status.path}>
+                  <span className="ms-2 text-muted" dir="ltr" title={status.path}>
                     <span className="inline-block max-w-[180px] truncate align-bottom" dir="ltr">
                       ({status.path})
                     </span>
@@ -227,23 +227,23 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
                 )}
               </p>
               {status.uploadedAtIso && (
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-muted">
                   Uploaded at: {new Date(status.uploadedAtIso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                 </p>
               )}
               {status.lastBackupName && (
-                <p className="text-[11px] text-slate-600">
+                <p className="text-[11px] text-muted">
                   Last backup: <span className="max-w-[160px] truncate inline-block align-bottom" title={status.lastBackupName}>{status.lastBackupName}</span>
                 </p>
               )}
             </>
           ) : (
-            <p className="mt-1 text-sm text-slate-500">Select branch and month to check.</p>
+            <p className="mt-1 text-sm text-muted">Select branch and month to check.</p>
           )}
         </div>
 
         {lastUploadResult && (lastUploadResult.backedUp || lastUploadResult.uploadedAtIso) && (
-          <div className="mt-2 min-w-0 rounded border border-slate-100 bg-slate-50/50 p-2 text-[11px] text-slate-600">
+          <div className="mt-2 min-w-0 rounded border border-border bg-surface-subtle/50 p-2 text-[11px] text-muted">
             {lastUploadResult.uploadedAtIso && (
               <p>Saved at: {new Date(lastUploadResult.uploadedAtIso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</p>
             )}
@@ -256,11 +256,11 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
         )}
 
         {preview && (
-          <div className="mt-4 min-w-0 rounded border border-slate-100 bg-slate-50/50 p-3">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+          <div className="mt-4 min-w-0 rounded border border-border bg-surface-subtle/50 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
               Last upload preview (SAR whole numbers)
             </p>
-            <p className="mt-1 text-sm text-slate-700">
+            <p className="mt-1 text-sm text-foreground">
               MTD Sales: {preview.mtdSalesSar.toLocaleString()} SAR · Invoices: {preview.mtdInvoices.toLocaleString()} ·
               Pieces: {preview.mtdPieces.toLocaleString()} · Staff: {preview.staffCount}
             </p>
@@ -269,24 +269,24 @@ export function MonthSnapshotUploadClient({ defaultBranchCode }: { defaultBranch
 
         {errors.length > 0 && (
           <div className="mt-4 min-w-0 overflow-hidden">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
               Validation errors
             </p>
             <div className="mt-1 overflow-x-auto">
               <table className="w-full min-w-0 border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="py-2 px-2 text-start font-medium text-slate-600">Code</th>
-                    <th className="py-2 px-2 text-start font-medium text-slate-600">Message</th>
-                    <th className="py-2 px-2 text-start font-medium text-slate-600">Location</th>
+                  <tr className="border-b border-border bg-surface-subtle">
+                    <th className="py-2 px-2 text-start font-medium text-muted">Code</th>
+                    <th className="py-2 px-2 text-start font-medium text-muted">Message</th>
+                    <th className="py-2 px-2 text-start font-medium text-muted">Location</th>
                   </tr>
                 </thead>
                 <tbody>
                   {errors.map((e, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="py-2 px-2 text-slate-700">{e.code}</td>
-                      <td className="py-2 px-2 text-slate-700">{e.message}</td>
-                      <td className="py-2 px-2 text-slate-500">
+                    <tr key={i} className="border-b border-border">
+                      <td className="py-2 px-2 text-foreground">{e.code}</td>
+                      <td className="py-2 px-2 text-foreground">{e.message}</td>
+                      <td className="py-2 px-2 text-muted">
                         {[e.sheet, e.row != null ? `Row ${e.row}` : null, e.column]
                           .filter(Boolean)
                           .join(' · ') || '—'}

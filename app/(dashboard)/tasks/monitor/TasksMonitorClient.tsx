@@ -135,7 +135,7 @@ export function TasksMonitorClient() {
           <button
             type="button"
             onClick={load}
-            className="mt-2 rounded bg-slate-800 px-3 py-1.5 text-sm text-white"
+            className="mt-2 rounded bg-accent px-3 py-1.5 text-sm text-white"
           >
             Retry
           </button>
@@ -146,19 +146,19 @@ export function TasksMonitorClient() {
 
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-xl font-semibold text-slate-900">{t('monitorTitle')}</h1>
+      <h1 className="text-xl font-semibold text-foreground">{t('monitorTitle')}</h1>
 
       {/* Filters */}
-      <OpsCard title={t('filters')} className="rounded-2xl border border-slate-200 shadow-sm">
+      <OpsCard title={t('filters')} className="rounded-2xl border border-border shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('dateRange')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('dateRange')}</label>
             <select
               value={filters.dateRange}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, dateRange: e.target.value as DateRange }))
               }
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             >
               <option value="today">{t('today')}</option>
               <option value="week">{t('thisWeek')}</option>
@@ -169,31 +169,31 @@ export function TasksMonitorClient() {
           {filters.dateRange === 'custom' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Start</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Start</label>
                 <input
                   type="date"
                   value={filters.customStart}
                   onChange={(e) => setFilters((prev) => ({ ...prev, customStart: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">End</label>
+                <label className="mb-1 block text-xs font-medium text-muted">End</label>
                 <input
                   type="date"
                   value={filters.customEnd}
                   onChange={(e) => setFilters((prev) => ({ ...prev, customEnd: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="w-full rounded border border-border px-2 py-1.5 text-sm"
                 />
               </div>
             </>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('status')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('status')}</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             >
               <option value="all">{t('all')}</option>
               <option value="completed">{t('completed')}</option>
@@ -202,11 +202,11 @@ export function TasksMonitorClient() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('assignee')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('assignee')}</label>
             <select
               value={filters.assignee}
               onChange={(e) => setFilters((prev) => ({ ...prev, assignee: e.target.value }))}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             >
               <option value="all">{t('all')}</option>
               {data?.employees?.map((emp) => (
@@ -217,11 +217,11 @@ export function TasksMonitorClient() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('type')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('type')}</label>
             <select
               value={filters.type}
               onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             >
               <option value="all">{t('all')}</option>
               <option value="DAILY">DAILY</option>
@@ -230,13 +230,13 @@ export function TasksMonitorClient() {
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('search')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('search')}</label>
             <input
               type="text"
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
               placeholder={t('search')}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             />
           </div>
           <div className="flex items-end">
@@ -245,19 +245,19 @@ export function TasksMonitorClient() {
                 type="checkbox"
                 checked={filters.onlySuspicious}
                 onChange={(e) => setFilters((prev) => ({ ...prev, onlySuspicious: e.target.checked }))}
-                className="rounded border-slate-300"
+                className="rounded border-border"
               />
               <span className="text-sm">{t('onlySuspicious')}</span>
             </label>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t('startPeriod')}</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t('startPeriod')}</label>
             <input
               type="text"
               value={filters.startPeriodKey}
               onChange={(e) => setFilters((prev) => ({ ...prev, startPeriodKey: e.target.value }))}
               placeholder={t('startPeriodPlaceholder')}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded border border-border px-2 py-1.5 text-sm"
             />
           </div>
         </div>
@@ -266,7 +266,7 @@ export function TasksMonitorClient() {
             type="button"
             onClick={load}
             disabled={loading}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+            className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
           >
             {loading ? '...' : t('search')}
           </button>
@@ -274,7 +274,7 @@ export function TasksMonitorClient() {
       </OpsCard>
 
       {loading && !data && (
-        <div className="py-8 text-center text-slate-500">Loading...</div>
+        <div className="py-8 text-center text-muted">Loading...</div>
       )}
 
       {data && (
@@ -282,25 +282,25 @@ export function TasksMonitorClient() {
           {/* Summary */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <OpsCard className="rounded-2xl border border-emerald-200 bg-emerald-50/50">
-              <p className="text-xs font-medium uppercase text-slate-500">{t('summaryCompleted')}</p>
-              <p className="text-2xl font-bold text-slate-900">{data.summary.completed}</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('summaryCompleted')}</p>
+              <p className="text-2xl font-bold text-foreground">{data.summary.completed}</p>
             </OpsCard>
             <OpsCard className="rounded-2xl border border-amber-200 bg-amber-50/50">
-              <p className="text-xs font-medium uppercase text-slate-500">{t('summaryPending')}</p>
-              <p className="text-2xl font-bold text-slate-900">{data.summary.pending}</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('summaryPending')}</p>
+              <p className="text-2xl font-bold text-foreground">{data.summary.pending}</p>
             </OpsCard>
             <OpsCard className="rounded-2xl border border-red-200 bg-red-50/50">
-              <p className="text-xs font-medium uppercase text-slate-500">{t('summaryOverdue')}</p>
-              <p className="text-2xl font-bold text-slate-900">{data.summary.overdue}</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('summaryOverdue')}</p>
+              <p className="text-2xl font-bold text-foreground">{data.summary.overdue}</p>
             </OpsCard>
             <OpsCard className="rounded-2xl border border-violet-200 bg-violet-50/50">
-              <p className="text-xs font-medium uppercase text-slate-500">{t('summarySuspicious')}</p>
-              <p className="text-2xl font-bold text-slate-900">{data.summary.suspicious}</p>
+              <p className="text-xs font-medium uppercase text-muted">{t('summarySuspicious')}</p>
+              <p className="text-2xl font-bold text-foreground">{data.summary.suspicious}</p>
             </OpsCard>
           </div>
 
           {/* Completed tasks */}
-          <OpsCard title={t('completedTableTitle')} className="rounded-2xl border border-slate-200 shadow-sm">
+          <OpsCard title={t('completedTableTitle')} className="rounded-2xl border border-border shadow-sm">
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
@@ -315,7 +315,7 @@ export function TasksMonitorClient() {
               <LuxuryTableBody>
                 {data.completedTasks.length === 0 ? (
                   <tr>
-                    <LuxuryTd colSpan={6} className="text-center text-slate-500">
+                    <LuxuryTd colSpan={6} className="text-center text-muted">
                       —
                     </LuxuryTd>
                   </tr>
@@ -335,7 +335,7 @@ export function TasksMonitorClient() {
                                 ? 'text-red-600'
                                 : row.completionDelay.kind === 'early'
                                   ? 'text-emerald-600'
-                                  : 'text-slate-600'
+                                  : 'text-muted'
                             }
                           >
                             {row.completionDelay.text}
@@ -352,7 +352,7 @@ export function TasksMonitorClient() {
           </OpsCard>
 
           {/* Pending / Overdue tasks */}
-          <OpsCard title={t('pendingTableTitle')} className="rounded-2xl border border-slate-200 shadow-sm">
+          <OpsCard title={t('pendingTableTitle')} className="rounded-2xl border border-border shadow-sm">
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
@@ -366,7 +366,7 @@ export function TasksMonitorClient() {
               <LuxuryTableBody>
                 {data.pendingTasks.length === 0 ? (
                   <tr>
-                    <LuxuryTd colSpan={5} className="text-center text-slate-500">
+                    <LuxuryTd colSpan={5} className="text-center text-muted">
                       —
                     </LuxuryTd>
                   </tr>
@@ -397,7 +397,7 @@ export function TasksMonitorClient() {
           </OpsCard>
 
           {/* Employee performance */}
-          <OpsCard title={t('employeePerformanceTitle')} className="rounded-2xl border border-slate-200 shadow-sm">
+          <OpsCard title={t('employeePerformanceTitle')} className="rounded-2xl border border-border shadow-sm">
             <LuxuryTable>
               <LuxuryTableHead>
                 <tr>
@@ -414,7 +414,7 @@ export function TasksMonitorClient() {
               <LuxuryTableBody>
                 {data.employeeStats.length === 0 ? (
                   <tr>
-                    <LuxuryTd colSpan={8} className="text-center text-slate-500">
+                    <LuxuryTd colSpan={8} className="text-center text-muted">
                       —
                     </LuxuryTd>
                   </tr>
@@ -443,29 +443,29 @@ export function TasksMonitorClient() {
           {/* Suspicious activity */}
           {data.suspiciousBursts.length > 0 && (
             <OpsCard title={t('suspiciousTitle')} className="rounded-2xl border border-violet-200 shadow-sm">
-              <p className="mb-3 text-sm text-slate-600">{t('suspiciousHint')}</p>
+              <p className="mb-3 text-sm text-muted">{t('suspiciousHint')}</p>
               <div className="space-y-4">
                 {data.suspiciousBursts.map((burst) => (
                   <div
                     key={burst.empId}
                     className="rounded-xl border border-violet-200 bg-violet-50/50 p-3"
                   >
-                    <p className="font-medium text-slate-900">{burst.empName}</p>
-                    <p className="text-xs text-slate-600">
+                    <p className="font-medium text-foreground">{burst.empName}</p>
+                    <p className="text-xs text-muted">
                       {t('burstSize')}: {burst.biggestBurstSize} · {t('burstWindow')}: {burst.burstCount}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted">
                       {t('burstRange')}: {formatDate(burst.burstStart)} → {formatDate(burst.burstEnd)}
                     </p>
                     {burst.tasks?.length > 0 && (
-                      <ul className="mt-2 list-inside list-disc text-sm text-slate-700">
+                      <ul className="mt-2 list-inside list-disc text-sm text-foreground">
                         {burst.tasks.slice(0, 8).map((t, i) => (
                           <li key={i}>
                             {t.title} — {formatDate(t.completedAt)}
                           </li>
                         ))}
                         {burst.tasks.length > 8 && (
-                          <li className="text-slate-500">+{burst.tasks.length - 8} more</li>
+                          <li className="text-muted">+{burst.tasks.length - 8} more</li>
                         )}
                       </ul>
                     )}

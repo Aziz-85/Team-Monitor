@@ -54,16 +54,22 @@ export async function getSalesScope(
     return { scope: null, res: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
   const role = user.role as Role;
+  const roleStr = role as string;
+  const isAreaManager = roleStr === 'AREA_MANAGER';
   let activeBoutiqueId: string;
+  let allowedBoutiqueIdsForRole: string[] = [];
   if (role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER') {
     const empBoutiqueId = await getEmployeeBoutiqueIdForUser(user.id);
     activeBoutiqueId = empBoutiqueId ?? (await getOperationalScope(options.request ?? undefined))?.boutiqueId ?? '';
   } else {
     const op = await getOperationalScope(options.request ?? undefined);
     activeBoutiqueId = op?.boutiqueId ?? '';
+    if (isAreaManager) {
+      allowedBoutiqueIdsForRole = op?.boutiqueIds ?? (activeBoutiqueId ? [activeBoutiqueId] : []);
+    } else {
+      allowedBoutiqueIdsForRole = activeBoutiqueId ? [activeBoutiqueId] : [];
+    }
   }
-
-  const roleStr = role as string;
   // Non-ADMIN/SUPER_ADMIN must have operational boutique
   if (roleStr !== 'ADMIN' && roleStr !== 'SUPER_ADMIN' && !activeBoutiqueId) {
     return {
@@ -87,6 +93,20 @@ export async function getSalesScope(
         ? [activeBoutiqueId]
         : [];
     effectiveBoutiqueId = requestBoutiqueId || activeBoutiqueId;
+  } else if (isAreaManager) {
+    allowedBoutiqueIds = allowedBoutiqueIdsForRole;
+    effectiveBoutiqueId = requestBoutiqueId && allowedBoutiqueIds.includes(requestBoutiqueId)
+      ? requestBoutiqueId
+      : activeBoutiqueId;
+    if (requestBoutiqueId && !allowedBoutiqueIds.includes(requestBoutiqueId)) {
+      return {
+        scope: null,
+        res: NextResponse.json(
+          { error: 'Boutique must be in your assigned scope' },
+          { status: 403 }
+        ),
+      };
+    }
   } else {
     allowedBoutiqueIds = [activeBoutiqueId];
     effectiveBoutiqueId = activeBoutiqueId;
@@ -102,11 +122,18 @@ export async function getSalesScope(
   }
 
   const canImport =
-    (roleStr === 'MANAGER' && !!activeBoutiqueId) || roleStr === 'ADMIN' || roleStr === 'SUPER_ADMIN';
+    (roleStr === 'MANAGER' && !!activeBoutiqueId) ||
+    (isAreaManager && allowedBoutiqueIds.length > 0) ||
+    roleStr === 'ADMIN' ||
+    roleStr === 'SUPER_ADMIN';
   const canResolveIssues =
-    (roleStr === 'MANAGER' && !!activeBoutiqueId) || roleStr === 'ADMIN' || roleStr === 'SUPER_ADMIN';
+    (roleStr === 'MANAGER' && !!activeBoutiqueId) ||
+    (isAreaManager && allowedBoutiqueIds.length > 0) ||
+    roleStr === 'ADMIN' ||
+    roleStr === 'SUPER_ADMIN';
   const canAddManualReturn =
     ((roleStr === 'MANAGER' || roleStr === 'ASSISTANT_MANAGER') && !!activeBoutiqueId) ||
+    (isAreaManager && allowedBoutiqueIds.length > 0) ||
     roleStr === 'ADMIN' ||
     roleStr === 'SUPER_ADMIN';
   const employeeOnly = roleStr === 'EMPLOYEE';

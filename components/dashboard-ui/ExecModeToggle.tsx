@@ -15,7 +15,7 @@ export function ExecModeToggle({
 }: ExecModeToggleProps) {
   return (
     <div
-      className="flex min-w-0 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm"
+      className="flex min-w-0 rounded-lg border border-border bg-surface p-0.5 shadow-sm"
       role="group"
       aria-label={ariaLabel}
     >
@@ -24,8 +24,8 @@ export function ExecModeToggle({
         onClick={() => onChange('Operator')}
         className={`min-w-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
           value === 'Operator'
-            ? 'bg-slate-100 text-slate-900'
-            : 'text-slate-600 hover:bg-slate-50'
+            ? 'bg-surface-subtle text-foreground'
+            : 'text-muted hover:bg-surface-subtle'
         }`}
       >
         Operator
@@ -35,8 +35,8 @@ export function ExecModeToggle({
         onClick={() => onChange('Investor')}
         className={`min-w-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
           value === 'Investor'
-            ? 'bg-slate-100 text-slate-900'
-            : 'text-slate-600 hover:bg-slate-50'
+            ? 'bg-surface-subtle text-foreground'
+            : 'text-muted hover:bg-surface-subtle'
         }`}
       >
         Investor

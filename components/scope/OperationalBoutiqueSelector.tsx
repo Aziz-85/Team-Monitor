@@ -27,7 +27,7 @@ export function OperationalBoutiqueSelector({ role }: { role: Role }) {
 
   if (!data) {
     return (
-      <div className="min-w-0 truncate rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500">
+      <div className="min-w-0 truncate rounded border border-border bg-surface-subtle px-2 py-1 text-xs text-muted">
         —
       </div>
     );
@@ -37,7 +37,7 @@ export function OperationalBoutiqueSelector({ role }: { role: Role }) {
 
   return (
     <div
-      className="min-w-0 truncate rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
+      className="min-w-0 truncate rounded border border-border bg-surface px-2 py-1 text-xs text-foreground"
       title={label}
     >
       <span className="truncate">{label}</span>

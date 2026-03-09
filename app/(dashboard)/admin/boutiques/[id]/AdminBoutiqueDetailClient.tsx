@@ -81,8 +81,8 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
   if (!boutique) {
     return (
       <div className="p-4 md:p-6">
-        <p className="text-slate-600">{t('admin.boutiques.notFound')}</p>
-        <Link href="/admin/boutiques" className="text-sky-600 hover:underline">
+        <p className="text-muted">{t('admin.boutiques.notFound')}</p>
+        <Link href="/admin/boutiques" className="text-accent hover:underline">
           {t('admin.boutiques.backToList')}
         </Link>
       </div>
@@ -92,23 +92,23 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
   return (
     <div className="min-w-0 p-4 md:p-6">
       <div className="mb-4">
-        <Link href="/admin/boutiques" className="text-sm text-sky-600 hover:underline">
+        <Link href="/admin/boutiques" className="text-sm text-accent hover:underline">
           ← {t('admin.boutiques.backToList')}
         </Link>
       </div>
       <OpsCard title={`${boutique.name} (${boutique.code})`}>
-        <div className="mb-3 flex flex-wrap gap-2 border-b border-slate-200">
+        <div className="mb-3 flex flex-wrap gap-2 border-b border-border">
           <button
             type="button"
             onClick={() => setTab('info')}
-            className={`px-3 py-2 text-sm ${tab === 'info' ? 'border-b-2 border-sky-500 font-medium text-sky-700' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3 py-2 text-sm ${tab === 'info' ? 'border-b-2 border-accent font-medium text-accent' : 'text-muted hover:text-foreground'}`}
           >
             {t('admin.boutiques.info')}
           </button>
           <button
             type="button"
             onClick={() => setTab('memberships')}
-            className={`px-3 py-2 text-sm ${tab === 'memberships' ? 'border-b-2 border-sky-500 font-medium text-sky-700' : 'text-slate-600 hover:text-slate-900'}`}
+            className={`px-3 py-2 text-sm ${tab === 'memberships' ? 'border-b-2 border-accent font-medium text-accent' : 'text-muted hover:text-foreground'}`}
           >
             {t('admin.boutiques.memberships')} ({boutique.membersCount})
           </button>
@@ -119,12 +119,12 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
             {editForm ? (
               <>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">{t('common.name')}</label>
+                  <label className="mb-1 block text-sm font-medium text-foreground">{t('common.name')}</label>
                   <input
                     type="text"
                     value={editForm.name}
                     onChange={(e) => setEditForm((f) => f && { ...f, name: e.target.value })}
-                    className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full max-w-md rounded-lg border border-border px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -138,30 +138,30 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
                   <label htmlFor="detail-active">{t('adminEmp.active')}</label>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={saveEdit} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700">
+                  <button type="button" onClick={saveEdit} className="rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90">
                     {t('common.save')}
                   </button>
-                  <button type="button" onClick={() => setEditForm(null)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+                  <button type="button" onClick={() => setEditForm(null)} className="rounded-lg border border-border px-3 py-2 text-sm text-foreground">
                     {t('common.cancel')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <p><span className="font-medium text-slate-700">{t('common.name')}:</span> {boutique.name}</p>
-                <p><span className="font-medium text-slate-700">Code:</span> {boutique.code}</p>
-                <p><span className="font-medium text-slate-700">{t('admin.boutiques.region')}:</span> {boutique.region ? boutique.region.name : '—'}</p>
-                <p><span className="font-medium text-slate-700">{t('adminEmp.active')}:</span> {boutique.isActive ? t('adminEmp.active') : t('adminEmp.inactive')}</p>
-                <button type="button" onClick={startEdit} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                <p><span className="font-medium text-foreground">{t('common.name')}:</span> {boutique.name}</p>
+                <p><span className="font-medium text-foreground">Code:</span> {boutique.code}</p>
+                <p><span className="font-medium text-foreground">{t('admin.boutiques.region')}:</span> {boutique.region ? boutique.region.name : '—'}</p>
+                <p><span className="font-medium text-foreground">{t('adminEmp.active')}:</span> {boutique.isActive ? t('adminEmp.active') : t('adminEmp.inactive')}</p>
+                <button type="button" onClick={startEdit} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-surface-subtle">
                   {t('common.edit')}
                 </button>
               </>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/admin/targets?boutiqueId=${boutiqueId}`} className="text-sm text-sky-600 hover:underline">
+              <Link href={`/admin/targets?boutiqueId=${boutiqueId}`} className="text-sm text-accent hover:underline">
                 {t('admin.boutiques.targets')}
               </Link>
-              <Link href={`/sales/daily?boutiqueId=${boutiqueId}`} className="text-sm text-sky-600 hover:underline">
+              <Link href={`/sales/daily?boutiqueId=${boutiqueId}`} className="text-sm text-accent hover:underline">
                 {t('admin.boutiques.salesDailyLedger')}
               </Link>
             </div>
@@ -170,8 +170,8 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
 
         {tab === 'memberships' && (
           <>
-            <p className="mb-2 text-sm text-slate-600">
-              <Link href={`/admin/memberships?boutiqueId=${boutiqueId}`} className="text-sky-600 hover:underline">
+            <p className="mb-2 text-sm text-muted">
+              <Link href={`/admin/memberships?boutiqueId=${boutiqueId}`} className="text-accent hover:underline">
                 {t('admin.boutiques.manageMemberships')}
               </Link>
             </p>

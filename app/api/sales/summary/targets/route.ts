@@ -10,7 +10,7 @@ import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import type { Role } from '@prisma/client';
 
-const ALLOWED_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+const ALLOWED_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 const SALES_ENTRY_SOURCES = ['LEDGER', 'IMPORT', 'MANUAL'];
 
 type PeriodRow = {

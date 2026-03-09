@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 
-const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN'];
+const APPROVER_ROLES: Role[] = ['MANAGER', 'ADMIN', 'AREA_MANAGER'];
 
 /**
  * GET /api/approvals

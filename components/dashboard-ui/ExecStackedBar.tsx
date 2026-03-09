@@ -25,7 +25,7 @@ export function ExecStackedBar({
 
   return (
     <div
-      className="overflow-hidden rounded-full bg-slate-200"
+      className="overflow-hidden rounded-full bg-surface-subtle"
       style={{ width, height }}
       aria-hidden
     >
@@ -35,7 +35,7 @@ export function ExecStackedBar({
           style={{ width: `${completedPct}%`, minWidth: completed > 0 ? 2 : 0 }}
         />
         <div
-          className="h-full rounded-r-full bg-slate-300"
+          className="h-full rounded-r-full bg-surface-subtle"
           style={{ width: `${pendingPct}%`, minWidth: pending > 0 ? 2 : 0 }}
         />
       </div>

@@ -109,7 +109,7 @@ export function AdminUsersClient() {
   return (
     <div className="min-w-0 p-4 md:p-6">
       <OpsCard title={t('nav.admin.users')}>
-        <p className="mb-2 text-sm text-slate-600">{t('admin.adminFilterLabel')}</p>
+        <p className="mb-2 text-sm text-muted">{t('admin.adminFilterLabel')}</p>
         <AdminFilterBar filterLabel={t('admin.adminFilterLabel')} onFilterChange={setAdminFilter} t={t} />
         <LuxuryTable>
           <LuxuryTableHead>
@@ -139,13 +139,13 @@ export function AdminUsersClient() {
                       className={`rounded border px-2 py-1 text-sm ${
                         u.canEditSchedule
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-300 bg-slate-50 text-slate-600'
+                          : 'border-border bg-surface-subtle text-muted'
                       }`}
                     >
                       {u.canEditSchedule ? t('admin.revoke') : t('admin.grant')}
                     </button>
                   ) : (
-                    <span className="text-slate-400">—</span>
+                    <span className="text-muted">—</span>
                   )}
                 </LuxuryTd>
                 <LuxuryTd>{u.mustChangePassword ? 'Yes' : 'No'}</LuxuryTd>

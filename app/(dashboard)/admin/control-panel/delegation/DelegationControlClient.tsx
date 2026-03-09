@@ -134,7 +134,7 @@ export function DelegationControlClient({
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="rounded bg-slate-700 px-3 py-1 text-white"
+          className="rounded bg-accent px-3 py-1 text-white"
         >
           Create Delegation
         </button>
@@ -142,10 +142,10 @@ export function DelegationControlClient({
 
       {error && <p className="mt-2 text-red-600">{error}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded-lg border bg-white">
+      <div className="mt-4 overflow-x-auto rounded-lg border bg-surface">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
+            <tr className="border-b bg-surface-subtle">
               <th className="p-2 text-start">Target</th>
               <th className="p-2 text-start">Type</th>
               <th className="p-2 text-start">Role / Flags</th>
@@ -159,7 +159,7 @@ export function DelegationControlClient({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="p-4 text-center text-slate-500">
+                <td colSpan={8} className="p-4 text-center text-muted">
                   Loading…
                 </td>
               </tr>
@@ -185,7 +185,7 @@ export function DelegationControlClient({
                           ? 'text-green-600'
                           : g.status === 'scheduled'
                             ? 'text-amber-600'
-                            : 'text-slate-500'
+                            : 'text-muted'
                       }
                     >
                       {g.status}
@@ -211,7 +211,7 @@ export function DelegationControlClient({
           </tbody>
         </table>
         {!loading && grants.length === 0 && (
-          <p className="p-4 text-slate-500">No grants match the filter.</p>
+          <p className="p-4 text-muted">No grants match the filter.</p>
         )}
       </div>
 
@@ -299,7 +299,7 @@ function CreateDelegationDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border bg-white p-6 shadow-lg">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border bg-surface p-6 shadow-lg">
         <h2 className="mb-4 text-lg font-semibold">Create Delegation</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -393,7 +393,7 @@ function CreateDelegationDrawer({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1 text-white disabled:opacity-50"
             >
               {submitting ? 'Creating…' : 'Create'}
             </button>

@@ -37,18 +37,18 @@ export function DefaultBoutiquePicker({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">{titleLabel}</p>
+      <p className="text-sm text-muted">{titleLabel}</p>
       {current.boutique && (
-        <p className="text-sm font-medium text-slate-900">
+        <p className="text-sm font-medium text-foreground">
           Current: {current.boutique.name} ({current.boutique.code})
         </p>
       )}
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Default boutique</label>
+        <label className="mb-1 block text-sm font-medium text-foreground">Default boutique</label>
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
         >
           <option value="">—</option>
           {boutiques.map((b) => (

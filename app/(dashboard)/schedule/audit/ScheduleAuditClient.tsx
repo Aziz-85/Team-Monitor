@@ -65,7 +65,7 @@ function auditActionColor(action: string, module: string | null): string {
   if (module === 'TEAM') return 'border-l-4 border-amber-400 bg-amber-50/50';
   if (module === 'INVENTORY') return 'border-l-4 border-purple-400 bg-purple-50/50';
   if (module === 'APPROVALS') return 'border-l-4 border-indigo-400 bg-indigo-50/50';
-  return 'border-l-4 border-slate-300 bg-slate-50/50';
+  return 'border-l-4 border-border bg-surface-subtle/50';
 }
 
 function formatBeforeAfterSummary(before: string | null, after: string | null): string {
@@ -144,19 +144,19 @@ export function ScheduleAuditClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-slate-900">
+        <h1 className="mb-4 text-xl font-semibold text-foreground">
           {t('governance.auditTitle')}
         </h1>
 
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-3 text-sm font-semibold text-slate-900">{t('governance.filters') ?? 'Filters'}</p>
+        <div className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <p className="mb-3 text-sm font-semibold text-foreground">{t('governance.filters') ?? 'Filters'}</p>
           <div className="flex flex-wrap gap-3 overflow-x-auto pb-1">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterModule') ?? 'Module'}</span>
+              <span className="text-muted">{t('governance.filterModule') ?? 'Module'}</span>
               <select
                 value={filters.module}
                 onChange={(e) => setFilters((f) => ({ ...f, module: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">{t('common.all') ?? 'All'}</option>
                 <option value="SCHEDULE">Schedule</option>
@@ -167,58 +167,58 @@ export function ScheduleAuditClient() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterWeek') ?? 'Week'}</span>
+              <span className="text-muted">{t('governance.filterWeek') ?? 'Week'}</span>
               <input
                 type="date"
                 value={filters.weekStart}
                 onChange={(e) => setFilters((f) => ({ ...f, weekStart: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.dateFrom') ?? 'From'}</span>
+              <span className="text-muted">{t('governance.dateFrom') ?? 'From'}</span>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.dateTo') ?? 'To'}</span>
+              <span className="text-muted">{t('governance.dateTo') ?? 'To'}</span>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterEmployee') ?? 'Employee (ID)'}</span>
+              <span className="text-muted">{t('governance.filterEmployee') ?? 'Employee (ID)'}</span>
               <input
                 type="text"
                 value={filters.employeeId}
                 onChange={(e) => setFilters((f) => ({ ...f, employeeId: e.target.value.trim() }))}
                 placeholder="empId"
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterActor') ?? 'Actor (user ID)'}</span>
+              <span className="text-muted">{t('governance.filterActor') ?? 'Actor (user ID)'}</span>
               <input
                 type="text"
                 value={filters.actor}
                 onChange={(e) => setFilters((f) => ({ ...f, actor: e.target.value.trim() }))}
                 placeholder="user id"
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-600">{t('governance.filterActionType') ?? 'Action'}</span>
+              <span className="text-muted">{t('governance.filterActionType') ?? 'Action'}</span>
               <select
                 value={filters.actionType}
                 onChange={(e) => setFilters((f) => ({ ...f, actionType: e.target.value }))}
-                className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">{t('common.all') ?? 'All'}</option>
                 {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -232,7 +232,7 @@ export function ScheduleAuditClient() {
               <button
                 type="button"
                 onClick={fetchAudit}
-                className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {t('common.refresh') ?? 'Apply'}
               </button>
@@ -241,67 +241,67 @@ export function ScheduleAuditClient() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-500">{t('common.loading') ?? 'Loading…'}</p>
+          <p className="text-sm text-muted">{t('common.loading') ?? 'Loading…'}</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Time</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Module</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Action</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Actor</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Target</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Summary</th>
-                  <th className="px-3 py-2 text-start text-xs font-semibold text-slate-700 md:text-sm">Reason</th>
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Time</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Module</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Action</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Actor</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Target</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Summary</th>
+                  <th className="px-3 py-2 text-start text-xs font-semibold text-foreground md:text-sm">Reason</th>
                 </tr>
               </thead>
-              <tbody className="bg-white">
+              <tbody className="bg-surface">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-3 text-center text-sm text-slate-600">
+                    <td colSpan={7} className="px-4 py-3 text-center text-sm text-muted">
                       {t('governance.noAuditEntries') ?? 'No audit entries.'}
                     </td>
                   </tr>
                 ) : (
                   items.map((item) => (
-                    <tr key={item.id} className={`border-b border-slate-200 hover:bg-slate-50 ${auditActionColor(item.action, item.module)}`}>
-                      <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                    <tr key={item.id} className={`border-b border-border hover:bg-surface-subtle ${auditActionColor(item.action, item.module)}`}>
+                      <td className="px-3 py-2 text-xs text-muted md:text-sm">
                         {new Date(item.createdAt).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 text-xs font-medium text-slate-700 md:text-sm">
+                      <td className="px-3 py-2 text-xs font-medium text-foreground md:text-sm">
                         {item.module ?? '—'}
                       </td>
-                      <td className="px-3 py-2 text-xs font-medium text-slate-900 md:text-sm">
+                      <td className="px-3 py-2 text-xs font-medium text-foreground md:text-sm">
                         {ACTION_LABELS[item.action] ?? item.action}
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-700 md:text-sm">
+                      <td className="px-3 py-2 text-xs text-foreground md:text-sm">
                         {item.actor ? (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium">
+                          <span className="inline-flex items-center rounded-full border border-border bg-surface-subtle px-2 py-0.5 text-xs font-medium">
                             {item.actor.name} ({getRoleDisplayLabel(item.actor.role as Role, null, t)})
                           </span>
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-700 md:text-sm">
+                      <td className="px-3 py-2 text-xs text-foreground md:text-sm">
                         <div className="space-y-0.5">
                           {item.targetEmployeeName && (
                             <div className="font-medium">{item.targetEmployeeName}</div>
                           )}
                           {item.targetDate && (
-                            <div className="text-slate-500">Date: {item.targetDate}</div>
+                            <div className="text-muted">Date: {item.targetDate}</div>
                           )}
                           {item.weekStart && (
-                            <div className="text-slate-500">Week: {item.weekStart}</div>
+                            <div className="text-muted">Week: {item.weekStart}</div>
                           )}
                           {!item.targetEmployeeName && !item.targetDate && !item.weekStart && '—'}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                      <td className="px-3 py-2 text-xs text-muted md:text-sm">
                         {formatBeforeAfterSummary(item.beforeJson, item.afterJson) || '—'}
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-600 md:text-sm">
+                      <td className="px-3 py-2 text-xs text-muted md:text-sm">
                         {item.reason || '—'}
                       </td>
                     </tr>

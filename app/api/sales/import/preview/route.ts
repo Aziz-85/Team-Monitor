@@ -11,7 +11,7 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { parseMatrixBuffer } from '@/lib/sales/matrixImportParse';
 import { dateKeyUTC } from '@/lib/dates/safeCalendar';
 
-const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
+const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'AREA_MANAGER'] as const;
 
 export async function POST(request: NextRequest) {
   try {

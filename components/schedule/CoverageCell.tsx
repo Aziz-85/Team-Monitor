@@ -30,7 +30,7 @@ export function CoverageCell({ dayGuests, lines: linesProp, className = '', titl
 
   if (lines.length === 0) {
     return (
-      <span className={`${SCHEDULE_UI.guestLine} text-slate-500 ${className}`.trim()} title={title}>
+      <span className={`${SCHEDULE_UI.guestLine} text-muted ${className}`.trim()} title={title}>
         —
       </span>
     );
@@ -45,11 +45,11 @@ export function CoverageCell({ dayGuests, lines: linesProp, className = '', titl
       title={title ?? (lines.length > MAX_COVERAGE_LINES ? lines.join(', ') : undefined)}
     >
       {show.map((line, idx) => (
-        <span key={idx} className={`${SCHEDULE_UI.guestLine} font-medium text-slate-800`}>
+        <span key={idx} className={`${SCHEDULE_UI.guestLine} font-medium text-foreground`}>
           {line}
         </span>
       ))}
-      {extra > 0 && <span className={`${SCHEDULE_UI.guestLine} text-slate-500`}>+{extra}</span>}
+      {extra > 0 && <span className={`${SCHEDULE_UI.guestLine} text-muted`}>+{extra}</span>}
     </div>
   );
 }

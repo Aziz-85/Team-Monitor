@@ -300,18 +300,18 @@ export function SalesMyClient() {
 
       {/* Tabs: My Sales | Boutique Target */}
       {showBoutiqueTab && (
-        <div className="flex gap-2 border-b border-slate-200">
+        <div className="flex gap-2 border-b border-border">
           <button
             type="button"
             onClick={() => setActiveTab('my')}
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === 'my' ? 'border-slate-700 text-slate-900' : 'border-transparent text-slate-500'}`}
+            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === 'my' ? 'border-accent text-foreground' : 'border-transparent text-muted'}`}
           >
             My Sales
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('boutique')}
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === 'boutique' ? 'border-slate-700 text-slate-900' : 'border-transparent text-slate-500'}`}
+            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === 'boutique' ? 'border-accent text-foreground' : 'border-transparent text-muted'}`}
           >
             Boutique Target
           </button>
@@ -344,15 +344,15 @@ export function SalesMyClient() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="rounded bg-slate-700 px-3 py-1 text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1 text-white disabled:opacity-50"
             >
               {loading ? 'Loading…' : 'Apply'}
             </button>
           </div>
           {error && <p className="text-red-600">{error}</p>}
           {summary && (
-            <div className="space-y-3 rounded-lg border bg-white p-4">
-              <p className="text-sm text-slate-600">
+            <div className="space-y-3 rounded-lg border bg-surface p-4">
+              <p className="text-sm text-muted">
                 {summary.from} – {summary.to}
               </p>
               <div className="grid gap-2 text-sm">
@@ -388,28 +388,28 @@ export function SalesMyClient() {
           )}
 
           {/* My Sales by Boutique (breakdown by sale location) */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">My Sales by Boutique</h2>
-            <p className="mb-2 text-xs text-slate-500">Total sales across all boutiques, broken down by sale location.</p>
-            {breakdownLoading && !breakdown && <p className="text-sm text-slate-500">Loading…</p>}
+          <div className="rounded-lg border bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">My Sales by Boutique</h2>
+            <p className="mb-2 text-xs text-muted">Total sales across all boutiques, broken down by sale location.</p>
+            {breakdownLoading && !breakdown && <p className="text-sm text-muted">Loading…</p>}
             {breakdownError && <p className="mb-2 text-sm text-red-600">{breakdownError}</p>}
             {breakdown && (
               <>
                 <div className="mb-3 flex justify-between text-sm">
-                  <span className="text-slate-600">{breakdown.from} – {breakdown.to}</span>
+                  <span className="text-muted">{breakdown.from} – {breakdown.to}</span>
                   <span className="font-medium">Total: {formatSarInt(breakdown.totalSar)}</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 text-start">
-                        <th className="py-1.5 pr-2 font-semibold text-slate-700">Boutique</th>
-                        <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Amount</th>
+                      <tr className="border-b border-border text-start">
+                        <th className="py-1.5 pr-2 font-semibold text-foreground">Boutique</th>
+                        <th className="py-1.5 pr-2 text-end font-semibold text-foreground">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
                       {breakdown.byBoutique.map((row) => (
-                        <tr key={row.boutiqueId} className="border-b border-slate-100">
+                        <tr key={row.boutiqueId} className="border-b border-border">
                           <td className="py-1.5 pr-2">{row.boutiqueName ?? row.boutiqueCode ?? row.boutiqueId}</td>
                           <td className="py-1.5 pr-2 text-end">{formatSarInt(row.amountSar)}</td>
                         </tr>
@@ -418,15 +418,15 @@ export function SalesMyClient() {
                   </table>
                 </div>
                 {breakdown.byBoutique.length === 0 && (
-                  <p className="text-sm text-slate-500">No sales in this period.</p>
+                  <p className="text-sm text-muted">No sales in this period.</p>
                 )}
               </>
             )}
           </div>
 
           {/* Section 1 — Monthly table (from /api/sales/my/monthly) */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">Monthly target summary</h2>
+          <div className="rounded-lg border bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Monthly target summary</h2>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <label className="text-sm">
                 From month
@@ -450,7 +450,7 @@ export function SalesMyClient() {
                 type="button"
                 onClick={loadMonthly}
                 disabled={monthlyLoading}
-                className="rounded bg-slate-700 px-3 py-1 text-sm text-white disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1 text-sm text-white disabled:opacity-50"
               >
                 {monthlyLoading ? 'Loading…' : 'Apply'}
               </button>
@@ -460,17 +460,17 @@ export function SalesMyClient() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-start">
-                      <th className="py-1.5 pr-2 font-semibold text-slate-700">Month</th>
-                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Target</th>
-                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Achieved</th>
-                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">Remaining</th>
-                      <th className="py-1.5 pr-2 text-end font-semibold text-slate-700">%</th>
+                    <tr className="border-b border-border text-start">
+                      <th className="py-1.5 pr-2 font-semibold text-foreground">Month</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-foreground">Target</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-foreground">Achieved</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-foreground">Remaining</th>
+                      <th className="py-1.5 pr-2 text-end font-semibold text-foreground">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {monthlySummary.months.map((row) => (
-                      <tr key={row.month} className="border-b border-slate-100">
+                      <tr key={row.month} className="border-b border-border">
                         <td className="py-1.5 pr-2">{row.month}</td>
                         <td className="py-1.5 pr-2 text-end">{formatSarInt(row.targetSar)}</td>
                         <td className="py-1.5 pr-2 text-end">{formatSarInt(row.achievedSar)}</td>
@@ -483,21 +483,21 @@ export function SalesMyClient() {
               </div>
             )}
             {monthlySummary && monthlySummary.months.length === 0 && (
-              <p className="text-sm text-slate-500">No months in range.</p>
+              <p className="text-sm text-muted">No months in range.</p>
             )}
           </div>
 
           {/* Section 2 — Quarter cards */}
           {monthlySummary && monthlySummary.quarters.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="mb-3 text-sm font-semibold text-slate-800">Quarter aggregates</h2>
+            <div className="rounded-lg border bg-surface p-4">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Quarter aggregates</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {monthlySummary.quarters.map((q) => (
-                  <div key={q.quarter} className="rounded border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-medium text-slate-700">{q.quarter}</p>
-                    <p className="mt-1 text-xs text-slate-600">Target: {formatSarInt(q.targetSar)}</p>
-                    <p className="text-xs text-slate-600">Achieved: {formatSarInt(q.achievedSar)}</p>
-                    <p className="text-xs text-slate-600">Remaining: {formatSarInt(q.remainingSar)}</p>
+                  <div key={q.quarter} className="rounded border border-border bg-surface-subtle p-3">
+                    <p className="text-sm font-medium text-foreground">{q.quarter}</p>
+                    <p className="mt-1 text-xs text-muted">Target: {formatSarInt(q.targetSar)}</p>
+                    <p className="text-xs text-muted">Achieved: {formatSarInt(q.achievedSar)}</p>
+                    <p className="text-xs text-muted">Remaining: {formatSarInt(q.remainingSar)}</p>
                   </div>
                 ))}
               </div>
@@ -505,8 +505,8 @@ export function SalesMyClient() {
           )}
 
           {/* Section 3 — My Dynamic Daily Target card */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">My dynamic daily target</h2>
+          <div className="rounded-lg border bg-surface p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">My dynamic daily target</h2>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <label className="text-sm">
                 Month
@@ -530,7 +530,7 @@ export function SalesMyClient() {
                 type="button"
                 onClick={loadMyDaily}
                 disabled={dailyLoading}
-                className="rounded bg-slate-700 px-3 py-1 text-sm text-white disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1 text-sm text-white disabled:opacity-50"
               >
                 {dailyLoading ? 'Loading…' : 'Refresh'}
               </button>
@@ -539,23 +539,23 @@ export function SalesMyClient() {
             {myDaily && (
               <div className="grid gap-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Month target</span>
+                  <span className="text-muted">Month target</span>
                   <span className="font-medium">{formatSarInt(myDaily.monthTargetSar)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Achieved to date</span>
+                  <span className="text-muted">Achieved to date</span>
                   <span>{formatSarInt(myDaily.achievedToDateSar)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Remaining</span>
+                  <span className="text-muted">Remaining</span>
                   <span>{formatSarInt(myDaily.remainingSar)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Days remaining</span>
+                  <span className="text-muted">Days remaining</span>
                   <span>{myDaily.daysRemaining}</span>
                 </div>
-                <div className="flex justify-between border-t border-slate-200 pt-2">
-                  <span className="font-medium text-slate-700">Daily required today</span>
+                <div className="flex justify-between border-t border-border pt-2">
+                  <span className="font-medium text-foreground">Daily required today</span>
                   <span className="font-semibold">{formatSarInt(myDaily.dailyRequiredSar)}</span>
                 </div>
               </div>
@@ -565,8 +565,8 @@ export function SalesMyClient() {
       )}
 
       {activeTab === 'boutique' && showBoutiqueTab && (
-        <div className="rounded-lg border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Boutique daily target</h2>
+        <div className="rounded-lg border bg-surface p-4">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Boutique daily target</h2>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <label className="text-sm">
               Month
@@ -590,7 +590,7 @@ export function SalesMyClient() {
               type="button"
               onClick={loadBoutiqueDaily}
               disabled={boutiqueDailyLoading}
-              className="rounded bg-slate-700 px-3 py-1 text-sm text-white disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1 text-sm text-white disabled:opacity-50"
             >
               {boutiqueDailyLoading ? 'Loading…' : 'Refresh'}
             </button>
@@ -599,35 +599,35 @@ export function SalesMyClient() {
           {boutiqueDaily && (
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-600">Boutique</span>
+                <span className="text-muted">Boutique</span>
                 <span className="font-medium">{boutiqueDaily.boutiqueId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Month target</span>
+                <span className="text-muted">Month target</span>
                 <span>{formatSarInt(boutiqueDaily.monthTargetSar)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Achieved</span>
+                <span className="text-muted">Achieved</span>
                 <span>{formatSarInt(boutiqueDaily.monthAchievedSar)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Remaining</span>
+                <span className="text-muted">Remaining</span>
                 <span>{formatSarInt(boutiqueDaily.remainingSar)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Days remaining</span>
+                <span className="text-muted">Days remaining</span>
                 <span>{boutiqueDaily.daysRemaining}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Daily required</span>
+                <span className="text-muted">Daily required</span>
                 <span className="font-medium">{formatSarInt(boutiqueDaily.dailyRequiredSar)}</span>
               </div>
-              <div className="flex justify-between border-t border-slate-200 pt-2">
-                <span className="text-slate-600">Today achieved</span>
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="text-muted">Today achieved</span>
                 <span>{formatSarInt(boutiqueDaily.todayAchievedSar)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-600">Today %</span>
+                <span className="text-muted">Today %</span>
                 <span className="font-semibold">{boutiqueDaily.todayPct}%</span>
               </div>
             </div>

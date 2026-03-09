@@ -92,20 +92,20 @@ export function AreaEmployeesClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-gray-800">Employees (Global)</h1>
+      <h1 className="text-xl font-semibold text-foreground">Employees (Global)</h1>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-surface p-3">
         <input
           type="search"
           placeholder="Search by name or ID"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded border border-border px-2 py-1.5 text-sm"
         />
         <select
           value={boutiqueId}
           onChange={(e) => setBoutiqueId(e.target.value)}
-          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
+          className="rounded border border-border px-2 py-1.5 text-sm"
         >
           <option value="">All boutiques</option>
           {boutiques.map((b) => (
@@ -137,31 +137,31 @@ export function AreaEmployeesClient() {
       )}
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-muted">Loading…</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-[#E8DFC8] bg-white">
+        <div className="overflow-x-auto rounded-lg border border-[#E8DFC8] bg-surface">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-3 py-2 text-start font-medium text-gray-700">ID</th>
-                <th className="px-3 py-2 text-start font-medium text-gray-700">Name</th>
-                <th className="px-3 py-2 text-start font-medium text-gray-700">Boutique</th>
-                <th className="px-3 py-2 text-start font-medium text-gray-700">Team</th>
-                <th className="px-3 py-2 text-start font-medium text-gray-700">Position</th>
-                <th className="px-3 py-2 text-start font-medium text-gray-700">Status</th>
-                <th className="px-3 py-2 text-end font-medium text-gray-700">Actions</th>
+              <tr className="border-b border-border bg-surface-subtle">
+                <th className="px-3 py-2 text-start font-medium text-foreground">ID</th>
+                <th className="px-3 py-2 text-start font-medium text-foreground">Name</th>
+                <th className="px-3 py-2 text-start font-medium text-foreground">Boutique</th>
+                <th className="px-3 py-2 text-start font-medium text-foreground">Team</th>
+                <th className="px-3 py-2 text-start font-medium text-foreground">Position</th>
+                <th className="px-3 py-2 text-start font-medium text-foreground">Status</th>
+                <th className="px-3 py-2 text-end font-medium text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {employees.map((e) => (
-                <tr key={e.empId} className="border-b border-gray-100">
-                  <td className="px-3 py-2 font-mono text-gray-800">{e.empId}</td>
-                  <td className="px-3 py-2 text-gray-800">{e.name}</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr key={e.empId} className="border-b border-border">
+                  <td className="px-3 py-2 font-mono text-foreground">{e.empId}</td>
+                  <td className="px-3 py-2 text-foreground">{e.name}</td>
+                  <td className="px-3 py-2 text-muted">
                     {e.boutique ? `${e.boutique.name} (${e.boutique.code})` : '—'}
                   </td>
-                  <td className="px-3 py-2 text-gray-600">{e.team}</td>
-                  <td className="px-3 py-2 text-gray-600">{e.position ?? '—'}</td>
+                  <td className="px-3 py-2 text-muted">{e.team}</td>
+                  <td className="px-3 py-2 text-muted">{e.position ?? '—'}</td>
                   <td className="px-3 py-2">{e.active ? 'Active' : 'Inactive'}</td>
                   <td className="px-3 py-2 text-end">
                     {e.active && (
@@ -173,7 +173,7 @@ export function AreaEmployeesClient() {
                           setTransferReason('');
                           setTransferError(null);
                         }}
-                        className="text-sky-600 hover:underline"
+                        className="text-accent hover:underline"
                       >
                         Transfer
                       </button>
@@ -188,15 +188,15 @@ export function AreaEmployeesClient() {
 
       {transferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">Transfer employee</h2>
-            <p className="mb-2 text-sm text-gray-600">
+          <div className="w-full max-w-md rounded-lg border border-border bg-surface p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold text-foreground">Transfer employee</h2>
+            <p className="mb-2 text-sm text-muted">
               {transferModal.name} ({transferModal.empId}) → select target boutique
             </p>
             <select
               value={transferToId}
               onChange={(e) => setTransferToId(e.target.value)}
-              className="mb-3 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-3 w-full rounded border border-border px-2 py-1.5 text-sm"
             >
               <option value="">Select boutique</option>
               {boutiques
@@ -207,14 +207,14 @@ export function AreaEmployeesClient() {
                   </option>
                 ))}
             </select>
-            <label className="mb-2 block text-sm text-gray-600">
+            <label className="mb-2 block text-sm text-muted">
               Reason (optional)
             </label>
             <input
               type="text"
               value={transferReason}
               onChange={(e) => setTransferReason(e.target.value)}
-              className="mb-3 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
+              className="mb-3 w-full rounded border border-border px-2 py-1.5 text-sm"
               placeholder="e.g. Reassignment"
             />
             {transferError && (
@@ -227,7 +227,7 @@ export function AreaEmployeesClient() {
                   setTransferModal(null);
                   setTransferError(null);
                 }}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+                className="rounded border border-border px-3 py-1.5 text-sm"
               >
                 Cancel
               </button>
@@ -235,7 +235,7 @@ export function AreaEmployeesClient() {
                 type="button"
                 onClick={handleTransfer}
                 disabled={!transferToId.trim() || transferSubmitting}
-                className="rounded bg-sky-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
               >
                 {transferSubmitting ? 'Transferring…' : 'Transfer'}
               </button>

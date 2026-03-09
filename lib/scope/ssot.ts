@@ -61,7 +61,7 @@ function resolveOperationalBoutiqueOnlyInternal(
     if (!opScope?.boutiqueId) {
       return { ok: false as const, res: NextResponse.json({ error: 'Operational boutique required' }, { status: 403 }) };
     }
-    return { ok: true as const, scope: { boutiqueId: opScope.boutiqueId, boutiqueIds: [opScope.boutiqueId], label: opScope.label } };
+    return { ok: true as const, scope: { boutiqueId: opScope.boutiqueId, boutiqueIds: opScope.boutiqueIds, label: opScope.label } };
   });
 }
 
@@ -271,16 +271,16 @@ export async function resolveBoutiqueIdsForRequest(
     }
   }
 
-  // Default: single operational boutique (session or ?b= for SUPER_ADMIN)
+  // Default: single operational boutique (session or ?b= for SUPER_ADMIN); AREA_MANAGER gets multiple from membership
   const opScope = await getOperationalScope(request ?? undefined);
   if (!opScope?.boutiqueId) return null;
 
   return {
-    boutiqueIds: [opScope.boutiqueId],
+    boutiqueIds: opScope.boutiqueIds,
     boutiqueId: opScope.boutiqueId,
     label: opScope.label,
     isGlobal: false,
-    scopeUsed: { boutiqueIds: [opScope.boutiqueId], global: false },
+    scopeUsed: { boutiqueIds: opScope.boutiqueIds, global: false },
   };
 }
 
@@ -308,19 +308,22 @@ export async function requireBoutiqueScope(
       ),
     };
   }
-  // Safety: when allowGlobal=false, assert single boutique
+  // Safety: when allowGlobal=false, assert single boutique unless user is AREA_MANAGER (multi-boutique area)
   if (!options.allowGlobal && scope.boutiqueIds.length > 1) {
-    console.warn(`[SSOT] Route ${options.modeName ?? 'unknown'} expected single boutique but got ${scope.boutiqueIds.length}`);
-    // Return first only to prevent data bleed; do not leak multi-boutique
-    return {
-      ok: true,
-      scope: {
-        ...scope,
-        boutiqueIds: [scope.boutiqueId],
-        scopeUsed: { boutiqueIds: [scope.boutiqueId], global: false },
-      },
-      res: null,
-    };
+    const user = await getSessionUser();
+    const role = user?.role as Role | undefined;
+    if (role !== 'AREA_MANAGER') {
+      console.warn(`[SSOT] Route ${options.modeName ?? 'unknown'} expected single boutique but got ${scope.boutiqueIds.length}`);
+      return {
+        ok: true,
+        scope: {
+          ...scope,
+          boutiqueIds: [scope.boutiqueId],
+          scopeUsed: { boutiqueIds: [scope.boutiqueId], global: false },
+        },
+        res: null,
+      };
+    }
   }
   return { ok: true, scope, res: null };
 }

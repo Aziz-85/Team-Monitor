@@ -112,7 +112,7 @@ export function AdminBoutiqueGroupsClient() {
           <button
             type="button"
             onClick={() => { setEditing(null); setModal('add'); }}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-700"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
           >
             {t('common.add')}
           </button>
@@ -137,14 +137,14 @@ export function AdminBoutiqueGroupsClient() {
                     <button
                       type="button"
                       onClick={() => { setEditing(g); setModal('edit'); }}
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                     >
                       {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => { setMembersModalGroup(g); setMembersAddRemove({ add: [], remove: [] }); setModal('members'); }}
-                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                     >
                       {t('admin.groups.manageMembers')}
                     </button>
@@ -181,7 +181,7 @@ export function AdminBoutiqueGroupsClient() {
       >
         {membersModalGroup && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-600">{t('admin.groups.currentMembers')}</p>
+            <p className="text-sm text-muted">{t('admin.groups.currentMembers')}</p>
             <ul className="list-inside list-disc text-sm">
               {membersModalGroup.members.map((m) => (
                 <li key={m.boutiqueId}>
@@ -197,7 +197,7 @@ export function AdminBoutiqueGroupsClient() {
               ))}
             </ul>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">{t('admin.groups.addBoutiques')}</label>
+              <label className="mb-1 block text-sm font-medium text-foreground">{t('admin.groups.addBoutiques')}</label>
               <select
                 multiple
                 value={membersAddRemove.add}
@@ -207,7 +207,7 @@ export function AdminBoutiqueGroupsClient() {
                     add: Array.from(e.target.selectedOptions, (o) => o.value),
                   }))
                 }
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
               >
                 {availableToAdd.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -217,13 +217,13 @@ export function AdminBoutiqueGroupsClient() {
               </select>
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={saveMembers} className="rounded-lg bg-sky-600 px-3 py-2 text-sm text-white hover:bg-sky-700">
+              <button type="button" onClick={saveMembers} className="rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90">
                 {t('common.save')}
               </button>
               <button
                 type="button"
                 onClick={() => { setModal(null); setMembersModalGroup(null); }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                className="rounded-lg border border-border px-3 py-2 text-sm text-foreground"
               >
                 {t('common.close')}
               </button>
