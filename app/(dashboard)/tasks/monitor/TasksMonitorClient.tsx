@@ -302,7 +302,15 @@ export function TasksMonitorClient() {
           {/* Completed tasks */}
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('completedTableTitle')}</h2>
-            <LuxuryTable>
+            <LuxuryTable noScroll>
+              <colgroup>
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
               <LuxuryTableHead>
                   <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
@@ -321,10 +329,10 @@ export function TasksMonitorClient() {
                 ) : (
                   data.completedTasks.map((row) => (
                     <tr key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
-                      <LuxuryTd>{row.title}</LuxuryTd>
+                      <LuxuryTd className="truncate">{row.title}</LuxuryTd>
                       <LuxuryTd>{row.type}</LuxuryTd>
                       <LuxuryTd>{row.dueDate}</LuxuryTd>
-                      <LuxuryTd>{row.assignedTo ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="truncate">{row.assignedTo ?? '—'}</LuxuryTd>
                       <LuxuryTd>{row.completedAt ? formatDate(row.completedAt) : '—'}</LuxuryTd>
                       <LuxuryTd>
                         {row.completionDelay ? (
@@ -353,7 +361,14 @@ export function TasksMonitorClient() {
           {/* Pending / Overdue tasks */}
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('pendingTableTitle')}</h2>
-            <LuxuryTable>
+            <LuxuryTable noScroll>
+              <colgroup>
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '20%' }} />
+              </colgroup>
               <LuxuryTableHead>
                   <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
                   <LuxuryTh>{t('type')}</LuxuryTh>
@@ -371,10 +386,10 @@ export function TasksMonitorClient() {
                 ) : (
                   data.pendingTasks.map((row) => (
                     <tr key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
-                      <LuxuryTd>{row.title}</LuxuryTd>
+                      <LuxuryTd className="truncate">{row.title}</LuxuryTd>
                       <LuxuryTd>{row.type}</LuxuryTd>
                       <LuxuryTd>{row.dueDate}</LuxuryTd>
-                      <LuxuryTd>{row.assignedTo ?? '—'}</LuxuryTd>
+                      <LuxuryTd className="truncate">{row.assignedTo ?? '—'}</LuxuryTd>
                       <LuxuryTd>
                         {row.isSuspiciousBurst ? (
                           <span className="text-violet-600">{t('summarySuspicious')}</span>
@@ -397,7 +412,17 @@ export function TasksMonitorClient() {
           {/* Employee performance */}
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('employeePerformanceTitle')}</h2>
-            <LuxuryTable>
+            <LuxuryTable noScroll>
+              <colgroup>
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '12%' }} />
+              </colgroup>
               <LuxuryTableHead>
                   <LuxuryTh>{t('assignedTo')}</LuxuryTh>
                   <LuxuryTh>{t('assignedCount')}</LuxuryTh>
@@ -418,7 +443,7 @@ export function TasksMonitorClient() {
                 ) : (
                   data.employeeStats.map((row) => (
                     <tr key={row.empId}>
-                      <LuxuryTd>{row.name}</LuxuryTd>
+                      <LuxuryTd className="truncate">{row.name}</LuxuryTd>
                       <LuxuryTd>{row.assigned}</LuxuryTd>
                       <LuxuryTd>{row.completed}</LuxuryTd>
                       <LuxuryTd>{row.pending}</LuxuryTd>
