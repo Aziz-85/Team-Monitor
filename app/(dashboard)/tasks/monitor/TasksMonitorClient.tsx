@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, ReactNode } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import {
@@ -11,6 +11,35 @@ import {
   LuxuryTd,
 } from '@/components/ui/LuxuryTable';
 import { formatDateTimeDisplayRiyadh } from '@/lib/time';
+
+/** Task Monitor-only grid table for perfect header/body column alignment. NOT used by schedule. */
+function TaskMonitorGridTable({
+  gridTemplateColumns,
+  headers,
+  children,
+}: {
+  gridTemplateColumns: string;
+  headers: ReactNode[];
+  children: ReactNode;
+}) {
+  const headerCell = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 text-xs font-semibold text-foreground bg-surface-subtle border-b border-border';
+
+  return (
+    <div
+      className="rounded-lg border border-border bg-surface shadow-sm overflow-hidden"
+      style={{ display: 'grid', gridTemplateColumns }}
+    >
+      {headers.map((h, i) => (
+        <div key={`h-${i}`} className={headerCell}>
+          {h}
+        </div>
+      ))}
+      {children}
+    </div>
+  );
+}
+
+const BODY_CELL = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2.5 text-sm border-b border-border';
 
 type TaskMonitorRow = {
   taskId: string;
@@ -302,111 +331,88 @@ export function TasksMonitorClient() {
           {/* Completed tasks */}
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('completedTableTitle')}</h2>
-            <LuxuryTable noScroll>
-              <colgroup>
-                <col style={{ width: '28%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '10%' }} />
-              </colgroup>
-              <LuxuryTableHead>
-                  <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
-                  <LuxuryTh>{t('type')}</LuxuryTh>
-                  <LuxuryTh>{t('due')}</LuxuryTh>
-                  <LuxuryTh>{t('assignedTo')}</LuxuryTh>
-                  <LuxuryTh>{t('completedAt')}</LuxuryTh>
-                  <LuxuryTh>{t('delay')}</LuxuryTh>
-              </LuxuryTableHead>
-              <LuxuryTableBody>
-                {data.completedTasks.length === 0 ? (
-                  <tr>
-                    <LuxuryTd colSpan={6} className="text-center text-muted">
-                      —
-                    </LuxuryTd>
-                  </tr>
-                ) : (
-                  data.completedTasks.map((row) => (
-                    <tr key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
-                      <LuxuryTd className="truncate">{row.title}</LuxuryTd>
-                      <LuxuryTd>{row.type}</LuxuryTd>
-                      <LuxuryTd>{row.dueDate}</LuxuryTd>
-                      <LuxuryTd className="truncate">{row.assignedTo ?? '—'}</LuxuryTd>
-                      <LuxuryTd>{row.completedAt ? formatDate(row.completedAt) : '—'}</LuxuryTd>
-                      <LuxuryTd>
-                        {row.completionDelay ? (
-                          <span
-                            className={
-                              row.completionDelay.kind === 'late'
-                                ? 'text-red-600'
-                                : row.completionDelay.kind === 'early'
-                                  ? 'text-emerald-600'
-                                  : 'text-muted'
-                            }
-                          >
-                            {row.completionDelay.text}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </LuxuryTd>
-                    </tr>
-                  ))
-                )}
-              </LuxuryTableBody>
-            </LuxuryTable>
+            <TaskMonitorGridTable
+              gridTemplateColumns="2.5fr 1fr 1fr 2fr 2fr 1fr"
+              headers={[
+                t('colTaskTitle'),
+                t('type'),
+                t('due'),
+                t('assignedTo'),
+                t('completedAt'),
+                t('delay'),
+              ]}
+            >
+              {data.completedTasks.length === 0 ? (
+                <div className="col-span-full px-3 py-2.5 text-center text-muted">—</div>
+              ) : (
+                data.completedTasks.map((row) => (
+                  <React.Fragment key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
+                    <div className={BODY_CELL}>{row.title}</div>
+                    <div className={BODY_CELL}>{row.type}</div>
+                    <div className={BODY_CELL}>{row.dueDate}</div>
+                    <div className={BODY_CELL}>{row.assignedTo ?? '—'}</div>
+                    <div className={BODY_CELL}>{row.completedAt ? formatDate(row.completedAt) : '—'}</div>
+                    <div className={BODY_CELL}>
+                      {row.completionDelay ? (
+                        <span
+                          className={
+                            row.completionDelay.kind === 'late'
+                              ? 'text-red-600'
+                              : row.completionDelay.kind === 'early'
+                                ? 'text-emerald-600'
+                                : 'text-muted'
+                          }
+                        >
+                          {row.completionDelay.text}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </div>
+                  </React.Fragment>
+                ))
+              )}
+            </TaskMonitorGridTable>
           </section>
 
           {/* Pending / Overdue tasks */}
           <section>
             <h2 className="mb-2 text-lg font-semibold text-foreground">{t('pendingTableTitle')}</h2>
-            <LuxuryTable noScroll>
-              <colgroup>
-                <col style={{ width: '28%' }} />
-                <col style={{ width: '10%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '28%' }} />
-                <col style={{ width: '20%' }} />
-              </colgroup>
-              <LuxuryTableHead>
-                  <LuxuryTh>{t('colTaskTitle')}</LuxuryTh>
-                  <LuxuryTh>{t('type')}</LuxuryTh>
-                  <LuxuryTh>{t('due')}</LuxuryTh>
-                  <LuxuryTh>{t('assignedTo')}</LuxuryTh>
-                  <LuxuryTh>{t('status')}</LuxuryTh>
-              </LuxuryTableHead>
-              <LuxuryTableBody>
-                {data.pendingTasks.length === 0 ? (
-                  <tr>
-                    <LuxuryTd colSpan={5} className="text-center text-muted">
-                      —
-                    </LuxuryTd>
-                  </tr>
-                ) : (
-                  data.pendingTasks.map((row) => (
-                    <tr key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
-                      <LuxuryTd className="truncate">{row.title}</LuxuryTd>
-                      <LuxuryTd>{row.type}</LuxuryTd>
-                      <LuxuryTd>{row.dueDate}</LuxuryTd>
-                      <LuxuryTd className="truncate">{row.assignedTo ?? '—'}</LuxuryTd>
-                      <LuxuryTd>
-                        {row.isSuspiciousBurst ? (
-                          <span className="text-violet-600">{t('summarySuspicious')}</span>
-                        ) : row.overdue ? (
-                          <span className="text-red-600">
-                            {t('overdue')}
-                            {row.overdueByDays != null ? ` (${row.overdueByDays}d)` : ''}
-                          </span>
-                        ) : (
-                          <span className="text-amber-600">{t('pending')}</span>
-                        )}
-                      </LuxuryTd>
-                    </tr>
-                  ))
-                )}
-              </LuxuryTableBody>
-            </LuxuryTable>
+            <TaskMonitorGridTable
+              gridTemplateColumns="2.5fr 1fr 1fr 2fr 1.5fr"
+              headers={[
+                t('colTaskTitle'),
+                t('type'),
+                t('due'),
+                t('assignedTo'),
+                t('status'),
+              ]}
+            >
+              {data.pendingTasks.length === 0 ? (
+                <div className="col-span-full px-3 py-2.5 text-center text-muted">—</div>
+              ) : (
+                data.pendingTasks.map((row) => (
+                  <React.Fragment key={`${row.taskId}-${row.dueDate}-${row.assignedEmpId ?? 'u'}`}>
+                    <div className={BODY_CELL}>{row.title}</div>
+                    <div className={BODY_CELL}>{row.type}</div>
+                    <div className={BODY_CELL}>{row.dueDate}</div>
+                    <div className={BODY_CELL}>{row.assignedTo ?? '—'}</div>
+                    <div className={BODY_CELL}>
+                      {row.isSuspiciousBurst ? (
+                        <span className="text-violet-600">{t('summarySuspicious')}</span>
+                      ) : row.overdue ? (
+                        <span className="text-red-600">
+                          {t('overdue')}
+                          {row.overdueByDays != null ? ` (${row.overdueByDays}d)` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-amber-600">{t('pending')}</span>
+                      )}
+                    </div>
+                  </React.Fragment>
+                ))
+              )}
+            </TaskMonitorGridTable>
           </section>
 
           {/* Employee performance */}
