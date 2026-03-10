@@ -126,7 +126,7 @@ function CopyButton({ text, label, t }: { text: string; label: string; t: (k: st
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center justify-center rounded-md border-2 border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-1"
+      className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-subtle hover:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-1"
       title={`${t('admin.planner.copy')} ${label}`}
     >
       {copied ? t('admin.planner.copied') : t('admin.planner.copy')}
@@ -290,11 +290,13 @@ export function PlannerIntegrationClient() {
 
   const powerAutomateIntegration = integrations.find((i) => i.mode === 'POWER_AUTOMATE' && i.enabled);
 
-  return (
-    <div className="min-w-0 space-y-3 p-3 md:p-4">
-      <h1 className="mb-1 text-xl font-semibold text-foreground">{t('nav.plannerIntegration')}</h1>
+  const cardClass = 'rounded-2xl border border-border/80 bg-surface p-4 shadow-sm md:p-5';
 
-      <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+  return (
+    <div className="min-w-0 space-y-4 p-4 md:p-5">
+      <h1 className="mb-2 text-xl font-semibold tracking-tight text-foreground">{t('nav.plannerIntegration')}</h1>
+
+      <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className={cardClass}>
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.graphApi')}</p>
@@ -308,13 +310,13 @@ export function PlannerIntegrationClient() {
       </OpsCard>
 
       {!powerAutomateIntegration && (
-        <OpsCard title={t('admin.planner.addPowerAutomate')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <OpsCard title={t('admin.planner.addPowerAutomate')} className={cardClass}>
           <IntegrationForm onSuccess={fetchData} t={t} />
         </OpsCard>
       )}
 
       {powerAutomateIntegration && (
-        <OpsCard title={t('admin.planner.powerAutomateSetup')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <OpsCard title={t('admin.planner.powerAutomateSetup')} className={cardClass}>
           <p className="mb-1.5 text-sm text-muted">{t('admin.planner.powerAutomateSetupDesc')}</p>
           <div className="space-y-2 text-sm">
             <div>
@@ -344,7 +346,7 @@ export function PlannerIntegrationClient() {
         </OpsCard>
       )}
 
-      <OpsCard title={t('admin.planner.testPayloadHelper')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+      <OpsCard title={t('admin.planner.testPayloadHelper')} className={cardClass}>
         <div className="space-y-2">
           <p className="text-sm text-muted">{t('admin.planner.testPayloadDesc')}</p>
           <div className="flex flex-wrap gap-2">
@@ -353,7 +355,7 @@ export function PlannerIntegrationClient() {
                 key={key}
                 type="button"
                 onClick={() => setTestPayload(JSON.stringify(SAMPLE_PAYLOADS[key], null, 2))}
-                className="inline-flex items-center justify-center rounded-md border-2 border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-1"
+                className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-subtle hover:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-1"
               >
                 {key}
               </button>
@@ -371,7 +373,7 @@ export function PlannerIntegrationClient() {
               type="button"
               onClick={handleTestPayload}
               disabled={testLoading}
-              className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+              className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
             >
               {testLoading ? t('admin.planner.testing') : t('admin.planner.testPayload')}
             </button>
@@ -387,16 +389,16 @@ export function PlannerIntegrationClient() {
         </div>
       </OpsCard>
 
-      <OpsCard title={undefined} className="rounded-xl border border-border p-3 shadow-card md:p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground">{t('admin.planner.userMappings')}</h2>
+      <OpsCard title={undefined} className={cardClass}>
+        <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{t('admin.planner.userMappings')}</h2>
           <button
             type="button"
             onClick={() => {
               setEditingUserMap(null);
               setUserMapModal('add');
             }}
-            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+            className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1"
           >
             {t('common.add')}
           </button>
@@ -411,9 +413,9 @@ export function PlannerIntegrationClient() {
           <AdminTableBody>
             {userMaps.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-2.5">
-                  <div className="rounded-lg border-2 border-dashed border-border bg-surface-subtle/50 px-3 py-2.5 text-center text-sm text-muted">
-                    {t('admin.planner.noUserMappings')}
+                <td colSpan={4} className="p-0">
+                  <div className="mx-3 my-4 rounded-xl border-2 border-dashed border-border/70 bg-muted/30 px-6 py-5 text-center">
+                    <p className="text-sm font-medium text-muted">{t('admin.planner.noUserMappings')}</p>
                   </div>
                 </td>
               </tr>
@@ -429,7 +431,7 @@ export function PlannerIntegrationClient() {
                         setEditingUserMap(um);
                         setUserMapModal('edit');
                       }}
-                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
+                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-subtle hover:border-accent/40"
                     >
                       {t('common.edit')}
                     </button>
@@ -438,7 +440,7 @@ export function PlannerIntegrationClient() {
                     <button
                       type="button"
                       onClick={() => handleDeleteUserMap(um)}
-                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                      className="rounded-lg border border-red-200/80 bg-red-50/80 px-2.5 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100/90"
                     >
                       {t('common.delete')}
                     </button>
@@ -450,16 +452,16 @@ export function PlannerIntegrationClient() {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title={undefined} className="rounded-xl border border-border p-3 shadow-card md:p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground">{t('admin.planner.bucketMappings')}</h2>
+      <OpsCard title={undefined} className={cardClass}>
+        <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/60 pb-3">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{t('admin.planner.bucketMappings')}</h2>
           <button
             type="button"
             onClick={() => {
               setEditingBucketMap(null);
               setBucketMapModal('add');
             }}
-            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+            className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1"
           >
             {t('common.add')}
           </button>
@@ -474,9 +476,9 @@ export function PlannerIntegrationClient() {
           <AdminTableBody>
             {bucketMaps.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-2.5">
-                  <div className="rounded-lg border-2 border-dashed border-border bg-surface-subtle/50 px-3 py-2.5 text-center text-sm text-muted">
-                    {t('admin.planner.noBucketMappings')}
+                <td colSpan={4} className="p-0">
+                  <div className="mx-3 my-4 rounded-xl border-2 border-dashed border-border/70 bg-muted/30 px-6 py-5 text-center">
+                    <p className="text-sm font-medium text-muted">{t('admin.planner.noBucketMappings')}</p>
                   </div>
                 </td>
               </tr>
@@ -493,7 +495,7 @@ export function PlannerIntegrationClient() {
                         setEditingBucketMap(bm);
                         setBucketMapModal('edit');
                       }}
-                      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
+                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-surface-subtle hover:border-accent/40"
                     >
                       {t('common.edit')}
                     </button>
@@ -505,25 +507,25 @@ export function PlannerIntegrationClient() {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.actions') ?? 'Actions'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <OpsCard title={t('admin.planner.actions') ?? 'Actions'} className={cardClass}>
+        <div className="flex flex-wrap items-center gap-3">
           <a
             href="/sync/planner"
-            className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
+            className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle hover:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-1"
           >
             {t('nav.syncPlanner')}
           </a>
           <button
             type="button"
             onClick={handleReconcile}
-            className="rounded bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent/90"
+            className="inline-flex items-center justify-center rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1"
           >
             {t('admin.planner.runReconcile') ?? 'Run reconciliation'}
           </button>
         </div>
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.logs') ?? 'Sync logs'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+      <OpsCard title={t('admin.planner.logs') ?? 'Sync logs'} className={cardClass}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -699,7 +701,7 @@ function IntegrationForm({ onSuccess, t }: { onSuccess: () => void; t: (k: strin
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
-      <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
+      <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1">
         {saving ? t('admin.planner.creating') : t('admin.planner.createIntegration')}
       </button>
     </form>
@@ -803,11 +805,11 @@ function UserMapForm({
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
-      <div className="flex items-center justify-start gap-2">
-        <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
+      <div className="flex items-center justify-start gap-3 pt-1">
+        <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1">
           {saving ? t('admin.planner.saving') : t('common.save')}
         </button>
-        <button type="button" onClick={onCancel} className="rounded border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-surface-subtle">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-muted focus:ring-offset-1">
           {t('common.cancel')}
         </button>
       </div>
@@ -929,11 +931,11 @@ function BucketMapForm({
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
-      <div className="flex items-center justify-start gap-2">
-        <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
+      <div className="flex items-center justify-start gap-3 pt-1">
+        <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1">
           {saving ? t('admin.planner.saving') : t('common.save')}
         </button>
-        <button type="button" onClick={onCancel} className="rounded border border-border bg-surface px-3 py-2 text-sm text-foreground hover:bg-surface-subtle">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-muted focus:ring-offset-1">
           {t('common.cancel')}
         </button>
       </div>
