@@ -408,7 +408,8 @@
       "localZoneOptional": "Local zone (optional)",
       "localPriorityOptional": "Local priority (optional)",
       "noUserMappings": "No user mappings. Click Add to link a Microsoft email to an employee.",
-      "noBucketMappings": "No bucket mappings. Click Add to link a Planner bucket to local."
+      "noBucketMappings": "No bucket mappings. Click Add to link a Planner bucket to local.",
+      "confirmDeleteUserMap": "Delete this user mapping?"
     }
   },
   "auth": {

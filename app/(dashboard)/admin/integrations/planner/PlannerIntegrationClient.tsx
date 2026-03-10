@@ -230,6 +230,20 @@ export function PlannerIntegrationClient() {
     [editingUserMap, fetchData]
   );
 
+  const handleDeleteUserMap = useCallback(
+    async (um: UserMap) => {
+      if (!confirm(t('admin.planner.confirmDeleteUserMap'))) return;
+      const res = await fetch(`/api/integrations/planner/mappings/users/${um.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error ?? 'Failed');
+        return;
+      }
+      fetchData();
+    },
+    [fetchData, t]
+  );
+
   const handleSaveBucketMap = useCallback(
     async (values: { integrationId: string; externalBucketId: string; externalBucketName: string; localTaskType?: string; localZone?: string; localPriority?: number }) => {
       const body = editingBucketMap
@@ -392,11 +406,12 @@ export function PlannerIntegrationClient() {
             <AdminTh>{t('admin.planner.microsoftEmail')}</AdminTh>
             <AdminTh>{t('admin.planner.employee')}</AdminTh>
             <AdminTh>{t('common.edit')}</AdminTh>
+            <AdminTh>{t('common.delete')}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
             {userMaps.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-3 py-2.5">
+                <td colSpan={4} className="px-3 py-2.5">
                   <div className="rounded-lg border-2 border-dashed border-border bg-surface-subtle/50 px-3 py-2.5 text-center text-sm text-muted">
                     {t('admin.planner.noUserMappings')}
                   </div>
@@ -417,6 +432,15 @@ export function PlannerIntegrationClient() {
                       className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
                     >
                       {t('common.edit')}
+                    </button>
+                  </AdminTd>
+                  <AdminTd>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUserMap(um)}
+                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                    >
+                      {t('common.delete')}
                     </button>
                   </AdminTd>
                 </tr>

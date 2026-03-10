@@ -407,7 +407,8 @@
       "localZoneOptional": "المنطقة المحلية (اختياري)",
       "localPriorityOptional": "الأولوية المحلية (اختياري)",
       "noUserMappings": "لا توجد ربطات مستخدمين. انقر «إضافة» لربط بريد Microsoft بموظف.",
-      "noBucketMappings": "لا توجد ربطات حاويات. انقر «إضافة» لربط حاوية Planner بالمحلي."
+      "noBucketMappings": "لا توجد ربطات حاويات. انقر «إضافة» لربط حاوية Planner بالمحلي.",
+      "confirmDeleteUserMap": "حذف ربط المستخدم هذا؟"
     }
   },
   "auth": {
