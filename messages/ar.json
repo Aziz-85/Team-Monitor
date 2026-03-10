@@ -405,7 +405,9 @@
       "externalBucketNamePlaceholder": "مثال: قيد التنفيذ",
       "localTaskTypeOptional": "نوع المهمة المحلي (اختياري)",
       "localZoneOptional": "المنطقة المحلية (اختياري)",
-      "localPriorityOptional": "الأولوية المحلية (اختياري)"
+      "localPriorityOptional": "الأولوية المحلية (اختياري)",
+      "noUserMappings": "لا توجد ربطات مستخدمين. انقر «إضافة» لربط بريد Microsoft بموظف.",
+      "noBucketMappings": "لا توجد ربطات حاويات. انقر «إضافة» لربط حاوية Planner بالمحلي."
     }
   },
   "auth": {

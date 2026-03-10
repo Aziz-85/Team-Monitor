@@ -126,7 +126,7 @@ function CopyButton({ text, label, t }: { text: string; label: string; t: (k: st
     <button
       type="button"
       onClick={copy}
-      className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
+      className="inline-flex items-center justify-center rounded-md border-2 border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-1"
       title={`${t('admin.planner.copy')} ${label}`}
     >
       {copied ? t('admin.planner.copied') : t('admin.planner.copy')}
@@ -150,7 +150,7 @@ export function PlannerIntegrationClient() {
   const [bucketMapModal, setBucketMapModal] = useState<'add' | 'edit' | null>(null);
   const [editingUserMap, setEditingUserMap] = useState<UserMap | null>(null);
   const [editingBucketMap, setEditingBucketMap] = useState<BucketMap | null>(null);
-  const [employees, setEmployees] = useState<Array<{ empId: string; name: string }>>([]);
+  const [employees, setEmployees] = useState<Array<{ empId: string; name: string; email?: string | null }>>([]);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -161,7 +161,7 @@ export function PlannerIntegrationClient() {
       fetch('/api/integrations/planner').then((r) => r.json()),
       fetch('/api/integrations/planner/mappings').then((r) => r.json()),
       fetch('/api/integrations/planner/logs?limit=50').then((r) => r.json()),
-      fetch('/api/admin/employees').then((r) => (r.ok ? r.json() : [])),
+      fetch('/api/integrations/planner/employees').then((r) => (r.ok ? r.json() : [])),
     ])
       .then(([data, mappingsData, logsData, empData]) => {
         setIntegrations(data.integrations ?? []);
@@ -169,7 +169,7 @@ export function PlannerIntegrationClient() {
         setUserMaps(mappingsData.userMaps ?? []);
         setBucketMaps(mappingsData.bucketMaps ?? []);
         setLogs(logsData.logs ?? []);
-        setEmployees(Array.isArray(empData) ? empData.map((e: { empId: string; name?: string }) => ({ empId: e.empId, name: e.name ?? e.empId })) : []);
+        setEmployees(Array.isArray(empData) ? empData.map((e: { empId: string; name?: string; email?: string | null }) => ({ empId: e.empId, name: e.name ?? e.empId, email: e.email ?? null })) : []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -277,11 +277,11 @@ export function PlannerIntegrationClient() {
   const powerAutomateIntegration = integrations.find((i) => i.mode === 'POWER_AUTOMATE' && i.enabled);
 
   return (
-    <div className="min-w-0 space-y-6 p-4 md:p-6">
-      <h1 className="text-xl font-semibold text-foreground">{t('nav.plannerIntegration')}</h1>
+    <div className="min-w-0 space-y-3 p-3 md:p-4">
+      <h1 className="mb-1 text-xl font-semibold text-foreground">{t('nav.plannerIntegration')}</h1>
 
-      <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className="rounded-xl border border-border">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.graphApi')}</p>
             <p className="text-foreground">{graphConfigured ? t('admin.planner.configured') : t('admin.planner.notConfigured')}</p>
@@ -294,92 +294,95 @@ export function PlannerIntegrationClient() {
       </OpsCard>
 
       {!powerAutomateIntegration && (
-        <OpsCard title={t('admin.planner.addPowerAutomate')} className="rounded-xl border border-border">
+        <OpsCard title={t('admin.planner.addPowerAutomate')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
           <IntegrationForm onSuccess={fetchData} t={t} />
         </OpsCard>
       )}
 
       {powerAutomateIntegration && (
-        <OpsCard title={t('admin.planner.powerAutomateSetup')} className="rounded-xl border border-border">
-          <p className="mb-4 text-sm text-muted">{t('admin.planner.powerAutomateSetupDesc')}</p>
-          <div className="space-y-4 text-sm">
+        <OpsCard title={t('admin.planner.powerAutomateSetup')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+          <p className="mb-1.5 text-sm text-muted">{t('admin.planner.powerAutomateSetupDesc')}</p>
+          <div className="space-y-2 text-sm">
             <div>
               <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.webhookUrl')}</p>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-0.5 flex items-center gap-2">
                 <code className="flex-1 truncate rounded bg-muted/50 px-2 py-1 font-mono text-xs">{webhookUrl || '/api/integrations/planner/webhook'}</code>
                 <CopyButton text={webhookUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/api/integrations/planner/webhook`} label="URL" t={t} />
               </div>
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.requiredHeader')}</p>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-0.5 flex items-center gap-2">
                 <code className="rounded bg-muted/50 px-2 py-1 font-mono text-xs">{WEBHOOK_SECRET_HEADER}</code>
                 <CopyButton text={WEBHOOK_SECRET_HEADER} label="header name" t={t} />
               </div>
-              <p className="mt-1 text-xs text-muted">{t('admin.planner.headerValueHint')}</p>
+              <p className="mt-0.5 text-xs text-muted">{t('admin.planner.headerValueHint')}</p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase text-muted">{t('admin.planner.samplePayload')}</p>
-              <div className="mt-1 flex items-start gap-2">
+              <div className="mt-0.5 flex items-start gap-2">
                 <pre className="flex-1 overflow-auto rounded bg-muted/50 p-2 font-mono text-xs">{JSON.stringify(SAMPLE_PAYLOADS['task.completed'], null, 2)}</pre>
                 <CopyButton text={JSON.stringify(SAMPLE_PAYLOADS['task.completed'], null, 2)} label="sample" t={t} />
               </div>
-              <p className="mt-1 text-xs text-muted">{t('admin.planner.samplePayloadHint')}</p>
+              <p className="mt-0.5 text-xs text-muted">{t('admin.planner.samplePayloadHint')}</p>
             </div>
           </div>
         </OpsCard>
       )}
 
-      <OpsCard title={t('admin.planner.testPayloadHelper')} className="rounded-xl border border-border">
-        <p className="mb-2 text-sm text-muted">{t('admin.planner.testPayloadDesc')}</p>
-        <div className="mb-2 flex flex-wrap gap-2">
-          {(['task.created', 'task.updated', 'task.completed', 'task.uncompleted'] as const).map((key) => (
+      <OpsCard title={t('admin.planner.testPayloadHelper')} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <div className="space-y-2">
+          <p className="text-sm text-muted">{t('admin.planner.testPayloadDesc')}</p>
+          <div className="flex flex-wrap gap-2">
+            {(['task.created', 'task.updated', 'task.completed', 'task.uncompleted'] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTestPayload(JSON.stringify(SAMPLE_PAYLOADS[key], null, 2))}
+                className="inline-flex items-center justify-center rounded-md border-2 border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-1"
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={testPayload}
+            onChange={(e) => setTestPayload(e.target.value)}
+            className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm"
+            rows={5}
+            spellCheck={false}
+          />
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              key={key}
               type="button"
-              onClick={() => setTestPayload(JSON.stringify(SAMPLE_PAYLOADS[key], null, 2))}
-              className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground hover:bg-surface-subtle"
+              onClick={handleTestPayload}
+              disabled={testLoading}
+              className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
             >
-              {key}
+              {testLoading ? t('admin.planner.testing') : t('admin.planner.testPayload')}
             </button>
-          ))}
+            {testResult && (
+              <span className={testResult.ok ? 'text-green-600' : 'text-amber-600'}>
+                {testResult.ok ? `OK — eventHash: ${testResult.eventHash ?? '—'}` : testResult.parseError ?? 'Parse error'}
+              </span>
+            )}
+          </div>
+          {testResult?.normalized != null ? (
+            <pre className="max-h-28 overflow-auto rounded bg-muted/30 p-2 text-xs">{JSON.stringify(testResult.normalized as object, null, 2)}</pre>
+          ) : null}
         </div>
-        <textarea
-          value={testPayload}
-          onChange={(e) => setTestPayload(e.target.value)}
-          className="mb-2 w-full rounded border border-border bg-surface px-3 py-2 font-mono text-xs"
-          rows={12}
-          spellCheck={false}
-        />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleTestPayload}
-            disabled={testLoading}
-            className="rounded bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-          >
-            {testLoading ? t('admin.planner.testing') : t('admin.planner.testPayload')}
-          </button>
-          {testResult && (
-            <span className={testResult.ok ? 'text-green-600' : 'text-amber-600'}>
-              {testResult.ok ? `OK — eventHash: ${testResult.eventHash ?? '—'}` : testResult.parseError ?? 'Parse error'}
-            </span>
-          )}
-        </div>
-        {testResult?.normalized != null ? (
-          <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/30 p-2 text-xs">{JSON.stringify(testResult.normalized as object, null, 2)}</pre>
-        ) : null}
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.userMappings')} className="rounded-xl border border-border">
-        <div className="mb-3">
+      <OpsCard title={undefined} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">{t('admin.planner.userMappings')}</h2>
           <button
             type="button"
             onClick={() => {
               setEditingUserMap(null);
               setUserMapModal('add');
             }}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
           >
             {t('common.add')}
           </button>
@@ -393,8 +396,10 @@ export function PlannerIntegrationClient() {
           <AdminTableBody>
             {userMaps.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-3 py-4 text-center text-muted">
-                  —
+                <td colSpan={3} className="px-3 py-2.5">
+                  <div className="rounded-lg border-2 border-dashed border-border bg-surface-subtle/50 px-3 py-2.5 text-center text-sm text-muted">
+                    {t('admin.planner.noUserMappings')}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -421,15 +426,16 @@ export function PlannerIntegrationClient() {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.bucketMappings')} className="rounded-xl border border-border">
-        <div className="mb-3">
+      <OpsCard title={undefined} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">{t('admin.planner.bucketMappings')}</h2>
           <button
             type="button"
             onClick={() => {
               setEditingBucketMap(null);
               setBucketMapModal('add');
             }}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
+            className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90"
           >
             {t('common.add')}
           </button>
@@ -444,8 +450,10 @@ export function PlannerIntegrationClient() {
           <AdminTableBody>
             {bucketMaps.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-4 text-center text-muted">
-                  —
+                <td colSpan={4} className="px-3 py-2.5">
+                  <div className="rounded-lg border-2 border-dashed border-border bg-surface-subtle/50 px-3 py-2.5 text-center text-sm text-muted">
+                    {t('admin.planner.noBucketMappings')}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -473,8 +481,8 @@ export function PlannerIntegrationClient() {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.actions') ?? 'Actions'} className="rounded-xl border border-border">
-        <div className="flex flex-wrap gap-2">
+      <OpsCard title={t('admin.planner.actions') ?? 'Actions'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href="/sync/planner"
             className="rounded border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
@@ -491,35 +499,35 @@ export function PlannerIntegrationClient() {
         </div>
       </OpsCard>
 
-      <OpsCard title={t('admin.planner.logs') ?? 'Sync logs'} className="rounded-xl border border-border">
+      <OpsCard title={t('admin.planner.logs') ?? 'Sync logs'} className="rounded-xl border border-border p-3 shadow-card md:p-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="px-3 py-2 text-start text-muted">eventType</th>
-                <th className="px-3 py-2 text-start text-muted">status</th>
-                <th className="px-3 py-2 text-start text-muted">taskId</th>
-                <th className="px-3 py-2 text-start text-muted">localTaskId</th>
-                <th className="px-3 py-2 text-start text-muted">message</th>
-                <th className="px-3 py-2 text-start text-muted">createdAt</th>
+              <tr className="border-b border-border bg-surface-subtle text-start">
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">eventType</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">status</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">taskId</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">localTaskId</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">message</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-foreground">createdAt</th>
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-4 text-center text-muted">
+                  <td colSpan={6} className="px-3 py-2.5 text-center text-muted">
                     —
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="border-b border-border">
-                    <td className="px-3 py-2 text-foreground">{log.eventType}</td>
-                    <td className="px-3 py-2">{log.status}</td>
-                    <td className="px-3 py-2 font-mono text-xs" title={log.relatedExternalTaskId ?? undefined}>{log.relatedExternalTaskId ?? '—'}</td>
-                    <td className="px-3 py-2 font-mono text-xs" title={log.relatedLocalTaskId ?? undefined}>{log.relatedLocalTaskId ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted max-w-[220px] truncate" title={log.message ?? undefined}>{log.message ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted whitespace-nowrap">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</td>
+                    <td className="px-3 py-2.5 text-foreground">{log.eventType}</td>
+                    <td className="px-3 py-2.5">{log.status}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs" title={log.relatedExternalTaskId ?? undefined}>{log.relatedExternalTaskId ?? '—'}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs" title={log.relatedLocalTaskId ?? undefined}>{log.relatedLocalTaskId ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-muted max-w-[220px] truncate" title={log.message ?? undefined}>{log.message ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-muted whitespace-nowrap">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</td>
                   </tr>
                 ))
               )}
@@ -633,10 +641,10 @@ function IntegrationForm({ onSuccess, t }: { onSuccess: () => void; t: (k: strin
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-2">
       <div>
         <label className="block text-sm font-medium text-foreground">{t('admin.planner.boutiqueOptional')}</label>
-        <select value={boutiqueId} onChange={(e) => setBoutiqueId(e.target.value)} className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm">
+        <select value={boutiqueId} onChange={(e) => setBoutiqueId(e.target.value)} className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm">
           <option value="">—</option>
           {boutiques.map((b) => (
             <option key={b.id} value={b.id}>
@@ -652,7 +660,7 @@ function IntegrationForm({ onSuccess, t }: { onSuccess: () => void; t: (k: strin
           value={webhookSecret}
           onChange={(e) => setWebhookSecret(e.target.value)}
           placeholder={t('admin.planner.webhookSecretPlaceholder')}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
@@ -663,7 +671,7 @@ function IntegrationForm({ onSuccess, t }: { onSuccess: () => void; t: (k: strin
           value={planName}
           onChange={(e) => setPlanName(e.target.value)}
           placeholder={t('admin.planner.planNamePlaceholder')}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
@@ -681,7 +689,7 @@ function UserMapForm({
   onCancel,
   t,
 }: {
-  employees: Array<{ empId: string; name: string }>;
+  employees: Array<{ empId: string; name: string; email?: string | null }>;
   initial?: { employeeId: string; microsoftEmail?: string; microsoftDisplayName?: string };
   onSubmit: (v: { employeeId: string; microsoftEmail?: string; microsoftDisplayName?: string }) => Promise<void>;
   onCancel: () => void;
@@ -715,17 +723,21 @@ function UserMapForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-2">
       <div>
         <label className="block text-sm font-medium text-foreground">{t('admin.planner.employee')}</label>
         <select
-          value={employees.some((e) => e.empId === employeeId) || employeeId === '__custom__' ? employeeId : '__custom__'}
+          value={employeeId}
           onChange={(e) => {
             const v = e.target.value;
             setEmployeeId(v);
-            if (v !== '__custom__') setCustomEmpId('');
+            if (v !== '__custom__') {
+              setCustomEmpId('');
+              const sel = employees.find((emp) => emp.empId === v);
+              setMicrosoftEmail(sel?.email?.trim() ?? '');
+            }
           }}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         >
           <option value="">{t('admin.planner.selectPlaceholder')}</option>
@@ -742,7 +754,7 @@ function UserMapForm({
             value={customEmpId}
             onChange={(e) => setCustomEmpId(e.target.value)}
             placeholder={t('admin.planner.empIdPlaceholder')}
-            className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+            className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           />
         )}
       </div>
@@ -753,7 +765,7 @@ function UserMapForm({
           value={microsoftEmail}
           onChange={(e) => setMicrosoftEmail(e.target.value)}
           placeholder="user@example.com"
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       <div>
@@ -763,11 +775,11 @@ function UserMapForm({
           value={microsoftDisplayName}
           onChange={(e) => setMicrosoftDisplayName(e.target.value)}
           placeholder={t('admin.planner.optional')}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
-      <div className="flex gap-2">
+      <div className="flex items-center justify-start gap-2">
         <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
           {saving ? t('admin.planner.saving') : t('common.save')}
         </button>
@@ -826,13 +838,13 @@ function BucketMapForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-2">
       <div>
         <label className="block text-sm font-medium text-foreground">{t('admin.planner.integration')}</label>
         <select
           value={integrationId}
           onChange={(e) => setIntegrationId(e.target.value)}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         >
           <option value="">{t('admin.planner.selectPlaceholder')}</option>
@@ -850,7 +862,7 @@ function BucketMapForm({
           value={externalBucketId}
           onChange={(e) => setExternalBucketId(e.target.value)}
           placeholder={t('admin.planner.externalBucketIdPlaceholder')}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
@@ -861,7 +873,7 @@ function BucketMapForm({
           value={externalBucketName}
           onChange={(e) => setExternalBucketName(e.target.value)}
           placeholder={t('admin.planner.externalBucketNamePlaceholder')}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
           required
         />
       </div>
@@ -871,7 +883,7 @@ function BucketMapForm({
           type="text"
           value={localTaskType}
           onChange={(e) => setLocalTaskType(e.target.value)}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       <div>
@@ -880,7 +892,7 @@ function BucketMapForm({
           type="text"
           value={localZone}
           onChange={(e) => setLocalZone(e.target.value)}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       <div>
@@ -889,11 +901,11 @@ function BucketMapForm({
           type="number"
           value={localPriority}
           onChange={(e) => setLocalPriority(e.target.value)}
-          className="mt-1 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
+          className="mt-0.5 w-full rounded border border-border bg-surface px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-amber-600">{error}</p>}
-      <div className="flex gap-2">
+      <div className="flex items-center justify-start gap-2">
         <button type="submit" disabled={saving} className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-50">
           {saving ? t('admin.planner.saving') : t('common.save')}
         </button>

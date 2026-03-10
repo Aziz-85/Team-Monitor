@@ -13,6 +13,11 @@ export async function GET() {
     return handleAdminError(e);
   }
 
+  if (access.role === 'AREA_MANAGER' && (!access.boutiqueIds || access.boutiqueIds.length === 0)) {
+    const graphOk = await isGraphConfigured();
+    return NextResponse.json({ integrations: [], graphConfigured: graphOk });
+  }
+
   const where = access.boutiqueId
     ? { boutiqueId: access.boutiqueId }
     : access.boutiqueIds?.length
@@ -73,9 +78,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const canAccessBoutique = (boutiqueId: string | null) =>
-    !boutiqueId ||
-    (access.boutiqueId ? boutiqueId === access.boutiqueId : access.boutiqueIds?.includes(boutiqueId) ?? true);
+  const canAccessBoutique = (boutiqueId: string | null) => {
+    if (!boutiqueId) return true;
+    if (access.boutiqueId) return boutiqueId === access.boutiqueId;
+    if (access.boutiqueIds?.length) return access.boutiqueIds.includes(boutiqueId);
+    return true; // SUPER_ADMIN
+  };
+
+  if (access.role === 'AREA_MANAGER' && (!access.boutiqueIds || access.boutiqueIds.length === 0)) {
+    return NextResponse.json({ error: 'Forbidden: no boutique scope' }, { status: 403 });
+  }
 
   if (access.boutiqueId || access.boutiqueIds?.length) {
     const requestedBoutique = body.boutiqueId ?? null;

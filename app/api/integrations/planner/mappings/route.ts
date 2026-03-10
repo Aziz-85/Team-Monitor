@@ -11,6 +11,10 @@ export async function GET() {
     return handleAdminError(e);
   }
 
+  if (access.role === 'AREA_MANAGER' && (!access.boutiqueIds || access.boutiqueIds.length === 0)) {
+    return NextResponse.json({ userMaps: [], bucketMaps: [], userCount: 0, bucketCount: 0 });
+  }
+
   const boutiqueFilter = access.boutiqueId
     ? { boutiqueId: access.boutiqueId }
     : access.boutiqueIds?.length
