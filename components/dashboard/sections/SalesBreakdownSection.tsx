@@ -2,7 +2,7 @@
 
 import { OpsCard } from '@/components/ui/OpsCard';
 import { ProgressBar } from '../cards/ProgressBar';
-import { formatSarFromHalala } from '@/lib/utils/money';
+import { formatSarInt } from '@/lib/utils/money';
 
 type Row = { name: string; target: number; actual: number; pct: number };
 
@@ -25,7 +25,7 @@ export function SalesBreakdownSection({ employees }: { employees: Row[] }) {
               </span>
             </div>
             <div className="mt-1 flex items-center gap-2 text-xs text-muted">
-              <span>{formatSarFromHalala(emp.actual)} / {formatSarFromHalala(emp.target)}</span>
+              <span>{formatSarInt(emp.actual)} / {formatSarInt(emp.target)}</span>
             </div>
             <div className="mt-1.5">
               <ProgressBar

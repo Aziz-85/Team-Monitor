@@ -58,8 +58,10 @@ export async function validateWeekKeyContinuity(
     const roster = await rosterForDate(new Date(dateStr + 'T12:00:00Z'), { boutiqueIds });
     const amEmpIds = new Set(roster.amEmployees.map((e) => e.empId));
     const pmEmpIds = new Set(roster.pmEmployees.map((e) => e.empId));
-    if (amHolder && !amEmpIds.has(amHolder)) {
-      errors.push({ date: dateStr, code: 'AM_NOT_SCHEDULED', message: `Day ${dateStr}: AM key holder must be scheduled AM that day.` });
+    const dayOfWeek = new Date(dateStr + 'T12:00:00Z').getUTCDay();
+    const isFriday = dayOfWeek === 5;
+    if (amHolder && !amEmpIds.has(amHolder) && !(isFriday && pmEmpIds.has(amHolder))) {
+      errors.push({ date: dateStr, code: 'AM_NOT_SCHEDULED', message: `Day ${dateStr}: AM key holder must be scheduled that day.` });
     }
     if (pmHolder && !pmEmpIds.has(pmHolder)) {
       errors.push({ date: dateStr, code: 'PM_NOT_SCHEDULED', message: `Day ${dateStr}: PM key holder must be scheduled PM that day.` });

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
+import { formatSarInt } from '@/lib/utils/money';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
 
 type Risk = { score: number; level: string; reasons: string[] };
@@ -422,7 +423,7 @@ export function ExecutiveInsightsClient() {
               <ExecutiveLineChart
                 height={180}
                 data={trends.map((tr) => ({ label: tr.weekStart.slice(5), value: tr.revenue }))}
-                valueFormat={(n) => (n / 1000).toFixed(0) + 'k'}
+                valueFormat={(n) => formatSarInt(n)}
               />
             </div>
             <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm">

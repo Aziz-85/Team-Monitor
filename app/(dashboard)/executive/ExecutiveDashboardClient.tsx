@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
+import { formatSarInt } from '@/lib/utils/money';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
 import { ExecutiveBarChart } from '@/components/executive/ExecutiveBarChart';
 
@@ -203,7 +204,7 @@ export function ExecutiveDashboardClient() {
             height={200}
             data={data.salesVsTargetTrend.map((d) => ({ label: d.label, value: d.sales }))}
             targetLine={data.salesVsTargetTrend.map((d) => d.target)}
-            valueFormat={(n) => (n / 1000).toFixed(0) + 'k'}
+            valueFormat={(n) => formatSarInt(n)}
           />
         </div>
         <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">

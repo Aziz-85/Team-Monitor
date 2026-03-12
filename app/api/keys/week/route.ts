@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { getWeekKeyPlan, applyWeekKeyPlan, type DayKeyAssignment } from '@/lib/keys/keyService';
 import { validateWeekKeyContinuity } from '@/lib/keys/keyContinuity';
+import { computeSuggestionsAndWarnings } from '@/lib/keys/keySuggestions';
 import { rosterForDate } from '@/lib/services/roster';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
@@ -57,9 +58,13 @@ export async function GET(request: NextRequest) {
   const daysWithEligible = await Promise.all(
     plan.days.map(async (day) => {
       const roster = await rosterForDate(new Date(day.date + 'T12:00:00Z'), { boutiqueIds });
+      const dayOfWeek = new Date(day.date + 'T12:00:00Z').getUTCDay();
+      const isFriday = dayOfWeek === 5;
       return {
         ...day,
-        amEligible: roster.amEmployees.map((e) => ({ empId: e.empId, name: e.name })),
+        amEligible: isFriday
+          ? roster.pmEmployees.map((e) => ({ empId: e.empId, name: e.name }))
+          : roster.amEmployees.map((e) => ({ empId: e.empId, name: e.name })),
         pmEligible: roster.pmEmployees.map((e) => ({ empId: e.empId, name: e.name })),
       };
     })
@@ -72,9 +77,11 @@ export async function GET(request: NextRequest) {
     ? (await prisma.employee.findUnique({ where: { empId: plan.currentHolders.key2HolderEmployeeId }, select: { name: true } }))?.name ?? null
     : null;
 
+  const daysWithSuggestions = computeSuggestionsAndWarnings(daysWithEligible);
+
   return NextResponse.json({
     weekStart: plan.weekStart,
-    days: daysWithEligible,
+    days: daysWithSuggestions,
     currentHolders: {
       key1HolderEmployeeId: plan.currentHolders.key1HolderEmployeeId,
       key2HolderEmployeeId: plan.currentHolders.key2HolderEmployeeId,

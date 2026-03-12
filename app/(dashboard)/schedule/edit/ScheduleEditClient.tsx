@@ -261,6 +261,9 @@ type KeyPlanDay = {
   pmHolderEmpId: string | null;
   amEligible?: Array<{ empId: string; name: string }>;
   pmEligible?: Array<{ empId: string; name: string }>;
+  suggestedAmHolderEmpId?: string | null;
+  suggestedPmHolderEmpId?: string | null;
+  warnings?: Array<{ date: string; code: string; message: string }>;
 };
 
 type KeyPlan = {
@@ -600,7 +603,13 @@ export function ScheduleEditClient({
       .then((data: KeyPlan | null) => {
         if (data) {
           setKeyPlan(data);
-          setKeyPlanLocal(data.days.map((d) => ({ ...d })));
+          setKeyPlanLocal(
+            data.days.map((d) => ({
+              ...d,
+              amHolderEmpId: d.amHolderEmpId ?? d.suggestedAmHolderEmpId ?? null,
+              pmHolderEmpId: d.pmHolderEmpId ?? d.suggestedPmHolderEmpId ?? null,
+            }))
+          );
           setKeyPlanDirty(false);
         } else setKeyPlan(null);
       })
@@ -825,8 +834,8 @@ export function ScheduleEditClient({
         const isFriday = day.dayOfWeek === 5;
         const validations: ValidationResult[] = [];
         if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: (t('schedule.warningRashidOverflow') as string) || `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
-        if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: (t('schedule.minAmTwo') as string) || `AM (${am}) < ${effectiveMinAm}`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
-        if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: (t('schedule.warningMinPm') as string) || `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
+        if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: (t('schedule.minAmTwo') as string) || `AM must be at least ${effectiveMinAm} (${am} present)`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
+        if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
         return { date: day.date, validations };
       }) ?? [],
     [gridData, displayCounts, t]
@@ -1404,15 +1413,37 @@ export function ScheduleEditClient({
             </div>
             {keyPlan && keyPlan.days.length > 0 && (
               <div className="overflow-x-auto">
+                {(() => {
+                  const allWarnings = keyPlan.days.flatMap((d) => (d.warnings ?? []).map((w) => ({ ...w, dayDate: d.date })));
+                  const hasWarnings = allWarnings.length > 0;
+                  return hasWarnings ? (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                      <span className="font-medium">Warnings:</span>
+                      {allWarnings.slice(0, 5).map((w, i) => (
+                        <span key={`${w.dayDate}-${w.code}-${i}`} title={w.message}>{w.message}</span>
+                      ))}
+                      {allWarnings.length > 5 && <span className="text-muted">+{allWarnings.length - 5} more</span>}
+                    </div>
+                  ) : null;
+                })()}
                 <table className="w-full min-w-[600px] text-sm">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="py-1 pr-2 text-left font-medium text-muted">{t('schedule.day') ?? 'Day'}</th>
-                      {keyPlan.days.map((d) => (
-                        <th key={d.date} className="py-1 px-1 text-center font-medium text-muted">
-                          {getDayShort(d.date, locale)} {formatDDMM(d.date)}
-                        </th>
-                      ))}
+                      {keyPlan.days.map((d) => {
+                        const dayWarnings = d.warnings ?? [];
+                        const hasDayWarnings = dayWarnings.length > 0;
+                        return (
+                          <th key={d.date} className="py-1 px-1 text-center font-medium text-muted">
+                            <span className="inline-flex items-center gap-0.5">
+                              {getDayShort(d.date, locale)} {formatDDMM(d.date)}
+                              {hasDayWarnings && (
+                                <span title={dayWarnings.map((w) => w.message).join(' • ')} className="text-amber-600 dark:text-amber-400" aria-label="Warnings">⚠</span>
+                              )}
+                            </span>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
@@ -1421,6 +1452,10 @@ export function ScheduleEditClient({
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.amEligible ?? [];
+                        const savedAm = day.amHolderEmpId;
+                        const suggestedAm = day.suggestedAmHolderEmpId ?? null;
+                        const isSuggested = !savedAm && suggestedAm != null && local.amHolderEmpId === suggestedAm;
+                        const isManual = !savedAm && local.amHolderEmpId != null && local.amHolderEmpId !== suggestedAm;
                         return (
                           <td key={day.date} className="py-1 px-1">
                             <select
@@ -1437,6 +1472,11 @@ export function ScheduleEditClient({
                                 <option key={o.empId} value={o.empId}>{o.name}</option>
                               ))}
                             </select>
+                            {(isSuggested || isManual) && (
+                              <span className="mt-0.5 block text-[10px] text-muted">
+                                {isSuggested ? 'Suggested' : 'Manual'}
+                              </span>
+                            )}
                           </td>
                         );
                       })}
@@ -1446,6 +1486,10 @@ export function ScheduleEditClient({
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.pmEligible ?? [];
+                        const savedPm = day.pmHolderEmpId;
+                        const suggestedPm = day.suggestedPmHolderEmpId ?? null;
+                        const isSuggested = !savedPm && suggestedPm != null && local.pmHolderEmpId === suggestedPm;
+                        const isManual = !savedPm && local.pmHolderEmpId != null && local.pmHolderEmpId !== suggestedPm;
                         return (
                           <td key={day.date} className="py-1 px-1">
                             <select
@@ -1462,6 +1506,11 @@ export function ScheduleEditClient({
                                 <option key={o.empId} value={o.empId}>{o.name}</option>
                               ))}
                             </select>
+                            {(isSuggested || isManual) && (
+                              <span className="mt-0.5 block text-[10px] text-muted">
+                                {isSuggested ? 'Suggested' : 'Manual'}
+                              </span>
+                            )}
                           </td>
                         );
                       })}
@@ -1488,8 +1537,11 @@ export function ScheduleEditClient({
                           setToast(t('schedule.keys.saved') ?? 'Key plan saved');
                           setTimeout(() => setToast(null), 3000);
                         } else {
-                          setToast((data.error as string) ?? 'Key plan validation failed');
-                          setTimeout(() => setToast(null), 5000);
+                          const msg = data.code === 'KEY_CONTINUITY' && Array.isArray(data.errors)
+                            ? data.errors.map((e: { message?: string }) => e.message).filter(Boolean).join(' · ') || data.error
+                            : (data.error as string) ?? 'Key plan validation failed';
+                          setToast(msg);
+                          setTimeout(() => setToast(null), 6000);
                         }
                       }}
                       className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
@@ -1498,7 +1550,7 @@ export function ScheduleEditClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setKeyPlanLocal(keyPlan.days.map((d) => ({ ...d }))); setKeyPlanDirty(false); }}
+                      onClick={() => { setKeyPlanLocal(keyPlan.days.map((d) => ({ ...d, amHolderEmpId: d.amHolderEmpId ?? d.suggestedAmHolderEmpId ?? null, pmHolderEmpId: d.pmHolderEmpId ?? d.suggestedPmHolderEmpId ?? null }))); setKeyPlanDirty(false); }}
                       className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
                     >
                       {t('common.cancel') ?? 'Cancel'}

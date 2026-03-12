@@ -1,7 +1,7 @@
 'use client';
 
 import { OpsCard } from '@/components/ui/OpsCard';
-import { formatSarFromHalala } from '@/lib/utils/money';
+import { formatSarInt } from '@/lib/utils/money';
 import {
   DataTable,
   DataTableHead,
@@ -48,8 +48,8 @@ export function TeamTableSection({ rows }: { rows: Row[] }) {
                   {r.roleLabel ?? r.role}
                 </span>
               </DataTableTd>
-              <DataTableTd className="text-end text-foreground">{formatSarFromHalala(r.target)}</DataTableTd>
-              <DataTableTd className="text-end text-foreground">{formatSarFromHalala(r.actual)}</DataTableTd>
+              <DataTableTd className="text-end text-foreground">{formatSarInt(r.target)}</DataTableTd>
+              <DataTableTd className="text-end text-foreground">{formatSarInt(r.actual)}</DataTableTd>
               <DataTableTd
                 className={`text-end font-medium ${
                   r.pct >= 60 ? 'text-foreground' : r.pct >= 40 ? 'text-amber-600' : 'text-luxury-error'
