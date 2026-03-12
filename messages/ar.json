@@ -1162,6 +1162,7 @@
     },
     "summary": {
       "title": "ملخص المبيعات",
+      "boardTitle": "لوحة أداء الفرع",
       "subtitle": "تقدم الأسبوع والشهر والفريق مقابل الهدف",
       "apply": "تطبيق",
       "loading": "جاري التحميل…",
@@ -1184,6 +1185,7 @@
       "guestCoverageNet": "صافي تغطية الضيوف",
       "employee": "الموظف",
       "net": "الصافي",
+      "contributionPct": "نسبة المساهمة %",
       "guestCoverage": "تغطية الضيوف",
       "sourceBoutique": "فرع المصدر",
       "sourcesNote": "المصادر: السجل + الاستيراد + اليدوي",

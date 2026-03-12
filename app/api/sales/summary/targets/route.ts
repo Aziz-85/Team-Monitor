@@ -1,13 +1,18 @@
 /**
  * GET /api/sales/summary/targets?from=YYYY-MM-DD&to=YYYY-MM-DD
  * Boutique target overview: week, month, quarter, half-year, year with target/achieved/remaining and pct.
- * RBAC: MANAGER, ADMIN, SUPER_ADMIN only. All amounts SAR_INT; pct integer.
+ * Targets follow BoutiqueMonthlyTarget aggregation:
+ * - Week: SUM(dailyTarget per day in week) via getDailyTargetForDay
+ * - Month: BoutiqueMonthlyTarget.amount
+ * - Quarter/Half/Year: SUM(month targets in period)
+ * RBAC: MANAGER, ADMIN, SUPER_ADMIN only. All amounts SAR_INT; pct via calculatePerformance.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
-import { computePct, remainingPctDisplay } from '@/lib/sales/targetsPct';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
+import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import type { Role } from '@prisma/client';
 
@@ -167,9 +172,32 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const daysInMonth = new Date(Date.UTC(year, toDate.getUTCMonth() + 1, 0)).getUTCDate();
   const monthTargetSar = monthTarget?.amount ?? 0;
-  const weekTargetSar = monthTargetSar > 0 ? Math.floor((monthTargetSar * 7) / daysInMonth) : 0;
+  const quarterTargetSar = quarterTargets.reduce((s, t) => s + t.amount, 0);
+  const halfTargetSar = halfTargets.reduce((s, t) => s + t.amount, 0);
+  const yearTargetSar = yearTargets.reduce((s, t) => s + t.amount, 0);
+
+  // Week target: SUM(dailyTarget for each day in week). Week may span two months.
+  const weekDates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStartDate);
+    d.setUTCDate(d.getUTCDate() + i);
+    weekDates.push(d.toISOString().slice(0, 10));
+  }
+  const monthKeysInWeek = Array.from(new Set(weekDates.map((d) => d.slice(0, 7))));
+  const monthTargetsInWeek = await prisma.boutiqueMonthlyTarget.findMany({
+    where: { boutiqueId, month: { in: monthKeysInWeek } },
+    select: { month: true, amount: true },
+  });
+  const monthTargetMap = new Map(monthTargetsInWeek.map((t) => [t.month, t.amount]));
+  let weekTargetSar = 0;
+  for (const dateStr of weekDates) {
+    const monthKey = dateStr.slice(0, 7);
+    const mt = monthTargetMap.get(monthKey) ?? 0;
+    const daysInMonth = new Date(Date.UTC(parseInt(monthKey.slice(0, 4), 10), parseInt(monthKey.slice(5, 7), 10), 0)).getUTCDate();
+    const dayOfMonth = parseInt(dateStr.slice(8, 10), 10);
+    weekTargetSar += getDailyTargetForDay(mt, daysInMonth, dayOfMonth);
+  }
 
   const weekAchieved = weekSales._sum.amount ?? 0;
   const monthAchieved = monthSales._sum.amount ?? 0;
@@ -177,9 +205,28 @@ export async function GET(request: NextRequest) {
   const halfAchieved = halfSales._sum.amount ?? 0;
   const yearAchieved = yearSales._sum.amount ?? 0;
 
-  const quarterTargetSar = quarterTargets.reduce((s, t) => s + t.amount, 0);
-  const halfTargetSar = halfTargets.reduce((s, t) => s + t.amount, 0);
-  const yearTargetSar = yearTargets.reduce((s, t) => s + t.amount, 0);
+  // Daily trajectory for Target vs Actual chart (month of to, MTD cumulative)
+  const daysInMonth = new Date(Date.UTC(year, toDate.getUTCMonth() + 1, 0)).getUTCDate();
+  const todayDayOfMonth = Math.min(toDate.getUTCDate(), daysInMonth);
+  const salesByDate = await prisma.salesEntry.groupBy({
+    by: ['dateKey'],
+    where: {
+      ...baseWhere,
+      date: { gte: monthStart, lte: monthEnd },
+    },
+    _sum: { amount: true },
+  });
+  const salesByDateKey = new Map(salesByDate.map((r) => [r.dateKey, r._sum?.amount ?? 0]));
+  let cumTarget = 0;
+  let cumActual = 0;
+  const dailyTrajectory: { dateKey: string; targetCumulative: number; actualCumulative: number }[] = [];
+  const mm = String(toDate.getUTCMonth() + 1).padStart(2, '0');
+  for (let d = 1; d <= todayDayOfMonth; d++) {
+    const dateKey = `${year}-${mm}-${String(d).padStart(2, '0')}`;
+    cumTarget += getDailyTargetForDay(monthTargetSar, daysInMonth, d);
+    cumActual += salesByDateKey.get(dateKey) ?? 0;
+    dailyTrajectory.push({ dateKey, targetCumulative: cumTarget, actualCumulative: cumActual });
+  }
 
   function row(
     key: string,
@@ -188,18 +235,17 @@ export async function GET(request: NextRequest) {
     from?: string,
     to?: string
   ): PeriodRow {
-    const remainingSar = targetSar - achievedSar;
-    const pct = computePct(achievedSar, targetSar);
+    const perf = calculatePerformance({ target: targetSar, sales: achievedSar });
     return {
       key,
       ...(from && { from }),
       ...(to && { to }),
-      targetSar,
-      achievedSar,
-      remainingSar,
-      pct,
-      achievedPct: pct,
-      remainingPct: remainingPctDisplay(pct),
+      targetSar: perf.target,
+      achievedSar: perf.sales,
+      remainingSar: perf.remaining,
+      pct: perf.percent,
+      achievedPct: perf.percent,
+      remainingPct: 100 - Math.min(perf.percent, 100),
     };
   }
 
@@ -209,5 +255,7 @@ export async function GET(request: NextRequest) {
     quarter: row(quarterKey, quarterTargetSar, quarterAchieved),
     half: row(halfKey, halfTargetSar, halfAchieved),
     year: row(String(year), yearTargetSar, yearAchieved),
+    dailyTrajectory,
+    monthKey,
   });
 }

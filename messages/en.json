@@ -1163,6 +1163,7 @@
     },
     "summary": {
       "title": "Sales Summary",
+      "boardTitle": "Boutique Performance Board",
       "subtitle": "Week, month and team progress vs target",
       "apply": "Apply",
       "loading": "Loading…",
@@ -1185,6 +1186,7 @@
       "guestCoverageNet": "Guest coverage net",
       "employee": "Employee",
       "net": "Net",
+      "contributionPct": "Contribution %",
       "guestCoverage": "Guest coverage",
       "sourceBoutique": "Source boutique",
       "sourcesNote": "Sources: LEDGER + IMPORT + MANUAL",

@@ -17,6 +17,7 @@ import {
   DataTableTd,
 } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TargetVsActualLineChart } from '@/components/charts/TargetVsActualLineChart';
 
 type BoutiqueOption = { id: string; code: string; name: string };
 
@@ -52,6 +53,8 @@ type TargetsResponse = {
   quarter: { key: string; targetSar: number; achievedSar: number; remainingSar: number; pct: number };
   half: { key: string; targetSar: number; achievedSar: number; remainingSar: number; pct: number };
   year: { key: string; targetSar: number; achievedSar: number; remainingSar: number; pct: number };
+  dailyTrajectory?: { dateKey: string; targetCumulative: number; actualCumulative: number }[];
+  monthKey?: string;
 };
 
 type Summary = {
@@ -75,6 +78,12 @@ type Summary = {
   }>;
 };
 
+function getPerformanceColor(percent: number): string {
+  if (percent >= 100) return 'bg-emerald-500';
+  if (percent >= 60) return 'bg-amber-500';
+  return 'bg-red-500';
+}
+
 export function SalesSummaryClient() {
   const { t } = useT();
   const searchParams = useSearchParams();
@@ -93,7 +102,6 @@ export function SalesSummaryClient() {
   const [targetsLoading, setTargetsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Read URL on mount and when searchParams change
   useEffect(() => {
     const fromParam = searchParams.get('from')?.trim() || '';
     const toParam = searchParams.get('to')?.trim() || '';
@@ -104,7 +112,6 @@ export function SalesSummaryClient() {
     if (fromParam || toParam) setSelectedPeriodId('custom');
   }, [searchParams]);
 
-  // Default date range when not in URL
   useEffect(() => {
     if (from || to) return;
     const { from: defaultFrom, to: defaultTo } = getDefaultDateRange();
@@ -112,7 +119,6 @@ export function SalesSummaryClient() {
     setTo(defaultTo);
   }, [from, to]);
 
-  // Fetch operational boutique and allowed boutiques; resolve default boutique and validate URL
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -133,7 +139,6 @@ export function SalesSummaryClient() {
     return () => { cancelled = true; };
   }, []);
 
-  // When scope is ready, ensure boutiqueId is set to a valid allowed boutique (default or from URL)
   useEffect(() => {
     if (!scopeReady || allowedBoutiques.length === 0) return;
     const defaultId = operationalBoutique?.boutiqueId ?? allowedBoutiques[0]?.id ?? '';
@@ -144,7 +149,6 @@ export function SalesSummaryClient() {
     });
   }, [scopeReady, operationalBoutique?.boutiqueId, allowedBoutiques]);
 
-  // Sync URL when from, to, boutiqueId or scope become ready (one-way: state -> URL)
   useEffect(() => {
     if (!scopeReady) return;
     const params = new URLSearchParams(searchParams.toString());
@@ -241,9 +245,25 @@ export function SalesSummaryClient() {
     }));
   }, [allowedBoutiques]);
 
+  const chartData = useMemo(() => {
+    const traj = targets?.dailyTrajectory ?? [];
+    return traj.map((d) => ({
+      label: d.dateKey.slice(-2),
+      value: d.actualCumulative,
+    }));
+  }, [targets?.dailyTrajectory]);
+
+  const chartTargetLine = useMemo(() => {
+    const traj = targets?.dailyTrajectory ?? [];
+    return traj.map((d) => d.targetCumulative);
+  }, [targets?.dailyTrajectory]);
+
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <PageHeader title={t('sales.summary.title')} subtitle={t('sales.summary.subtitle')} />
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        title={t('sales.summary.boardTitle')}
+        subtitle={from && to ? `${selectedBoutique?.name ?? ''} • ${from} → ${to}` : t('sales.summary.subtitle')}
+      />
       <FilterBar
         activeFilters={activeFilters}
         quickPeriods={QUICK_PERIODS}
@@ -294,10 +314,14 @@ export function SalesSummaryClient() {
       {error && <p className="text-sm text-luxury-error">{error}</p>}
 
       {targetsLoading && !targets && <p className="text-sm text-muted">{t('sales.summary.loadingTargets')}</p>}
+
+      {/* Part 2 — Top KPI Section */}
       {targets && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted">{t('sales.summary.boutiqueTargets')}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            {t('sales.summary.boutiqueTargets')}
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               { label: t('sales.summary.week'), data: targets.week, sub: targets.week.from && targets.week.to ? `${targets.week.from} – ${targets.week.to}` : undefined },
               { label: t('sales.summary.month'), data: targets.month, sub: targets.month.key },
@@ -305,16 +329,28 @@ export function SalesSummaryClient() {
               { label: t('sales.summary.halfYear'), data: targets.half, sub: targets.half.key },
               { label: t('sales.summary.year'), data: targets.year, sub: targets.year.key },
             ].map(({ label, data, sub }) => (
-              <div key={label} className="rounded-lg border border-border bg-surface p-4 shadow-sm">
-                <p className="text-sm font-medium text-foreground">{label}</p>
-                {sub && <p className="text-xs text-muted">{sub}</p>}
-                <p className="mt-1 text-xs text-muted">{t('sales.summary.target')}: {formatSarInt(data.targetSar)}</p>
-                <p className="text-xs text-muted">{t('sales.summary.achieved')}: {formatSarInt(data.achievedSar)}</p>
-                <p className="text-xs text-muted">{t('sales.summary.remaining')}: {formatSarInt(data.remainingSar)}</p>
-                <p className="mt-1 text-sm font-medium">{t('sales.summary.progress')}: {data.pct}%</p>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded bg-surface-subtle">
+              <div
+                key={label}
+                className="rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted">{label}</p>
+                {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+                <p className="mt-3 text-2xl font-bold tabular-nums text-foreground md:text-3xl">
+                  {formatSarInt(data.achievedSar)}
+                </p>
+                <p className="text-xs text-muted">{t('sales.summary.achieved')}</p>
+                <div className="mt-3 space-y-1 text-xs">
+                  <p className="text-muted">
+                    {t('sales.summary.target')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.targetSar)}</span>
+                  </p>
+                  <p className="text-muted">
+                    {t('sales.summary.remaining')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.remainingSar)}</span>
+                  </p>
+                </div>
+                <p className="mt-2 text-sm font-bold tabular-nums">{data.pct}%</p>
+                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface-subtle">
                   <div
-                    className="h-full rounded bg-surface-subtle transition-[width]"
+                    className={`h-full rounded-full transition-all duration-500 ${getPerformanceColor(data.pct)}`}
                     style={{ width: `${Math.min(data.pct, 100)}%` }}
                   />
                 </div>
@@ -324,60 +360,125 @@ export function SalesSummaryClient() {
         </section>
       )}
 
-      {summary && (
-        <div className="space-y-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
-          <p className="text-sm text-foreground">
-            {summary.from} – {summary.to}
-          </p>
-          <p className="text-xs text-muted">{t('sales.summary.sourcesNote')}</p>
-          {summary.netSalesTotal === 0 && summary.breakdownByEmployee.length === 0 && (
-            <EmptyState title={t('sales.summary.noDataForPeriod')} />
-          )}
-          <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-            <div className="rounded border border-border p-2">
-              <p className="text-muted">{t('sales.summary.netSales')}</p>
-              <p className="font-medium text-foreground">{formatSarInt(summary.netSalesTotal)}</p>
-            </div>
-            <div className="rounded border border-border p-2">
-              <p className="text-muted">{t('sales.summary.grossSales')}</p>
-              <p className="text-foreground">{formatSarInt(summary.grossSalesTotal)}</p>
-            </div>
-            <div className="rounded border border-border p-2">
-              <p className="text-muted">{t('sales.summary.returns')}</p>
-              <p className="text-foreground">{formatSarInt(summary.returnsTotal)}</p>
-            </div>
-            <div className="rounded border border-border p-2">
-              <p className="text-muted">{t('sales.summary.guestCoverageNet')}</p>
-              <p className="text-foreground">{formatSarInt(summary.guestCoverageNetSales)}</p>
-            </div>
+      {/* Part 4 — Visual Analytics Section */}
+      {targets?.dailyTrajectory && targets.dailyTrajectory.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Target vs Actual (MTD)
+          </h2>
+          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md md:p-8">
+            <p className="mb-6 text-xs text-muted">
+              Cumulative sales vs target by day • {targets.monthKey ?? ''}
+            </p>
+            <TargetVsActualLineChart
+              data={chartData}
+              targetLine={chartTargetLine}
+              height={260}
+              valueFormat={(n) => formatSarInt(n)}
+              emptyLabel="No sales data yet"
+              theme="home"
+            />
           </div>
-          {summary.breakdownByEmployee.length > 0 ? (
-            <DataTable variant="luxury" zebra>
-              <DataTableHead>
-                <DataTableTh className="text-start">{t('sales.summary.employee')}</DataTableTh>
-                <DataTableTh className="text-end">{t('sales.summary.net')}</DataTableTh>
-                <DataTableTh className="text-end">{t('sales.summary.guestCoverage')}</DataTableTh>
-                <DataTableTh className="text-start">{t('sales.summary.sourceBoutique')}</DataTableTh>
-              </DataTableHead>
-              <DataTableBody>
-                {summary.breakdownByEmployee.map((row) => (
-                  <tr key={row.employeeId}>
-                    <DataTableTd className="text-start">{row.employeeName}</DataTableTd>
-                    <DataTableTd className="text-end">{formatSarInt(row.netSales)}</DataTableTd>
-                    <DataTableTd className="text-end">{formatSarInt(row.guestCoverageNetSales)}</DataTableTd>
-                    <DataTableTd className="text-start">
-                      {row.guestCoverageSources.map((s) => (
-                        <span key={s.sourceBoutiqueId} className="me-2">
-                          {s.sourceBoutiqueName ?? s.sourceBoutiqueId}: {formatSarInt(s.netSales)}
-                        </span>
-                      ))}
-                    </DataTableTd>
-                  </tr>
-                ))}
-              </DataTableBody>
-            </DataTable>
+        </section>
+      )}
+
+      {/* Part 5 — Sales Breakdown Strip */}
+      {summary && (
+        <section>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Sales Summary
+          </h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { label: t('sales.summary.netSales'), value: summary.netSalesTotal, primary: true },
+              { label: t('sales.summary.grossSales'), value: summary.grossSalesTotal, primary: false },
+              { label: t('sales.summary.returns'), value: summary.returnsTotal, primary: false },
+              { label: t('sales.summary.guestCoverageNet'), value: summary.guestCoverageNetSales, primary: false },
+            ].map(({ label, value, primary }) => (
+              <div
+                key={label}
+                className={`rounded-2xl border border-border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md ${
+                  primary ? 'ring-1 ring-accent/20' : ''
+                }`}
+              >
+                <p className="text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
+                <p className={`mt-2 tabular-nums ${primary ? 'text-2xl font-bold text-foreground' : 'text-xl font-semibold text-foreground'}`}>
+                  {formatSarInt(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">{t('sales.summary.sourcesNote')}</p>
+        </section>
+      )}
+
+      {/* Part 6 — Employee Contribution Board */}
+      {summary && (
+        <section>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Employee Contribution
+          </h2>
+          {summary.netSalesTotal === 0 && summary.breakdownByEmployee.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-surface p-12">
+              <EmptyState title={t('sales.summary.noDataForPeriod')} />
+            </div>
+          ) : summary.breakdownByEmployee.length > 0 ? (
+            (() => {
+              const totalNet = summary.netSalesTotal || 1;
+              const sorted = [...summary.breakdownByEmployee].sort((a, b) => b.netSales - a.netSales);
+              const top3Ids = new Set(sorted.slice(0, 3).map((r) => r.employeeId));
+              return (
+                <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+                  <DataTable variant="luxury" zebra>
+                    <DataTableHead>
+                      <DataTableTh className="text-start">#</DataTableTh>
+                      <DataTableTh className="text-start">{t('sales.summary.employee')}</DataTableTh>
+                      <DataTableTh className="text-end">{t('sales.summary.net')}</DataTableTh>
+                      <DataTableTh className="text-end">{t('sales.summary.contributionPct')}</DataTableTh>
+                      <DataTableTh className="text-end">{t('sales.summary.progress')} %</DataTableTh>
+                      <DataTableTh className="text-end">{t('sales.summary.guestCoverage')}</DataTableTh>
+                      <DataTableTh className="text-start">{t('sales.summary.sourceBoutique')}</DataTableTh>
+                    </DataTableHead>
+                    <DataTableBody>
+                      {sorted.map((row, idx) => {
+                        const contributionPct = totalNet > 0 ? Math.round((row.netSales * 100) / totalNet) : 0;
+                        const isTopContributor = top3Ids.has(row.employeeId);
+                        return (
+                          <tr key={row.employeeId} className={isTopContributor ? 'bg-emerald-50/30' : ''}>
+                            <DataTableTd className="text-start">
+                              <span className={`font-semibold tabular-nums ${idx < 3 ? 'text-foreground' : 'text-muted'}`}>
+                                {idx + 1}
+                              </span>
+                              {idx < 3 && (
+                                <span className="ms-1.5 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+                                  Top {idx + 1}
+                                </span>
+                              )}
+                            </DataTableTd>
+                            <DataTableTd className="text-start font-medium text-foreground">{row.employeeName}</DataTableTd>
+                            <DataTableTd className="text-end font-semibold tabular-nums text-foreground">
+                              {formatSarInt(row.netSales)}
+                            </DataTableTd>
+                            <DataTableTd className="text-end tabular-nums">{contributionPct}%</DataTableTd>
+                            <DataTableTd className="text-end tabular-nums text-muted">—</DataTableTd>
+                            <DataTableTd className="text-end">{formatSarInt(row.guestCoverageNetSales)}</DataTableTd>
+                            <DataTableTd className="text-start">
+                              {row.guestCoverageSources.map((s) => (
+                                <span key={s.sourceBoutiqueId} className="me-2">
+                                  {s.sourceBoutiqueName ?? s.sourceBoutiqueId}: {formatSarInt(s.netSales)}
+                                </span>
+                              ))}
+                            </DataTableTd>
+                          </tr>
+                        );
+                      })}
+                    </DataTableBody>
+                  </DataTable>
+                </div>
+              );
+            })()
           ) : null}
-        </div>
+        </section>
       )}
     </div>
   );
