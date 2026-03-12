@@ -1,6 +1,7 @@
 /**
  * GET /api/metrics/my-target?month=YYYY-MM
  * Canonical target + MTD metrics for /me/target. Uses resolveMetricsScope + getTargetMetrics.
+ * All amounts returned as SAR_INT (integer riyals). No scaling.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

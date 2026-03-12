@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
-import { formatSarFromHalala, formatSarInt } from '@/lib/utils/money';
+import { formatSarInt } from '@/lib/utils/money';
 
 /** Add delta months to YYYY-MM. Returns YYYY-MM. */
 function addMonths(monthKey: string, delta: number): string {
@@ -245,8 +245,6 @@ export function MyTargetClient() {
     }
   };
 
-  const formatMoney = (n: number) => (Number.isFinite(n) ? formatSarFromHalala(n) : '—');
-  /** مبالغ التقويم الشهري و إجمالي الشهر من /api/me/sales بالريال (SAR) — لا تقسيم على 100 */
   const formatSar = (n: number) => (Number.isFinite(n) ? formatSarInt(n) : '—');
   const formatPct = (n: number) => (Number.isFinite(n) ? `${n.toFixed(1)}%` : '—');
 
@@ -346,8 +344,8 @@ export function MyTargetClient() {
             )}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.dailyTarget)}</td></tr>
-                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.todaySales)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.dailyTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatSar(d.todaySales)}</td></tr>
                 <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctDaily)}</td></tr>
               </tbody>
             </table>
@@ -360,8 +358,8 @@ export function MyTargetClient() {
             {d.weekRangeLabel && <p className="mb-2 text-xs text-muted">{d.weekRangeLabel}</p>}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekTarget)}</td></tr>
-                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatMoney(d.weekSales)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.weekTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatSar(d.weekSales)}</td></tr>
                 <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctWeek)}</td></tr>
               </tbody>
             </table>
@@ -373,10 +371,10 @@ export function MyTargetClient() {
           <OpsCard title={t('targets.monthProgress')}>
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatMoney(d.monthTarget)}</td></tr>
-                <tr><td className="p-1 text-muted">MTD</td><td className="p-1 text-end font-medium">{formatMoney(d.mtdSales)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.monthTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">MTD</td><td className="p-1 text-end font-medium">{formatSar(d.mtdSales)}</td></tr>
                 <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctMonth)}</td></tr>
-                <tr><td className="p-1 text-muted">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatMoney(d.remaining)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatSar(d.remaining)}</td></tr>
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
