@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
+import { computePct, remainingPctDisplay } from '@/lib/sales/targetsPct';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import type { Role } from '@prisma/client';
 
@@ -27,17 +28,6 @@ type PeriodRow = {
 
 function parseYmd(s: string): Date {
   return new Date(s + 'T00:00:00Z');
-}
-
-/** pct = (targetSar > 0) ? floor((achievedSar * 100) / targetSar) : 0 */
-function computePct(achievedSar: number, targetSar: number): number {
-  if (!Number.isFinite(targetSar) || targetSar <= 0) return 0;
-  return Math.floor((Number(achievedSar) * 100) / targetSar);
-}
-
-/** remainingPct = 100 - min(pct, 100) for display */
-function remainingPctDisplay(pct: number): number {
-  return 100 - Math.min(pct, 100);
 }
 
 export async function GET(request: NextRequest) {
@@ -179,7 +169,7 @@ export async function GET(request: NextRequest) {
 
   const daysInMonth = new Date(Date.UTC(year, toDate.getUTCMonth() + 1, 0)).getUTCDate();
   const monthTargetSar = monthTarget?.amount ?? 0;
-  const weekTargetSar = monthTargetSar > 0 ? Math.round((monthTargetSar / daysInMonth) * 7) : 0;
+  const weekTargetSar = monthTargetSar > 0 ? Math.floor((monthTargetSar * 7) / daysInMonth) : 0;
 
   const weekAchieved = weekSales._sum.amount ?? 0;
   const monthAchieved = monthSales._sum.amount ?? 0;

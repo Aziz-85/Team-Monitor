@@ -5,7 +5,7 @@
 import {
   computePct,
   remainingPctDisplay,
-} from '@/app/api/sales/summary/targets/route';
+} from '@/lib/sales/targetsPct';
 
 describe('computePct', () => {
   it('returns 0 when targetSar is 0', () => {

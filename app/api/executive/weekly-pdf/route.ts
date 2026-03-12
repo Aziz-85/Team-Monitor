@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
 
   const revenue = salesSum._sum.amount ?? 0;
   const target = boutiqueTarget?.amount ?? 0;
-  const achievementPct = target > 0 ? Math.round((revenue / target) * 100) : 0;
+  const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
 
   let totalWeekly = 0;
   let completed = 0;

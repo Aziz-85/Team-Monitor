@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     const userId = empIdToUserId.get(empId);
     const annualTarget = userId != null ? targetByUserId.get(userId) ?? 0 : 0;
-    const achievementPct = annualTarget > 0 ? Math.round((rec.total / annualTarget) * 100) : null;
+    const achievementPct = annualTarget > 0 ? calculatePerformance({ target: annualTarget, sales: rec.total }).percent : null;
 
     result.push({
       empId,

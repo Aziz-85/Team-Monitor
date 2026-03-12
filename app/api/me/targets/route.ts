@@ -1,3 +1,11 @@
+/**
+ * GET /api/me/targets?month=YYYY-MM
+ *
+ * COMPATIBILITY WRAPPER — Canonical API is /api/metrics/my-target.
+ * Same data, same logic (getTargetMetrics). Preserved for Employee Home and legacy consumers.
+ * Uses employeeCrossBoutique when employeeOnly so employees see target/sales across all assigned boutiques.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
@@ -15,17 +23,14 @@ export async function GET(request: NextRequest) {
       { status: 403 }
     );
   }
-  const boutiqueId = scope.effectiveBoutiqueId;
-  const userId = user.id;
 
-  const now = new Date();
-  const monthKey = normalizeMonthKey(request.nextUrl.searchParams.get('month')?.trim() || formatMonthKey(now));
+  const monthKey = normalizeMonthKey(request.nextUrl.searchParams.get('month')?.trim() || formatMonthKey(new Date()));
 
   const metrics = await getTargetMetrics({
-    boutiqueId,
-    userId,
+    boutiqueId: scope.effectiveBoutiqueId,
+    userId: scope.userId,
     monthKey,
-    employeeCrossBoutique: true,
+    employeeCrossBoutique: scope.employeeOnly ?? true,
   });
 
   return NextResponse.json({

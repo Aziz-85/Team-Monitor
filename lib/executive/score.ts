@@ -8,6 +8,7 @@
 
 import { prisma } from '@/lib/db';
 import { whereBoutiqueStrict } from '@/lib/scope/whereStrict';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { rosterForDate } from '@/lib/services/roster';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 
@@ -158,7 +159,7 @@ export async function calculateBoutiqueScore(
   // Revenue (40%) — from authoritative ledger
   const revenue = salesSum._sum.totalSar ?? 0;
   const target = boutiqueTarget?.amount ?? 0;
-  const revenuePct = target > 0 ? Math.min(100, Math.round((revenue / target) * 100)) : 0;
+  const revenuePct = calculatePerformance({ target, sales: revenue }).percent;
   const revenueScore = (revenuePct / 100) * 40;
 
   // Tasks (25%) — full month

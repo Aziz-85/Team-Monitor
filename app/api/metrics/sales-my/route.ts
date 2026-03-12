@@ -10,6 +10,7 @@ import { getRiyadhNow, formatMonthKey } from '@/lib/time';
 import { parseIsoDateOrThrow, formatIsoDate } from '@/lib/time/parse';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { getSalesMetrics } from '@/lib/metrics/aggregator';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -125,7 +126,8 @@ export async function GET(request: NextRequest) {
       const targetSar = targetByMonth.get(monthKey) ?? 0;
       const target = targetSar;
       const actual = actualByMonth.get(monthKey) ?? 0;
-      const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const perf = calculatePerformance({ target, sales: actual });
+      const pct = perf.percent;
       cumTarget += target;
       cumActual += actual;
       const [, mStr] = monthKey.split('-');

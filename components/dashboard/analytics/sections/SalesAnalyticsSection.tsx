@@ -2,6 +2,7 @@
 
 import { SimpleLineChart } from '../charts/SimpleLineChart';
 import { SimpleBarChart } from '../charts/SimpleBarChart';
+import { formatSarInt } from '@/lib/utils/money';
 import type { SalesAnalytics } from '@/lib/analytics';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
@@ -41,15 +42,15 @@ export function SalesAnalyticsSection({ data, t }: Props) {
         </div>
       </div>
 
-      {data.dailyActuals.length > 0 && (
-        <div className="mb-6">
-          <h3 className="mb-2 text-sm font-semibold text-foreground">{t('dashboard.sales.trend')}</h3>
-          <SimpleLineChart
-            data={data.dailyActuals.map((d) => ({ label: d.date, value: d.amount }))}
-            height={200}
-          />
-        </div>
-      )}
+      <div className="mb-6">
+        <h3 className="mb-2 text-sm font-semibold text-foreground">{t('dashboard.sales.trend')}</h3>
+        <SimpleLineChart
+          data={data.dailyActuals.map((d) => ({ label: d.date, value: d.amount }))}
+          height={200}
+          valueFormat={(n) => formatSarInt(n)}
+          emptyLabel={t('dashboard.sales.noData') || 'No sales data yet'}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
@@ -77,13 +78,15 @@ export function SalesAnalyticsSection({ data, t }: Props) {
           <SimpleBarChart
             data={data.top5.map((e) => ({ label: e.name, value: e.actual }))}
             height={140}
-            valueFormat={(n) => n.toLocaleString()}
+            valueFormat={(n) => formatSarInt(n)}
+            emptyLabel={t('dashboard.sales.noData') || 'No data yet'}
           />
           <p className="mt-3 text-xs text-muted">{t('dashboard.sales.bottom5')}</p>
           <SimpleBarChart
             data={data.bottom5.map((e) => ({ label: e.name, value: e.actual }))}
             height={140}
-            valueFormat={(n) => n.toLocaleString()}
+            valueFormat={(n) => formatSarInt(n)}
+            emptyLabel={t('dashboard.sales.noData') || 'No data yet'}
           />
         </div>
       </div>

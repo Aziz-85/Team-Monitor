@@ -17,7 +17,7 @@ export function ShiftCard({
   children: ReactNode;
 }) {
   return (
-    <div className={`rounded-lg border p-4 ${styles[variant]}`}>
+    <div className={`rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md ${styles[variant]}`}>
       <h3 className="mb-2 text-sm font-semibold">{title}</h3>
       <div className="text-base">{children}</div>
     </div>

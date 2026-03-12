@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     boutiqueId: scope.effectiveBoutiqueId,
     userId: scope.userId,
     monthKey,
+    employeeCrossBoutique: scope.employeeOnly ?? false,
   });
 
   return NextResponse.json({

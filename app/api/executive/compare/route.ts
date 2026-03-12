@@ -8,6 +8,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import type { Role } from '@prisma/client';
 
 export type CompareBoutiqueRow = {
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
   for (const b of boutiques) {
     const revenue = revenueByBoutiqueMap.get(b.id) ?? 0;
     const target = targetByBoutique.get(b.id) ?? 0;
-    const achievementPct = target > 0 ? Math.round((revenue / target) * 100) : null;
+    const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : null;
     let riskScore = 0;
     try {
       const scoreResult = await calculateBoutiqueScore(monthKey, [b.id]);
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
       boutiqueIds: rows.map((r) => r.boutiqueId),
       sales: totalSales,
       target,
-      achievementPct: target > 0 ? Math.round((totalSales / target) * 100) : null,
+      achievementPct: target > 0 ? calculatePerformance({ target, sales: totalSales }).percent : null,
     });
   }
 
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
       boutiqueIds: rows.map((r) => r.boutiqueId),
       sales: totalSales,
       target,
-      achievementPct: target > 0 ? Math.round((totalSales / target) * 100) : null,
+      achievementPct: target > 0 ? calculatePerformance({ target, sales: totalSales }).percent : null,
     });
   }
 

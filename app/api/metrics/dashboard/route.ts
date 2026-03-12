@@ -1,6 +1,11 @@
 /**
  * GET /api/metrics/dashboard?boutiqueId= (optional)
- * Canonical metrics for dashboard: sales snapshot + breakdown. Uses resolveMetricsScope + getDashboardSalesMetrics.
+ *
+ * Sales-only metrics: currentMonthTarget, currentMonthActual, completionPct, remainingGap, byUserId.
+ * Uses getDashboardSalesMetrics (same aggregator as getPerformanceSummaryExtended; calculatePerformance).
+ *
+ * Consumers: Tests (metrics-crosspage); external/mobile clients needing sales-only payload.
+ * For full dashboard (schedule, tasks, team), use GET /api/dashboard instead.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

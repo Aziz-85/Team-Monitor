@@ -17,9 +17,8 @@ function nextRequest(url = 'http://localhost/', search?: Record<string, string>)
 const BOUTIQUE_ID = 'boutique-B1';
 const USER_ID = 'user-u1';
 const MONTH_KEY = '2026-02';
-/** MTD in halalas (API unit). Mock DB stores SAR, so raw amount in DB = FIXTURE_MTD_HALALAS / 100. */
-const FIXTURE_MTD_HALALAS = 5000;
-const FIXTURE_MTD_SAR = FIXTURE_MTD_HALALAS / 100; // 50 SAR
+/** MTD in SAR (integer). Schema stores SAR_INT. */
+const FIXTURE_MTD_SAR = 50;
 
 describe('metrics-crosspage: MTD consistency across aggregator outputs', () => {
   beforeAll(() => {
@@ -42,8 +41,8 @@ describe('metrics-crosspage: MTD consistency across aggregator outputs', () => {
         findMany: jest.fn().mockResolvedValue([{ amount: FIXTURE_MTD_SAR }]),
         findFirst: jest.fn().mockResolvedValue(null),
       },
-      employeeMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 100 }) }, // 100 SAR → 10000 halalas
-      boutiqueMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 500 }) }, // 500 SAR → 50000 halalas
+      employeeMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 100 }) },
+      boutiqueMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 500 }) },
     };
 
     jest.doMock('@/lib/db', () => ({ prisma: prismaMock }));
@@ -76,9 +75,9 @@ describe('metrics-crosspage: MTD consistency across aggregator outputs', () => {
       }),
     ]);
 
-    expect(dashboard.currentMonthActual).toBe(FIXTURE_MTD_HALALAS);
-    expect(target.mtdSales).toBe(FIXTURE_MTD_HALALAS);
-    expect(sales.netSalesTotal).toBe(FIXTURE_MTD_HALALAS);
+    expect(dashboard.currentMonthActual).toBe(FIXTURE_MTD_SAR);
+    expect(target.mtdSales).toBe(FIXTURE_MTD_SAR);
+    expect(sales.netSalesTotal).toBe(FIXTURE_MTD_SAR);
     expect(dashboard.currentMonthActual).toBe(target.mtdSales);
     expect(target.mtdSales).toBe(sales.netSalesTotal);
   });

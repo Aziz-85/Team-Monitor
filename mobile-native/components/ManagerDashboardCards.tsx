@@ -4,10 +4,9 @@ import { StatCard } from '@/components/StatCard';
 import { colors, spacing, typography } from '@/constants/theme';
 import type { Role } from '@/types/api';
 
-function formatNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+/** Full integer SAR display — no K/M abbreviations. */
+function formatSar(n: number): string {
+  return Number.isFinite(n) ? Math.trunc(n).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
 }
 
 export function ManagerDashboardCards({ role }: { role: Role }) {
@@ -60,7 +59,7 @@ export function ManagerDashboardCards({ role }: { role: Role }) {
       />
       <StatCard
         title="Sales (SAR)"
-        value={`${formatNum(data.sales.achieved)} / ${formatNum(data.sales.target)}`}
+        value={`${formatSar(data.sales.achieved)} / ${formatSar(data.sales.target)} SAR`}
         subtitle={salesSub}
       />
       <StatCard

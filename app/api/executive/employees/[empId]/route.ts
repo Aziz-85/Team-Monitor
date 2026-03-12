@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
@@ -114,7 +115,7 @@ export async function GET(
       select: { amount: true },
     });
     const annualTarget = targets.reduce((s, t) => s + t.amount, 0);
-    if (annualTarget > 0) achievementPct = Math.round((total / annualTarget) * 100);
+    if (annualTarget > 0) achievementPct = calculatePerformance({ target: annualTarget, sales: total }).percent;
   }
 
   return NextResponse.json({

@@ -7,6 +7,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 import * as XLSX from 'xlsx';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 
 const DEFAULT_MONTH_SNAPSHOT_DIR = '/data/month-snapshots';
 const EXTENSIONS = ['.xlsx', '.xlsm'];
@@ -242,7 +243,7 @@ export async function loadMonthSnapshotFromExcel(
             const inv = invColS >= 0 ? toInt(row[invColS]) : 0;
             const pcs = piecesColS >= 0 ? toInt(row[piecesColS]) : 0;
             const targetVal = targetColS >= 0 ? toHalalas(row[targetColS]) : 0;
-            const achievementPct = targetVal > 0 ? Math.round((netSalesHalalas / targetVal) * 100) : undefined;
+            const achievementPct = targetVal > 0 ? calculatePerformance({ target: targetVal, sales: netSalesHalalas }).percent : undefined;
             fromSheet.push({
               empId: empId || undefined,
               name: name || empId || 'Staff',

@@ -14,6 +14,7 @@ import {
   getRiyadhNow,
 } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { tasksRunnableOnDate } from '@/lib/services/tasks';
 import { rosterForDate } from '@/lib/services/roster';
 
@@ -89,7 +90,8 @@ export async function getManagerDashboard(
   const dayOfMonth1Based = dayStart.getUTCDate();
   const dailyTarget =
     daysInMonth > 0 ? getDailyTargetForDay(monthlyTarget, daysInMonth, dayOfMonth1Based) : 0;
-  const percent = dailyTarget > 0 ? Math.round((achieved / dailyTarget) * 100) : 0;
+  const perf = calculatePerformance({ target: dailyTarget, sales: achieved });
+  const percent = perf.percent;
 
   const amCount = roster.amEmployees.length;
   const pmCount = roster.pmEmployees.length;

@@ -9,6 +9,7 @@ import { getRiyadhNow, toRiyadhDateString } from '@/lib/time';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { computeRiskIndex } from '@/lib/executive/metrics';
 import { fetchWeekMetrics } from '@/lib/executive/aggregation';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
   const raw = await fetchWeekMetrics(weekStart, todayStr, boutiqueIds);
 
   const achievementPct =
-    raw.target > 0 ? Math.round((raw.revenue / raw.target) * 100) : 0;
+    raw.target > 0 ? calculatePerformance({ target: raw.target, sales: raw.revenue }).percent : 0;
   const overduePct =
     raw.taskTotal > 0 ? Math.round((raw.taskOverdue / raw.taskTotal) * 100) : 0;
   const suspiciousPct =

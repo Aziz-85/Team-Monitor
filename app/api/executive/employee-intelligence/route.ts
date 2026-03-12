@@ -17,6 +17,7 @@ import {
   type ERSLevel,
 } from '@/lib/executive/metrics';
 import { getRevenueFromSalesLinesByEmpId } from '@/lib/executive/salesLineRevenue';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
     const revenueMTD = mtdMap.get(t.userId) ?? 0;
     const target = t.amount;
     const achievementPercent =
-      target > 0 ? Math.round((revenueMTD / target) * 100) : 0;
+      target > 0 ? calculatePerformance({ target, sales: revenueMTD }).percent : 0;
     const last3Weeks = [
       w1Map.get(t.userId) ?? 0,
       w2Map.get(t.userId) ?? 0,

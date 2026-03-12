@@ -11,13 +11,13 @@ type Props = {
   emptyLabel?: string;
 };
 
-/** Executive theme target-vs-actual line chart. Wraps shared TargetVsActualLineChart. */
-export function ExecutiveLineChart({
+/** Home theme target-vs-actual line chart. Wraps shared TargetVsActualLineChart. */
+export function PerformanceLineChart({
   data,
   targetLine,
-  height = 200,
+  height = 240,
   valueFormat = (n) => n.toLocaleString(),
-  emptyLabel = 'No data yet',
+  emptyLabel = 'No sales data yet',
 }: Props) {
   return (
     <TargetVsActualLineChart
@@ -26,7 +26,7 @@ export function ExecutiveLineChart({
       height={height}
       valueFormat={valueFormat}
       emptyLabel={emptyLabel}
-      theme="executive"
+      theme="home"
     />
   );
 }

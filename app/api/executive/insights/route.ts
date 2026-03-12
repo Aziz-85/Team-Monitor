@@ -22,6 +22,7 @@ import {
   volatilityIndex,
 } from '@/lib/executive/metrics';
 import { fetchWeekMetrics, fetchDailyRevenueForWeek } from '@/lib/executive/aggregation';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
 
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
   const disciplineScore = Math.max(0, 100 - suspiciousPct);
 
   const salesRisk = computeSalesRiskIndex({
-    achievementPct: raw.target > 0 ? Math.round((raw.revenue / raw.target) * 100) : 0,
+    achievementPct: raw.target > 0 ? calculatePerformance({ target: raw.target, sales: raw.revenue }).percent : 0,
     revenueTrendDirection,
     targetGapMomentum,
     taskCompletionPct: raw.taskTotal > 0 ? Math.round((raw.taskCompleted / raw.taskTotal) * 100) : 100,

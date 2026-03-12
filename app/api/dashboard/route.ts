@@ -21,7 +21,8 @@ import {
 } from '@/lib/time';
 import { getWeekStart, getWeekStatus } from '@/lib/services/scheduleLock';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
-import { getDashboardSalesMetrics } from '@/lib/metrics/aggregator';
+import { getPerformanceSummaryExtended } from '@/lib/metrics/aggregator';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { rosterForDate } from '@/lib/services/roster';
 import { validateCoverage } from '@/lib/services/coverageValidation';
 import { getSLACutoffMs, computeInventoryStatus } from '@/lib/inventorySla';
@@ -168,12 +169,13 @@ export async function GET(request: NextRequest) {
 
   if (isEmployee) {
     const empId = user.empId;
-    const [salesMetrics, rosterToday, tasks, myZoneRuns, weekStatus] = await Promise.all([
-      getDashboardSalesMetrics({
+    const [perfSummary, rosterToday, tasks, myZoneRuns, weekStatus] = await Promise.all([
+      getPerformanceSummaryExtended({
         boutiqueId,
         userId: user.id,
         monthKey,
         employeeOnly: true,
+        employeeCrossBoutique: true,
       }),
       rosterForDate(now),
       prisma.task.findMany({
@@ -187,9 +189,9 @@ export async function GET(request: NextRequest) {
       getWeekStatus(weekStart, boutiqueId),
     ]);
 
-    const myTarget = salesMetrics.currentMonthTarget;
-    const myActual = salesMetrics.currentMonthActual;
-    const completionPct = salesMetrics.completionPct;
+    const myTarget = perfSummary.monthly.target;
+    const myActual = perfSummary.monthly.sales;
+    const completionPct = perfSummary.monthly.percent;
 
     const todayTasks: { done: number; total: number } = { done: 0, total: 0 };
     const completionsToday = await prisma.taskCompletion.findMany({
@@ -222,7 +224,7 @@ export async function GET(request: NextRequest) {
         currentMonthTarget: myTarget,
         currentMonthActual: myActual,
         completionPct,
-        remainingGap: salesMetrics.remainingGap,
+        remainingGap: perfSummary.monthly.remaining,
       },
       scheduleHealth: {
         weekApproved: weekStatus?.status === 'APPROVED',
@@ -267,24 +269,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   }
 
-  // Sales: single source = aggregator; scope already from resolveMetricsScope.
+  // Sales: canonical source = getPerformanceSummaryExtended (same as /api/performance/summary).
 
-  const [salesMetrics, empTargetsWithUser, rosterToday, coverageResults, weekStatus, tasks, plannerLast] =
+  const [perfSummary, empTargetsWithUser, rosterToday, coverageResults, weekStatus, tasks, plannerLast] =
     await Promise.all([
       boutiqueId
-        ? getDashboardSalesMetrics({
+        ? getPerformanceSummaryExtended({
             boutiqueId,
             userId: null,
             monthKey,
             employeeOnly: false,
           })
-        : Promise.resolve({
-            currentMonthTarget: 0,
-            currentMonthActual: 0,
-            completionPct: 0,
-            remainingGap: 0,
-            byUserId: {} as Record<string, number>,
-          }),
+        : Promise.resolve(null),
       prisma.employeeMonthlyTarget.findMany({
         where: { month: monthKey, ...(boutiqueId ? { boutiqueId } : {}) },
         include: {
@@ -305,16 +301,18 @@ export async function GET(request: NextRequest) {
         : Promise.resolve(null),
     ]);
 
-  const currentMonthTarget = salesMetrics.currentMonthTarget;
-  const currentMonthActual = salesMetrics.currentMonthActual;
-  const completionPct = salesMetrics.completionPct;
+  const currentMonthTarget = perfSummary?.monthly.target ?? 0;
+  const currentMonthActual = perfSummary?.monthly.sales ?? 0;
+  const completionPct = perfSummary?.monthly.percent ?? 0;
+  const remainingGap = perfSummary?.monthly.remaining ?? 0;
+  const salesByUser = perfSummary?.byUserId ?? ({} as Record<string, number>);
 
   result.snapshot = {
     sales: {
       currentMonthTarget,
       currentMonthActual,
       completionPct,
-      remainingGap: salesMetrics.remainingGap,
+      remainingGap,
     },
     scheduleHealth: {
       weekApproved: weekStatus?.status === 'APPROVED',
@@ -331,17 +329,16 @@ export async function GET(request: NextRequest) {
     },
   };
 
-  const salesByUser = salesMetrics.byUserId;
   result.salesBreakdown = empTargetsWithUser.map((et) => {
     const actualSar = salesByUser[et.userId] ?? 0;
     const targetSar = et.amount ?? 0;
-    const pct = targetSar > 0 ? Math.round((actualSar / targetSar) * 100) : 0;
+    const perf = calculatePerformance({ target: targetSar, sales: actualSar });
     return {
       empId: et.user.empId,
       name: et.user.employee?.name ?? et.user.empId,
       target: targetSar,
       actual: actualSar,
-      pct,
+      pct: perf.percent,
     };
   });
 
@@ -481,7 +478,7 @@ export async function GET(request: NextRequest) {
   const employeesForTable = filterOperationalEmployees(employeesForTableRaw);
 
   const empTargetMap = new Map(empTargetsWithUser.map((et) => [et.userId, et.amount]));
-  const empSalesMap = salesMetrics.byUserId;
+  const empSalesMap = salesByUser;
   const zoneAssignments = await prisma.inventoryZoneAssignment.findMany({
     where: { active: true, ...(boutiqueId ? { zone: { boutiqueId } } : {}) },
     orderBy: { createdAt: 'desc' },
@@ -508,7 +505,7 @@ export async function GET(request: NextRequest) {
         const uid = e.user!.id;
         const targetSar = empTargetMap.get(uid) ?? 0;
         const actualSar = empSalesMap[uid] ?? 0;
-        const pct = targetSar > 0 ? Math.round((actualSar / targetSar) * 100) : 0;
+        const perf = calculatePerformance({ target: targetSar, sales: actualSar });
         return {
           empId: e.empId,
           employee: e.name,
@@ -516,7 +513,7 @@ export async function GET(request: NextRequest) {
           position: e.position ?? null,
           target: targetSar,
           actual: actualSar,
-          pct,
+          pct: perf.percent,
           tasksDone: completionsByUser.get(uid) ?? 0,
           late: lateByUser.get(uid) ?? 0,
           zone: empIdToZone.get(e.empId) ?? null,

@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 import { getMonthRange, normalizeMonthKey, getCurrentMonthKeyRiyadh } from '@/lib/time';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculateRiskScore } from '@/lib/executive/risk';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import type { Role } from '@prisma/client';
 
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
   // Use the lower of: manual lines total vs summary totalSar (guards against import inflation)
   const revenue = manualLinesTotal > 0 ? manualLinesTotal : ledgerSummaryTotal;
   const target = boutiqueTarget?.amount ?? 0;
-  const achievementPct = target > 0 ? Math.round((revenue / target) * 100) : 0;
+  const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
   const totalEmployeeTarget = employeeTargets.reduce((s, e) => s + e.amount, 0);
   const zoneCompliancePct =
     zoneRunsCount > 0

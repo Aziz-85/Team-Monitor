@@ -4,6 +4,8 @@
  * All logic is explainable (reasons list for risk and anomalies).
  */
 
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
+
 /** Saturday-start week range. weekStart and weekEnd are YYYY-MM-DD (Sat and Fri). */
 export type WeekRange = {
   weekStart: string;
@@ -56,13 +58,13 @@ export function getLastNWeeksRanges(n: number, refDate?: Date): WeekRange[] {
   return out;
 }
 
-/** Revenue metrics from raw totals (pure). */
+/** Revenue metrics from raw totals (pure). Uses canonical calculatePerformance for achievement %. */
 export function computeRevenueMetrics(params: {
   revenue: number;
   target: number;
 }): { revenue: number; target: number; achievementPct: number } {
   const { revenue, target } = params;
-  const achievementPct = target > 0 ? Math.round((revenue / target) * 100) : 0;
+  const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
   return { revenue, target, achievementPct };
 }
 

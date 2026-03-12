@@ -2,6 +2,12 @@
  * Metrics aggregator — single source of truth for sales and target KPIs.
  * All dates in Asia/Riyadh. Use with resolveMetricsScope for RBAC-consistent scope.
  * Money: SAR_INT only (SalesEntry.amount and target tables store integer riyals).
+ *
+ * Canonical flow:
+ * - Manager/boutique performance: getPerformanceSummaryExtended → /api/performance/summary, /api/dashboard
+ * - Employee targets: getTargetMetrics → /api/metrics/my-target, /api/me/targets
+ * - Sales-only snapshot: getDashboardSalesMetrics → /api/metrics/dashboard
+ * All percent calculations use lib/performance/performanceEngine.calculatePerformance.
  */
 
 import { prisma } from '@/lib/db';
@@ -16,6 +22,7 @@ import {
   normalizeMonthKey,
 } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
+import { calculatePerformance } from '@/lib/performance/performanceEngine';
 
 export type SalesMetricsInput = {
   /** When null/undefined and userId set: employee totals across ALL boutiques. */
@@ -186,10 +193,13 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     }
   }
 
-  const remaining = Math.max(0, monthTarget - mtdSales);
-  const pctDaily = dailyTarget > 0 ? (todaySales / dailyTarget) * 100 : 0;
-  const pctWeek = weekTarget > 0 ? (weekSales / weekTarget) * 100 : 0;
-  const pctMonth = monthTarget > 0 ? (mtdSales / monthTarget) * 100 : 0;
+  const remaining = monthTarget - mtdSales;
+  const dailyPerf = calculatePerformance({ target: dailyTarget, sales: todaySales });
+  const weekPerf = calculatePerformance({ target: weekTarget, sales: weekSales });
+  const monthPerf = calculatePerformance({ target: monthTarget, sales: mtdSales });
+  const pctDaily = dailyPerf.percent;
+  const pctWeek = weekPerf.percent;
+  const pctMonth = monthPerf.percent;
 
   const boutiqueTargetSar = boutiqueTarget?.amount ?? null;
 
@@ -277,8 +287,9 @@ export async function getDashboardSalesMetrics(
     currentMonthActual += sumSar;
   }
 
-  const completionPct = currentMonthTarget > 0 ? Math.round((currentMonthActual / currentMonthTarget) * 100) : 0;
-  const remainingGap = Math.max(0, currentMonthTarget - currentMonthActual);
+  const perf = calculatePerformance({ target: currentMonthTarget, sales: currentMonthActual });
+  const completionPct = perf.percent;
+  const remainingGap = perf.remaining;
 
   return {
     currentMonthTarget,
@@ -286,5 +297,266 @@ export async function getDashboardSalesMetrics(
     completionPct,
     remainingGap,
     byUserId,
+  };
+}
+
+export type PerformanceSummaryInput = {
+  boutiqueId: string;
+  userId?: string | null;
+  monthKey: string;
+  employeeOnly: boolean;
+  /** When true (employee view), target = sum of all boutiques; sales = across all boutiques. */
+  employeeCrossBoutique?: boolean;
+};
+
+export type PerformancePeriod = {
+  target: number;
+  sales: number;
+  remaining: number;
+  percent: number;
+};
+
+export type PerformanceSummaryResult = {
+  daily: PerformancePeriod;
+  weekly: PerformancePeriod;
+  monthly: PerformancePeriod;
+};
+
+export type DailyTrajectoryPoint = {
+  dateKey: string;
+  targetCumulative: number;
+  actualCumulative: number;
+};
+
+export type TopSeller = { name: string; amount: number } | null;
+
+export type PerformanceSummaryExtendedResult = PerformanceSummaryResult & {
+  dailyTrajectory: DailyTrajectoryPoint[];
+  topSellers: { today: TopSeller; week: TopSeller; month: TopSeller };
+  /** Per-user MTD sales when !employeeOnly. Used by Dashboard sales breakdown. */
+  byUserId: Record<string, number>;
+  daysInMonth: number;
+  todayDayOfMonth: number;
+};
+
+/**
+ * Unified performance summary for /api/performance/summary.
+ * Returns daily, weekly, monthly targets, sales, remaining, percent.
+ * Uses calculatePerformance for all metrics. SAR_INT only.
+ */
+export async function getPerformanceSummary(
+  input: PerformanceSummaryInput
+): Promise<PerformanceSummaryResult> {
+  const now = getRiyadhNow();
+  const todayStr = toRiyadhDateString(now);
+  const monthKey = normalizeMonthKey(input.monthKey);
+  const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
+  const daysInMonth = getDaysInMonth(monthKey);
+  const todayDateOnly = new Date(todayStr + 'T00:00:00.000Z');
+  const todayInSelectedMonth = formatMonthKey(todayDateOnly) === monthKey;
+  const anchorDate = todayInSelectedMonth ? todayDateOnly : monthStart;
+  const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(anchorDate);
+  const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
+
+  const where: {
+    boutiqueId?: string;
+    month: string;
+    userId?: string;
+    source: { in: string[] };
+  } = {
+    month: monthKey,
+    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
+  };
+  if (input.employeeCrossBoutique && input.userId) {
+    where.userId = input.userId;
+  } else {
+    where.boutiqueId = input.boutiqueId;
+    if (input.employeeOnly && input.userId) where.userId = input.userId;
+  }
+
+  const [targetRow, targetRowsAll, mtdAgg, todayAgg, weekAgg] = await Promise.all([
+    input.employeeOnly && input.userId && !input.employeeCrossBoutique
+      ? prisma.employeeMonthlyTarget.findFirst({
+          where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
+        })
+      : !input.employeeOnly
+        ? prisma.boutiqueMonthlyTarget.findFirst({
+            where: { boutiqueId: input.boutiqueId, month: monthKey },
+          })
+        : null,
+    input.employeeCrossBoutique && input.userId
+      ? prisma.employeeMonthlyTarget.findMany({
+          where: { userId: input.userId, month: monthKey },
+          select: { amount: true },
+        })
+      : null,
+    prisma.salesEntry.aggregate({
+      where: { ...where, dateKey: { lte: todayStr } },
+      _sum: { amount: true },
+    }),
+    todayInSelectedMonth
+      ? prisma.salesEntry.aggregate({
+          where: { ...where, dateKey: todayStr },
+          _sum: { amount: true },
+        })
+      : Promise.resolve({ _sum: { amount: 0 } }),
+    weekInMonth
+      ? prisma.salesEntry.aggregate({
+          where: {
+            ...where,
+            date: { gte: weekInMonth.start, lt: weekInMonth.end },
+          },
+          _sum: { amount: true },
+        })
+      : Promise.resolve({ _sum: { amount: 0 } }),
+  ]);
+
+  const monthTarget =
+    input.employeeCrossBoutique && targetRowsAll
+      ? targetRowsAll.reduce((s, r) => s + r.amount, 0)
+      : (targetRow?.amount ?? 0);
+  const mtdSales = mtdAgg._sum?.amount ?? 0;
+  const todaySales = todayInSelectedMonth ? (todayAgg._sum?.amount ?? 0) : 0;
+  const weekSales = weekInMonth ? (weekAgg._sum?.amount ?? 0) : 0;
+
+  const todayDayOfMonth = todayDateOnly.getUTCDate();
+  const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
+
+  let weekTarget = 0;
+  if (weekInMonth && daysInMonth > 0) {
+    const start = weekInMonth.start.getTime();
+    const end = weekInMonth.end.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+    for (let t = start; t < end; t += dayMs) {
+      const d = new Date(t);
+      weekTarget += getDailyTargetForDay(monthTarget, daysInMonth, d.getUTCDate());
+    }
+  }
+
+  const daily = calculatePerformance({ target: dailyTarget, sales: todaySales });
+  const weekly = calculatePerformance({ target: weekTarget, sales: weekSales });
+  const monthly = calculatePerformance({ target: monthTarget, sales: mtdSales });
+
+  return {
+    daily: { target: daily.target, sales: daily.sales, remaining: daily.remaining, percent: daily.percent },
+    weekly: { target: weekly.target, sales: weekly.sales, remaining: weekly.remaining, percent: weekly.percent },
+    monthly: { target: monthly.target, sales: monthly.sales, remaining: monthly.remaining, percent: monthly.percent },
+  };
+}
+
+/**
+ * Extended performance summary for dashboard: adds dailyTrajectory and topSellers.
+ * Only fetches topSellers when boutique view (not employeeOnly).
+ */
+export async function getPerformanceSummaryExtended(
+  input: PerformanceSummaryInput
+): Promise<PerformanceSummaryExtendedResult> {
+  const base = await getPerformanceSummary(input);
+  const now = getRiyadhNow();
+  const todayStr = toRiyadhDateString(now);
+  const monthKey = normalizeMonthKey(input.monthKey);
+  const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
+  const daysInMonth = getDaysInMonth(monthKey);
+  const todayDateOnly = new Date(todayStr + 'T00:00:00.000Z');
+  const todayInSelectedMonth = formatMonthKey(todayDateOnly) === monthKey;
+  const todayDayOfMonth = todayDateOnly.getUTCDate();
+  const anchorDate = todayInSelectedMonth ? todayDateOnly : monthStart;
+  const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(anchorDate);
+  const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
+
+  const where: {
+    boutiqueId?: string;
+    month: string;
+    userId?: string;
+    source: { in: string[] };
+  } = {
+    month: monthKey,
+    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
+  };
+  if (input.employeeCrossBoutique && input.userId) {
+    where.userId = input.userId;
+  } else {
+    where.boutiqueId = input.boutiqueId;
+    if (input.employeeOnly && input.userId) where.userId = input.userId;
+  }
+
+  const [salesByDate, todayByUser, weekByUser, monthByUser] = await Promise.all([
+    prisma.salesEntry.groupBy({
+      by: ['dateKey'],
+      where: { ...where, dateKey: { lte: todayStr } },
+      _sum: { amount: true },
+    }),
+    todayInSelectedMonth && !input.employeeOnly
+      ? prisma.salesEntry.groupBy({
+          by: ['userId'],
+          where: { ...where, dateKey: todayStr },
+          _sum: { amount: true },
+        })
+      : Promise.resolve([]),
+    weekInMonth && !input.employeeOnly
+      ? prisma.salesEntry.groupBy({
+          by: ['userId'],
+          where: { ...where, date: { gte: weekInMonth.start, lt: weekInMonth.end } },
+          _sum: { amount: true },
+        })
+      : Promise.resolve([]),
+    !input.employeeOnly
+      ? prisma.salesEntry.groupBy({
+          by: ['userId'],
+          where: { ...where, dateKey: { lte: todayStr } },
+          _sum: { amount: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const salesByDateKey = new Map(salesByDate.map((r) => [r.dateKey, r._sum?.amount ?? 0]));
+
+  const monthTarget = base.monthly.target;
+  let cumTarget = 0;
+  let cumActual = 0;
+  const dailyTrajectory: DailyTrajectoryPoint[] = [];
+  const [y, m] = monthKey.split('-').map(Number);
+  const mm = String(m).padStart(2, '0');
+  for (let d = 1; d <= (todayInSelectedMonth ? todayDayOfMonth : 0); d++) {
+    const dateKey = `${y}-${mm}-${String(d).padStart(2, '0')}`;
+    cumTarget += getDailyTargetForDay(monthTarget, daysInMonth, d);
+    cumActual += salesByDateKey.get(dateKey) ?? 0;
+    dailyTrajectory.push({ dateKey, targetCumulative: cumTarget, actualCumulative: cumActual });
+  }
+
+  const pickTop = async (
+    rows: { userId: string; _sum: { amount: number | null } }[]
+  ): Promise<TopSeller> => {
+    if (rows.length === 0) return null;
+    const top = rows.reduce((a, b) =>
+      (a._sum?.amount ?? 0) >= (b._sum?.amount ?? 0) ? a : b
+    );
+    const amount = top._sum?.amount ?? 0;
+    if (amount <= 0) return null;
+    const u = await prisma.user.findUnique({
+      where: { id: top.userId },
+      select: { employee: { select: { name: true } }, empId: true },
+    });
+    const name = u?.employee?.name ?? u?.empId ?? top.userId;
+    return { name, amount };
+  };
+
+  const [topToday, topWeek, topMonth] = await Promise.all([
+    pickTop(todayByUser),
+    pickTop(weekByUser),
+    pickTop(monthByUser),
+  ]);
+
+  const byUserId: Record<string, number> = input.employeeOnly
+    ? {}
+    : Object.fromEntries(monthByUser.map((r) => [r.userId, r._sum?.amount ?? 0]));
+
+  return {
+    ...base,
+    dailyTrajectory,
+    topSellers: { today: topToday, week: topWeek, month: topMonth },
+    byUserId,
+    daysInMonth,
+    todayDayOfMonth,
   };
 }
