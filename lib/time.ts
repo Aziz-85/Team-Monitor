@@ -136,10 +136,19 @@ export function formatMonthKey(date: Date): string {
   return toRiyadhDateString(date).slice(0, 7);
 }
 
-/** Normalize YYYY-MM string to ASCII digits (e.g. "2026-0١" → "2026-01") so Date parsing and DB queries work. */
+/** Normalize YYYY-MM: Arabic digits → ASCII, and zero-pad month (e.g. "2026-0١" → "2026-01", "2025-1" → "2025-01") so DB queries match. */
 export function normalizeMonthKey(monthKey: string): string {
   const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
-  return monthKey.replace(/[٠-٩]/g, (c) => String(arabicDigits.indexOf(c)));
+  const ascii = monthKey.replace(/[٠-٩]/g, (c) => String(arabicDigits.indexOf(c)));
+  const parts = ascii.trim().split('-');
+  if (parts.length >= 2) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (Number.isFinite(y) && Number.isFinite(m) && m >= 1 && m <= 12) {
+      return `${y}-${String(m).padStart(2, '0')}`;
+    }
+  }
+  return ascii;
 }
 
 /**

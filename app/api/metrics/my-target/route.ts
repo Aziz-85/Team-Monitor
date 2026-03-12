@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { formatMonthKey, normalizeMonthKey } from '@/lib/time';
+import { getRiyadhNow, formatMonthKey, normalizeMonthKey } from '@/lib/time';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { getTargetMetrics } from '@/lib/metrics/aggregator';
 
@@ -21,9 +21,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const now = new Date();
+  const now = getRiyadhNow();
   const monthParam = request.nextUrl.searchParams.get('month')?.trim();
-  const monthKey = normalizeMonthKey(monthParam || formatMonthKey(now));
+  const monthKey = monthParam
+    ? normalizeMonthKey(monthParam)
+    : formatMonthKey(now);
+  if (!/^\d{4}-\d{2}$/.test(monthKey)) {
+    return NextResponse.json({ error: 'month must be YYYY-MM (e.g. 2025-01)' }, { status: 400 });
+  }
 
   const metrics = await getTargetMetrics({
     boutiqueId: scope.effectiveBoutiqueId,

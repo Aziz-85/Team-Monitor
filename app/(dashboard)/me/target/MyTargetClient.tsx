@@ -5,10 +5,13 @@ import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarInt } from '@/lib/utils/money';
 
-/** Add delta months to YYYY-MM. Returns YYYY-MM. */
+/** Add delta months to YYYY-MM. Returns YYYY-MM (month zero-padded). */
 function addMonths(monthKey: string, delta: number): string {
-  const [y, m] = monthKey.split('-').map(Number);
-  if (!Number.isFinite(y) || !Number.isFinite(m)) return monthKey;
+  const parts = monthKey.trim().split('-');
+  if (parts.length < 2) return monthKey;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return monthKey;
   let month = m + delta;
   let year = y;
   while (month > 12) {
@@ -20,6 +23,16 @@ function addMonths(monthKey: string, delta: number): string {
     year -= 1;
   }
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/** Normalize to YYYY-MM with two-digit month for API/display. */
+function normalizeMonth(monthKey: string): string {
+  const parts = monthKey.trim().split('-');
+  if (parts.length < 2) return monthKey;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return monthKey;
+  return `${y}-${String(m).padStart(2, '0')}`;
 }
 
 /** Day-of-week for Riyadh: 0=Sat, 1=Sun, ..., 6=Fri. */
@@ -111,8 +124,10 @@ export function MyTargetClient() {
     fetch(`/api/metrics/my-target?month=${month}`)
       .then((r) => r.json().then((body) => ({ ok: r.ok, body })))
       .then(({ ok, body }) => {
-        if (ok) setData(body);
-        else {
+        if (ok) {
+          setData(body);
+          if (body?.monthKey && /^\d{4}-\d{2}$/.test(body.monthKey)) setMonth(body.monthKey);
+        } else {
           setData(null);
           setApiError(typeof body?.error === 'string' ? body.error : 'Failed to load targets');
         }
@@ -308,7 +323,7 @@ export function MyTargetClient() {
           <input
             type="month"
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => setMonth(normalizeMonth(e.target.value))}
             className="rounded border border-border px-3 py-2 text-sm"
           />
           <button
