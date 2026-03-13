@@ -197,6 +197,7 @@
     }
   },
   "dashboard": {
+    "asOfToday": "As of today",
     "title": {
       "my": "My Dashboard",
       "branch": "Branch Dashboard",
@@ -993,6 +994,8 @@
     "enabledYes": "Yes",
     "enabledNo": "No",
     "noWarnings": "Coverage OK",
+    "coverageStatusTitle": "Coverage Status",
+    "warningsThisWeek": "warnings this week",
     "amGtPm": "AM > PM",
     "amLt2": "AM < 2",
     "counts": "AM: {am}, PM: {pm}",
@@ -1010,7 +1013,22 @@
     "monthlyProgressCard": "Monthly Progress",
     "target": "Target",
     "sales": "Sales",
-    "remaining": "Remaining"
+    "remaining": "Remaining",
+    "performanceTodayOnly": "Today's Performance",
+    "dateContextHint": "Roster, coverage & tasks use selected date · Performance is always today",
+    "yourTasksForToday": "Your tasks for today",
+    "tasksForDate": "Tasks for {date}",
+    "keyHolderToday": "Key Holder Today",
+    "keyHolder": "Key Holder",
+    "keyHolderForDate": "Key Holder for {date}",
+    "coverageStatus": "Coverage Status",
+    "selectedDay": "Selected day",
+    "thisWeek": "This week",
+    "daysNeedAttention": "{count} day(s) this week",
+    "targetsTodayOnly": "Today's progress",
+    "targetsTodayOnlySubtitle": "Targets are for today; schedule uses selected date.",
+    "operationalAlerts": "Operational Alerts",
+    "allClear": "All clear"
   },
   "targetsManagement": {
     "title": "Target Management",
@@ -1191,7 +1209,9 @@
       "sourceBoutique": "Source boutique",
       "sourcesNote": "Sources: LEDGER + IMPORT + MANUAL",
       "noDataForPeriod": "No sales in this period for the selected boutique.",
-      "failedToLoad": "Failed to load"
+      "failedToLoad": "Failed to load",
+      "chartMtdSubtitle": "MTD for month of end date",
+      "weekOfEndDate": "Week of end date"
     },
     "returns": {
       "title": "Returns / Exchanges",

@@ -328,11 +328,20 @@ export type DailyTrajectoryPoint = {
   actualCumulative: number;
 };
 
-export type TopSeller = { name: string; amount: number } | null;
+export type TopSellerEntry = {
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  rank: number;
+};
 
 export type PerformanceSummaryExtendedResult = PerformanceSummaryResult & {
   dailyTrajectory: DailyTrajectoryPoint[];
-  topSellers: { today: TopSeller; week: TopSeller; month: TopSeller };
+  topSellers: {
+    today: TopSellerEntry[];
+    week: TopSellerEntry[];
+    month: TopSellerEntry[];
+  };
   /** Per-user MTD sales when !employeeOnly. Used by Dashboard sales breakdown. */
   byUserId: Record<string, number>;
   daysInMonth: number;
@@ -524,27 +533,37 @@ export async function getPerformanceSummaryExtended(
     dailyTrajectory.push({ dateKey, targetCumulative: cumTarget, actualCumulative: cumActual });
   }
 
-  const pickTop = async (
+  const pickTop3 = async (
     rows: { userId: string; _sum: { amount: number | null } }[]
-  ): Promise<TopSeller> => {
-    if (rows.length === 0) return null;
-    const top = rows.reduce((a, b) =>
-      (a._sum?.amount ?? 0) >= (b._sum?.amount ?? 0) ? a : b
-    );
-    const amount = top._sum?.amount ?? 0;
-    if (amount <= 0) return null;
-    const u = await prisma.user.findUnique({
-      where: { id: top.userId },
-      select: { employee: { select: { name: true } }, empId: true },
+  ): Promise<TopSellerEntry[]> => {
+    if (rows.length === 0) return [];
+    const sorted = [...rows]
+      .map((r) => ({ userId: r.userId, amount: Math.floor(r._sum?.amount ?? 0) }))
+      .sort((a, b) => b.amount - a.amount);
+    const top3 = sorted.slice(0, 3).filter((r) => r.amount > 0);
+    if (top3.length === 0) return [];
+    const userIds = top3.map((r) => r.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, empId: true, employee: { select: { name: true } } },
     });
-    const name = u?.employee?.name ?? u?.empId ?? top.userId;
-    return { name, amount };
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    return top3.map((r, i) => {
+      const u = userMap.get(r.userId);
+      const name = u?.employee?.name ?? u?.empId ?? r.userId;
+      return {
+        employeeId: u?.empId ?? r.userId,
+        employeeName: name,
+        amount: r.amount,
+        rank: i + 1,
+      };
+    });
   };
 
   const [topToday, topWeek, topMonth] = await Promise.all([
-    pickTop(todayByUser),
-    pickTop(weekByUser),
-    pickTop(monthByUser),
+    pickTop3(todayByUser),
+    pickTop3(weekByUser),
+    pickTop3(monthByUser),
   ]);
 
   const byUserId: Record<string, number> = input.employeeOnly

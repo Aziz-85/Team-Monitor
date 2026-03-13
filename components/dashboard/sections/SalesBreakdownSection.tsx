@@ -3,8 +3,12 @@
 import { OpsCard } from '@/components/ui/OpsCard';
 import { ProgressBar } from '../cards/ProgressBar';
 import { formatSarInt } from '@/lib/utils/money';
+import { getPerformanceTextClassForComparison, getProgressBarVariant } from '@/lib/performanceColors';
 
 type Row = { name: string; target: number; actual: number; pct: number };
+
+/** Thresholds for employee contribution comparison (60/40). */
+const COMPARISON_THRESHOLDS = { high: 60, mid: 40 };
 
 export function SalesBreakdownSection({ employees }: { employees: Row[] }) {
   if (!employees?.length) return null;
@@ -12,15 +16,14 @@ export function SalesBreakdownSection({ employees }: { employees: Row[] }) {
   return (
     <OpsCard title="Sales Breakdown" className="rounded-2xl border border-border shadow-sm">
       <ul className="space-y-4">
-        {employees.map((emp, i) => (
+        {employees.map((emp, i) => {
+          const textClass = getPerformanceTextClassForComparison(emp.pct, COMPARISON_THRESHOLDS);
+          const variant = getProgressBarVariant(emp.pct, COMPARISON_THRESHOLDS);
+          return (
           <li key={i} className="border-b border-border pb-3 last:border-0 last:pb-0">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium text-foreground">{emp.name}</span>
-              <span
-                className={`text-sm font-semibold ${
-                  emp.pct >= 60 ? 'text-foreground' : emp.pct >= 40 ? 'text-amber-600' : 'text-red-600'
-                }`}
-              >
+              <span className={`text-sm font-semibold ${textClass}`}>
                 {emp.pct}%
               </span>
             </div>
@@ -30,11 +33,12 @@ export function SalesBreakdownSection({ employees }: { employees: Row[] }) {
             <div className="mt-1.5">
               <ProgressBar
                 valuePct={emp.pct}
-                variant={emp.pct < 40 ? 'red' : emp.pct < 60 ? 'orange' : 'default'}
+                variant={variant}
               />
             </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </OpsCard>
   );

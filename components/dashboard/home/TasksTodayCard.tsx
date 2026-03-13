@@ -1,9 +1,11 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { CardShell } from '../cards/CardShell';
 
 type Props = {
   title: string;
+  subtitle?: string | null;
   total: number;
   completed: number;
   pending: number;
@@ -16,6 +18,7 @@ type Props = {
 
 export function TasksTodayCard({
   title,
+  subtitle,
   total,
   completed,
   pending,
@@ -26,10 +29,11 @@ export function TasksTodayCard({
   children,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardShell variant="home">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
         {title}
       </h3>
+      {subtitle && <p className="-mt-3 mb-4 text-xs text-muted">{subtitle}</p>}
       {loading && <p className="text-sm text-muted">…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!loading && !error && total === 0 && (
@@ -57,6 +61,6 @@ export function TasksTodayCard({
           <ul className="space-y-2">{children}</ul>
         </>
       )}
-    </div>
+    </CardShell>
   );
 }

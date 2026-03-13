@@ -16,6 +16,12 @@ export const CHART_TARGET_DASH_ARRAY = '5 4';
 export const CHART_EXECUTIVE_ACTUAL_COLOR = '#B8860B';
 export const CHART_EXECUTIVE_TARGET_COLOR = '#D4C4A8';
 
+/** Executive UI — cards, borders, accents (used by ExecutiveDashboardClient, etc.) */
+export const EXECUTIVE_CARD_BORDER = '#E8DFC8';
+export const EXECUTIVE_CARD_BG = '#FFFFFF';
+export const EXECUTIVE_GOLD = '#C6A756';
+export const EXECUTIVE_HOVER_BG = '#F8F4E8';
+
 /** Grid lines — subtle */
 export const CHART_GRID_COLOR = '#f1f5f9';
 export const CHART_GRID_STROKE_WIDTH = 1;

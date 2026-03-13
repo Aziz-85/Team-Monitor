@@ -128,7 +128,9 @@ export function EmployeeHomeClient() {
         </div>
 
         {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
+          <div className="mb-4">
+            <p className="mb-2 text-xs text-muted">{t('home.targetsTodayOnlySubtitle')}</p>
+            <div className="grid gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
@@ -153,6 +155,7 @@ export function EmployeeHomeClient() {
               </div>
               <p className="mt-1 text-sm font-medium text-foreground">{targetsData.mtdPct.toFixed(1)}%</p>
             </OpsCard>
+            </div>
           </div>
         )}
 

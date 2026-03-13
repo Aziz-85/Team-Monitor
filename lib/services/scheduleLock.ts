@@ -11,9 +11,9 @@ export type ScheduleWeekStatusEnum = 'DRAFT' | 'APPROVED';
 
 export function getWeekStart(date: Date): string {
   const start = getWeekStartSaturday(date);
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, '0');
-  const day = String(start.getDate()).padStart(2, '0');
+  const y = start.getUTCFullYear();
+  const m = String(start.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(start.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 

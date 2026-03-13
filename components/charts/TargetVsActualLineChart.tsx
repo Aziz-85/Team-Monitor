@@ -1,12 +1,13 @@
 'use client';
 
 /**
- * Shared target-vs-actual line chart abstraction.
- * Used by PerformanceLineChart (Home) and ExecutiveLineChart (Executive).
+ * Canonical target-vs-actual line chart — use for all target/actual line charts.
+ * Used by PerformanceLineChart (Home), ExecutiveLineChart (Executive), SalesSummaryClient.
  * Theme prop controls colors and sizing; 0 stays at bottom; tooltips and labels preserved.
  */
 
 import { useState, useCallback } from 'react';
+import { ChartEmptyState } from './ChartEmptyState';
 import {
   CHART_ACTUAL_COLOR,
   CHART_ACTUAL_STROKE_WIDTH,
@@ -119,25 +120,11 @@ export function TargetVsActualLineChart({
 
   if (!data.length) {
     return (
-      <div
-        style={{ height }}
-        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50/50 text-center"
-      >
-        <svg
-          className={`${theme === 'home' ? 'h-10 w-10' : 'h-8 w-8'} text-muted/60`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
-          />
-        </svg>
-        <p className={`font-medium text-muted ${theme === 'home' ? 'text-sm' : 'text-xs'}`}>{emptyLabel}</p>
-      </div>
+      <ChartEmptyState
+        height={height}
+        emptyLabel={emptyLabel}
+        size={theme === 'home' ? 'default' : 'compact'}
+      />
     );
   }
 

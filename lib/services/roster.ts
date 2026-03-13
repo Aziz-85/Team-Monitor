@@ -1,8 +1,4 @@
-import { prisma } from '@/lib/db';
-import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
-import { filterOperationalEmployees } from '@/lib/systemUsers';
-import { availabilityFor } from './availability';
-import { effectiveShiftFor } from './shift';
+import { getScheduleGridForWeek } from './scheduleGrid';
 
 export type RosterEmployee = { empId: string; name: string };
 export type RosterWarnings = string[];
@@ -17,45 +13,57 @@ export interface RosterForDateResult {
 
 export type RosterForDateOptions = { boutiqueIds?: string[] };
 
+/**
+ * Roster for a date using the same shift resolution logic as the Schedule grid.
+ * Single source of truth: getScheduleGridForWeek (availability, overrides, team parity, Friday PM-only).
+ */
 export async function rosterForDate(
   date: Date,
   options: RosterForDateOptions = {}
 ): Promise<RosterForDateResult> {
   const d = toDateOnly(date);
+  const dateStr = d.toISOString().slice(0, 10);
   const boutiqueIds = options.boutiqueIds ?? [];
-  const employeesRaw = await prisma.employee.findMany({
-    where: buildEmployeeWhereForOperational(boutiqueIds),
-    select: { empId: true, name: true, boutiqueId: true, isSystemOnly: true },
-    orderBy: employeeOrderByStable,
-  });
-  const employees = filterOperationalEmployees(employeesRaw);
+
+  const grid = await getScheduleGridForWeek(dateStr, { boutiqueIds });
+  const dayIndex = grid.days.findIndex((day) => day.date === dateStr);
+  if (dayIndex < 0) {
+    return emptyRoster();
+  }
 
   const amEmployees: RosterEmployee[] = [];
   const pmEmployees: RosterEmployee[] = [];
   const offEmployees: RosterEmployee[] = [];
   const leaveEmployees: RosterEmployee[] = [];
 
-  for (const emp of employees) {
-    const availability = await availabilityFor(emp.empId, d, emp.boutiqueId);
-    if (availability === 'LEAVE') {
+  for (const row of grid.rows) {
+    const cell = row.cells[dayIndex];
+    if (!cell) continue;
+
+    const emp = { empId: row.empId, name: row.name };
+
+    if (cell.availability === 'LEAVE') {
       leaveEmployees.push(emp);
       continue;
     }
-    if (availability === 'OFF' || availability === 'HOLIDAY') {
+    if (cell.availability === 'OFF' || cell.availability === 'HOLIDAY' || cell.availability === 'ABSENT') {
       offEmployees.push(emp);
       continue;
     }
-    const shift = await effectiveShiftFor(emp.empId, d);
-    if (shift === 'MORNING') amEmployees.push(emp);
-    else if (shift === 'EVENING') pmEmployees.push(emp);
-    else offEmployees.push(emp);
+    if (cell.availability === 'WORK') {
+      if (cell.effectiveShift === 'MORNING') amEmployees.push(emp);
+      else if (cell.effectiveShift === 'EVENING') pmEmployees.push(emp);
+      else offEmployees.push(emp);
+    } else {
+      offEmployees.push(emp);
+    }
   }
 
   if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
     // eslint-disable-next-line no-console
     console.log('[roster.rosterForDate]', {
-      date: d.toISOString().slice(0, 10),
-      boutiqueIds: options.boutiqueIds,
+      date: dateStr,
+      boutiqueIds,
       amCount: amEmployees.length,
       pmCount: pmEmployees.length,
       amEmpIds: amEmployees.map((e) => e.empId),
@@ -92,4 +100,14 @@ function toDateOnly(date: Date): Date {
   const d = new Date(date);
   d.setUTCHours(0, 0, 0, 0);
   return d;
+}
+
+function emptyRoster(): RosterForDateResult {
+  return {
+    amEmployees: [],
+    pmEmployees: [],
+    offEmployees: [],
+    leaveEmployees: [],
+    warnings: [],
+  };
 }

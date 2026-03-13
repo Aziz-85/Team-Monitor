@@ -1,6 +1,10 @@
 'use client';
 
+import { CardShell } from '../cards/CardShell';
+
 type Props = {
+  title: string;
+  subtitle?: string | null;
   primaryLabel: string;
   backupLabel: string;
   unassignedLabel: string;
@@ -13,6 +17,8 @@ type Props = {
 };
 
 export function KeyHolderCard({
+  title,
+  subtitle,
   primaryLabel,
   backupLabel,
   unassignedLabel,
@@ -24,10 +30,11 @@ export function KeyHolderCard({
   const badge = primaryTask ? primaryLabel : backupTask ? backupLabel : unassignedLabel;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardShell variant="home">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-        Key Holder Today
+        {title}
       </h3>
+      {subtitle && <p className="-mt-2 mb-3 text-xs text-muted">{subtitle}</p>}
       {holder ? (
         <div className="space-y-2">
           <p className="text-xl font-semibold text-foreground">{holder}</p>
@@ -41,6 +48,6 @@ export function KeyHolderCard({
       ) : (
         <p className="text-muted">—</p>
       )}
-    </div>
+    </CardShell>
   );
 }

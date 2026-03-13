@@ -5,8 +5,13 @@ import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
 import { ExecutiveBarChart } from '@/components/executive/ExecutiveBarChart';
-
-const GOLD = '#C6A756';
+import {
+  EXECUTIVE_CARD_BORDER,
+  EXECUTIVE_CARD_BG,
+  EXECUTIVE_GOLD,
+  EXECUTIVE_HOVER_BG,
+} from '@/lib/chartStyles';
+import { ExecutiveKpiCard } from '@/components/dashboard-ui/ExecutiveKpiCard';
 
 type KPIs = {
   revenue: number;
@@ -31,48 +36,6 @@ type ExecutiveData = {
   boutiqueScore?: { score: number; classification: string; components?: Record<string, number> };
 };
 
-function pctColor(pct: number): string {
-  if (pct >= 90) return 'text-emerald-600';
-  if (pct >= 20) return 'text-muted';
-  return 'text-amber-700';
-}
-
-function KPICard({
-  title,
-  value,
-  delta,
-  pct,
-  showPctBar,
-}: {
-  title: string;
-  value: string | number;
-  delta?: string | null;
-  pct?: number;
-  showPctBar?: boolean;
-}) {
-  const colorClass = pct != null ? pctColor(pct) : 'text-foreground';
-  return (
-    <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
-      <p className="text-sm text-muted">{title}</p>
-      <p className={`text-3xl font-semibold ${colorClass}`}>{value}</p>
-      {delta != null && delta !== '' && (
-        <p className="mt-1 text-xs text-muted">{delta}</p>
-      )}
-      {showPctBar && pct != null && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${Math.min(100, Math.max(0, pct))}%`,
-              backgroundColor: GOLD,
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ExecutiveDashboardClient() {
   const { t } = useT();
   const [data, setData] = useState<ExecutiveData | null>(null);
@@ -93,7 +56,10 @@ export function ExecutiveDashboardClient() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-6 shadow-sm">
+        <div
+          className="rounded-2xl border p-6 shadow-sm"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <p className="text-muted">{error}</p>
         </div>
       </div>
@@ -132,13 +98,19 @@ export function ExecutiveDashboardClient() {
             href={`/api/executive/weekly-pdf?weekStart=${weekStart}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-[#F8F4E8]"
+            className="rounded-lg border px-3 py-1.5 text-sm text-foreground shadow-sm transition-colors"
+            style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = EXECUTIVE_HOVER_BG; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = EXECUTIVE_CARD_BG; }}
           >
             Download Weekly PDF
           </a>
           <a
             href="/executive/monthly"
-            className="rounded-lg border border-[#E8DFC8] bg-white px-3 py-1.5 text-sm text-foreground shadow-sm hover:bg-[#F8F4E8]"
+            className="rounded-lg border px-3 py-1.5 text-sm text-foreground shadow-sm transition-colors"
+            style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = EXECUTIVE_HOVER_BG; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = EXECUTIVE_CARD_BG; }}
           >
             Executive Monthly
           </a>
@@ -146,9 +118,12 @@ export function ExecutiveDashboardClient() {
       </div>
 
       {data.boutiqueScore != null && (
-        <div className="rounded-2xl border-2 border-[#E8DFC8] bg-white p-4 shadow-sm">
+        <div
+          className="rounded-2xl border-2 p-4 shadow-sm"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <p className="text-sm text-muted">Boutique Performance Score</p>
-          <p className="text-2xl font-semibold text-[#C6A756]">
+          <p className="text-2xl font-semibold" style={{ color: EXECUTIVE_GOLD }}>
             {data.boutiqueScore.score}
             <span className="ms-2 text-base font-normal text-muted">
               ({data.boutiqueScore.classification})
@@ -159,36 +134,36 @@ export function ExecutiveDashboardClient() {
 
       {/* Section 1 – KPI Cards */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <KPICard
+        <ExecutiveKpiCard
           title="Revenue (Current Month)"
           value={kpis.revenue.toLocaleString()}
           delta={kpis.revenueDelta != null ? `vs prev: ${kpis.revenueDelta > 0 ? '+' : ''}${kpis.revenueDelta}%` : undefined}
         />
-        <KPICard
+        <ExecutiveKpiCard
           title="Target (Current Month)"
           value={kpis.target.toLocaleString()}
           delta={kpis.targetDelta != null ? `vs prev: ${kpis.targetDelta > 0 ? '+' : ''}${kpis.targetDelta}%` : undefined}
         />
-        <KPICard
+        <ExecutiveKpiCard
           title="Achievement %"
           value={`${achievementPct}%`}
           delta={undefined}
           pct={achievementPct}
           showPctBar
         />
-        <KPICard
+        <ExecutiveKpiCard
           title="Overdue Tasks %"
           value={`${overduePct}%`}
           pct={100 - Math.min(100, overduePct)}
           showPctBar
         />
-        <KPICard
+        <ExecutiveKpiCard
           title="Schedule Balance %"
           value={`${balancePct}%`}
           pct={balancePct}
           showPctBar
         />
-        <KPICard
+        <ExecutiveKpiCard
           title={t('executive.riskIndex')}
           value={riskPct}
           pct={100 - Math.min(100, riskPct)}
@@ -198,7 +173,10 @@ export function ExecutiveDashboardClient() {
 
       {/* Section 2 – Performance Analytics */}
       <section className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.salesVsTarget')}</h2>
           <ExecutiveLineChart
             height={200}
@@ -207,7 +185,10 @@ export function ExecutiveDashboardClient() {
             valueFormat={(n) => formatSarInt(n)}
           />
         </div>
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.taskCompletion')}</h2>
           <ExecutiveBarChart
             height={200}
@@ -215,7 +196,10 @@ export function ExecutiveDashboardClient() {
             valueFormat={(n) => String(n)}
           />
         </div>
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.zoneCompliance')}</h2>
           <ExecutiveBarChart
             height={200}
@@ -227,10 +211,13 @@ export function ExecutiveDashboardClient() {
 
       {/* Section 3 – Executive Control */}
       <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.antiGaming')}</h2>
           <div className="space-y-1 text-sm">
-            <p>Burst flags: <span className="font-semibold text-[#C6A756]">{data.antiGamingSummary.burstCount}</span></p>
+            <p>Burst flags: <span className="font-semibold" style={{ color: EXECUTIVE_GOLD }}>{data.antiGamingSummary.burstCount}</span></p>
             <p>Same-day bulk: <span className="font-semibold">{data.antiGamingSummary.sameDayBulkCount}</span></p>
             {data.antiGamingSummary.topSuspicious.length > 0 && (
               <p className="mt-2 text-xs text-muted">Top: {data.antiGamingSummary.topSuspicious.join(', ')}</p>
@@ -238,7 +225,10 @@ export function ExecutiveDashboardClient() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.scheduleEdits')}</h2>
           <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
             {data.latestScheduleEdits.length === 0 ? (
@@ -255,11 +245,14 @@ export function ExecutiveDashboardClient() {
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-[#E8DFC8] bg-white p-4 shadow-sm transition hover:shadow-md">
+        <div
+          className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+          style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
+        >
           <h2 className="mb-3 text-sm font-medium text-muted">{t('executive.topPerformer')}</h2>
           {data.topPerformer ? (
             <>
-              <p className="text-2xl font-semibold text-[#C6A756]">{data.topPerformer.name}</p>
+              <p className="text-2xl font-semibold" style={{ color: EXECUTIVE_GOLD }}>{data.topPerformer.name}</p>
               <p className="text-sm text-muted">{data.topPerformer.completedCount} tasks completed</p>
             </>
           ) : (

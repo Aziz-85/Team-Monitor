@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Executive KPI block: actual vs target, variance, status badge, bullet, footnote.
+ * Distinct from ExecutiveKpiCard (simple title/value/delta/bar).
+ * Used in ExecutiveDashboardLayout, ExecutiveSinglePageClient, NetworkExecutiveClient.
+ * Left separate: different structure (actual/target layout, variance, status badge).
+ */
+
 export type ExecKpiBlockStatus = 'ok' | 'watch' | 'action' | 'neutral';
 
 export type ExecKpiBlockProps = {

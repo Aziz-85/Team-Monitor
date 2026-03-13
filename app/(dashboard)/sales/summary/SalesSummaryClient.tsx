@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TargetVsActualLineChart } from '@/components/charts/TargetVsActualLineChart';
+import { PerformanceKpiCard } from '@/components/ui/PerformanceKpiCard';
 
 type BoutiqueOption = { id: string; code: string; name: string };
 
@@ -77,12 +78,6 @@ type Summary = {
     }>;
   }>;
 };
-
-function getPerformanceColor(percent: number): string {
-  if (percent >= 100) return 'bg-emerald-500';
-  if (percent >= 60) return 'bg-amber-500';
-  return 'bg-red-500';
-}
 
 export function SalesSummaryClient() {
   const { t } = useT();
@@ -323,38 +318,39 @@ export function SalesSummaryClient() {
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              { label: t('sales.summary.week'), data: targets.week, sub: targets.week.from && targets.week.to ? `${targets.week.from} – ${targets.week.to}` : undefined },
+              {
+                label: t('sales.summary.week'),
+                data: targets.week,
+                sub: targets.week.from && targets.week.to
+                  ? `${targets.week.from} – ${targets.week.to} · ${t('sales.summary.weekOfEndDate')}`
+                  : t('sales.summary.weekOfEndDate'),
+              },
               { label: t('sales.summary.month'), data: targets.month, sub: targets.month.key },
               { label: t('sales.summary.quarter'), data: targets.quarter, sub: targets.quarter.key },
               { label: t('sales.summary.halfYear'), data: targets.half, sub: targets.half.key },
               { label: t('sales.summary.year'), data: targets.year, sub: targets.year.key },
             ].map(({ label, data, sub }) => (
-              <div
+              <PerformanceKpiCard
                 key={label}
-                className="rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted">{label}</p>
-                {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
-                <p className="mt-3 text-2xl font-bold tabular-nums text-foreground md:text-3xl">
-                  {formatSarInt(data.achievedSar)}
-                </p>
-                <p className="text-xs text-muted">{t('sales.summary.achieved')}</p>
-                <div className="mt-3 space-y-1 text-xs">
-                  <p className="text-muted">
-                    {t('sales.summary.target')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.targetSar)}</span>
-                  </p>
-                  <p className="text-muted">
-                    {t('sales.summary.remaining')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.remainingSar)}</span>
-                  </p>
-                </div>
-                <p className="mt-2 text-sm font-bold tabular-nums">{data.pct}%</p>
-                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface-subtle">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${getPerformanceColor(data.pct)}`}
-                    style={{ width: `${Math.min(data.pct, 100)}%` }}
-                  />
-                </div>
-              </div>
+                title={label}
+                subtitle={sub}
+                mainValue={formatSarInt(data.achievedSar)}
+                mainValueLabel={t('sales.summary.achieved')}
+                metricsSlot={
+                  <div className="mt-3 space-y-1 text-xs">
+                    <p className="text-muted">
+                      {t('sales.summary.target')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.targetSar)}</span>
+                    </p>
+                    <p className="text-muted">
+                      {t('sales.summary.remaining')}: <span className="font-semibold tabular-nums text-foreground">{formatSarInt(data.remainingSar)}</span>
+                    </p>
+                  </div>
+                }
+                percent={data.pct}
+                showPercentInline
+                variant="compact"
+                progressBarSize="md"
+              />
             ))}
           </div>
         </section>
@@ -368,7 +364,7 @@ export function SalesSummaryClient() {
           </h2>
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md md:p-8">
             <p className="mb-6 text-xs text-muted">
-              Cumulative sales vs target by day • {targets.monthKey ?? ''}
+              {t('sales.summary.chartMtdSubtitle')}{targets.monthKey ? ` · ${targets.monthKey}` : ''}
             </p>
             <TargetVsActualLineChart
               data={chartData}
@@ -435,7 +431,6 @@ export function SalesSummaryClient() {
                       <DataTableTh className="text-start">{t('sales.summary.employee')}</DataTableTh>
                       <DataTableTh className="text-end">{t('sales.summary.net')}</DataTableTh>
                       <DataTableTh className="text-end">{t('sales.summary.contributionPct')}</DataTableTh>
-                      <DataTableTh className="text-end">{t('sales.summary.progress')} %</DataTableTh>
                       <DataTableTh className="text-end">{t('sales.summary.guestCoverage')}</DataTableTh>
                       <DataTableTh className="text-start">{t('sales.summary.sourceBoutique')}</DataTableTh>
                     </DataTableHead>
@@ -460,7 +455,6 @@ export function SalesSummaryClient() {
                               {formatSarInt(row.netSales)}
                             </DataTableTd>
                             <DataTableTd className="text-end tabular-nums">{contributionPct}%</DataTableTd>
-                            <DataTableTd className="text-end tabular-nums text-muted">—</DataTableTd>
                             <DataTableTd className="text-end">{formatSarInt(row.guestCoverageNetSales)}</DataTableTd>
                             <DataTableTd className="text-start">
                               {row.guestCoverageSources.map((s) => (

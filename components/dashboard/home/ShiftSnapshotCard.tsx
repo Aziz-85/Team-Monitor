@@ -1,5 +1,7 @@
 'use client';
 
+import { CardShell } from '../cards/CardShell';
+
 type Props = {
   morningLabel: string;
   eveningLabel: string;
@@ -14,7 +16,7 @@ export function ShiftSnapshotCard({
   pmEmployees,
 }: Props) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardShell variant="home">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
         Shift Snapshot
       </h3>
@@ -58,6 +60,6 @@ export function ShiftSnapshotCard({
           </div>
         </div>
       </div>
-    </div>
+    </CardShell>
   );
 }

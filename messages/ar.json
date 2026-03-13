@@ -196,6 +196,7 @@
     }
   },
   "dashboard": {
+    "asOfToday": "حتى تاريخ اليوم",
     "title": {
       "my": "لوحتي",
       "branch": "لوحة الفرع",
@@ -992,6 +993,8 @@
     "enabledYes": "نعم",
     "enabledNo": "لا",
     "noWarnings": "التغطية سليمة",
+    "coverageStatusTitle": "حالة التغطية",
+    "warningsThisWeek": "تحذيرات هذا الأسبوع",
     "amGtPm": "AM > PM",
     "amLt2": "AM < 2",
     "counts": "AM: {am}, PM: {pm}",
@@ -1009,7 +1012,22 @@
     "monthlyProgressCard": "تقدم الشهر",
     "target": "الهدف",
     "sales": "المبيعات",
-    "remaining": "المتبقي"
+    "remaining": "المتبقي",
+    "performanceTodayOnly": "أداء اليوم",
+    "dateContextHint": "الوردية والتغطية والمهام تستخدم التاريخ المحدد · الأداء دائماً لليوم",
+    "yourTasksForToday": "مهامك لليوم",
+    "tasksForDate": "مهام {date}",
+    "keyHolderToday": "حامل المفاتيح اليوم",
+    "keyHolder": "حامل المفاتيح",
+    "keyHolderForDate": "حامل المفاتيح لـ {date}",
+    "coverageStatus": "حالة التغطية",
+    "selectedDay": "اليوم المحدد",
+    "thisWeek": "هذا الأسبوع",
+    "daysNeedAttention": "{count} يوم هذا الأسبوع",
+    "targetsTodayOnly": "تقدم اليوم",
+    "targetsTodayOnlySubtitle": "الأهداف لليوم؛ الجدول يستخدم التاريخ المحدد.",
+    "operationalAlerts": "التنبيهات التشغيلية",
+    "allClear": "كل شيء سليم"
   },
   "targetsManagement": {
     "title": "إدارة الأهداف",
@@ -1190,7 +1208,9 @@
       "sourceBoutique": "فرع المصدر",
       "sourcesNote": "المصادر: السجل + الاستيراد + اليدوي",
       "noDataForPeriod": "لا توجد مبيعات في هذه الفترة للبوتيك المحدد.",
-      "failedToLoad": "فشل التحميل"
+      "failedToLoad": "فشل التحميل",
+      "chartMtdSubtitle": "المتراكم حتى نهاية شهر تاريخ النهاية",
+      "weekOfEndDate": "أسبوع تاريخ النهاية"
     },
     "returns": {
       "title": "مرتجعات / مبادلات",

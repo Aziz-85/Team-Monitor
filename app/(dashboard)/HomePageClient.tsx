@@ -16,6 +16,8 @@ import { ShiftSnapshotCard } from '@/components/dashboard/home/ShiftSnapshotCard
 import { KeyHolderCard } from '@/components/dashboard/home/KeyHolderCard';
 import { TasksTodayCard } from '@/components/dashboard/home/TasksTodayCard';
 import { OperationalAlertsCard } from '@/components/dashboard/home/OperationalAlertsCard';
+import { CardShell } from '@/components/dashboard/cards/CardShell';
+import { ChartCard } from '@/components/ui/ChartCard';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -79,9 +81,9 @@ type PerformanceSummary = {
   monthly: { target: number; sales: number; remaining: number; percent: number };
   dailyTrajectory?: { dateKey: string; targetCumulative: number; actualCumulative: number }[];
   topSellers?: {
-    today: { name: string; amount: number } | null;
-    week: { name: string; amount: number } | null;
-    month: { name: string; amount: number } | null;
+    today: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
+    week: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
+    month: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
   };
   daysInMonth?: number;
   todayDayOfMonth?: number;
@@ -215,6 +217,9 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     );
   }
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isSelectedToday = date === todayStr;
+
   const roster = data.roster ?? {
     amEmployees: [] as Array<{ empId: string; name: string }>,
     pmEmployees: [] as Array<{ empId: string; name: string }>,
@@ -284,14 +289,17 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-muted">{t('common.date')}</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-muted">{t('common.date')}</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
+              />
+            </div>
+            <p className="text-xs text-muted">{t('home.dateContextHint')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -313,9 +321,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
           </div>
         </div>
 
-        {/* Section 1 — Hero KPI Cards */}
+        {/* Performance section (always today) */}
         {performance && (
-          <section className="mb-10">
+          <section className="mb-10 rounded-2xl border border-border/60 bg-surface/50 p-6 md:p-8">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+              {t('home.performanceTodayOnly')}
+            </h2>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <LuxuryPerformanceCard
                 title="Today"
@@ -345,77 +356,63 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                 sparklineValues={trajectory.map((d) => d.actualCumulative)}
               />
             </div>
-          </section>
-        )}
-
-        {/* Section 2 — Pace Indicator */}
-        {performance && (
-          <section className="mb-10">
-            <LuxuryPaceCard
+            <div className="mt-10">
+              <LuxuryPaceCard
               expectedPct={expectedPct}
               actualPct={performance.daily.percent}
             />
-          </section>
-        )}
-
-        {/* Section 3 — Monthly Progress Chart */}
-        {performance && (
-          <section className="mb-10">
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md md:p-8">
-              <h2 className="mb-0.5 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-                Target vs Actual (MTD)
-              </h2>
-              <p className="mb-6 text-xs text-muted">Cumulative sales vs target by day</p>
-              <PerformanceLineChart
-                data={chartData}
-                targetLine={targetLine}
-                height={260}
-                valueFormat={(n) => formatSarInt(n)}
-                emptyLabel="No sales data yet"
-              />
             </div>
-          </section>
-        )}
-
-        {/* Section 4 — Top Sellers */}
-        {performance?.topSellers && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+            <div className="mt-10">
+              <ChartCard
+                title="Target vs Actual (MTD)"
+                subtitle="Cumulative sales vs target by day"
+                className="md:p-8 [&>div:first-child]:mb-6"
+              >
+                <PerformanceLineChart
+                  data={chartData}
+                  targetLine={targetLine}
+                  height={260}
+                  valueFormat={(n) => formatSarInt(n)}
+                  emptyLabel="No sales data yet"
+                />
+              </ChartCard>
+            </div>
+            {performance.topSellers && (
+            <>
+            <h2 className="mt-10 mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
               Top Sellers
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <LuxuryTopSellerCard
                 title="Top Seller Today"
-                name={performance.topSellers.today?.name ?? null}
-                amount={performance.topSellers.today?.amount ?? 0}
+                entries={performance.topSellers.today ?? []}
+                emptyLabel="No sales yet today"
               />
               <LuxuryTopSellerCard
                 title="Top Seller Week"
-                name={performance.topSellers.week?.name ?? null}
-                amount={performance.topSellers.week?.amount ?? 0}
+                entries={performance.topSellers.week ?? []}
+                emptyLabel="No sales yet this week"
               />
               <LuxuryTopSellerCard
                 title="Top Seller Month"
-                name={performance.topSellers.month?.name ?? null}
-                amount={performance.topSellers.month?.amount ?? 0}
+                entries={performance.topSellers.month ?? []}
+                emptyLabel="No sales yet this month"
               />
             </div>
+            </>
+            )}
           </section>
         )}
 
-        {/* Lower section — operational cards */}
+        {/* Operational section (selected date) */}
         <div className="space-y-6">
           {/* ROW 1: Coverage Status | Shift Snapshot */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <CoverageStatusCard
-              warningCount={weekSummary.length}
-              summary={
-                coverageValidation.length > 0
-                  ? coverageValidation[0].message
-                  : weekSummary.length > 0
-                    ? `${weekSummary.length} day(s) need attention this week`
-                    : ''
-              }
+              selectedDayMessage={coverageValidation.length > 0 ? coverageValidation[0].message : null}
+              weekWarningCount={weekSummary.length}
+              warningsThisWeekLabel={t('coverage.warningsThisWeek')}
+              daysNeedAttentionLabel={t('home.daysNeedAttention')}
               suggestedAction={
                 coverageSuggestion
                   ? {
@@ -430,6 +427,8 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               noWarningsLabel={t('coverage.noWarnings')}
               beforeAfterLabel={t('coverage.beforeAfter') as string}
               moveSuggestionLabel={t('coverage.moveSuggestion') as string}
+              titleLabel={t('home.coverageStatus')}
+              selectedDayLabel={t('home.selectedDay')}
             />
             <ShiftSnapshotCard
               morningLabel={t('schedule.morning')}
@@ -442,6 +441,8 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
           {/* ROW 2: Key Holder | Tasks Today */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <KeyHolderCard
+              title={isSelectedToday ? t('home.keyHolderToday') : t('home.keyHolder')}
+              subtitle={!isSelectedToday ? (t('home.keyHolderForDate') as string).replace('{date}', date) : null}
               primaryLabel={t('tasks.primary')}
               backupLabel={t('tasks.backup1')}
               unassignedLabel={t('tasks.unassigned')}
@@ -512,6 +513,8 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
           {/* ROW 3: Operational Alerts + Today Tasks (assigned) */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <OperationalAlertsCard
+              title={t('home.operationalAlerts')}
+              allClearLabel={t('home.allClear')}
               alerts={[
                 ...coverageValidation.map((v, i) => ({
                   key: `cov-${i}`,
@@ -530,9 +533,9 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                   : []),
               ]}
             />
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+            <CardShell variant="home">
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-                {t('tasks.today')}
+                {isSelectedToday ? t('tasks.today') : (t('home.tasksForDate') as string).replace('{date}', date)}
               </h3>
               <ul className="space-y-2">
                 {todayTasks.map((task) => (
@@ -559,12 +562,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                 ))}
                 {todayTasks.length === 0 && <li className="text-muted">—</li>}
               </ul>
-            </div>
+            </CardShell>
           </div>
 
           {/* Week summary apply buttons */}
           {weekSummary.length > 0 && (
-            <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+            <CardShell variant="home">
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
                 {t('coverage.weekSummary')}
               </h3>
@@ -619,7 +622,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </CardShell>
           )}
         </div>
 

@@ -1,8 +1,16 @@
 'use client';
 
+import { CardShell } from '../cards/CardShell';
+
 type Props = {
-  warningCount: number;
-  summary: string;
+  /** Message for the selected day (if it has a coverage issue). */
+  selectedDayMessage: string | null;
+  /** Number of days in the week with coverage issues. */
+  weekWarningCount: number;
+  /** Label for "warnings this week" (e.g. "warnings this week"). */
+  warningsThisWeekLabel: string;
+  /** Label for "X day(s) need attention" (use {count} placeholder). */
+  daysNeedAttentionLabel: string;
   suggestedAction: {
     employeeName: string;
     impact: { amBefore: number; pmBefore: number; amAfter: number; pmAfter: number };
@@ -13,11 +21,15 @@ type Props = {
   noWarningsLabel: string;
   beforeAfterLabel: string;
   moveSuggestionLabel: string;
+  titleLabel: string;
+  selectedDayLabel: string;
 };
 
 export function CoverageStatusCard({
-  warningCount,
-  summary,
+  selectedDayMessage,
+  weekWarningCount,
+  warningsThisWeekLabel,
+  daysNeedAttentionLabel,
   suggestedAction,
   onApplySuggestion,
   applying,
@@ -25,22 +37,35 @@ export function CoverageStatusCard({
   noWarningsLabel,
   beforeAfterLabel,
   moveSuggestionLabel,
+  titleLabel,
+  selectedDayLabel,
 }: Props) {
-  const hasWarnings = warningCount > 0;
+  const hasWarnings = weekWarningCount > 0 || (selectedDayMessage?.trim().length ?? 0) > 0;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardShell variant="home">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-        Coverage Status
+        {titleLabel}
       </h3>
       <div className="space-y-4">
         <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-bold tabular-nums text-foreground">{warningCount}</span>
-          <span className="text-sm text-muted">warnings this week</span>
+          <span className="text-3xl font-bold tabular-nums text-foreground">{weekWarningCount}</span>
+          <span className="text-sm text-muted">{warningsThisWeekLabel}</span>
         </div>
-        <p className="text-sm text-foreground">
-          {hasWarnings ? summary : noWarningsLabel}
-        </p>
+        <div className="space-y-1 text-sm text-foreground">
+          {hasWarnings ? (
+            <>
+              {selectedDayMessage && (
+                <p><strong>{selectedDayLabel}:</strong> {selectedDayMessage}</p>
+              )}
+              {weekWarningCount > 0 && (
+                <p>{daysNeedAttentionLabel.replace('{count}', String(weekWarningCount))}</p>
+              )}
+            </>
+          ) : (
+            <p>{noWarningsLabel}</p>
+          )}
+        </div>
         {suggestedAction && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
             <p className="text-sm font-medium text-amber-900">
@@ -64,6 +89,6 @@ export function CoverageStatusCard({
           </div>
         )}
       </div>
-    </div>
+    </CardShell>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { CardShell } from '../cards/CardShell';
+
 type AlertItem = {
   key: string;
   label: string;
@@ -9,19 +11,21 @@ type AlertItem = {
 
 type Props = {
   alerts: AlertItem[];
+  title?: string;
+  allClearLabel?: string;
 };
 
-export function OperationalAlertsCard({ alerts }: Props) {
+export function OperationalAlertsCard({ alerts, title = 'Operational Alerts', allClearLabel = 'All clear' }: Props) {
   const displayAlerts = alerts.filter((a) => a.value?.trim());
   return (
-    <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardShell variant="home">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-        Operational Alerts
+        {title}
       </h3>
       {displayAlerts.length === 0 ? (
         <div className="flex items-center gap-2 rounded-xl bg-emerald-50/60 py-3 px-4">
           <span className="text-emerald-600">✓</span>
-          <span className="text-sm font-medium text-emerald-800">All clear</span>
+          <span className="text-sm font-medium text-emerald-800">{allClearLabel}</span>
         </div>
       ) : (
         <div className="space-y-2">
@@ -42,6 +46,6 @@ export function OperationalAlertsCard({ alerts }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </CardShell>
   );
 }

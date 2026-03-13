@@ -155,7 +155,7 @@ export function ExecutiveDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl p-4 md:p-6 pb-nav">
-      <PageHeader title={t(`dashboard.title.${titleKey}`)} />
+      <PageHeader title={t(`dashboard.title.${titleKey}`)} subtitle={t('dashboard.asOfToday')} />
 
       {/* Section 1 — Top 4 cards */}
       <section className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

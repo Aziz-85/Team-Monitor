@@ -1,18 +1,17 @@
+import { getWeekRangeForDate } from '@/lib/time';
+
+/** Week start (Saturday) in Riyadh. Aligns with lib/time getWeekRangeForDate for consistency. */
 export function getWeekStartSaturday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=Sun..6=Sat (local)
-  const diff = (day - 6 + 7) % 7;
-  d.setDate(d.getDate() - diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const { startSat } = getWeekRangeForDate(date);
+  return startSat;
 }
 
-/** Week start as YYYY-MM-DD (Saturday). Uses same Saturday logic as getWeekStartSaturday. */
+/** Week start as YYYY-MM-DD (Saturday). Uses Riyadh week boundaries. */
 export function getWeekStart(date: Date): string {
   const start = getWeekStartSaturday(date);
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, '0');
-  const day = String(start.getDate()).padStart(2, '0');
+  const y = start.getUTCFullYear();
+  const m = String(start.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(start.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
