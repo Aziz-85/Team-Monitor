@@ -8,14 +8,12 @@ import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { getDaysRemaining, getComplianceStatus } from '@/lib/compliance/status';
+import { COMPLIANCE_ROLES } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
-
-const VIEW_ROLES: Role[] = ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
-const WRITE_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
 export async function GET(request: NextRequest) {
   try {
-    await requireRole(VIEW_ROLES);
+    await requireRole(COMPLIANCE_ROLES);
   } catch (e) {
     const err = e as { code?: string };
     if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,7 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   const user = await getSessionUser();
-  const canWrite = user ? WRITE_ROLES.includes(user.role as Role) : false;
+  const canWrite = user ? COMPLIANCE_ROLES.includes(user.role as Role) : false;
 
   const scope = await getOperationalScope(request);
   if (!scope?.boutiqueIds?.length) {
@@ -95,7 +93,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(WRITE_ROLES);
+    await requireRole(COMPLIANCE_ROLES);
   } catch (e) {
     const err = e as { code?: string };
     if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

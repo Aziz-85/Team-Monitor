@@ -39,6 +39,17 @@ export function canViewFullSchedule(role: Role): boolean {
   return SCHEDULE_VIEW_FULL_ROLES.includes(role);
 }
 
+/** Compliance / Expiry Tracker: view and manage (SUPER_ADMIN, ADMIN, AREA_MANAGER, MANAGER only). */
+export const COMPLIANCE_ROLES: Role[] = ['SUPER_ADMIN', 'ADMIN', 'AREA_MANAGER', 'MANAGER'];
+
+export function canViewCompliance(role: Role): boolean {
+  return COMPLIANCE_ROLES.includes(role);
+}
+
+export function canManageCompliance(role: Role): boolean {
+  return COMPLIANCE_ROLES.includes(role);
+}
+
 /** Sprint 2B: MANAGER/ADMIN/SUPER_ADMIN auto-apply; ASSISTANT_MANAGER must go through approval. */
 export function canAutoApprove(role: Role): boolean {
   return role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
@@ -108,6 +119,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/sales/leadership-impact',
     '/kpi/upload',
     '/me/target',
+    '/compliance',
     '/about',
     '/change-password',
   ],
@@ -186,6 +198,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/sales/leadership-impact',
     '/kpi/upload',
     '/me/target',
+    '/compliance',
     '/about',
     '/change-password',
   ],
@@ -217,6 +230,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/sales/returns',
     '/sales/leadership-impact',
     '/me/target',
+    '/compliance',
     '/about',
     '/change-password',
   ],
@@ -289,10 +303,12 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/sales/leadership-impact',
     '/kpi/upload',
     '/me/target',
+    '/compliance',
     '/about',
     '/change-password',
   ],
 };
+
 
 export { getNavLinksForUser, getNavLinksForRole } from '@/lib/navConfig';
 

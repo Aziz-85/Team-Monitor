@@ -9,13 +9,11 @@ import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { getDaysRemaining, getComplianceStatus } from '@/lib/compliance/status';
-import type { Role } from '@prisma/client';
-
-const VIEW_ROLES: Role[] = ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
+import { COMPLIANCE_ROLES } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
-    await requireRole(VIEW_ROLES);
+    await requireRole(COMPLIANCE_ROLES);
   } catch (e) {
     const err = e as { code?: string };
     if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

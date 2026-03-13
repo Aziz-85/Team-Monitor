@@ -43,7 +43,7 @@ const GROUP_TEAM: NavGroup = {
     { href: '/boutique/leaves', key: 'nav.boutiqueLeaves', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
     { href: '/admin/control-panel/delegation', key: 'nav.admin.delegation', roles: ['ADMIN', 'SUPER_ADMIN', 'MANAGER'] },
     { href: '/admin/memberships', key: 'nav.admin.memberships', roles: ['ADMIN', 'SUPER_ADMIN'] },
-    { href: '/compliance', key: 'nav.compliance', roles: ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
+    { href: '/compliance', key: 'nav.compliance', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
   ],
 };
 
