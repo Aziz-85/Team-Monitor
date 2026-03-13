@@ -411,8 +411,6 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
             <CoverageStatusCard
               selectedDayMessage={coverageValidation.length > 0 ? coverageValidation[0].message : null}
               weekWarningCount={weekSummary.length}
-              warningsThisWeekLabel={t('coverage.warningsThisWeek')}
-              daysNeedAttentionLabel={t('home.daysNeedAttention')}
               suggestedAction={
                 coverageSuggestion
                   ? {
@@ -424,11 +422,16 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               onApplySuggestion={applySuggestion}
               applying={applyingSuggestion}
               applyLabel={t('coverage.applySuggestion')}
-              noWarningsLabel={t('coverage.noWarnings')}
               beforeAfterLabel={t('coverage.beforeAfter') as string}
               moveSuggestionLabel={t('coverage.moveSuggestion') as string}
               titleLabel={t('home.coverageStatus')}
               selectedDayLabel={t('home.selectedDay')}
+              selectedDateNoIssueLabel={t('coverage.selectedDateNoIssue')}
+              selectedDateAllClearLabel={t('coverage.selectedDateAllClear')}
+              thisWeekLabel={t('coverage.thisWeekLabel')}
+              thisWeekDaysNeedAttentionLabel={t('coverage.thisWeekDaysNeedAttention') as string}
+              thisWeekNoWarningsLabel={t('coverage.thisWeekNoWarnings')}
+              suggestedActionLabel={t('coverage.suggestedActionLabel')}
             />
             <ShiftSnapshotCard
               morningLabel={t('schedule.morning')}

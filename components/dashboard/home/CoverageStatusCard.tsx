@@ -7,10 +7,6 @@ type Props = {
   selectedDayMessage: string | null;
   /** Number of days in the week with coverage issues. */
   weekWarningCount: number;
-  /** Label for "warnings this week" (e.g. "warnings this week"). */
-  warningsThisWeekLabel: string;
-  /** Label for "X day(s) need attention" (use {count} placeholder). */
-  daysNeedAttentionLabel: string;
   suggestedAction: {
     employeeName: string;
     impact: { amBefore: number; pmBefore: number; amAfter: number; pmAfter: number };
@@ -18,29 +14,49 @@ type Props = {
   onApplySuggestion: () => void;
   applying: boolean;
   applyLabel: string;
-  noWarningsLabel: string;
   beforeAfterLabel: string;
   moveSuggestionLabel: string;
   titleLabel: string;
   selectedDayLabel: string;
+  selectedDateNoIssueLabel: string;
+  selectedDateAllClearLabel: string;
+  thisWeekLabel: string;
+  thisWeekDaysNeedAttentionLabel: string;
+  thisWeekNoWarningsLabel: string;
+  suggestedActionLabel: string;
 };
 
 export function CoverageStatusCard({
   selectedDayMessage,
   weekWarningCount,
-  warningsThisWeekLabel,
-  daysNeedAttentionLabel,
   suggestedAction,
   onApplySuggestion,
   applying,
   applyLabel,
-  noWarningsLabel,
   beforeAfterLabel,
   moveSuggestionLabel,
   titleLabel,
   selectedDayLabel,
+  selectedDateNoIssueLabel,
+  selectedDateAllClearLabel,
+  thisWeekLabel,
+  thisWeekDaysNeedAttentionLabel,
+  thisWeekNoWarningsLabel,
+  suggestedActionLabel,
 }: Props) {
-  const hasWarnings = weekWarningCount > 0 || (selectedDayMessage?.trim().length ?? 0) > 0;
+  const hasSelectedDayIssue = (selectedDayMessage?.trim().length ?? 0) > 0;
+  const hasWeekIssues = weekWarningCount > 0;
+  const allClear = !hasSelectedDayIssue && !hasWeekIssues;
+
+  const selectedDateStatus = hasSelectedDayIssue
+    ? selectedDayMessage!
+    : allClear
+      ? selectedDateAllClearLabel
+      : selectedDateNoIssueLabel;
+
+  const weekStatus = hasWeekIssues
+    ? thisWeekDaysNeedAttentionLabel.replace('{count}', String(weekWarningCount))
+    : thisWeekNoWarningsLabel;
 
   return (
     <CardShell variant="home">
@@ -48,27 +64,33 @@ export function CoverageStatusCard({
         {titleLabel}
       </h3>
       <div className="space-y-4">
-        <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-bold tabular-nums text-foreground">{weekWarningCount}</span>
-          <span className="text-sm text-muted">{warningsThisWeekLabel}</span>
+        {/* Primary: selected date status */}
+        <div className="space-y-1">
+          <p className="text-sm text-foreground">
+            <span className="font-medium text-muted">{selectedDayLabel}:</span>{' '}
+            <span className={hasSelectedDayIssue ? 'text-amber-800 font-medium' : 'text-foreground'}>
+              {selectedDateStatus}
+            </span>
+          </p>
         </div>
-        <div className="space-y-1 text-sm text-foreground">
-          {hasWarnings ? (
-            <>
-              {selectedDayMessage && (
-                <p><strong>{selectedDayLabel}:</strong> {selectedDayMessage}</p>
-              )}
-              {weekWarningCount > 0 && (
-                <p>{daysNeedAttentionLabel.replace('{count}', String(weekWarningCount))}</p>
-              )}
-            </>
-          ) : (
-            <p>{noWarningsLabel}</p>
-          )}
+
+        {/* Secondary: week-wide summary */}
+        <div className="space-y-1">
+          <p className="text-sm text-foreground">
+            <span className="font-medium text-muted">{thisWeekLabel}:</span>{' '}
+            <span className={hasWeekIssues ? 'text-amber-800 font-medium' : 'text-foreground'}>
+              {weekStatus}
+            </span>
+          </p>
         </div>
-        {suggestedAction && (
+
+        {/* Suggested action (selected date only) */}
+        {suggestedAction && hasSelectedDayIssue && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-            <p className="text-sm font-medium text-amber-900">
+            <p className="text-xs font-medium uppercase tracking-wide text-amber-800/80">
+              {suggestedActionLabel}
+            </p>
+            <p className="mt-1 text-sm font-medium text-amber-900">
               {moveSuggestionLabel.replace('{name}', suggestedAction.employeeName)}
             </p>
             <p className="mt-1 text-xs text-muted">
