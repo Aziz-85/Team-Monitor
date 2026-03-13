@@ -16,6 +16,7 @@ import { ShiftSnapshotCard } from '@/components/dashboard/home/ShiftSnapshotCard
 import { KeyHolderCard } from '@/components/dashboard/home/KeyHolderCard';
 import { TasksTodayCard } from '@/components/dashboard/home/TasksTodayCard';
 import { OperationalAlertsCard } from '@/components/dashboard/home/OperationalAlertsCard';
+import { ComplianceExpiryCard } from '@/components/dashboard/home/ComplianceExpiryCard';
 import { CardShell } from '@/components/dashboard/cards/CardShell';
 import { ChartCard } from '@/components/ui/ChartCard';
 
@@ -111,6 +112,13 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [zoneDialogOpen, setZoneDialogOpen] = useState(false);
   const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
+  const [complianceAlerts, setComplianceAlerts] = useState<Array<{
+    id: string;
+    name: string;
+    daysRemaining: number;
+    status: 'expired' | 'urgent' | 'warning';
+  }>>([]);
+  const [complianceNextExpiry, setComplianceNextExpiry] = useState<{ name: string; daysRemaining: number } | null>(null);
 
   useEffect(() => {
     fetch('/api/performance/summary')
@@ -204,6 +212,28 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
       })
       .catch(() => setWeekSummary([]));
   }, [date]);
+
+  useEffect(() => {
+    fetch('/api/compliance/alerts')
+      .then((r) => r.json())
+      .then((data: {
+        alerts?: Array<{ id: string; name: string; daysRemaining: number; status: string }>;
+        nextExpiry?: { name: string; daysRemaining: number } | null;
+      }) => {
+        const list = (data?.alerts ?? []).filter((a) => ['expired', 'urgent', 'warning'].includes(a.status)) as Array<{
+          id: string;
+          name: string;
+          daysRemaining: number;
+          status: 'expired' | 'urgent' | 'warning';
+        }>;
+        setComplianceAlerts(list);
+        setComplianceNextExpiry(data?.nextExpiry ?? null);
+      })
+      .catch(() => {
+        setComplianceAlerts([]);
+        setComplianceNextExpiry(null);
+      });
+  }, []);
 
   if (!data) {
     return (
@@ -406,6 +436,19 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
 
         {/* Operational section (selected date) */}
         <div className="space-y-6">
+          {/* Compliance & Expiry */}
+          <ComplianceExpiryCard
+            alerts={complianceAlerts}
+            nextExpiry={complianceNextExpiry}
+            titleLabel={t('home.complianceExpiryTitle')}
+            allValidLabel={t('home.complianceAllValid')}
+            nextExpiryLabel={t('home.complianceNextExpiry') as string}
+            expiredAgoLabel={t('home.complianceExpiredAgo') as string}
+            daysRemainingLabel={t('home.complianceDaysLeft') as string}
+            viewAllLabel={t('home.complianceViewAll')}
+            viewAllHref="/compliance"
+          />
+
           {/* ROW 1: Coverage Status | Shift Snapshot */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <CoverageStatusCard

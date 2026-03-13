@@ -161,9 +161,28 @@ model Boutique {
   keyHandovers          KeyHandover[]
   boutiqueMonthlyTargets BoutiqueMonthlyTarget[]
   employeeMonthlyTargets  EmployeeMonthlyTarget[]
+  complianceItems       ComplianceItem[]
 
   @@index([regionId])
   @@index([isActive])
+}
+
+model ComplianceItem {
+  id                    String    @id @default(cuid())
+  name                  String
+  category              String    // e.g. trade_license, municipality, fire_extinguisher, insurance
+  boutiqueId            String
+  dateType              String    @default("GREGORIAN") // "HIJRI" | "GREGORIAN"
+  expiryDateGregorian   DateTime  @db.Date             // always used for calculations
+  expiryDateHijri       String?   // optional, for display when dateType=HIJRI
+  notes                 String?
+  reminderDaysBefore    Int       @default(30)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  boutique              Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId])
+  @@index([expiryDateGregorian])
 }
 
 model BoutiqueGroup {
