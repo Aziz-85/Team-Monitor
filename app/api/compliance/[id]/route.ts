@@ -13,7 +13,10 @@ import { unlink } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 
-const ATTACH_BASE = 'data/compliance-attachments';
+function getAttachBaseDir(): string {
+  if (process.env.VERCEL) return '/tmp/compliance-attachments';
+  return path.join(process.cwd(), 'data/compliance-attachments');
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -130,7 +133,7 @@ export async function DELETE(
   }
 
   if (existing.attachmentStoragePath) {
-    const fullPath = path.join(process.cwd(), ATTACH_BASE, existing.attachmentStoragePath);
+    const fullPath = path.join(getAttachBaseDir(), existing.attachmentStoragePath);
     if (existsSync(fullPath)) {
       try {
         await unlink(fullPath);

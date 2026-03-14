@@ -160,15 +160,20 @@ export function ComplianceClient() {
     const file = e.target.files?.[0];
     if (!file || !canWrite) return;
     setUploadingId(itemId);
+    setError(null);
     const fd = new FormData();
     fd.append('file', file);
     fetch(`/api/compliance/${itemId}/attach`, { method: 'POST', body: fd })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setError(data.error || `${t('compliance.uploadFailed')} (${r.status})`);
+          return;
+        }
         if (data.error) setError(data.error);
         else load();
       })
-      .catch(() => setError('Upload failed'))
+      .catch((err) => setError(err?.message || t('compliance.uploadFailed')))
       .finally(() => {
         setUploadingId(null);
         e.target.value = '';

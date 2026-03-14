@@ -1087,7 +1087,9 @@
     "noAttachment": "لا يوجد ملف",
     "fileUploaded": "تم رفع الملف",
     "fileRemoved": "تم إزالة الملف",
-    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (حد أقصى 10 ميجا)"
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (حد أقصى 10 ميجا)",
+    "uploadFailed": "فشل الرفع",
+    "uploadFailedStatus": "فشل الرفع ({status})"
   },
   "targetsManagement": {
     "title": "إدارة الأهداف",

@@ -14,6 +14,11 @@ function getGitHash() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version || '1.0.0',
     NEXT_PUBLIC_GIT_HASH: getGitHash(),

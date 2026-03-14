@@ -5,6 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+export const maxDuration = 30;
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
@@ -13,7 +15,10 @@ import { writeFile, mkdir, unlink, readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 
-const BASE_DIR = 'data/compliance-attachments';
+function getAttachBaseDir(): string {
+  if (process.env.VERCEL) return '/tmp/compliance-attachments';
+  return path.join(process.cwd(), 'data/compliance-attachments');
+}
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXT = /\.(pdf|png|jpe?g|gif|webp|doc|docx|xls|xlsx)$/i;
 const ALLOWED_MIMES = [
@@ -70,7 +75,7 @@ export async function GET(
     return NextResponse.json({ error: 'No attachment' }, { status: 404 });
   }
 
-  const fullPath = path.join(process.cwd(), BASE_DIR, item.attachmentStoragePath);
+  const fullPath = path.join(getAttachBaseDir(), item.attachmentStoragePath);
   if (!existsSync(fullPath)) {
     await prisma.complianceItem.update({
       where: { id },
@@ -143,8 +148,9 @@ export async function POST(
   }
 
   const storagePath = `${id}/${fileName}`;
-  const dir = path.join(process.cwd(), BASE_DIR, id);
-  const fullPath = path.join(process.cwd(), BASE_DIR, storagePath);
+  const baseDir = getAttachBaseDir();
+  const dir = path.join(baseDir, id);
+  const fullPath = path.join(baseDir, storagePath);
 
   try {
     await mkdir(dir, { recursive: true });
@@ -161,7 +167,7 @@ export async function POST(
     select: { attachmentStoragePath: true },
   });
   if (existing?.attachmentStoragePath && existing.attachmentStoragePath !== storagePath) {
-    const oldPath = path.join(process.cwd(), BASE_DIR, existing.attachmentStoragePath);
+    const oldPath = path.join(getAttachBaseDir(), existing.attachmentStoragePath);
     if (existsSync(oldPath)) {
       try {
         await unlink(oldPath);
@@ -197,7 +203,7 @@ export async function DELETE(
     return NextResponse.json({ ok: true, message: 'No attachment' });
   }
 
-  const fullPath = path.join(process.cwd(), BASE_DIR, item.attachmentStoragePath);
+  const fullPath = path.join(getAttachBaseDir(), item.attachmentStoragePath);
   if (existsSync(fullPath)) {
     try {
       await unlink(fullPath);
