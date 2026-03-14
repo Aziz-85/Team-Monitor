@@ -42,6 +42,7 @@ next-env.d.ts
 
 # compliance attachments (user uploads)
 /data/compliance-attachments/
+/data/compliance-chunks/
 
 # backups
 *.dump

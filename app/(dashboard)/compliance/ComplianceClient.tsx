@@ -156,7 +156,80 @@ export function ComplianceClient() {
     setEditingId(item.id);
   };
 
-  const MAX_FILE_MB = 5;
+  const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB per chunk (Vercel limit 4.5MB)
+  const MAX_FILE_MB = 50;
+  const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+
+  const compressImageIfNeeded = (file: File): Promise<File> => {
+    if (!IMAGE_TYPES.includes(file.type) || file.size <= CHUNK_SIZE) return Promise.resolve(file);
+    return new Promise<File>((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        const maxDim = 2048;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height * maxDim) / width;
+            width = maxDim;
+          } else {
+            width = (width * maxDim) / height;
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            resolve(new File([blob], file.name, { type: file.type }));
+          },
+          file.type,
+          0.85
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  };
+
+  const uploadChunked = async (itemId: string, file: File) => {
+    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const fileName = (file.name || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const fd = new FormData();
+      fd.append('uploadId', uploadId);
+      fd.append('chunkIndex', String(i));
+      fd.append('totalChunks', String(totalChunks));
+      fd.append('fileName', fileName);
+      fd.append('file', chunk);
+
+      const r = await fetch(`/api/compliance/${itemId}/attach/chunk`, { method: 'POST', body: fd });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Chunk ${i + 1}/${totalChunks} failed`);
+    }
+  };
+
   const handleFileSelect = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !canWrite) return;
@@ -167,23 +240,28 @@ export function ComplianceClient() {
     }
     setUploadingId(itemId);
     setError(null);
-    const fd = new FormData();
-    fd.append('file', file);
-    fetch(`/api/compliance/${itemId}/attach`, { method: 'POST', body: fd })
-      .then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          setError(data.error || `${t('compliance.uploadFailed')} (${r.status})`);
-          return;
+
+    const doUpload = async () => {
+      try {
+        const toUpload = await compressImageIfNeeded(file);
+        if (toUpload.size <= CHUNK_SIZE) {
+          const fd = new FormData();
+          fd.append('file', toUpload);
+          const r = await fetch(`/api/compliance/${itemId}/attach`, { method: 'POST', body: fd });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data.error || `Upload failed (${r.status})`);
+        } else {
+          await uploadChunked(itemId, toUpload);
         }
-        if (data.error) setError(data.error);
-        else load();
-      })
-      .catch((err) => setError(err?.message || t('compliance.uploadFailed')))
-      .finally(() => {
+        load();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('compliance.uploadFailed'));
+      } finally {
         setUploadingId(null);
         e.target.value = '';
-      });
+      }
+    };
+    doUpload();
   };
 
   const handleRemoveAttachment = (itemId: string) => {

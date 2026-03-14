@@ -19,7 +19,7 @@ function getAttachBaseDir(): string {
   if (process.env.VERCEL) return '/tmp/compliance-attachments';
   return path.join(process.cwd(), 'data/compliance-attachments');
 }
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE_BYTES = 4 * 1024 * 1024; // 4MB (single request; larger files use chunked upload)
 const ALLOWED_EXT = /\.(pdf|png|jpe?g|gif|webp|doc|docx|xls|xlsx)$/i;
 const ALLOWED_MIMES = [
   'application/pdf',
@@ -132,7 +132,7 @@ export async function POST(
   const fileName = (blob.name || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
   if (!ALLOWED_EXT.test(fileName)) {
     return NextResponse.json(
-      { error: 'Allowed: PDF, PNG, JPG, GIF, WebP, DOC, DOCX, XLS, XLSX (max 5MB)' },
+      { error: 'Allowed: PDF, PNG, JPG, GIF, WebP, DOC, DOCX, XLS, XLSX' },
       { status: 400 }
     );
   }
@@ -144,7 +144,7 @@ export async function POST(
 
   const buffer = Buffer.from(await blob.arrayBuffer());
   if (buffer.length > MAX_SIZE_BYTES) {
-    return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
+    return NextResponse.json({ error: 'File too large; use chunked upload for files > 4MB' }, { status: 400 });
   }
 
   const storagePath = `${id}/${fileName}`;
