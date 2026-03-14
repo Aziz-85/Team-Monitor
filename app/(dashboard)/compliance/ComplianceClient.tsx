@@ -160,6 +160,21 @@ export function ComplianceClient() {
   const MAX_FILE_MB = 50;
   const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
 
+  const compressPdfIfNeeded = async (file: File): Promise<File> => {
+    if (file.type !== 'application/pdf' || file.size <= 1024 * 1024) return file; // skip if < 1MB
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+      const compressed = await pdfDoc.save({ useObjectStreams: true });
+      const blob = new Blob([new Uint8Array(compressed)], { type: 'application/pdf' });
+      const out = new File([blob], file.name, { type: 'application/pdf' });
+      return out.size < file.size ? out : file;
+    } catch {
+      return file;
+    }
+  };
+
   const compressImageIfNeeded = (file: File): Promise<File> => {
     if (!IMAGE_TYPES.includes(file.type) || file.size <= CHUNK_SIZE) return Promise.resolve(file);
     return new Promise<File>((resolve) => {
@@ -243,7 +258,12 @@ export function ComplianceClient() {
 
     const doUpload = async () => {
       try {
-        const toUpload = await compressImageIfNeeded(file);
+        let toUpload = file;
+        if (file.type === 'application/pdf') {
+          toUpload = await compressPdfIfNeeded(file);
+        } else {
+          toUpload = await compressImageIfNeeded(file);
+        }
         if (toUpload.size <= CHUNK_SIZE) {
           const fd = new FormData();
           fd.append('file', toUpload);

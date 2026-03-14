@@ -1087,7 +1087,7 @@
     "noAttachment": "لا يوجد ملف",
     "fileUploaded": "تم رفع الملف",
     "fileRemoved": "تم إزالة الملف",
-    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (حد أقصى 50 ميجا، الصور تُضغط تلقائياً)",
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (حد أقصى 50 ميجا، PDF والصور تُضغط تلقائياً)",
     "uploadFailed": "فشل الرفع",
     "uploadFailedStatus": "فشل الرفع ({status})",
     "fileTooLarge": "الملف كبير جداً (حد أقصى {max} ميجا)"

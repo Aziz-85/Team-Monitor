@@ -1088,7 +1088,7 @@
     "noAttachment": "No file",
     "fileUploaded": "File uploaded",
     "fileRemoved": "File removed",
-    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (max 50MB, images auto-compressed)",
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (max 50MB, PDF & images auto-compressed)",
     "uploadFailed": "Upload failed",
     "uploadFailedStatus": "Upload failed ({status})",
     "fileTooLarge": "File too large (max {max}MB)"
