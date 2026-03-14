@@ -1088,9 +1088,10 @@
     "noAttachment": "No file",
     "fileUploaded": "File uploaded",
     "fileRemoved": "File removed",
-    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (max 10MB)",
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (max 5MB)",
     "uploadFailed": "Upload failed",
-    "uploadFailedStatus": "Upload failed ({status})"
+    "uploadFailedStatus": "Upload failed ({status})",
+    "fileTooLarge": "File too large (max {max}MB)"
   },
   "targetsManagement": {
     "title": "Target Management",

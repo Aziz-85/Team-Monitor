@@ -156,9 +156,15 @@ export function ComplianceClient() {
     setEditingId(item.id);
   };
 
+  const MAX_FILE_MB = 5;
   const handleFileSelect = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !canWrite) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      setError(`${t('compliance.fileTooLarge').replace('{max}', String(MAX_FILE_MB))}`);
+      e.target.value = '';
+      return;
+    }
     setUploadingId(itemId);
     setError(null);
     const fd = new FormData();
