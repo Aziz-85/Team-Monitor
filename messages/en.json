@@ -1079,7 +1079,16 @@
     "dateType": "Date Type",
     "dateTypeGregorian": "Gregorian",
     "dateTypeHijri": "Hijri",
-    "hijriDatePlaceholder": "YYYY-MM-DD or DD/MM/YYYY"
+    "hijriDatePlaceholder": "YYYY-MM-DD or DD/MM/YYYY",
+    "attachment": "Attachment",
+    "uploadFile": "Upload file",
+    "viewFile": "View",
+    "downloadFile": "Download",
+    "removeFile": "Remove file",
+    "noAttachment": "No file",
+    "fileUploaded": "File uploaded",
+    "fileRemoved": "File removed",
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (max 10MB)"
   },
   "targetsManagement": {
     "title": "Target Management",

@@ -177,6 +177,8 @@ model ComplianceItem {
   expiryDateHijri       String?   // optional, for display when dateType=HIJRI
   notes                 String?
   reminderDaysBefore    Int       @default(30)
+  attachmentFileName    String?   // original filename for download
+  attachmentStoragePath String?   // relative path in data/compliance-attachments/
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   boutique              Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)

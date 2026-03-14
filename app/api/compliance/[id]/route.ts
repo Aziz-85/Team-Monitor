@@ -9,6 +9,11 @@ import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { getDaysRemaining, getComplianceStatus } from '@/lib/compliance/status';
 import { COMPLIANCE_ROLES } from '@/lib/permissions';
+import { unlink } from 'fs/promises';
+import path from 'path';
+import { existsSync } from 'fs';
+
+const ATTACH_BASE = 'data/compliance-attachments';
 
 export async function PATCH(
   request: NextRequest,
@@ -115,10 +120,24 @@ export async function DELETE(
     return NextResponse.json({ error: 'No operational boutique' }, { status: 403 });
   }
 
-  const existing = await prisma.complianceItem.findUnique({ where: { id } });
+  const existing = await prisma.complianceItem.findUnique({
+    where: { id },
+    select: { boutiqueId: true, attachmentStoragePath: true },
+  });
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!scope.boutiqueIds.includes(existing.boutiqueId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  if (existing.attachmentStoragePath) {
+    const fullPath = path.join(process.cwd(), ATTACH_BASE, existing.attachmentStoragePath);
+    if (existsSync(fullPath)) {
+      try {
+        await unlink(fullPath);
+      } catch {
+        // ignore
+      }
+    }
   }
 
   await prisma.complianceItem.delete({ where: { id } });

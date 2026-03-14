@@ -40,6 +40,9 @@ next-env.d.ts
 # Secrets
 .env.*
 
+# compliance attachments (user uploads)
+/data/compliance-attachments/
+
 # backups
 *.dump
 *.bak*

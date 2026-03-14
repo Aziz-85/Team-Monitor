@@ -21,6 +21,7 @@ type ComplianceItem = {
   reminderDaysBefore: number;
   daysRemaining: number;
   status: 'expired' | 'urgent' | 'warning' | 'ok';
+  attachmentFileName: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -66,6 +67,7 @@ export function ComplianceClient() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
     category: 'trade_license',
@@ -154,6 +156,36 @@ export function ComplianceClient() {
     setEditingId(item.id);
   };
 
+  const handleFileSelect = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !canWrite) return;
+    setUploadingId(itemId);
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch(`/api/compliance/${itemId}/attach`, { method: 'POST', body: fd })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) setError(data.error);
+        else load();
+      })
+      .catch(() => setError('Upload failed'))
+      .finally(() => {
+        setUploadingId(null);
+        e.target.value = '';
+      });
+  };
+
+  const handleRemoveAttachment = (itemId: string) => {
+    if (!confirm(t('compliance.confirmDelete'))) return;
+    fetch(`/api/compliance/${itemId}/attach`, { method: 'DELETE' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) setError(data.error);
+        else load();
+      })
+      .catch(() => setError('Failed to remove'));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const hasDate = form.dateType === 'HIJRI'
@@ -222,6 +254,7 @@ export function ComplianceClient() {
     <div className="p-4 md:p-6">
       <OpsCard title={t('compliance.title')}>
         <p className="mb-4 text-sm text-muted">{t('compliance.subtitle')}</p>
+        <p className="mb-4 text-xs text-muted">{t('compliance.allowedFormats')}</p>
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">
             {error}
@@ -376,6 +409,7 @@ export function ComplianceClient() {
             <LuxuryTh>{t('compliance.expiryDate')}</LuxuryTh>
             <LuxuryTh>{t('compliance.daysLeft')}</LuxuryTh>
             <LuxuryTh>{t('compliance.status')}</LuxuryTh>
+            <LuxuryTh>{t('compliance.attachment')}</LuxuryTh>
             {canWrite && <LuxuryTh />}
           </LuxuryTableHead>
           <LuxuryTableBody>
@@ -387,6 +421,49 @@ export function ComplianceClient() {
                 <LuxuryTd>{item.expiryDate}</LuxuryTd>
                 <LuxuryTd className="tabular-nums">{item.daysRemaining}</LuxuryTd>
                 <LuxuryTd className={statusClass(item.status)}>{t(statusKey(item.status))}</LuxuryTd>
+                <LuxuryTd>
+                  {item.attachmentFileName ? (
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={`/api/compliance/${item.id}/attach`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-accent hover:underline"
+                      >
+                        {t('compliance.viewFile')}
+                      </a>
+                      <a
+                        href={`/api/compliance/${item.id}/attach?download=1`}
+                        download={item.attachmentFileName}
+                        className="text-sm text-accent hover:underline"
+                      >
+                        {t('compliance.downloadFile')}
+                      </a>
+                      {canWrite && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(item.id)}
+                          className="text-sm text-red-600 hover:underline"
+                        >
+                          {t('compliance.removeFile')}
+                        </button>
+                      )}
+                    </div>
+                  ) : canWrite ? (
+                    <label className="cursor-pointer text-sm text-accent hover:underline">
+                      <input
+                        type="file"
+                        className="sr-only"
+                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx"
+                        onChange={(e) => handleFileSelect(item.id, e)}
+                        disabled={!!uploadingId}
+                      />
+                      {uploadingId === item.id ? t('common.loading') : t('compliance.uploadFile')}
+                    </label>
+                  ) : (
+                    <span className="text-muted text-sm">{t('compliance.noAttachment')}</span>
+                  )}
+                </LuxuryTd>
                 {canWrite && (
                   <LuxuryTd>
                     <div className="flex gap-2">

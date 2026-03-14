@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     reminderDaysBefore: number;
     daysRemaining: number;
     status: string;
+    attachmentFileName: string | null;
     createdAt: string;
     updatedAt: string;
   }> = items.map((item) => {
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       reminderDaysBefore: item.reminderDaysBefore,
       daysRemaining,
       status,
+      attachmentFileName: item.attachmentFileName,
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     };

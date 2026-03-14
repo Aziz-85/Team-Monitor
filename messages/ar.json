@@ -1078,7 +1078,16 @@
     "dateType": "نوع التاريخ",
     "dateTypeGregorian": "ميلادي",
     "dateTypeHijri": "هجري",
-    "hijriDatePlaceholder": "YYYY-MM-DD أو DD/MM/YYYY"
+    "hijriDatePlaceholder": "YYYY-MM-DD أو DD/MM/YYYY",
+    "attachment": "المرفق",
+    "uploadFile": "رفع ملف",
+    "viewFile": "عرض",
+    "downloadFile": "تنزيل",
+    "removeFile": "إزالة الملف",
+    "noAttachment": "لا يوجد ملف",
+    "fileUploaded": "تم رفع الملف",
+    "fileRemoved": "تم إزالة الملف",
+    "allowedFormats": "PDF, PNG, JPG, DOC, XLS (حد أقصى 10 ميجا)"
   },
   "targetsManagement": {
     "title": "إدارة الأهداف",
