@@ -16,7 +16,11 @@ const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
   TASKS: false,
   INVENTORY: false,
   REPORTS: false,
-  SETTINGS: false,
+  ORGANIZATION: false,
+  RULES_TEMPLATES: false,
+  INTEGRATIONS: false,
+  DATA_IMPORTS: false,
+  SYSTEM_ADMIN: false,
   HELP: false,
   AREA_MANAGER: false,
 };
