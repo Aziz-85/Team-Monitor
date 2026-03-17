@@ -20,7 +20,8 @@ function CircularPercentRing({ percent }: { percent: number }) {
   const stroke = 6;
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-  const offset = circumference - (Math.min(100, Math.max(0, percent)) / 100) * circumference;
+  const barWidth = Math.min(100, Math.max(0, percent));
+  const offset = circumference - (barWidth / 100) * circumference;
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
@@ -50,7 +51,7 @@ function CircularPercentRing({ percent }: { percent: number }) {
       <span
         className={`absolute inset-0 flex items-center justify-center text-sm font-bold tabular-nums ${colors.text}`}
       >
-        {percent}%
+        {Math.round(percent)}%
       </span>
     </div>
   );

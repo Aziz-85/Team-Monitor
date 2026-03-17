@@ -5,15 +5,18 @@ import {
   EXECUTIVE_CARD_BG,
   EXECUTIVE_GOLD,
 } from '@/lib/chartStyles';
+import { getPerformanceColorClasses } from '@/lib/performanceColors';
 
 /**
  * Canonical executive KPI card — compact, premium, gold accent.
  * Uses executive theme (border, bg, gold progress bar).
  * Distinct from PerformanceKpiCard (Home/Sales Summary) which uses emerald/amber/red.
- * pctColor: 90+ = emerald, 20+ = muted, else amber (for value display).
+ * pctColor: >150 = gold, >100 = green, 90+ = emerald, 20+ = muted, else amber (for value display).
  */
 
 function pctColor(pct: number): string {
+  if (pct > 150) return 'text-amber-500';
+  if (pct > 100) return 'text-emerald-600';
   if (pct >= 90) return 'text-emerald-600';
   if (pct >= 20) return 'text-muted';
   return 'text-amber-700';
@@ -50,10 +53,10 @@ export function ExecutiveKpiCard({
       {showPctBar && pct != null && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
           <div
-            className="h-full rounded-full transition-all"
+            className={`h-full rounded-full transition-all ${pct > 100 ? getPerformanceColorClasses(pct).bg : ''}`}
             style={{
               width: `${Math.min(100, Math.max(0, pct))}%`,
-              backgroundColor: EXECUTIVE_GOLD,
+              ...(pct <= 100 && { backgroundColor: EXECUTIVE_GOLD }),
             }}
           />
         </div>

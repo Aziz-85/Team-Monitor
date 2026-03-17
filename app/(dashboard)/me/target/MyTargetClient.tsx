@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarInt } from '@/lib/utils/money';
+import { getPerformanceBgClass } from '@/lib/performanceColors';
 
 /** Add delta months to YYYY-MM. Returns YYYY-MM (month zero-padded). */
 function addMonths(monthKey: string, delta: number): string {
@@ -261,7 +262,7 @@ export function MyTargetClient() {
   };
 
   const formatSar = (n: number) => (Number.isFinite(n) ? formatSarInt(n) : '—');
-  const formatPct = (n: number) => (Number.isFinite(n) ? `${n.toFixed(1)}%` : '—');
+  const formatPct = (n: number) => (Number.isFinite(n) ? `${Math.round(n)}%` : '—');
 
   const progress = (pct: number) => Math.min(100, Math.max(0, pct));
 
@@ -365,7 +366,7 @@ export function MyTargetClient() {
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress(d.pctDaily)}%` }} />
+              <div className={`h-full rounded-full transition-all ${d.pctDaily > 100 ? getPerformanceBgClass(d.pctDaily) : 'bg-accent'}`} style={{ width: `${progress(d.pctDaily)}%` }} />
             </div>
           </OpsCard>
 
@@ -379,7 +380,7 @@ export function MyTargetClient() {
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
-              <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${progress(d.pctWeek)}%` }} />
+              <div className={`h-full rounded-full transition-all ${d.pctWeek > 100 ? getPerformanceBgClass(d.pctWeek) : 'bg-amber-500'}`} style={{ width: `${progress(d.pctWeek)}%` }} />
             </div>
           </OpsCard>
 
@@ -393,7 +394,7 @@ export function MyTargetClient() {
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
-              <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${progress(d.pctMonth)}%` }} />
+              <div className={`h-full rounded-full transition-all ${d.pctMonth > 100 ? getPerformanceBgClass(d.pctMonth) : 'bg-emerald-600'}`} style={{ width: `${progress(d.pctMonth)}%` }} />
             </div>
           </OpsCard>
         </div>

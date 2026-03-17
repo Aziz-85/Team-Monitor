@@ -18,7 +18,26 @@ export function SalesPerformanceCard({
   remainingGap,
 }: Props) {
   const variant =
-    completionPct < 40 ? 'red' : completionPct < 60 ? 'orange' : 'default';
+    completionPct > 150
+      ? 'gold'
+      : completionPct > 100
+        ? 'green'
+        : completionPct < 40
+          ? 'red'
+          : completionPct < 60
+            ? 'orange'
+            : 'default';
+
+  const pctColorClass =
+    variant === 'red'
+      ? 'text-red-600'
+      : variant === 'orange'
+        ? 'text-amber-600'
+        : variant === 'green'
+          ? 'text-emerald-600'
+          : variant === 'gold'
+            ? 'text-amber-500'
+            : 'text-foreground';
 
   return (
     <SnapshotCard title="Monthly Sales Performance">
@@ -30,16 +49,8 @@ export function SalesPerformanceCard({
               / {formatSarInt(currentMonthTarget)}
             </span>
           </span>
-          <span
-            className={`text-xl font-semibold ${
-              variant === 'red'
-                ? 'text-red-600'
-                : variant === 'orange'
-                  ? 'text-amber-600'
-                  : 'text-foreground'
-            }`}
-          >
-            {completionPct}%
+          <span className={`text-xl font-semibold ${pctColorClass}`}>
+            {Math.round(completionPct)}%
           </span>
         </div>
         <ProgressBar valuePct={completionPct} variant={variant} />

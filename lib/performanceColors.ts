@@ -7,13 +7,16 @@
  * - Sales breakdown / comparison: 60%+ = success, 40%+ = warning, <40% = danger
  */
 
-export type PerformanceColorVariant = 'success' | 'warning' | 'danger';
+export type PerformanceColorVariant = 'success' | 'warning' | 'danger' | 'gold';
 
 export type ProgressBarVariant = 'default' | 'orange' | 'red';
 
 /** Default thresholds for target achievement (e.g. sales vs target). */
 const DEFAULT_HIGH = 100;
 const DEFAULT_MID = 60;
+
+/** Over-achievement: >150% = gold, >100% = green. */
+const OVER_ACHIEVE_GOLD = 150;
 
 /** Thresholds for comparison contexts (e.g. employee contribution). */
 const COMPARISON_HIGH = 60;
@@ -22,8 +25,8 @@ const COMPARISON_MID = 40;
 export type PerformanceThresholds = { high?: number; mid?: number };
 
 /**
- * Returns the performance variant (success/warning/danger) for a given percentage.
- * Use for target achievement: getPerformanceColorVariant(pct)
+ * Returns the performance variant (success/warning/danger/gold) for a given percentage.
+ * Use for target achievement: getPerformanceColorVariant(pct) — supports over-achievement (>100 green, >150 gold)
  * Use for comparison: getPerformanceColorVariant(pct, { high: 60, mid: 40 })
  */
 export function getPerformanceColorVariant(
@@ -32,6 +35,7 @@ export function getPerformanceColorVariant(
 ): PerformanceColorVariant {
   const high = options?.high ?? DEFAULT_HIGH;
   const mid = options?.mid ?? DEFAULT_MID;
+  if (percent > OVER_ACHIEVE_GOLD) return 'gold';
   if (percent >= high) return 'success';
   if (percent >= mid) return 'warning';
   return 'danger';
@@ -44,6 +48,7 @@ const VARIANT_CLASSES: Record<
   success: { ring: 'text-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-500' },
   warning: { ring: 'text-amber-500', text: 'text-amber-600', bg: 'bg-amber-500' },
   danger: { ring: 'text-red-500', text: 'text-red-600', bg: 'bg-red-500' },
+  gold: { ring: 'text-amber-400', text: 'text-amber-500', bg: 'bg-amber-400' },
 };
 
 /**

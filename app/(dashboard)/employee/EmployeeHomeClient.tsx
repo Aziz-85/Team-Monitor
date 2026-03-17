@@ -5,6 +5,7 @@ import { OpsCard } from '@/components/ui/OpsCard';
 import { ShiftCard } from '@/components/ui/ShiftCard';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
+import { getPerformanceBgClass } from '@/lib/performanceColors';
 
 type EmployeeHomeData = {
   date: string;
@@ -137,11 +138,11 @@ export function EmployeeHomeClient() {
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
-                  className="h-full rounded-full bg-accent"
+                  className={`h-full rounded-full ${targetsData.todayPct > 100 ? getPerformanceBgClass(targetsData.todayPct) : 'bg-accent'}`}
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.todayPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.todayPct)}%</p>
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
               <p className="text-sm text-muted">
@@ -149,11 +150,11 @@ export function EmployeeHomeClient() {
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
-                  className="h-full rounded-full bg-emerald-600"
+                  className={`h-full rounded-full ${targetsData.mtdPct > 100 ? getPerformanceBgClass(targetsData.mtdPct) : 'bg-emerald-600'}`}
                   style={{ width: `${Math.min(100, Math.max(0, targetsData.mtdPct))}%` }}
                 />
               </div>
-              <p className="mt-1 text-sm font-medium text-foreground">{targetsData.mtdPct.toFixed(1)}%</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.mtdPct)}%</p>
             </OpsCard>
             </div>
           </div>

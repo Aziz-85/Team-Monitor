@@ -558,7 +558,7 @@ export function weeklyRevenueConsistencyScore(weeklyRevenues: number[]): number 
  */
 export function computeEmployeeRevenueScore(metrics: ERSMetrics): ERSResult {
   const reasons: string[] = [];
-  const ach = Math.min(100, Math.max(0, metrics.achievementPct ?? 0));
+  const ach = Math.max(0, metrics.achievementPct ?? 0);
   const trend = metrics.revenueTrendDirection ?? 'flat';
   const consistency = Math.min(100, Math.max(0, metrics.consistencyScore ?? 100));
 

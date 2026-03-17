@@ -75,7 +75,7 @@ export function PerformanceKpiCard({
           {metricsSlot}
 
           {showPercentInline && (
-            <p className="text-sm font-bold tabular-nums">{percent}%</p>
+            <p className="text-sm font-bold tabular-nums">{Math.round(percent)}%</p>
           )}
 
           <div className={`w-full overflow-hidden rounded-full bg-surface-subtle ${progressHeight}`}>

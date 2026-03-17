@@ -20,14 +20,14 @@ export type PerformanceResult = {
 /**
  * Calculate performance metrics from target and sales (both SAR_INT).
  * - remaining: target - sales (integer; negative allowed for overachievement)
- * - percent: integer 0–100 from floor((sales * 100) / target); 0 when target is 0
+ * - percent: actual/target * 100, rounded; can exceed 100 for over-achievement; 0 when target is 0
  */
 export function calculatePerformance({ target, sales }: PerformanceInput): PerformanceResult {
   const targetInt = Math.trunc(Number(target)) || 0;
   const salesInt = Math.trunc(Number(sales)) || 0;
   const remaining = targetInt - salesInt;
   const percent =
-    targetInt === 0 ? 0 : Math.min(100, Math.floor((salesInt * 100) / targetInt));
+    targetInt === 0 ? 0 : Math.round((salesInt * 100) / targetInt);
   return {
     target: targetInt,
     sales: salesInt,
