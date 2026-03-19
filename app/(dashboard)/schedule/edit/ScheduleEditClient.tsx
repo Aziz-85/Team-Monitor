@@ -359,6 +359,8 @@ export function ScheduleEditClient({
     isExternal?: boolean;
   };
   const [weekGuests, setWeekGuests] = useState<GuestItem[]>([]);
+  // Draft-only external coverage additions. These are not persisted until user clicks "Save changes".
+  const [localPendingGuests, setLocalPendingGuests] = useState<GuestItem[]>([]);
 
   const [keyPlan, setKeyPlan] = useState<KeyPlan>(null);
   const [keyPlanLoading, setKeyPlanLoading] = useState(false);
@@ -508,10 +510,20 @@ export function ScheduleEditClient({
       }) => {
         const applied = data.guests ?? [];
         const pending = data.pendingGuests ?? [];
-        setWeekGuests([...applied, ...pending]);
+        const merged = [...applied, ...pending, ...localPendingGuests];
+        const seen = new Set<string>();
+        const keyOf = (g: GuestItem) => `${g.empId}|${g.date}|${g.shift}|${g.sourceBoutiqueId ?? ''}`;
+        const unique: GuestItem[] = [];
+        for (const g of merged) {
+          const k = keyOf(g);
+          if (seen.has(k)) continue;
+          seen.add(k);
+          unique.push(g);
+        }
+        setWeekGuests(unique);
       })
       .catch(() => setWeekGuests([]));
-  }, [weekStart]);
+  }, [weekStart, localPendingGuests]);
 
   useEffect(() => {
     refetchScopeLabel();
@@ -559,6 +571,14 @@ export function ScheduleEditClient({
   const handleRemoveGuestShift = useCallback(
     (id: string) => {
       setRemovingGuestId(id);
+      if (id.startsWith('local-')) {
+        setWeekGuests((prev) => prev.filter((g) => g.id !== id));
+        setLocalPendingGuests((prev) => prev.filter((g) => g.id !== id));
+        setToast(t('schedule.guestRemoved') ?? 'Guest removed from draft');
+        setTimeout(() => setToast(null), 3000);
+        setRemovingGuestId(null);
+        return;
+      }
       fetch(`/api/schedule/guests?id=${encodeURIComponent(id)}`, { method: 'DELETE', cache: 'no-store' })
         .then((r) => {
           if (r.ok) {
@@ -732,7 +752,7 @@ export function ScheduleEditClient({
       .finally(() => setMonthExcelLoading(false));
   }, [tab, monthMode, month, locale]);
 
-  const pendingCount = pendingEdits.size;
+  const pendingCount = pendingEdits.size + localPendingGuests.length;
 
   const getDraftShift = useCallback(
     (empId: string, date: string, serverEffective: string): string => {
@@ -762,14 +782,36 @@ export function ScheduleEditClient({
     return byDay;
   }, [externalGuests, gridData?.days]);
 
+  /** Local pending (unsaved) guest coverage counts for the non-draft view. */
+  const localGuestCountsByDay = useMemo(() => {
+    const days = gridData?.days ?? [];
+    const byDay = days.map(() => ({ am: 0, pm: 0 }));
+    for (const g of localPendingGuests) {
+      const dateStr = typeof g.date === 'string' ? g.date.slice(0, 10) : '';
+      const i = days.findIndex((d) => d.date === dateStr);
+      if (i >= 0) {
+        if (g.shift === 'MORNING') byDay[i].am += 1;
+        else if (g.shift === 'EVENING') byDay[i].pm += 1;
+      }
+    }
+    return byDay;
+  }, [localPendingGuests, gridData?.days]);
+
   /** Counts shown in grid/excel: when using draft, add guest counts; otherwise API counts already include guests. */
   const displayCounts = useMemo(() => {
-    if (!draftCounts.length) return gridData?.counts ?? [];
+    if (!gridData?.counts) return [];
+    if (!draftCounts.length) {
+      return gridData.counts.map((c, i) => ({
+        ...c,
+        amCount: (c.amCount ?? 0) + (localGuestCountsByDay[i]?.am ?? 0),
+        pmCount: (c.pmCount ?? 0) + (localGuestCountsByDay[i]?.pm ?? 0),
+      }));
+    }
     return draftCounts.map((c, i) => ({
       amCount: (c.amCount ?? 0) + (guestCountsByDay[i]?.am ?? 0),
       pmCount: (c.pmCount ?? 0) + (guestCountsByDay[i]?.pm ?? 0),
     }));
-  }, [draftCounts, gridData?.counts, guestCountsByDay]);
+  }, [draftCounts, gridData?.counts, guestCountsByDay, localGuestCountsByDay]);
 
   /** Only show suggestions for days that still have the violation per displayCounts (avoids stale warning after local edits). */
   const effectiveSuggestions = useMemo(() => {
@@ -879,6 +921,9 @@ export function ScheduleEditClient({
   const discardAll = useCallback(() => {
     setPendingEdits(new Map());
     setLeaveConfirm(null);
+    setLocalPendingGuests([]);
+    // Remove any locally added guest shifts that were not saved.
+    setWeekGuests((prev) => prev.filter((g) => !g.id.startsWith('local-')));
   }, []);
 
   const focusDay = useCallback((date: string) => {
@@ -957,7 +1002,9 @@ export function ScheduleEditClient({
 
   const applyBatch = useCallback(async () => {
     const entries = Array.from(pendingEdits.entries());
-    if (entries.length === 0) return;
+    const guestAdds = localPendingGuests;
+    if (entries.length === 0 && guestAdds.length === 0) return;
+
     if (gridData?.rows) {
       const leaveSet = new Set<string>();
       for (const row of gridData.rows) {
@@ -967,60 +1014,157 @@ export function ScheduleEditClient({
       }
       for (const [key] of entries) {
         if (leaveSet.has(key)) {
-          setToast('Cannot save: one or more changes are on a leave day. Remove those changes or save only non-leave cells.');
+          setToast('Cannot save: one or more shift changes are on a leave day. Remove those changes.');
+          setTimeout(() => setToast(null), 6000);
+          return;
+        }
+      }
+      for (const g of guestAdds) {
+        if (leaveSet.has(editKey(g.empId, g.date))) {
+          setToast('Cannot save: one or more external coverage additions are on a leave day.');
           setTimeout(() => setToast(null), 6000);
           return;
         }
       }
     }
+
     setSaving(true);
-    setSaveProgress({ done: 0, total: entries.length });
+    setSaveProgress({ done: 0, total: entries.length + guestAdds.length });
     const reason = globalReason.trim() || DEFAULT_REASON;
-    const changes = entries.map(([key, edit]) => {
-      const [empId, date] = key.split('|');
-      return {
-        empId,
-        date,
-        newShift: edit.newShift,
-        originalEffectiveShift: edit.originalEffectiveShift,
-        overrideId: edit.overrideId,
-      };
-    });
     try {
-      const res = await fetch('/api/schedule/week/grid/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, changes }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 403) {
-        setToast((data.error as string) || t('governance.scheduleLocked'));
-        fetchWeekGovernance();
-        fetchGrid();
-        setTimeout(() => setToast(null), 5000);
-        return;
+      let appliedEdits = 0;
+      let skippedEdits = 0;
+
+      if (entries.length > 0) {
+        const changes = entries.map(([key, edit]) => {
+          const [empId, date] = key.split('|');
+          return {
+            empId,
+            date,
+            newShift: edit.newShift,
+            originalEffectiveShift: edit.originalEffectiveShift,
+            overrideId: edit.overrideId,
+          };
+        });
+
+        const res = await fetch('/api/schedule/week/grid/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason, changes }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 403) {
+          setToast((data.error as string) || t('governance.scheduleLocked'));
+          fetchWeekGovernance();
+          fetchGrid();
+          fetchGuests();
+          setTimeout(() => setToast(null), 5000);
+          return;
+        }
+        if (
+          res.status === 400 &&
+          (data.code === 'RAMADAN_PM_BLOCKED' || data.code === 'FRIDAY_PM_ONLY')
+        ) {
+          setToast(
+            locale === 'ar'
+              ? (data.messageAr as string)
+              : (data.code === 'FRIDAY_PM_ONLY'
+                  ? (t('schedule.fridayPmOnly') as string)
+                  : (t('schedule.ramadanPmBlocked') as string))
+          );
+          setTimeout(() => setToast(null), 5000);
+          return;
+        }
+
+        appliedEdits = data.applied ?? 0;
+        skippedEdits = data.skipped ?? 0;
+        setSaveProgress((p) => ({ ...p, done: entries.length }));
       }
-      if (res.status === 400 && (data.code === 'RAMADAN_PM_BLOCKED' || data.code === 'FRIDAY_PM_ONLY')) {
-        setToast(locale === 'ar' ? (data.messageAr as string) : (data.code === 'FRIDAY_PM_ONLY' ? (t('schedule.fridayPmOnly') as string) : (t('schedule.ramadanPmBlocked') as string)));
-        setTimeout(() => setToast(null), 5000);
-        return;
+
+      if (guestAdds.length > 0) {
+        for (const g of guestAdds) {
+          const res = await fetch('/api/schedule/guests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date: g.date,
+              employeeId: g.empId,
+              shift: g.shift,
+              reason: g.reason?.trim() || reason,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (res.status === 403 || res.status === 423) {
+            setToast((data.error as string) || t('governance.scheduleLocked'));
+            fetchWeekGovernance();
+            fetchGrid();
+            fetchGuests();
+            setTimeout(() => setToast(null), 5000);
+            return;
+          }
+          if (res.status === 400 && (data.code === 'RAMADAN_PM_BLOCKED' || data.code === 'FRIDAY_PM_ONLY')) {
+            setToast(
+              locale === 'ar'
+                ? (data.messageAr as string)
+                : (data.code === 'FRIDAY_PM_ONLY'
+                    ? (t('schedule.fridayPmOnly') as string)
+                    : (t('schedule.ramadanPmBlocked') as string))
+            );
+            setTimeout(() => setToast(null), 5000);
+            return;
+          }
+          if (!res.ok) {
+            setToast((data.error as string) || 'Failed');
+            setTimeout(() => setToast(null), 4000);
+            return;
+          }
+
+          setSaveProgress((p) => ({ ...p, done: Math.min(p.total, p.done + 1) }));
+        }
       }
-      const applied = data.applied ?? 0;
-      const skipped = data.skipped ?? 0;
+
       setPendingEdits(new Map());
+      setLocalPendingGuests([]);
+      setWeekGuests((prev) => prev.filter((x) => !x.id.startsWith('local-')));
       setSaveModalOpen(false);
       setGlobalReason(DEFAULT_REASON);
+
       fetchGrid();
       router.refresh();
       fetchWeekGovernance();
-      let msg = (t('schedule.savedChanges') as string)?.replace?.('{n}', String(applied)) ?? `Saved ${applied} changes`;
-      if (skipped > 0) msg += `. ${skipped} skipped (${t('schedule.fridayPmOnly')})`;
-      setToast(msg);
+      fetchGuests();
+
+      const parts: string[] = [];
+      if (entries.length > 0) {
+        let msg =
+          (t('schedule.savedChanges') as string)?.replace?.('{n}', String(appliedEdits)) ??
+          `Saved ${appliedEdits} changes`;
+        if (skippedEdits > 0) msg += `. ${skippedEdits} skipped (${t('schedule.fridayPmOnly')})`;
+        parts.push(msg);
+      }
+      if (guestAdds.length > 0) {
+        parts.push(`Guest coverage saved (${guestAdds.length})`);
+      }
+      setToast(parts.join('. ') || (t('schedule.savedChanges') as string) || 'Saved changes');
       setTimeout(() => setToast(null), 4000);
     } finally {
       setSaving(false);
     }
-  }, [pendingEdits, globalReason, fetchGrid, fetchWeekGovernance, t, locale, gridData, router]);
+  }, [
+    pendingEdits,
+    localPendingGuests,
+    globalReason,
+    fetchGrid,
+    fetchWeekGovernance,
+    fetchGuests,
+    t,
+    locale,
+    gridData,
+    router,
+  ]);
 
   useEffect(() => {
     if (pendingCount === 0) return;
@@ -2303,6 +2447,14 @@ export function ScheduleEditClient({
                   </li>
                 );
               })}
+              {localPendingGuests.map((g) => (
+                <li key={g.id} className="flex justify-between gap-2 py-0.5">
+                  <span className="text-foreground">{formatDDMM(g.date)} {g.employee.name}</span>
+                  <span className="text-muted">
+                    Add External → {g.shift === 'MORNING' ? 'AM' : 'PM'}
+                  </span>
+                </li>
+              ))}
             </ul>
             <div className="mt-4">
               <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
@@ -2435,28 +2587,50 @@ export function ScheduleEditClient({
                   if (!guestForm.empId || !date || !guestForm.reason.trim()) return;
                   setGuestSubmitting(true);
                   try {
-                    const res = await fetch('/api/overrides', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        empId: guestForm.empId,
-                        date,
-                        overrideShift: guestForm.shift,
-                        reason: guestForm.reason.trim(),
-                      }),
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    if (res.ok || res.status === 202) {
-                      setAddGuestOpen(false);
-                      fetchGrid();
-                      fetchGuests();
-                      fetchWeekGovernance();
-                      setToast(t('schedule.guestAdded') || 'Guest added to schedule');
+                    // Draft-only add: external coverage must be persisted via unified "Save changes".
+                    const exists = weekGuests.some(
+                      (g) =>
+                        g.empId === guestForm.empId &&
+                        g.date === date &&
+                        g.shift === guestForm.shift &&
+                        (g.sourceBoutiqueId ?? '') === selectedSourceBoutiqueId
+                    );
+                    if (exists) {
+                      setToast('Guest coverage already added to draft changes.');
                       setTimeout(() => setToast(null), 3000);
-                    } else {
-                      setToast((data.error as string) || 'Failed');
-                      setTimeout(() => setToast(null), 4000);
+                      setAddGuestOpen(false);
+                      return;
                     }
+
+                    const sourceBoutique =
+                      sourceBoutiques.find((b) => b.id === selectedSourceBoutiqueId) ?? null;
+                    const emp =
+                      guestEmployees.find((e) => e.empId === guestForm.empId) ?? null;
+
+                    const localId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                    const newGuest: GuestItem = {
+                      id: localId,
+                      date,
+                      empId: guestForm.empId,
+                      shift: guestForm.shift,
+                      reason: guestForm.reason.trim(),
+                      sourceBoutiqueId: selectedSourceBoutiqueId,
+                      sourceBoutique: sourceBoutique
+                        ? { id: sourceBoutique.id, name: sourceBoutique.name }
+                        : null,
+                      isExternal: true,
+                      employee: {
+                        name: emp?.name ?? guestForm.empId,
+                        homeBoutiqueCode: '',
+                        homeBoutiqueName: emp?.boutiqueName ?? undefined,
+                      },
+                    };
+
+                    setLocalPendingGuests((prev) => [...prev, newGuest]);
+                    setWeekGuests((prev) => [...prev, newGuest]);
+                    setAddGuestOpen(false);
+                    setToast('Guest added to pending changes. Click "Save changes" to persist.');
+                    setTimeout(() => setToast(null), 3000);
                   } finally {
                     setGuestSubmitting(false);
                   }
