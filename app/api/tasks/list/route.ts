@@ -61,12 +61,13 @@ export async function GET(request: NextRequest) {
   const empId = scope.empId;
 
   const { dateStr } = getKsaToday();
-  const period = request.nextUrl.searchParams.get('period') ?? 'today';
+  const isManagerOrAdmin = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
+  /** Defaults match /tasks/monitor (this week) and manager view (all assignees). */
+  const period = request.nextUrl.searchParams.get('period') ?? 'week';
   const statusFilter = request.nextUrl.searchParams.get('status') ?? 'all';
-  const assignedFilter = request.nextUrl.searchParams.get('assigned') ?? 'me';
+  const assignedFilter = request.nextUrl.searchParams.get('assigned') ?? (isManagerOrAdmin ? 'all' : 'me');
   const search = (request.nextUrl.searchParams.get('search') ?? '').trim().toLowerCase();
 
-  const isManagerOrAdmin = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
   const canSeeAll = isManagerOrAdmin && assignedFilter === 'all';
 
   let dateStrs: string[];

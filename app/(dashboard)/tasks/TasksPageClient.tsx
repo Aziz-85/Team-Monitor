@@ -25,17 +25,18 @@ function formatDDMM(dateStr: string): string {
 export function TasksPageClient({ role }: { role: Role }) {
   const { t } = useT();
 
-  const [period, setPeriod] = useState<'today' | 'week' | 'overdue' | 'all'>('today');
+  const canSeeAllAssigned = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+  /** Defaults align with /tasks/monitor: "This week" + all assignees so counts match for managers. */
+  const [period, setPeriod] = useState<'today' | 'week' | 'overdue' | 'all'>('week');
   const [status, setStatus] = useState<'open' | 'done' | 'all'>('all');
-  const [assigned, setAssigned] = useState<'me' | 'all'>(role === 'EMPLOYEE' ? 'me' : 'me');
+  const [assigned, setAssigned] = useState<'me' | 'all'>(() => (canSeeAllAssigned ? 'all' : 'me'));
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
 
   const [tasks, setTasks] = useState<TaskListRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  const canSeeAllAssigned = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
 
   const handleExport = useCallback(async () => {
     try {
