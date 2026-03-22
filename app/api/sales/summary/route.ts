@@ -1,16 +1,21 @@
 /**
  * GET /api/sales/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&boutiqueId= (optional, ADMIN only)
- * Source of truth: SalesEntry (LEDGER, IMPORT, MANUAL). Strict boutique scoping.
- * All amounts SAR_INT (integer riyals). Branch totals by SalesEntry.boutiqueId; employee totals by SalesEntry.userId across all boutiques.
+ * Aggregation only: totals come from `lib/sales/readSalesAggregate.ts` (SalesEntry).
+ * Strict boutique scoping via getSalesScope. SAR_INT.
  */
+
+export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { parseDateRiyadh, formatDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
+import {
+  aggregateSalesEntrySum,
+  salesEntryWhereDateRangeInclusive,
+} from '@/lib/sales/readSalesAggregate';
 
 const DEFAULT_DAYS = 31;
-const SALES_ENTRY_SOURCES = ['LEDGER', 'IMPORT', 'MANUAL'];
 
 export async function GET(request: NextRequest) {
   const boutiqueIdParam = request.nextUrl.searchParams.get('boutiqueId')?.trim();
@@ -38,28 +43,18 @@ export async function GET(request: NextRequest) {
     [fromDate, toDate] = [toDate, fromDate];
   }
 
-  const whereBase: {
-    boutiqueId?: string;
-    userId?: string;
-    date: { gte: Date; lte: Date };
-    source: { in: string[] };
-  } = {
-    date: { gte: fromDate, lte: toDate },
-    source: { in: SALES_ENTRY_SOURCES },
-  };
+  const whereBase = salesEntryWhereDateRangeInclusive({
+    from: fromDate,
+    to: toDate,
+    ...(scope.employeeOnly
+      ? { userId: scope.userId }
+      : scope.allowedBoutiqueIds.length > 0
+        ? { boutiqueId: scope.effectiveBoutiqueId }
+        : {}),
+  });
 
-  if (scope.employeeOnly) {
-    whereBase.userId = scope.userId;
-    // Do not add boutiqueId: employee sees total across ALL boutiques.
-  } else if (scope.allowedBoutiqueIds.length > 0) {
-    whereBase.boutiqueId = scope.effectiveBoutiqueId;
-  }
-
-  const [aggregateResult, groupByResult] = await Promise.all([
-    prisma.salesEntry.aggregate({
-      where: whereBase,
-      _sum: { amount: true },
-    }),
+  const [netTotal, groupByResult] = await Promise.all([
+    aggregateSalesEntrySum(whereBase),
     prisma.salesEntry.groupBy({
       by: ['userId'],
       where: whereBase,
@@ -67,7 +62,7 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const rawNetSales = aggregateResult._sum.amount ?? 0;
+  const rawNetSales = netTotal;
   const netSalesTotal = rawNetSales;
   const grossSalesTotal = rawNetSales;
   const returnsTotal = 0;

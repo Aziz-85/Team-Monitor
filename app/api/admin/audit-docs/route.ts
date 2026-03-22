@@ -1,6 +1,7 @@
 /**
- * GET /api/admin/audit-docs — list audit docs (ADMIN only).
+ * GET /api/admin/audit-docs — list audit docs.
  * GET /api/admin/audit-docs?file=NEXT_PLAN.md — return raw content of one doc.
+ * Access: **ADMIN** and **SUPER_ADMIN** only (aligned with `/admin/system-audit` page).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,7 +15,7 @@ const ALLOWED_EXT = ['.md', '.json'];
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
-  if (!user || user.role !== 'ADMIN') {
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

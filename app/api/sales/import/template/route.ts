@@ -27,15 +27,22 @@ export async function GET(request: NextRequest) {
 
   const scopeResult = await requireOperationalBoutique(request);
   if (!scopeResult.ok) return scopeResult.res;
-  const scopeId = scopeResult.boutiqueId;
+  const boutiqueId = scopeResult.boutiqueId;
 
   const monthParam = request.nextUrl.searchParams.get('month')?.trim() ?? '';
   if (!/^\d{4}-\d{2}$/.test(monthParam)) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
 
+  const boutiqueRow = await prisma.boutique.findUnique({
+    where: { id: boutiqueId },
+    select: { code: true },
+  });
+  /** Matrix import validates ScopeId against boutique code, not DB id. */
+  const scopeCode = (boutiqueRow?.code ?? '').trim();
+
   const employeesRaw = await prisma.employee.findMany({
-    where: { boutiqueId: scopeId, active: true },
+    where: { boutiqueId, active: true },
     select: { empId: true, name: true, isSystemOnly: true },
     orderBy: [{ name: 'asc' }, { empId: 'asc' }],
   });
@@ -52,7 +59,7 @@ export async function GET(request: NextRequest) {
   for (const dateKey of dayKeys) {
     const date = new Date(dateKey + 'T12:00:00.000Z');
     const dayName = DAY_NAMES[date.getUTCDay()];
-    const row: (string | number)[] = [scopeId, dateKey, dayName];
+    const row: (string | number)[] = [scopeCode, dateKey, dayName];
     for (let i = 0; i < employees.length; i++) {
       row.push('');
     }

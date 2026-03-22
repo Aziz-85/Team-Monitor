@@ -8,7 +8,12 @@
 import * as XLSX from 'xlsx';
 import { formatDateRiyadh, toRiyadhDateOnly } from '@/lib/time';
 
-const SHEET_NAME = 'Import_2026';
+/** Any sheet named `Import_YYYY` (e.g. Import_2026). Template generator must match. */
+const IMPORT_SHEET_RE = /^Import_\d{4}$/i;
+
+export function isYearlyImportSheetName(sheetName: string): boolean {
+  return IMPORT_SHEET_RE.test(sheetName.trim());
+}
 
 export type EmployeeColumn = { index: number; header: string; empId: string };
 
@@ -134,13 +139,16 @@ export function parseYearlyImportExcel(buffer: Buffer): ParseYearlyImportResult 
     return { ok: false, error: 'Invalid Excel file' };
   }
 
-  const sheetName = workbook.SheetNames.find((n) => n.trim() === SHEET_NAME);
+  const sheetName = workbook.SheetNames.find((n) => isYearlyImportSheetName(n));
   if (!sheetName) {
-    return { ok: false, error: `Sheet "${SHEET_NAME}" not found` };
+    return {
+      ok: false,
+      error: 'No sheet named Import_YYYY (e.g. Import_2026). Download the branch yearly template from Import Center.',
+    };
   }
 
   const sheet = workbook.Sheets[sheetName];
-  if (!sheet) return { ok: false, error: `Sheet "${SHEET_NAME}" not found` };
+  if (!sheet) return { ok: false, error: `Sheet "${sheetName}" not found` };
 
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
   if (rows.length < 2) {

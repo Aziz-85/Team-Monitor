@@ -1,11 +1,15 @@
 /**
  * GET /api/executive/compare?month=YYYY-MM&global=true — Cross-boutique comparison. ADMIN + MANAGER only.
  * global=true: ADMIN only, all boutiques + audit. MANAGER: always scope. Money SAR integer only.
+ *
+ * **Sales (CLASS A — canonical):** `groupSalesSumByBoutiqueForMonth` from `readSalesAggregate`
+ * — same SalesEntry semantics as dashboard month totals per boutique.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { groupSalesSumByBoutiqueForMonth } from '@/lib/sales/readSalesAggregate';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
@@ -71,11 +75,7 @@ export async function GET(request: NextRequest) {
       select: { id: true, code: true, name: true, regionId: true, region: { select: { code: true, name: true } } },
       orderBy: { code: 'asc' },
     }),
-    prisma.salesEntry.groupBy({
-      by: ['boutiqueId'],
-      where: { month: monthKey, boutiqueId: { in: boutiqueIds } },
-      _sum: { amount: true },
-    }),
+    groupSalesSumByBoutiqueForMonth(monthKey, boutiqueIds),
     prisma.boutiqueMonthlyTarget.findMany({
       where: { month: monthKey, boutiqueId: { in: boutiqueIds } },
       select: { boutiqueId: true, amount: true },

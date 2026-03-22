@@ -1,7 +1,7 @@
 /**
  * GET /api/sales/monthly-matrix?month=YYYY-MM&includePreviousMonth=true|false&source=LEDGER|ALL
- * Source of truth: SalesEntry (LEDGER, IMPORT, MANUAL). Strict boutique scope via requireOperationalBoutique.
- * Employees = active in scope ∪ any EmpID in SalesEntry for that month range.
+ * Specialized matrix endpoint; row/day values are built from **SalesEntry** via
+ * `salesEntryWhereForBoutiqueMonths` in `lib/sales/readSalesAggregate.ts` (same canonical read layer as dashboard/metrics).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,12 +11,11 @@ import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutiq
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { normalizeMonthKey, addMonths } from '@/lib/time';
 import { monthDaysUTC, monthRangeUTCNoon, dateKeyUTC } from '@/lib/dates/safeCalendar';
+import { salesEntryWhereForBoutiqueMonths } from '@/lib/sales/readSalesAggregate';
 
 export const dynamic = 'force-dynamic';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
-const SALES_ENTRY_SOURCES_ALL = ['LEDGER', 'IMPORT', 'MANUAL'];
-
 /** Build day keys for matrix using safe calendar (no ISO slice). */
 function buildDays(monthKey: string, includePreviousMonth: boolean): string[] {
   const keys: string[] = [];
@@ -51,7 +50,6 @@ export async function GET(request: NextRequest) {
 
   const sourceParam = (request.nextUrl.searchParams.get('source') ?? 'ALL').toUpperCase();
   const ledgerOnly = sourceParam === 'LEDGER';
-  const sourceFilter = ledgerOnly ? ['LEDGER'] : SALES_ENTRY_SOURCES_ALL;
 
   const days = buildDays(monthKey, includePreviousMonth);
   const months = Array.from(
@@ -69,11 +67,7 @@ export async function GET(request: NextRequest) {
 
   const [entries, activeEmployeesRaw, allEmployeesByEmpIdRaw] = await Promise.all([
     prisma.salesEntry.findMany({
-      where: {
-        boutiqueId: scopeId,
-        month: { in: months },
-        source: { in: sourceFilter },
-      },
+      where: salesEntryWhereForBoutiqueMonths(scopeId, months, ledgerOnly),
       select: {
         dateKey: true,
         amount: true,

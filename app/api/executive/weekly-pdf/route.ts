@@ -2,11 +2,15 @@
  * Weekly Executive PDF — READ ONLY aggregation. MANAGER + ADMIN only.
  * Scope resolved server-side; data filtered by boutiqueIds.
  * Query: weekStart (YYYY-MM-DD, Saturday).
+ *
+ * **Sales (CLASS A — canonical):** Month-to-date revenue uses `aggregateSalesEntrySumForBoutiquesMonth`
+ * (full calendar month of `weekStart`, not ISO week slice). Same definition as executive main KPI when scoped equally.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { aggregateSalesEntrySumForBoutiquesMonth } from '@/lib/sales/readSalesAggregate';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
@@ -108,10 +112,7 @@ export async function GET(request: NextRequest) {
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { month: monthKey, ...boutiqueFilter },
     }),
-    prisma.salesEntry.aggregate({
-      where: { month: monthKey, ...boutiqueFilter },
-      _sum: { amount: true },
-    }),
+    aggregateSalesEntrySumForBoutiquesMonth(monthKey, boutiqueIds),
     prisma.task.findMany({
       where: { active: true, ...boutiqueFilter },
       include: {
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
     allUsers.map((u) => [u.id, u.employee?.name ?? u.empId])
   );
 
-  const revenue = salesSum._sum.amount ?? 0;
+  const revenue = salesSum;
   const target = boutiqueTarget?.amount ?? 0;
   const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
 

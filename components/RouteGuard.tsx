@@ -1,26 +1,30 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import Link from 'next/link';
+import { useT } from '@/lib/i18n/useT';
 import { canAccessRoute } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
 export function RouteGuard({ role, children }: { role: Role; children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useT();
+  const hasAccess = pathname ? canAccessRoute(role, pathname) : true;
 
-  useEffect(() => {
-    if (!pathname) return;
-    if (canAccessRoute(role, pathname)) return;
-    if (role === 'DEMO_VIEWER') {
-      window.location.replace('/dashboard');
-      return;
-    }
-    if (role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER') {
-      window.location.replace('/employee');
-    } else {
-      window.location.replace('/');
-    }
-  }, [role, pathname]);
+  if (!pathname || hasAccess) {
+    return <>{children}</>;
+  }
 
-  return <>{children}</>;
+  const backHref = role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER' ? '/employee' : role === 'DEMO_VIEWER' ? '/dashboard' : '/';
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
+      <p className="text-center text-muted">{t('common.accessDenied')}</p>
+      <Link
+        href={backHref}
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90"
+      >
+        {t('common.back')}
+      </Link>
+    </div>
+  );
 }

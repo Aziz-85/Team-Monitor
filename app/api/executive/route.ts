@@ -1,11 +1,19 @@
 /**
  * Executive Dashboard API — READ ONLY, presentation aggregation.
  * MANAGER + ADMIN + SUPER_ADMIN. Scope: same as dashboard (operational/session boutique when available).
+ *
+ * **SalesEntry (CLASS A — canonical):** Current-month revenue and month trends use
+ * `lib/sales/readSalesAggregate.ts` (same totals as dashboard/summary when scoped the same).
+ * Non-SalesEntry KPIs (tasks, roster, zones) are separate.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import {
+  aggregateSalesEntrySumForBoutiquesMonth,
+  groupSalesSumByMonthForScopedBoutiques,
+} from '@/lib/sales/readSalesAggregate';
 import {
   getRiyadhNow,
   formatMonthKey,
@@ -129,7 +137,7 @@ export async function GET(request: NextRequest) {
 
   const [
     boutiqueTarget,
-    salesCurrentMonth,
+    salesCurrentMonthSum,
     salesByMonth,
     targetsByMonth,
     rosterToday,
@@ -144,15 +152,8 @@ export async function GET(request: NextRequest) {
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { month: monthKey, ...boutiqueFilter },
     }),
-    prisma.salesEntry.aggregate({
-      where: { month: monthKey, ...boutiqueFilter },
-      _sum: { amount: true },
-    }),
-    prisma.salesEntry.groupBy({
-      by: ['month'],
-      where: boutiqueFilter,
-      _sum: { amount: true },
-    }),
+    aggregateSalesEntrySumForBoutiquesMonth(monthKey, boutiqueIds),
+    groupSalesSumByMonthForScopedBoutiques(boutiqueIds),
     prisma.boutiqueMonthlyTarget.findMany({
       where: {
         month: { in: lastMonthKeys(now, 6) },
@@ -215,7 +216,7 @@ export async function GET(request: NextRequest) {
     allUsers.map((u) => [u.id, u.employee?.name ?? u.empId])
   );
 
-  const revenue = salesCurrentMonth._sum.amount ?? 0;
+  const revenue = salesCurrentMonthSum;
   const target = boutiqueTarget?.amount ?? 0;
   const achievementPct = calculatePerformance({ target, sales: revenue }).percent;
 

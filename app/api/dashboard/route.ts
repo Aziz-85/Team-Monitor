@@ -1,7 +1,9 @@
 /**
  * Executive Dashboard API — READ ONLY.
  * Returns aggregated data for /dashboard. RBAC applied: role determines what is returned.
- * Sales actuals: dashboard UI should use /api/sales/monthly-matrix (ledger) and merge; this API still returns targets + empId for merging.
+ *
+ * **Sales reads:** `getPerformanceSummaryExtended` → `lib/metrics/aggregator` → `lib/sales/readSalesAggregate.ts`
+ * (SalesEntry only). Matrix grid may use `/api/sales/monthly-matrix`; same canonical layer.
  */
 
 export const dynamic = 'force-dynamic';

@@ -11,6 +11,7 @@ const ADMINISTRATION_CARDS: { href: string; titleKey: string; descKey: string }[
   { href: '/admin/administration/audit', titleKey: 'admin.administration.auditLogs', descKey: 'admin.administration.auditLogsDesc' },
   { href: '/admin/administration/settings', titleKey: 'admin.administration.systemSettings', descKey: 'admin.administration.systemSettingsDesc' },
   { href: '/admin/administration/version', titleKey: 'admin.administration.versionBuild', descKey: 'admin.administration.versionBuildDesc' },
+  { href: '/admin/sales-integrity', titleKey: 'admin.administration.salesIntegrity', descKey: 'admin.administration.salesIntegrityDesc' },
 ];
 
 export function AdminAdministrationClient() {

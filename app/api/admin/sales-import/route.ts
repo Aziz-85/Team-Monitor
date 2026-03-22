@@ -1,8 +1,13 @@
+/**
+ * Admin Excel → **SalesEntry** (canonical). BoutiqueSalesLine / batches are not used here.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { formatMonthKey } from '@/lib/time';
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
+import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
+import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 import * as XLSX from 'xlsx';
 
@@ -251,18 +256,37 @@ export async function POST(request: NextRequest) {
         continue;
       }
       const boutiqueId = userIdToBoutique.get(userId) ?? defaultBoutiqueId;
-      const month = formatMonthKey(dateNorm);
       try {
         const existing = await prisma.salesEntry.findUnique({
           where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
         });
-        await prisma.salesEntry.upsert({
-          where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
-          create: { date: dateNorm, dateKey, month, userId, amount, boutiqueId, source: 'IMPORT', createdById: user.id },
-          update: { amount, source: 'IMPORT', updatedAt: new Date() },
+        const res = await upsertCanonicalSalesEntry({
+          kind: 'direct',
+          boutiqueId,
+          userId,
+          amount,
+          source: SALES_ENTRY_SOURCE.EXCEL_IMPORT,
+          actorUserId: user.id,
+          date: dateNorm,
         });
-        if (existing) updatedCount += 1;
-        else importedCount += 1;
+        if (res.status === 'rejected_locked') {
+          skipped.push({ rowNumber: i + 1, reason: 'Day locked in daily sales ledger' });
+          continue;
+        }
+        if (res.status === 'rejected_precedence') {
+          skipped.push({
+            rowNumber: i + 1,
+            reason: `Source precedence: existing "${res.existingSource ?? ''}" outranks EXCEL_IMPORT`,
+          });
+          continue;
+        }
+        if (res.status === 'rejected_invalid') {
+          skipped.push({ rowNumber: i + 1, reason: res.reason });
+          continue;
+        }
+        if (res.status === 'created') importedCount += 1;
+        else if (res.status === 'updated') updatedCount += 1;
+        else if (res.status === 'no_change' && existing) updatedCount += 1;
       } catch {
         skipped.push({ rowNumber: i + 1, reason: 'Upsert failed' });
       }
@@ -354,7 +378,6 @@ export async function POST(request: NextRequest) {
         });
         continue;
       }
-      const month = formatMonthKey(dateNorm);
       let totalSaleAfter = 0;
       const totalRaw = row[totalSaleAfterCol];
       if (typeof totalRaw === 'number' && Number.isFinite(totalRaw)) {
@@ -379,13 +402,33 @@ export async function POST(request: NextRequest) {
           const existing = await prisma.salesEntry.findUnique({
             where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
           });
-          await prisma.salesEntry.upsert({
-            where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
-            create: { date: dateNorm, dateKey, month, userId, amount, boutiqueId, source: 'IMPORT', createdById: user.id },
-            update: { amount, source: 'IMPORT', updatedAt: new Date() },
+          const res = await upsertCanonicalSalesEntry({
+            kind: 'direct',
+            boutiqueId,
+            userId,
+            amount,
+            source: SALES_ENTRY_SOURCE.EXCEL_IMPORT,
+            actorUserId: user.id,
+            date: dateNorm,
           });
-          if (existing) updatedCount += 1;
-          else importedCount += 1;
+          if (res.status === 'rejected_locked') {
+            skipped.push({ rowNumber: i + 1, reason: 'Day locked in daily sales ledger' });
+            continue;
+          }
+          if (res.status === 'rejected_precedence') {
+            skipped.push({
+              rowNumber: i + 1,
+              reason: `Source precedence: existing "${res.existingSource ?? ''}" outranks EXCEL_IMPORT`,
+            });
+            continue;
+          }
+          if (res.status === 'rejected_invalid') {
+            skipped.push({ rowNumber: i + 1, reason: res.reason });
+            continue;
+          }
+          if (res.status === 'created') importedCount += 1;
+          else if (res.status === 'updated') updatedCount += 1;
+          else if (res.status === 'no_change' && existing) updatedCount += 1;
         } catch {
           skipped.push({ rowNumber: i + 1, reason: 'Upsert failed' });
         }

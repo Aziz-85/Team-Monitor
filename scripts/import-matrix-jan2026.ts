@@ -5,12 +5,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { PrismaClient } from '@prisma/client';
 import { parseMatrixWorkbook } from '../lib/sales/importMatrix';
 import { monthDaysUTC } from '../lib/dates/safeCalendar';
 import { normalizeDateOnlyRiyadh } from '../lib/time';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/db';
+import { upsertCanonicalSalesEntry } from '../lib/sales/upsertSalesEntry';
+import { SALES_ENTRY_SOURCE } from '../lib/sales/salesEntrySources';
 const FILE = path.join(__dirname, '../TeamMonitor_Monthly_Import_Template_Matrix copy.xlsx');
 const BOUTIQUE_ID = 'bout_dhhrn_001';
 const MONTH = '2026-01';
@@ -85,32 +85,29 @@ async function main() {
 
   let inserted = 0;
   let updated = 0;
+  let skippedPrec = 0;
   for (const { dateKey, userId, amount } of toUpsert) {
     const date = normalizeDateOnlyRiyadh(dateKey);
-    const month = dateKey.slice(0, 7);
-    const existing = await prisma.salesEntry.findUnique({
-      where: { boutiqueId_dateKey_userId: { boutiqueId: BOUTIQUE_ID, dateKey, userId } },
+    const res = await upsertCanonicalSalesEntry({
+      kind: 'direct',
+      boutiqueId: BOUTIQUE_ID,
+      userId,
+      amount,
+      source: SALES_ENTRY_SOURCE.MATRIX,
+      actorUserId: actorId,
+      date,
     });
-    await prisma.salesEntry.upsert({
-      where: { boutiqueId_dateKey_userId: { boutiqueId: BOUTIQUE_ID, dateKey, userId } },
-      create: {
-        boutiqueId: BOUTIQUE_ID,
-        date,
-        dateKey,
-        month,
-        userId,
-        amount,
-        source: 'IMPORT',
-        createdById: actorId,
-      },
-      update: { amount, source: 'IMPORT', createdById: actorId, updatedAt: new Date() },
-    });
-    if (existing) updated++;
-    else inserted++;
+    if (res.status === 'rejected_precedence') {
+      skippedPrec += 1;
+      continue;
+    }
+    if (res.status === 'created') inserted++;
+    else if (res.status === 'updated') updated++;
+    else if (res.status === 'no_change') updated++;
   }
 
   const day1Sum = toUpsert.filter((u) => u.dateKey === firstDayKey).reduce((s, u) => s + u.amount, 0);
-  console.log(`Done. Inserted: ${inserted}, Updated: ${updated}`);
+  console.log(`Done. Inserted: ${inserted}, Updated: ${updated}, precedenceSkipped: ${skippedPrec}`);
   console.log(`Day 01 (${firstDayKey}) total: ${day1Sum.toLocaleString()} (expected 47,300)`);
   if (day1Sum === 47300) {
     console.log('✓ Day 01 correct!');
@@ -122,4 +119,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => prisma.$disconnect().catch(() => undefined));

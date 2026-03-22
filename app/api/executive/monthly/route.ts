@@ -3,17 +3,32 @@
  * Operational scope: single boutiqueId. All data filtered by boutiqueId + month (Asia/Riyadh).
  * Query: month (YYYY-MM). Optional; defaults to current month.
  * No cache so Daily Sales Ledger updates reflect immediately.
+ *
+ * **CLASS B — mixed semantics (intentional):**
+ * - **BoutiqueSalesSummary / BoutiqueSalesLine:** operational daily ledger; revenue KPI uses reconciliation
+ *   (manual lines vs summary totalSar) — not interchangeable with raw SalesEntry totals.
+ * - **SalesEntry breakdown:** CLASS A — `groupSalesEntryBySource` + `salesEntryWhereForBoutiqueMonthDateRange`
+ *   from `readSalesAggregate` (canonical where; parity with matrix/dashboard when filters match).
+ * Do not expect ledger revenue line to equal SalesEntry month sum without understanding sync lag / precedence.
+ *
+ * **Policy A (historical imports):** `HISTORICAL_IMPORT` rows exist only in SalesEntry — not in ledger.
+ * Response includes `reconciliationPolicy` — see `docs/historical-ledger-reconciliation.md`.
  */
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import {
+  groupSalesEntryBySource,
+  salesEntryWhereForBoutiqueMonthDateRange,
+} from '@/lib/sales/readSalesAggregate';
 import { getMonthRange, normalizeMonthKey, getCurrentMonthKeyRiyadh } from '@/lib/time';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculateRiskScore } from '@/lib/executive/risk';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
+import { HISTORICAL_LEDGER_RECONCILIATION_POLICY } from '@/lib/sales/reconciliationPolicy';
 import type { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
@@ -44,6 +59,13 @@ export async function GET(request: NextRequest) {
       : getCurrentMonthKeyRiyadh();
 
   const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
+
+  const salesEntryWhereCanonical = salesEntryWhereForBoutiqueMonthDateRange(
+    operationalBoutiqueId,
+    monthKey,
+    monthStart,
+    monthEnd
+  );
 
   const [
     boutiqueTarget,
@@ -103,17 +125,7 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' },
       take: 3,
     }),
-    // Breakdown SalesEntry by source
-    prisma.salesEntry.groupBy({
-      by: ['source'],
-      where: {
-        ...boutiqueFilter,
-        month: monthKey,
-        date: { gte: monthStart, lt: monthEnd },
-      },
-      _sum: { amount: true },
-      _count: { id: true },
-    }),
+    groupSalesEntryBySource(salesEntryWhereCanonical),
     prisma.employeeMonthlyTarget.findMany({
       where: { month: monthKey, ...boutiqueFilter },
       select: { userId: true, amount: true },
@@ -229,6 +241,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     monthKey,
+    reconciliationPolicy: HISTORICAL_LEDGER_RECONCILIATION_POLICY,
     dataScope: {
       boutiqueId: operationalBoutiqueId,
       boutiqueName: boutique?.name ?? null,

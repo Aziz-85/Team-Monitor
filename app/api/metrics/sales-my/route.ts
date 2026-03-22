@@ -1,7 +1,7 @@
 /**
  * GET /api/metrics/sales-my?from=YYYY-MM-DD&to=YYYY-MM-DD
- * Canonical sales metrics for /sales/my. Uses resolveMetricsScope + getSalesMetrics.
- * When employee: totals across ALL boutiques (SalesEntry.userId only). SAR_INT.
+ * Sales: `getSalesMetrics` → aggregator → `readSalesAggregate.getSalesMetricsFromSalesEntry`.
+ * Employee monthly rows: `groupSalesSumByMonthForUser` (same SalesEntry layer).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,9 +9,10 @@ import { addDays, toRiyadhDateOnly } from '@/lib/time';
 import { getRiyadhNow, formatMonthKey } from '@/lib/time';
 import { parseIsoDateOrThrow, formatIsoDate } from '@/lib/time/parse';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
+import { prisma } from '@/lib/db';
 import { getSalesMetrics } from '@/lib/metrics/aggregator';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
-import { prisma } from '@/lib/db';
+import { groupSalesSumByMonthForUser } from '@/lib/sales/readSalesAggregate';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,15 +103,7 @@ export async function GET(request: NextRequest) {
         },
         select: { month: true, amount: true },
       }),
-      prisma.salesEntry.groupBy({
-        by: ['month'],
-        where: {
-          userId: scope.userId,
-          month: { in: monthKeys },
-          source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-        },
-        _sum: { amount: true },
-      }),
+      groupSalesSumByMonthForUser(scope.userId, monthKeys),
     ]);
 
     const targetByMonth = new Map<string, number>();

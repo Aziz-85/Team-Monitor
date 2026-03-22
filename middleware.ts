@@ -155,6 +155,7 @@ export const config = {
     '/boutique/:path*',
     '/kpi',
     '/kpi/:path*',
+    '/compliance',
     '/app/:path*',
     '/(dashboard)/:path*',
     '/api/:path*',

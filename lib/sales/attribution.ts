@@ -8,12 +8,11 @@
  * - Transfer: do not rewrite historical SalesEntry; totals remain stable.
  *
  * All amounts SAR_INT. Dates use canonical dateKey (YYYY-MM-DD Riyadh).
+ * Include all SalesEntry rows; `source` is not used to filter reporting totals.
  */
 
 import { prisma } from '@/lib/db';
 import { toRiyadhDateString } from '@/lib/time';
-
-const SALES_ENTRY_SOURCES = ['LEDGER', 'IMPORT', 'MANUAL'] as const;
 
 export type DateRange = {
   fromDate: Date;
@@ -38,7 +37,6 @@ export async function sumBoutiqueSales(params: {
     where: {
       boutiqueId: params.boutiqueId,
       dateKey: { gte: fromKey, lte: toKey },
-      source: { in: [...SALES_ENTRY_SOURCES] },
     },
     _sum: { amount: true },
   });
@@ -59,7 +57,6 @@ export async function sumEmployeeSales(params: {
     where: {
       userId: params.userId,
       dateKey: { gte: fromKey, lte: toKey },
-      source: { in: [...SALES_ENTRY_SOURCES] },
     },
     _sum: { amount: true },
   });
@@ -86,7 +83,6 @@ export async function sumEmployeeSalesByBoutique(params: {
     where: {
       userId: params.userId,
       dateKey: { gte: fromKey, lte: toKey },
-      source: { in: [...SALES_ENTRY_SOURCES] },
     },
     _sum: { amount: true },
   });
@@ -116,7 +112,6 @@ export async function sumBoutiqueSalesByEmployee(params: {
     where: {
       boutiqueId: params.boutiqueId,
       dateKey: { gte: fromKey, lte: toKey },
-      source: { in: [...SALES_ENTRY_SOURCES] },
     },
     _sum: { amount: true },
   });

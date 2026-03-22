@@ -9,6 +9,7 @@ import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { parseMonthKeyOrThrow, parseIsoDateOrThrow } from '@/lib/time/parse';
 import { toRiyadhDateString, getDaysRemainingInMonthIncluding, normalizeMonthKey } from '@/lib/time';
 import { prisma } from '@/lib/db';
+import { aggregateSalesEntrySum, salesEntryWhereForUserMonth } from '@/lib/sales/readSalesAggregate';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   const normMonth = normalizeMonthKey(monthKey);
   const daysRemaining = getDaysRemainingInMonthIncluding(normMonth, dateStr);
 
-  const [targetRows, salesInMonth] = await Promise.all([
+  const [targetRows, achievedToDateSar] = await Promise.all([
     prisma.employeeMonthlyTarget.findMany({
       where: {
         userId: scope.userId,
@@ -49,19 +50,13 @@ export async function GET(request: NextRequest) {
       },
       select: { amount: true },
     }),
-    prisma.salesEntry.findMany({
-      where: {
-        userId: scope.userId,
-        month: normMonth,
-        dateKey: { lte: dateStr },
-        source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-      },
-      select: { amount: true },
+    aggregateSalesEntrySum({
+      ...salesEntryWhereForUserMonth(scope.userId, normMonth, null),
+      dateKey: { lte: dateStr },
     }),
   ]);
 
   const monthTargetSar = targetRows.reduce((s, r) => s + r.amount, 0);
-  const achievedToDateSar = salesInMonth.reduce((s, e) => s + e.amount, 0);
   const remainingSar = Math.max(monthTargetSar - achievedToDateSar, 0);
   const dailyRequiredSar =
     daysRemaining > 0 ? Math.ceil(remainingSar / daysRemaining) : remainingSar;

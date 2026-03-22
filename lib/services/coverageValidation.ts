@@ -5,6 +5,9 @@ import { rosterForDate } from './roster';
  * Coverage Validation Engine – VALIDATION + WARNINGS ONLY.
  * Does NOT modify base schedules, coverage rules, or auto-adjust shifts.
  * Computed on the fly; not persisted to DB.
+ *
+ * **Canonical input:** uses **rosterForDate** → **getScheduleGridForWeek** counts. Do not fork AM/PM counts
+ * from a second schedule implementation for new features.
  */
 
 export type ValidationResultType = 'MIN_AM' | 'MIN_PM' | 'AM_GT_PM' | 'AM_ON_FRIDAY';

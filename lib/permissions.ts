@@ -60,8 +60,13 @@ export function requiresApproval(role: Role): boolean {
 }
 
 /**
- * مصدر واحد للصلاحيات: أي المسارات والصلاحيات مُعلنة لأي دور.
- * غيّر هنا لتظهر أو تُخفى الصفحات حسب الدور.
+ * Route access matrix for `canAccessRoute` / `RouteGuard`: which path prefixes each role may open.
+ *
+ * **Relationship to nav:** `lib/navConfig.ts` drives the **sidebar** (labels, grouping, visibility).
+ * Not every allowed route appears in the nav (hidden admin tools, deep links, legacy aliases).
+ * Development checks: `lib/navConsistency.ts` warns if a nav item lists a role that `ROLE_ROUTES` denies.
+ *
+ * غيّر هنا لتظهر أو تُخفى الصفحات حسب الدور (مع الحفاظ على اتساق nav عند الإضافة).
  */
 export const ROLE_ROUTES: Record<Role, string[]> = {
   EMPLOYEE: [
@@ -106,6 +111,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/follow-up',
     '/admin/employees',
     '/admin/targets',
+    '/targets',
     '/admin/sales-edit-requests',
     '/admin/control-panel/delegation',
     '/admin/import/sales',
@@ -129,6 +135,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/employee',
     '/schedule/view',
     '/schedule/edit',
+    '/schedule/editor',
     '/tasks',
     '/me/target',
     '/leaves/requests',
@@ -140,6 +147,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/sales/import',
     '/sales/import-issues',
     '/sales/monthly-matrix',
+    '/targets',
     '/about',
     '/change-password',
   ],
@@ -176,7 +184,10 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/reset-emp-id',
     '/admin/reset-password',
     '/admin/coverage-rules',
+    '/admin/kpi-templates',
     '/admin/import',
+    '/admin/import-center',
+    '/admin/historical-import',
     '/admin/administration',
     '/admin/audit/login',
     '/admin/boutiques',
@@ -188,6 +199,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/system',
     '/admin/system/version',
     '/admin/system-audit',
+    '/targets',
     '/sales/daily',
     '/sales/summary',
     '/sales/returns',
@@ -212,6 +224,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/executive/employees',
     '/approvals',
     '/schedule/view',
+    '/sync/planner',
     '/leaves',
     '/boutique/leaves',
     '/tasks',
@@ -279,7 +292,10 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/reset-emp-id',
     '/admin/reset-password',
     '/admin/coverage-rules',
+    '/admin/kpi-templates',
     '/admin/import',
+    '/admin/import-center',
+    '/admin/historical-import',
     '/admin/administration',
     '/admin/audit/login',
     '/admin/boutiques',
@@ -293,6 +309,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/system-audit',
     '/area/employees',
     '/area/targets',
+    '/targets',
     '/sales/daily',
     '/sales/summary',
     '/sales/returns',

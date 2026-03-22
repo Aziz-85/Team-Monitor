@@ -115,7 +115,9 @@ export async function calculateBoutiqueScore(
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { month: monthKey, ...boutiqueFilter },
     }),
-    // Authoritative revenue from Daily Sales Ledger (BoutiqueSalesSummary)
+    // Revenue component: Daily Sales Ledger summary totals (NOT raw SalesEntry sum).
+    // Under Policy A, HISTORICAL_IMPORT exists only in SalesEntry — score revenue can diverge from SE month total.
+    // See docs/historical-ledger-reconciliation.md.
     prisma.boutiqueSalesSummary.aggregate({
       where: { ...boutiqueFilter, date: { gte: monthStart, lt: monthEndExclusive } },
       _sum: { totalSar: true },

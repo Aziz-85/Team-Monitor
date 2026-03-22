@@ -9,6 +9,7 @@ import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { parseMonthKeyOrThrow, parseIsoDateOrThrow } from '@/lib/time/parse';
 import { toRiyadhDateString, getDaysRemainingInMonthIncluding, normalizeMonthKey } from '@/lib/time';
 import { prisma } from '@/lib/db';
+import { aggregateSalesEntrySum, salesEntryWhereForBoutiqueMonth } from '@/lib/sales/readSalesAggregate';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,35 +44,24 @@ export async function GET(request: NextRequest) {
   const normMonth = normalizeMonthKey(monthKey);
   const daysRemaining = getDaysRemainingInMonthIncluding(normMonth, dateStr);
 
-  const [boutiqueTarget, monthSales, todaySales] = await Promise.all([
+  const bid = scope.effectiveBoutiqueId;
+
+  const [boutiqueTarget, monthAchievedSar, todayAchievedSar] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
-      where: { boutiqueId: scope.effectiveBoutiqueId, month: normMonth },
+      where: { boutiqueId: bid, month: normMonth },
       select: { amount: true },
     }),
-    prisma.salesEntry.aggregate({
-      where: {
-        boutiqueId: scope.effectiveBoutiqueId,
-        month: normMonth,
-        source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-      },
-      _sum: { amount: true },
-    }),
-    prisma.salesEntry.aggregate({
-      where: {
-        boutiqueId: scope.effectiveBoutiqueId,
-        dateKey: dateStr,
-        source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-      },
-      _sum: { amount: true },
+    aggregateSalesEntrySum(salesEntryWhereForBoutiqueMonth(bid, normMonth)),
+    aggregateSalesEntrySum({
+      boutiqueId: bid,
+      dateKey: dateStr,
     }),
   ]);
 
   const monthTargetSar = boutiqueTarget?.amount ?? 0;
-  const monthAchievedSar = monthSales._sum.amount ?? 0;
   const remainingSar = Math.max(monthTargetSar - monthAchievedSar, 0);
   const dailyRequiredSar =
     daysRemaining > 0 ? Math.ceil(remainingSar / daysRemaining) : remainingSar;
-  const todayAchievedSar = todaySales._sum.amount ?? 0;
   const todayPct =
     dailyRequiredSar > 0 ? Math.floor((todayAchievedSar * 100) / dailyRequiredSar) : 0;
 

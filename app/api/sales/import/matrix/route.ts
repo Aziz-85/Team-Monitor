@@ -1,7 +1,7 @@
 /**
  * POST /api/sales/import/matrix
  * Multipart: file (Excel), mode (preview | apply), sourceFilter?, force?
- * Persists to SalesEntry; scope validated via Boutique.code.
+ * Persists via upsertCanonicalSalesEntry → **SalesEntry** (canonical). Scope validated via Boutique.code.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,6 +14,8 @@ import { normalizeDateOnlyRiyadh } from '@/lib/time';
 import { parseMatrixWorkbook, type MatrixParseIssue } from '@/lib/sales/importMatrix';
 import { monthDaysUTC } from '@/lib/dates/safeCalendar';
 import { logAudit } from '@/lib/audit';
+import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
+import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -273,7 +275,6 @@ export async function POST(request: NextRequest) {
   await prisma.$transaction(async (tx) => {
     for (const { dateKey, userId, amount, roundedFrom } of toUpsert) {
       const date = normalizeDateOnlyRiyadh(dateKey);
-      const month = dateKey.slice(0, 7);
       const empId = usersByEmpId.find((x) => x.id === userId)?.empId ?? '';
 
       if (roundedFrom != null) {
@@ -303,18 +304,11 @@ export async function POST(request: NextRequest) {
         select: { id: true, amount: true, source: true },
       });
 
-      if (existing?.source === 'LEDGER' && !force) {
-        skipped += 1;
-        applyIssues.push({
-          code: 'LEDGER_CONFLICT',
-          message: `Skipped: existing LEDGER entry (amount ${existing.amount}) for ${dateKey}`,
-          dateKey,
-          existingAmount: existing.amount,
-        });
-        continue;
-      }
+      /** ADMIN/SUPER_ADMIN only — see salesEntryWritePrecedence + upsertCanonicalSalesEntry */
+      const forceAdminOverride =
+        force === true && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN');
 
-      if (existing?.source === 'LEDGER' && force) {
+      if (existing?.source === 'LEDGER' && forceAdminOverride) {
         applyIssues.push({
           code: 'FORCED_OVERWRITE',
           message: `Overwrote LEDGER entry for ${dateKey}`,
@@ -323,30 +317,51 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      await tx.salesEntry.upsert({
-        where: {
-          boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId },
-        },
-        create: {
-          boutiqueId,
-          date,
-          dateKey,
-          month,
-          userId,
-          amount,
-          source: 'IMPORT',
-          createdById: user.id,
-        },
-        update: {
-          amount,
-          source: 'IMPORT',
-          createdById: user.id,
-          updatedAt: new Date(),
-        },
+      const applyResult = await upsertCanonicalSalesEntry({
+        kind: 'direct',
+        boutiqueId,
+        userId,
+        amount,
+        source: SALES_ENTRY_SOURCE.MATRIX,
+        actorUserId: user.id,
+        date,
+        tx,
+        forceAdminOverride,
+        allowLockedOverride: !!(forceAdminOverride && existing?.source === 'LEDGER'),
       });
 
-      if (existing) updated += 1;
-      else inserted += 1;
+      if (applyResult.status === 'rejected_locked') {
+        skipped += 1;
+        applyIssues.push({
+          code: 'DAY_LOCKED',
+          message: `Skipped: daily ledger is locked for ${dateKey}`,
+          dateKey,
+        });
+        continue;
+      }
+      if (applyResult.status === 'rejected_precedence') {
+        skipped += 1;
+        applyIssues.push({
+          code: 'PRECEDENCE_CONFLICT',
+          message: `Skipped: existing source "${applyResult.existingSource ?? ''}" outranks MATRIX`,
+          dateKey,
+          existingAmount: existing?.amount,
+        });
+        continue;
+      }
+      if (applyResult.status === 'rejected_invalid') {
+        skipped += 1;
+        applyIssues.push({
+          code: 'INVALID',
+          message: applyResult.reason,
+          dateKey,
+        });
+        continue;
+      }
+
+      if (applyResult.status === 'created') inserted += 1;
+      else if (applyResult.status === 'updated') updated += 1;
+      else if (applyResult.status === 'no_change' && existing) updated += 1;
     }
   });
 

@@ -1,13 +1,18 @@
 /**
  * GET /api/executive/employees/[empId]?year=YYYY&global=true — One employee annual. ADMIN + MANAGER only.
- * Source of truth: SalesEntry (LEDGER, IMPORT, MANUAL). global=true: ADMIN only, all boutiques + audit.
- * MANAGER: always scope. SAR integer only.
+ * **CLASS A — canonical:** Aggregations use `groupSalesSumByMonthForUserInBoutiquesYear` /
+ * `groupSalesSumByBoutiqueForUserYear` from `readSalesAggregate` (same SalesEntry semantics as metrics).
+ * global=true: ADMIN only, all boutiques + audit. SAR integer only.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import {
+  groupSalesSumByBoutiqueForUserYear,
+  groupSalesSumByMonthForUserInBoutiquesYear,
+} from '@/lib/sales/readSalesAggregate';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
 import type { Role } from '@prisma/client';
 
@@ -17,8 +22,6 @@ function variance(arr: number[]): number {
   const sq = arr.map((x) => (x - mean) ** 2);
   return sq.reduce((a, b) => a + b, 0) / arr.length;
 }
-
-const SALES_ENTRY_SOURCES_ALL = ['LEDGER', 'IMPORT', 'MANUAL'];
 
 export async function GET(
   request: NextRequest,
@@ -49,39 +52,47 @@ export async function GET(
     return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
   }
 
-  const monthPrefix = `${year}-`;
-
-  const entries = await prisma.salesEntry.findMany({
-    where: {
-      boutiqueId: { in: boutiqueIds },
-      month: { startsWith: monthPrefix },
-      source: { in: SALES_ENTRY_SOURCES_ALL },
-      user: { empId },
-    },
-    select: {
-      amount: true,
-      month: true,
-      boutiqueId: true,
-    },
+  const empUser = await prisma.user.findUnique({
+    where: { empId },
+    select: { id: true },
   });
 
   let total = 0;
-  const byBoutique = new Map<string, { code: string; name: string; total: number }>();
   const byMonth = new Map<string, number>();
+  let byBoutiqueArr: Array<{
+    boutiqueId: string;
+    boutiqueCode: string;
+    boutiqueName: string;
+    total: number;
+  }> = [];
 
-  for (const e of entries) {
-    total += e.amount;
-    const bid = e.boutiqueId;
-    const monthKey = e.month;
-    if (bid) {
-      let b = byBoutique.get(bid);
-      if (!b) {
-        b = { code: bid, name: bid, total: 0 };
-        byBoutique.set(bid, b);
-      }
-      b.total += e.amount;
+  if (empUser) {
+    const [byMonthRows, byBoutiqueRows] = await Promise.all([
+      groupSalesSumByMonthForUserInBoutiquesYear(empUser.id, year, boutiqueIds),
+      groupSalesSumByBoutiqueForUserYear(empUser.id, year, boutiqueIds),
+    ]);
+
+    total = byMonthRows.reduce((s, r) => s + (r._sum.amount ?? 0), 0);
+    for (const r of byMonthRows) {
+      if (r.month) byMonth.set(r.month, r._sum.amount ?? 0);
     }
-    byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + e.amount);
+
+    const boutiques = await prisma.boutique.findMany({
+      where: { id: { in: byBoutiqueRows.map((row) => row.boutiqueId) } },
+      select: { id: true, code: true, name: true },
+    });
+    const boutiqueMeta = new Map(boutiques.map((b) => [b.id, b]));
+
+    byBoutiqueArr = byBoutiqueRows.map((r) => {
+      const bid = r.boutiqueId;
+      const meta = boutiqueMeta.get(bid);
+      return {
+        boutiqueId: bid,
+        boutiqueCode: meta?.code ?? bid,
+        boutiqueName: meta?.name ?? bid,
+        total: r._sum.amount ?? 0,
+      };
+    });
   }
 
   const monthlySeries = Array.from({ length: 12 }, (_, i) => {
@@ -96,18 +107,7 @@ export async function GET(
   const topMonths = sorted.slice(0, 3);
   const bottomMonths = sorted.filter((m) => m.amount > 0).slice(-3).reverse();
 
-  const byBoutiqueArr = Array.from(byBoutique.entries()).map(([boutiqueId, v]) => ({
-    boutiqueId,
-    boutiqueCode: v.code,
-    boutiqueName: v.name,
-    total: v.total,
-  }));
-
   let achievementPct: number | null = null;
-  const empUser = await prisma.user.findUnique({
-    where: { empId },
-    select: { id: true },
-  });
   if (empUser) {
     const monthKeys = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
     const targets = await prisma.employeeMonthlyTarget.findMany({

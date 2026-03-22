@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
       where: {
         userId: scope.userId,
         month: { in: monthKeys },
-        source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
       },
       _sum: { amount: true },
     }),

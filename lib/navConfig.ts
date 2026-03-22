@@ -18,6 +18,7 @@ import type { Role } from '@/lib/permissions';
 import type { User } from '@prisma/client';
 import { canEditSchedule as canEditScheduleRbac, canApproveWeek as canApproveWeekRbac } from '@/lib/rbac/schedulePermissions';
 import { FEATURES } from '@/lib/featureFlags';
+import { checkNavAgainstRoleRoutes } from '@/lib/navConsistency';
 
 /** Strict classification for every nav item. Prevents unclassified additions. */
 export type NavType =
@@ -315,6 +316,7 @@ if (process.env.NODE_ENV === 'development') {
     const msg = `[navConfig] Validation failed:\n${errs.map((e) => `  - ${e.code}: ${e.message}`).join('\n')}`;
     throw new Error(msg);
   }
+  checkNavAgainstRoleRoutes(NAV_GROUPS);
 }
 
 // --- RBAC & filtering ---

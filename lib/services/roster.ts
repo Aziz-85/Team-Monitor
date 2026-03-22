@@ -15,7 +15,9 @@ export type RosterForDateOptions = { boutiqueIds?: string[] };
 
 /**
  * Roster for a date using the same shift resolution logic as the Schedule grid.
- * Single source of truth: getScheduleGridForWeek (availability, overrides, team parity, Friday PM-only).
+ * Single source of truth: **getScheduleGridForWeek** (availability, overrides, team parity, Friday PM-only).
+ *
+ * **Do not** reimplement shift/override resolution elsewhere for business rules — extend `scheduleGrid.ts` instead.
  */
 export async function rosterForDate(
   date: Date,

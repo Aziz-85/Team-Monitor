@@ -23,6 +23,7 @@ export type SyncDailyLedgerResult = {
   summaryId: string | null;
   upserted: number;
   skipped: number;
+  precedenceRejected?: number;
   unmappedCount?: number;
   unmappedEmpIds?: string[];
   error?: string;
@@ -69,6 +70,7 @@ export async function syncDailyLedgerToSalesEntry(
       summaryId: summary.id,
       upserted: result.upserted,
       skipped: result.skipped,
+      precedenceRejected: result.precedenceRejected,
       unmappedCount: result.unmappedCount,
       unmappedEmpIds: result.unmappedEmpIds,
     };

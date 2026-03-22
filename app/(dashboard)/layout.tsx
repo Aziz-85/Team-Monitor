@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 
+/** Entire authenticated shell uses fresh session/scope data (sales, schedule, tasks, admin). */
 export const dynamic = 'force-dynamic';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';

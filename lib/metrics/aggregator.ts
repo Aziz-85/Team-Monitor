@@ -2,15 +2,25 @@
  * Metrics aggregator — single source of truth for sales and target KPIs.
  * All dates in Asia/Riyadh. Use with resolveMetricsScope for RBAC-consistent scope.
  * Money: SAR_INT only (SalesEntry.amount and target tables store integer riyals).
+ * Sales aggregations read **SalesEntry** only; do not filter by `source` (origin metadata).
  *
  * Canonical flow:
  * - Manager/boutique performance: getPerformanceSummaryExtended → /api/performance/summary, /api/dashboard
  * - Employee targets: getTargetMetrics → /api/metrics/my-target, /api/me/targets
  * - Sales-only snapshot: getDashboardSalesMetrics → /api/metrics/dashboard
  * All percent calculations use lib/performance/performanceEngine.calculatePerformance.
+ *
+ * **Sales reads** are composed via `lib/sales/readSalesAggregate.ts` (single internal layer over SalesEntry).
  */
 
 import { prisma } from '@/lib/db';
+import {
+  aggregateSalesEntrySum,
+  getSalesMetricsFromSalesEntry,
+  groupSalesByUserForBoutiqueMonth,
+  salesEntryWhereForUserMonth,
+  salesEntryWherePerformanceMonth,
+} from '@/lib/sales/readSalesAggregate';
 import {
   getRiyadhNow,
   toRiyadhDateString,
@@ -39,47 +49,16 @@ export type SalesMetricsResult = {
   byDateKey: Record<string, number>;
 };
 
-const SALES_SOURCES: string[] = ['LEDGER', 'IMPORT', 'MANUAL'];
-
 export async function getSalesMetrics(input: SalesMetricsInput): Promise<SalesMetricsResult> {
   if (!input.boutiqueId && !input.userId) {
     throw new Error('getSalesMetrics requires boutiqueId or userId');
   }
-  const where: {
-    boutiqueId?: string;
-    userId?: string;
-    date: { gte: Date; lt: Date };
-    source: { in: string[] };
-  } = {
-    date: { gte: input.from, lt: input.toExclusive },
-    source: { in: SALES_SOURCES },
-  };
-  if (input.boutiqueId) where.boutiqueId = input.boutiqueId;
-  if (input.userId) where.userId = input.userId;
-
-  const [agg, byDate] = await Promise.all([
-    prisma.salesEntry.aggregate({
-      where,
-      _sum: { amount: true },
-      _count: { id: true },
-    }),
-    prisma.salesEntry.groupBy({
-      by: ['dateKey'],
-      where,
-      _sum: { amount: true },
-    }),
-  ]);
-
-  const byDateKey: Record<string, number> = {};
-  for (const row of byDate) {
-    byDateKey[row.dateKey] = row._sum?.amount ?? 0;
-  }
-
-  return {
-    netSalesTotal: agg._sum?.amount ?? 0,
-    entriesCount: typeof agg._count === 'object' && agg._count && 'id' in agg._count ? agg._count.id : 0,
-    byDateKey,
-  };
+  return getSalesMetricsFromSalesEntry({
+    boutiqueId: input.boutiqueId,
+    userId: input.userId,
+    from: input.from,
+    toExclusive: input.toExclusive,
+  });
 }
 
 export type TargetMetricsInput = {
@@ -130,16 +109,13 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
       ? `${toRiyadhDateString(startSat)} – ${toRiyadhDateString(fridayDate)}`
       : '';
 
-  const salesWhereBase = {
-    userId: input.userId,
-    month: monthKey,
-    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] as string[] },
-  };
-  const salesWhereBoutique = input.employeeCrossBoutique
-    ? salesWhereBase
-    : { ...salesWhereBase, boutiqueId: input.boutiqueId };
+  const salesWhereBoutique = salesEntryWhereForUserMonth(
+    input.userId,
+    monthKey,
+    input.employeeCrossBoutique ? null : input.boutiqueId
+  );
 
-  const [boutiqueTarget, employeeTargetResult, salesInMonth, todayEntry, weekEntries] = await Promise.all([
+  const [boutiqueTarget, employeeTargetResult, mtdSales, todaySales, weekSales] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { boutiqueId: input.boutiqueId, month: monthKey },
     }),
@@ -152,32 +128,22 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
           where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
           select: { amount: true, leaveDaysInMonth: true, presenceFactor: true, scheduledDaysInMonth: true },
         }),
-    prisma.salesEntry.findMany({
-      where: { ...salesWhereBoutique, dateKey: { lte: todayStr } },
-      select: { amount: true },
-    }),
-    prisma.salesEntry.findFirst({
-      where: { ...salesWhereBoutique, dateKey: todayStr },
-      select: { amount: true },
-    }),
+    aggregateSalesEntrySum({ ...salesWhereBoutique, dateKey: { lte: todayStr } }),
+    todayInSelectedMonth
+      ? aggregateSalesEntrySum({ ...salesWhereBoutique, dateKey: todayStr })
+      : Promise.resolve(0),
     weekInMonth
-      ? prisma.salesEntry.findMany({
-          where: {
-            ...salesWhereBoutique,
-            date: { gte: weekInMonth.start, lt: weekInMonth.end },
-          },
-          select: { amount: true },
+      ? aggregateSalesEntrySum({
+          ...salesWhereBoutique,
+          date: { gte: weekInMonth.start, lt: weekInMonth.end },
         })
-      : Promise.resolve([]),
+      : Promise.resolve(0),
   ]);
 
   const monthTargetSar = input.employeeCrossBoutique
     ? (Array.isArray(employeeTargetResult) ? employeeTargetResult : []).reduce((s, r) => s + r.amount, 0)
     : (employeeTargetResult && !Array.isArray(employeeTargetResult) ? employeeTargetResult.amount : 0) ?? 0;
   const monthTarget = monthTargetSar;
-  const mtdSales = salesInMonth.reduce((s, e) => s + e.amount, 0);
-  const todaySales = todayInSelectedMonth ? (todayEntry?.amount ?? 0) : 0;
-  const weekSales = weekEntries.reduce((s, e) => s + e.amount, 0);
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
   const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
@@ -250,17 +216,6 @@ export async function getDashboardSalesMetrics(
   input: DashboardSalesMetricsInput
 ): Promise<DashboardSalesMetricsResult> {
   const monthKey = normalizeMonthKey(input.monthKey);
-  const where: {
-    boutiqueId: string;
-    month: string;
-    userId?: string;
-    source: { in: string[] };
-  } = {
-    boutiqueId: input.boutiqueId,
-    month: monthKey,
-    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-  };
-  if (input.employeeOnly && input.userId) where.userId = input.userId;
 
   const [boutiqueTarget, salesAgg] = await Promise.all([
     input.employeeOnly && input.userId
@@ -270,11 +225,11 @@ export async function getDashboardSalesMetrics(
       : prisma.boutiqueMonthlyTarget.findFirst({
           where: { boutiqueId: input.boutiqueId, month: monthKey },
         }),
-    prisma.salesEntry.groupBy({
-      by: ['userId'],
-      where,
-      _sum: { amount: true },
-    }),
+    groupSalesByUserForBoutiqueMonth(
+      input.boutiqueId,
+      monthKey,
+      input.employeeOnly && input.userId ? input.userId : null
+    ),
   ]);
 
   const targetSar = boutiqueTarget?.amount ?? 0;
@@ -367,23 +322,15 @@ export async function getPerformanceSummary(
   const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(anchorDate);
   const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
 
-  const where: {
-    boutiqueId?: string;
-    month: string;
-    userId?: string;
-    source: { in: string[] };
-  } = {
-    month: monthKey,
-    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-  };
-  if (input.employeeCrossBoutique && input.userId) {
-    where.userId = input.userId;
-  } else {
-    where.boutiqueId = input.boutiqueId;
-    if (input.employeeOnly && input.userId) where.userId = input.userId;
-  }
+  const wherePerf = salesEntryWherePerformanceMonth({
+    monthKey: input.monthKey,
+    boutiqueId: input.boutiqueId,
+    userId: input.userId,
+    employeeOnly: input.employeeOnly,
+    employeeCrossBoutique: input.employeeCrossBoutique,
+  });
 
-  const [targetRow, targetRowsAll, mtdAgg, todayAgg, weekAgg] = await Promise.all([
+  const [targetRow, targetRowsAll, mtdSales, todaySales, weekSales] = await Promise.all([
     input.employeeOnly && input.userId && !input.employeeCrossBoutique
       ? prisma.employeeMonthlyTarget.findFirst({
           where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
@@ -399,34 +346,22 @@ export async function getPerformanceSummary(
           select: { amount: true },
         })
       : null,
-    prisma.salesEntry.aggregate({
-      where: { ...where, dateKey: { lte: todayStr } },
-      _sum: { amount: true },
-    }),
+    aggregateSalesEntrySum({ ...wherePerf, dateKey: { lte: todayStr } }),
     todayInSelectedMonth
-      ? prisma.salesEntry.aggregate({
-          where: { ...where, dateKey: todayStr },
-          _sum: { amount: true },
-        })
-      : Promise.resolve({ _sum: { amount: 0 } }),
+      ? aggregateSalesEntrySum({ ...wherePerf, dateKey: todayStr })
+      : Promise.resolve(0),
     weekInMonth
-      ? prisma.salesEntry.aggregate({
-          where: {
-            ...where,
-            date: { gte: weekInMonth.start, lt: weekInMonth.end },
-          },
-          _sum: { amount: true },
+      ? aggregateSalesEntrySum({
+          ...wherePerf,
+          date: { gte: weekInMonth.start, lt: weekInMonth.end },
         })
-      : Promise.resolve({ _sum: { amount: 0 } }),
+      : Promise.resolve(0),
   ]);
 
   const monthTarget =
     input.employeeCrossBoutique && targetRowsAll
       ? targetRowsAll.reduce((s, r) => s + r.amount, 0)
       : (targetRow?.amount ?? 0);
-  const mtdSales = mtdAgg._sum?.amount ?? 0;
-  const todaySales = todayInSelectedMonth ? (todayAgg._sum?.amount ?? 0) : 0;
-  const weekSales = weekInMonth ? (weekAgg._sum?.amount ?? 0) : 0;
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
   const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
@@ -473,46 +408,38 @@ export async function getPerformanceSummaryExtended(
   const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(anchorDate);
   const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
 
-  const where: {
-    boutiqueId?: string;
-    month: string;
-    userId?: string;
-    source: { in: string[] };
-  } = {
-    month: monthKey,
-    source: { in: ['LEDGER', 'IMPORT', 'MANUAL'] },
-  };
-  if (input.employeeCrossBoutique && input.userId) {
-    where.userId = input.userId;
-  } else {
-    where.boutiqueId = input.boutiqueId;
-    if (input.employeeOnly && input.userId) where.userId = input.userId;
-  }
+  const wherePerf = salesEntryWherePerformanceMonth({
+    monthKey: input.monthKey,
+    boutiqueId: input.boutiqueId,
+    userId: input.userId,
+    employeeOnly: input.employeeOnly,
+    employeeCrossBoutique: input.employeeCrossBoutique,
+  });
 
   const [salesByDate, todayByUser, weekByUser, monthByUser] = await Promise.all([
     prisma.salesEntry.groupBy({
       by: ['dateKey'],
-      where: { ...where, dateKey: { lte: todayStr } },
+      where: { ...wherePerf, dateKey: { lte: todayStr } },
       _sum: { amount: true },
     }),
     todayInSelectedMonth && !input.employeeOnly
       ? prisma.salesEntry.groupBy({
           by: ['userId'],
-          where: { ...where, dateKey: todayStr },
+          where: { ...wherePerf, dateKey: todayStr },
           _sum: { amount: true },
         })
       : Promise.resolve([]),
     weekInMonth && !input.employeeOnly
       ? prisma.salesEntry.groupBy({
           by: ['userId'],
-          where: { ...where, date: { gte: weekInMonth.start, lt: weekInMonth.end } },
+          where: { ...wherePerf, date: { gte: weekInMonth.start, lt: weekInMonth.end } },
           _sum: { amount: true },
         })
       : Promise.resolve([]),
     !input.employeeOnly
       ? prisma.salesEntry.groupBy({
           by: ['userId'],
-          where: { ...where, dateKey: { lte: todayStr } },
+          where: { ...wherePerf, dateKey: { lte: todayStr } },
           _sum: { amount: true },
         })
       : Promise.resolve([]),

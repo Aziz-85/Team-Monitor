@@ -1,7 +1,10 @@
 /**
  * GET /api/executive/employees/annual?year=YYYY&global=true — Annual totals. ADMIN + MANAGER only.
- * Source of truth: SalesEntry (LEDGER, IMPORT, MANUAL). global=true: ADMIN only, all boutiques + audit.
- * MANAGER: always scope. SAR integer only.
+ *
+ * **CLASS C — bulk listing:** Multi-employee `findMany` over SalesEntry for the year (performance).
+ * Not the same code path as `readSalesAggregate` helpers; totals per employee match SalesEntry sums
+ * for scoped boutiques. For governance alignment prefer `groupSalesSumByMonthForUserInBoutiquesYear` when
+ * refactoring row-wise reports.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -32,8 +35,6 @@ function variance(arr: number[]): number {
   return sq.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-const SALES_ENTRY_SOURCES_ALL = ['LEDGER', 'IMPORT', 'MANUAL'];
-
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -56,7 +57,6 @@ export async function GET(request: NextRequest) {
     where: {
       boutiqueId: { in: boutiqueIds },
       month: { startsWith: monthPrefix },
-      source: { in: SALES_ENTRY_SOURCES_ALL },
     },
     select: {
       userId: true,

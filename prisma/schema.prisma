@@ -1295,7 +1295,7 @@ model SalesEntry {
   month       String   // "YYYY-MM" Riyadh for quick filtering
   userId      String   // seller (user who made the sale); employee totals use this across all boutiques
   amount      Int      // SAR (integer)
-  source      String?  @default("LEDGER") // LEDGER | MANUAL | IMPORT; sync only touches LEDGER
+  source      String?  @default("LEDGER") // Origin of last write (LEDGER, MATRIX, EXCEL_IMPORT, MANUAL, API, …); reporting uses all rows
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

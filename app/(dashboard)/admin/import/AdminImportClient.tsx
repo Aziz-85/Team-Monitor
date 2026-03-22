@@ -1,3 +1,7 @@
+/**
+ * Legacy card grid for import links. The main `/admin/import` hub uses `ImportCenterClient`
+ * (templates + upload links). Kept for reuse or deep links; do not wire as default page.
+ */
 'use client';
 
 import Link from 'next/link';

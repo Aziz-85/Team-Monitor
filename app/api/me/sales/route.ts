@@ -1,9 +1,19 @@
+/**
+ * GET: lists **SalesEntry** rows for the logged-in user (month or rolling window).
+ * Uses `salesEntryWhereForUserMonth` from `lib/sales/readSalesAggregate.ts` for month mode (cross-boutique).
+ * POST/DELETE: canonical writes via upsertCanonicalSalesEntry (not read scope).
+ */
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { toRiyadhDateOnly, toRiyadhDateString, formatDateRiyadh, formatMonthKey, getRiyadhNow, getMonthRange, getDaysInMonth, normalizeMonthKey } from '@/lib/time';
 import { canEditSalesForDate, canEditSalesForDateWithGrant } from '@/lib/sales-targets';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
+import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
+import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
+import { salesEntryWhereForUserMonth } from '@/lib/sales/readSalesAggregate';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
@@ -12,7 +22,6 @@ export async function GET(request: NextRequest) {
   const scope = await resolveMetricsScope(request);
   // Employee totals: always across ALL boutiques (SalesEntry.userId only). Do not filter by boutiqueId.
   void scope; // scope kept for consistent API; filtering is by userId only
-  const whereBase = { userId: user.id };
 
   const rawMonth = request.nextUrl.searchParams.get('month')?.trim();
   const monthKey = rawMonth ? normalizeMonthKey(rawMonth) : '';
@@ -21,7 +30,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const [entries, grants] = await Promise.all([
       prisma.salesEntry.findMany({
-        where: { ...whereBase, month: monthKey },
+        where: salesEntryWhereForUserMonth(user.id, monthKey, null),
         orderBy: { dateKey: 'asc' },
         select: { id: true, date: true, dateKey: true, amount: true },
       }),
@@ -60,7 +69,7 @@ export async function GET(request: NextRequest) {
   from.setUTCDate(from.getUTCDate() - (days - 1));
 
   const entries = await prisma.salesEntry.findMany({
-    where: { ...whereBase, date: { gte: from, lte: today } },
+    where: { userId: user.id, date: { gte: from, lte: today } },
     orderBy: { date: 'desc' },
     select: { id: true, date: true, amount: true },
   });
@@ -104,7 +113,6 @@ export async function POST(request: NextRequest) {
 
   const dateNorm = toRiyadhDateOnly(new Date(dateStr + 'T12:00:00.000Z'));
   const dateKey = formatDateRiyadh(dateNorm);
-  const month = formatMonthKey(dateNorm);
 
   const scope = await resolveMetricsScope(request);
   const employeeBoutiqueId = scope?.effectiveBoutiqueId ?? (user as { boutiqueId?: string }).boutiqueId;
@@ -115,28 +123,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const entry = await prisma.salesEntry.upsert({
+  const result = await upsertCanonicalSalesEntry({
+    kind: 'direct',
+    boutiqueId: employeeBoutiqueId,
+    userId: user.id,
+    amount,
+    source: SALES_ENTRY_SOURCE.MANUAL,
+    actorUserId: user.id,
+    date: dateNorm,
+  });
+  if (result.status === 'rejected_locked') {
+    return NextResponse.json(
+      { error: 'This day is locked in the daily sales ledger; edits are not allowed.' },
+      { status: 403 }
+    );
+  }
+  if (result.status === 'rejected_precedence') {
+    return NextResponse.json(
+      {
+        error:
+          'A higher-priority source already owns this day; manual entry cannot overwrite it.',
+        existingSource: result.existingSource,
+      },
+      { status: 409 }
+    );
+  }
+  if (result.status === 'rejected_invalid') {
+    return NextResponse.json({ error: result.reason }, { status: 400 });
+  }
+
+  const entry = await prisma.salesEntry.findUnique({
     where: {
       boutiqueId_dateKey_userId: {
         boutiqueId: employeeBoutiqueId,
         dateKey,
         userId: user.id,
       },
-    },
-    create: {
-      date: dateNorm,
-      dateKey,
-      month,
-      userId: user.id,
-      amount,
-      boutiqueId: employeeBoutiqueId,
-      source: 'MANUAL',
-      createdById: user.id,
-    },
-    update: {
-      amount,
-      source: 'MANUAL',
-      updatedAt: new Date(),
     },
   });
   return NextResponse.json(entry);
