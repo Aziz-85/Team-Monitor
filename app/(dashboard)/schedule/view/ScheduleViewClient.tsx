@@ -77,6 +77,19 @@ function addMonths(monthStr: string, delta: number): string {
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
 }
 
+function monthWeekStarts(monthStr: string): string[] {
+  const [y, m] = monthStr.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const last = new Date(Date.UTC(y, m, 0));
+  const starts: string[] = [];
+  let ws = weekStartSaturday(first.toISOString().slice(0, 10));
+  while (ws <= last.toISOString().slice(0, 10)) {
+    starts.push(ws);
+    ws = addDays(ws, 7);
+  }
+  return starts;
+}
+
 function formatMonthYear(monthStr: string, locale: string): string {
   const [y, m] = monthStr.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1, 1));
@@ -102,6 +115,22 @@ type MonthExcelData = {
   days: Array<{ date: string; dowLabel: string; isFriday: boolean }>;
   dayRows: MonthDayRow[];
   coverageHeaderLabel?: string;
+};
+
+type MonthWeekGrid = {
+  weekStart: string;
+  gridData: GridData;
+  weekGuests: Array<{
+    id: string;
+    date: string;
+    empId: string;
+    shift: string;
+    reason?: string;
+    sourceBoutiqueId?: string;
+    sourceBoutique?: { id: string; name: string } | null;
+    employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string };
+    isExternal?: boolean;
+  }>;
 };
 
 type GridCell = {
@@ -191,6 +220,8 @@ export function ScheduleViewClient({
   });
   const [monthExcelData, setMonthExcelData] = useState<MonthExcelData | null>(null);
   const [monthExcelLoading, setMonthExcelLoading] = useState(false);
+  const [monthWeekGrids, setMonthWeekGrids] = useState<MonthWeekGrid[]>([]);
+  const [monthGridLoading, setMonthGridLoading] = useState(false);
   const [scopeLabel, setScopeLabel] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
   const mobileDefaultAppliedRef = useRef(false);
@@ -336,6 +367,7 @@ export function ScheduleViewClient({
     const tab = searchParams.get('tab');
     if (tab === 'month') {
       setTimeScope('month');
+      setViewModeState('grid');
       const m = searchParams.get('month');
       if (m && /^\d{4}-\d{2}$/.test(m)) setMonth(m);
     } else {
@@ -388,6 +420,31 @@ export function ScheduleViewClient({
 
   useEffect(() => {
     if (timeScope !== 'month' || !month) return;
+    if (viewMode === 'grid') {
+      setMonthGridLoading(true);
+      const starts = monthWeekStarts(month);
+      Promise.all(
+        starts.map(async (ws) => {
+          const params = new URLSearchParams({ weekStart: ws });
+          if (fullGrid) params.set('scope', 'all');
+          if (teamFilter === 'A' || teamFilter === 'B') params.set('team', teamFilter);
+          const data = await fetch(`/api/schedule/week/grid?${params}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null);
+          if (!data) return null;
+          const applied = Array.isArray(data.guestShifts) ? data.guestShifts : [];
+          const pending = Array.isArray(data.pendingGuestShifts) ? data.pendingGuestShifts : [];
+          return {
+            weekStart: ws,
+            gridData: data as GridData,
+            weekGuests: [...applied, ...pending],
+          } as MonthWeekGrid;
+        })
+      )
+        .then((rows) => setMonthWeekGrids(rows.filter((x): x is MonthWeekGrid => !!x)))
+        .finally(() => setMonthGridLoading(false));
+      return;
+    }
     setMonthExcelLoading(true);
     const params = new URLSearchParams({ month, locale: locale === 'ar' ? 'ar' : 'en' });
     fetch(`/api/schedule/month/excel?${params}`, { cache: 'no-store' })
@@ -395,7 +452,7 @@ export function ScheduleViewClient({
       .then(setMonthExcelData)
       .catch(() => setMonthExcelData(null))
       .finally(() => setMonthExcelLoading(false));
-  }, [timeScope, month, locale]);
+  }, [timeScope, month, locale, viewMode, fullGrid, teamFilter]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -615,6 +672,23 @@ export function ScheduleViewClient({
               ))}
             </div>
           )}
+          {timeScope === 'month' && (
+            <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'grid'}
+                onClick={() => setViewMode('grid')}
+                className={`min-w-[5rem] h-full rounded-md px-3 text-sm font-medium transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-surface text-foreground shadow-sm border border-border'
+                    : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
+                }`}
+              >
+                {t('schedule.gridView')}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* schedule-header: left = week nav + title + badges, right = stat pills */}
@@ -808,12 +882,37 @@ export function ScheduleViewClient({
 
         {timeScope === 'month' && (
           <>
-            {monthExcelLoading && (
+            {viewMode === 'grid' && monthGridLoading && (
               <p className="text-muted">
                 {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
               </p>
             )}
-            {!monthExcelLoading && monthExcelData && (
+            {viewMode === 'grid' && !monthGridLoading && monthWeekGrids.map((w) => (
+              <div key={w.weekStart} className="mb-6">
+                <div className="mb-2 text-sm font-semibold text-foreground">
+                  {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
+                    .replace('{start}', formatWeekRangeLabel(w.weekStart, locale).start)
+                    .replace('{end}', formatWeekRangeLabel(w.weekStart, locale).end)}
+                </div>
+                <ScheduleGridView
+                  gridData={w.gridData}
+                  dayRefs={dayRefs}
+                  formatDDMM={formatDDMM}
+                  getDayName={(d: string) => getDayName(d, locale)}
+                  t={t}
+                  fullGrid={fullGrid}
+                  validationsByDay={[]}
+                  focusDay={() => {}}
+                  weekGuests={w.weekGuests}
+                />
+              </div>
+            ))}
+            {viewMode !== 'grid' && monthExcelLoading && (
+              <p className="text-muted">
+                {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
+              </p>
+            )}
+            {viewMode !== 'grid' && !monthExcelLoading && monthExcelData && (
               <ScheduleMonthExcelViewClient
                 month={monthExcelData.month}
                 dayRows={monthExcelData.dayRows}
