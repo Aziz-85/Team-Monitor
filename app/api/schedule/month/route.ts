@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
-import { rosterForDate } from '@/lib/services/roster';
-import { validateCoverage } from '@/lib/services/coverageValidation';
+import { getScheduleMonthExcel } from '@/lib/services/scheduleMonthExcel';
 import type { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
@@ -18,40 +17,27 @@ export async function GET(request: NextRequest) {
   if (!scheduleScope || scheduleScope.boutiqueIds.length === 0) {
     return NextResponse.json({ error: 'No schedule scope' }, { status: 403 });
   }
-  const rosterOptions = { boutiqueIds: scheduleScope.boutiqueIds };
-  const coverageOptions = { boutiqueIds: scheduleScope.boutiqueIds };
-
   const monthParam = request.nextUrl.searchParams.get('month');
   if (!monthParam) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
-
-  const [y, m] = monthParam.split('-').map(Number);
-  const first = new Date(Date.UTC(y, m - 1, 1));
-  const last = new Date(Date.UTC(y, m, 0));
-  const days: Array<{
-    date: string;
-    amCount: number;
-    pmCount: number;
-    warnings: string[];
-    coverageValidation: Awaited<ReturnType<typeof validateCoverage>>;
-  }> = [];
-
-  for (let d = new Date(first); d <= last; d.setUTCDate(d.getUTCDate() + 1)) {
-    const dateObj = new Date(d);
-    const [roster, coverageValidation] = await Promise.all([
-      rosterForDate(dateObj, rosterOptions),
-      validateCoverage(dateObj, coverageOptions),
-    ]);
-    const warnings = coverageValidation.map((r) => r.message);
-    days.push({
-      date: dateObj.toISOString().slice(0, 10),
-      amCount: roster.amEmployees.length,
-      pmCount: roster.pmEmployees.length,
-      warnings,
-      coverageValidation,
-    });
+  if (!/^\d{4}-\d{2}$/.test(monthParam)) {
+    return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
+
+  /**
+   * Unified month source of truth:
+   * - `/api/schedule/month/excel`
+   * - `/api/schedule/month`
+   * Both now derive from `getScheduleMonthExcel` (which uses week grid service).
+   */
+  const result = await getScheduleMonthExcel(monthParam, { boutiqueIds: scheduleScope.boutiqueIds });
+  const days = result.dayRows.map((r) => ({
+    date: r.date,
+    amCount: r.amCount,
+    pmCount: r.pmCount,
+    warnings: r.warnings,
+  }));
 
   return NextResponse.json({ month: monthParam, days });
 }
