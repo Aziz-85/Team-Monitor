@@ -1107,13 +1107,13 @@
     "complianceDaysLeft": "{count} days left",
     "complianceExpiresIn": "expires in {count} days",
     "complianceExpiredAgo": "expired {count} days ago",
-    "complianceExpiryTitle": "Compliance & Expiry",
+    "complianceExpiryTitle": "Government Documents",
     "complianceAllValid": "All compliance items valid",
     "complianceNextExpiry": "Next expiry: {name} — {count} days",
     "complianceViewAll": "View All →"
   },
   "compliance": {
-    "title": "Compliance & Expiry",
+    "title": "Government Documents",
     "subtitle": "Track licenses, certificates, and safety items",
     "addItem": "Add item",
     "item": "Item",

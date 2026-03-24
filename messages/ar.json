@@ -1106,13 +1106,13 @@
     "complianceDaysLeft": "{count} يوم متبقي",
     "complianceExpiresIn": "تنتهي خلال {count} يوم",
     "complianceExpiredAgo": "انتهت منذ {count} يوم",
-    "complianceExpiryTitle": "الامتثال والصلاحية",
+    "complianceExpiryTitle": "الوثائق الحكومية",
     "complianceAllValid": "جميع عناصر الامتثال سليمة",
     "complianceNextExpiry": "الانتهاء التالي: {name} — {count} يوم",
     "complianceViewAll": "عرض الكل ←"
   },
   "compliance": {
-    "title": "الامتثال والصلاحية",
+    "title": "الوثائق الحكومية",
     "subtitle": "تتبع التراخيص والشهادات ومعدات السلامة",
     "addItem": "إضافة عنصر",
     "item": "العنصر",
