@@ -5,6 +5,7 @@
 import { getScheduleGridForWeek } from './scheduleGrid';
 import { FRIDAY_DAY_OF_WEEK } from './shift';
 import { getWeekStartSaturday } from '@/lib/utils/week';
+import { prisma } from '@/lib/db';
 
 export type MonthDayRow = {
   date: string;
@@ -80,6 +81,41 @@ export async function getScheduleMonthExcel(
     gridsByWeek.set(weekStart, grid);
   }
 
+  // Match weekly grid semantics: include external guest coverage names for host boutique scope.
+  const externalGuestsByDate = new Map<string, Array<{ name: string; shift: 'AM' | 'PM' }>>();
+  if (options.boutiqueIds?.length && !options.empId) {
+    const [y, m] = month.split('-').map(Number);
+    const first = new Date(Date.UTC(y, m - 1, 1));
+    const last = new Date(Date.UTC(y, m, 0));
+    const guestOverrides = await prisma.shiftOverride.findMany({
+      where: {
+        boutiqueId: { in: options.boutiqueIds },
+        date: { gte: first, lte: last },
+        isActive: true,
+        overrideShift: { in: ['MORNING', 'EVENING'] },
+        employee: {
+          boutiqueId: { notIn: options.boutiqueIds },
+          active: true,
+        },
+      },
+      select: {
+        date: true,
+        overrideShift: true,
+        employee: { select: { name: true } },
+      },
+      orderBy: [{ date: 'asc' }],
+    });
+    for (const o of guestOverrides) {
+      const dateStr = o.date.toISOString().slice(0, 10);
+      const list = externalGuestsByDate.get(dateStr) ?? [];
+      list.push({
+        name: o.employee.name,
+        shift: o.overrideShift === 'MORNING' ? 'AM' : 'PM',
+      });
+      externalGuestsByDate.set(dateStr, list);
+    }
+  }
+
   const dayRows: MonthDayRow[] = [];
 
   for (const dateStr of dateStrs) {
@@ -107,6 +143,10 @@ export async function getScheduleMonthExcel(
       if (cell.effectiveShift === 'EVENING') eveningAssignees.push(row.name);
       if (cell.effectiveShift === 'COVER_RASHID_AM') rashidCoverage.push({ name: row.name, shift: 'AM' });
       if (cell.effectiveShift === 'COVER_RASHID_PM') rashidCoverage.push({ name: row.name, shift: 'PM' });
+    }
+    const externalGuests = externalGuestsByDate.get(dateStr) ?? [];
+    if (externalGuests.length > 0) {
+      rashidCoverage.push(...externalGuests);
     }
 
     const counts = grid.counts[dayIdx] ?? { amCount: 0, pmCount: 0, rashidAmCount: 0, rashidPmCount: 0 };
