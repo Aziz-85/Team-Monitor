@@ -101,6 +101,7 @@ type MonthExcelData = {
   month: string;
   days: Array<{ date: string; dowLabel: string; isFriday: boolean }>;
   dayRows: MonthDayRow[];
+  coverageHeaderLabel?: string;
 };
 
 type GridCell = {
@@ -816,6 +817,7 @@ export function ScheduleViewClient({
               <ScheduleMonthExcelViewClient
                 month={monthExcelData.month}
                 dayRows={monthExcelData.dayRows}
+                coverageHeaderLabel={monthExcelData.coverageHeaderLabel}
                 formatDDMM={formatDDMM}
                 t={t}
               />

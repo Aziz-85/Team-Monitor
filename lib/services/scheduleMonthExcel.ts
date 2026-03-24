@@ -6,6 +6,7 @@ import { getScheduleGridForWeek } from './scheduleGrid';
 import { FRIDAY_DAY_OF_WEEK } from './shift';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { prisma } from '@/lib/db';
+import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 
 export type MonthDayRow = {
   date: string;
@@ -25,6 +26,7 @@ export type ScheduleMonthExcelResult = {
   month: string;
   days: Array<{ date: string; dowLabel: string; isFriday: boolean }>;
   dayRows: MonthDayRow[];
+  coverageHeaderLabel?: string;
 };
 
 function getWeekStartForDate(dateStr: string): string {
@@ -83,6 +85,10 @@ export async function getScheduleMonthExcel(
 
   // Match weekly grid semantics: include external guest coverage names for host boutique scope.
   const externalGuestsByDate = new Map<string, Array<{ name: string; shift: 'AM' | 'PM' }>>();
+  const externalGuestsForLabel: Array<{
+    sourceBoutique: { name: string } | null;
+    employee: { homeBoutiqueName?: string };
+  }> = [];
   if (options.boutiqueIds?.length && !options.empId) {
     const [y, m] = month.split('-').map(Number);
     const first = new Date(Date.UTC(y, m - 1, 1));
@@ -101,7 +107,12 @@ export async function getScheduleMonthExcel(
       select: {
         date: true,
         overrideShift: true,
-        employee: { select: { name: true } },
+        employee: {
+          select: {
+            name: true,
+            boutique: { select: { name: true } },
+          },
+        },
       },
       orderBy: [{ date: 'asc' }],
     });
@@ -113,6 +124,10 @@ export async function getScheduleMonthExcel(
         shift: o.overrideShift === 'MORNING' ? 'AM' : 'PM',
       });
       externalGuestsByDate.set(dateStr, list);
+      externalGuestsForLabel.push({
+        sourceBoutique: o.employee.boutique?.name ? { name: o.employee.boutique.name } : null,
+        employee: { homeBoutiqueName: o.employee.boutique?.name ?? undefined },
+      });
     }
   }
 
@@ -179,5 +194,19 @@ export async function getScheduleMonthExcel(
     isFriday: r.isFriday,
   }));
 
-  return { month, days, dayRows };
+  let coverageHeaderLabel: string | undefined = undefined;
+  if (externalGuestsForLabel.length > 0) {
+    const host = options.boutiqueIds?.[0]
+      ? await prisma.boutique.findUnique({
+          where: { id: options.boutiqueIds[0] },
+          select: { name: true },
+        })
+      : null;
+    coverageHeaderLabel = getCoverageHeaderLabel(externalGuestsForLabel, {
+      hostBoutique: host ? { name: host.name ?? undefined } : undefined,
+      externalLabel: 'External Coverage',
+    });
+  }
+
+  return { month, days, dayRows, coverageHeaderLabel };
 }

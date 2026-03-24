@@ -38,11 +38,13 @@ function addDays(dateStr: string, delta: number): string {
 export function ScheduleMonthExcelViewClient({
   month,
   dayRows,
+  coverageHeaderLabel,
   formatDDMM,
   t,
 }: {
   month: string;
   dayRows: MonthExcelDayRow[];
+  coverageHeaderLabel?: string;
   formatDDMM: (d: string) => string;
   t: (k: string) => string;
 }) {
@@ -112,7 +114,7 @@ export function ScheduleMonthExcelViewClient({
                     {t('schedule.evening')}
                   </th>
                   <th className={headerRashid} scope="col">
-                    {t('schedule.rashidCoverage')}
+                    {coverageHeaderLabel ?? t('schedule.rashidCoverage')}
                   </th>
                   <th className={headerAm} scope="col">
                     {t('schedule.amCount')}
