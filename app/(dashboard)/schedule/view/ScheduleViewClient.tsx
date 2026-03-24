@@ -1009,18 +1009,6 @@ function ScheduleGridView({
       <div className="overflow-hidden">
         <LuxuryTable>
           <thead>
-            {/* Count row on top */}
-            <tr className={`${SCHEDULE_UI.headerRow} text-center`}>
-              {fullGrid && <LuxuryTh className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border"></LuxuryTh>}
-              <LuxuryTh className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border font-medium">
-                {t('schedule.amCount')} / {t('schedule.pmCount')}
-              </LuxuryTh>
-              {days.map((day, i) => (
-                <LuxuryTh key={day.date} className="min-w-[88px] text-center font-medium">
-                  {counts[i]?.amCount ?? 0} / {counts[i]?.pmCount ?? 0}
-                </LuxuryTh>
-              ))}
-            </tr>
             <tr className={`${SCHEDULE_UI.headerRow} text-start`}>
               {fullGrid && (
                 <LuxuryTh className="sticky left-0 z-10 w-12 bg-surface-subtle text-center border-r border-border">
@@ -1118,6 +1106,18 @@ function ScheduleGridView({
                 </tr>
               );
             })}
+            {/* Count row moved to bottom (after coverage rows) */}
+            <tr className={`${SCHEDULE_UI.headerRow} text-center`}>
+              {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border"></LuxuryTd>}
+              <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border font-medium">
+                {t('schedule.amCount')} / {t('schedule.pmCount')}
+              </LuxuryTd>
+              {days.map((day, i) => (
+                <LuxuryTd key={day.date} className="min-w-[88px] text-center font-medium">
+                  {counts[i]?.amCount ?? 0} / {counts[i]?.pmCount ?? 0}
+                </LuxuryTd>
+              ))}
+            </tr>
           </LuxuryTableBody>
         </LuxuryTable>
       </div>
