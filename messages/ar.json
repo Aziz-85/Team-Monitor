@@ -580,6 +580,8 @@
     "monthlyExcelView": "عرض Excel الشهري",
     "teamsView": "عرض الفرق",
     "gridView": "عرض الشبكة",
+    "monthViewClassic": "جدول الشهر (العرض السابق)",
+    "monthViewCurrent": "شبكات الأسابيع (العرض الحالي)",
     "view": {
       "excelBanner": "أنت تعرض وضع الإكسل الكلاسيكي",
       "modernBanner": "أنت تعرض الوضع الحديث"

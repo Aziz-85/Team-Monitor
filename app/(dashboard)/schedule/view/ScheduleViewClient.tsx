@@ -90,6 +90,11 @@ function monthWeekStarts(monthStr: string): string[] {
   return starts;
 }
 
+/** Match week grid: only show guest overrides from *other* boutiques in coverage rows */
+function filterExternalGuestShifts<T extends { isExternal?: boolean }>(guests: T[]): T[] {
+  return guests.filter((g) => g.isExternal !== false);
+}
+
 function formatMonthYear(monthStr: string, locale: string): string {
   const [y, m] = monthStr.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1, 1));
@@ -367,7 +372,12 @@ export function ScheduleViewClient({
     const tab = searchParams.get('tab');
     if (tab === 'month') {
       setTimeScope('month');
-      setViewModeState('grid');
+      const v = searchParams.get('view');
+      if (v === 'excel' || v === 'grid') {
+        setViewModeState(v);
+      } else {
+        setViewModeState('grid');
+      }
       const m = searchParams.get('month');
       if (m && /^\d{4}-\d{2}$/.test(m)) setMonth(m);
     } else {
@@ -420,7 +430,7 @@ export function ScheduleViewClient({
 
   useEffect(() => {
     if (timeScope !== 'month' || !month) return;
-    if (viewMode === 'grid') {
+    if (viewMode === 'grid' || viewMode === 'mobile') {
       setMonthGridLoading(true);
       const starts = monthWeekStarts(month);
       Promise.all(
@@ -437,7 +447,7 @@ export function ScheduleViewClient({
           return {
             weekStart: ws,
             gridData: data as GridData,
-            weekGuests: [...applied, ...pending],
+            weekGuests: filterExternalGuestShifts([...applied, ...pending]),
           } as MonthWeekGrid;
         })
       )
@@ -532,10 +542,7 @@ export function ScheduleViewClient({
   }, [gridData]);
 
   /** Only guests from other boutiques (show in External Coverage); same-branch excluded */
-  const externalGuests = useMemo(
-    () => (weekGuests ?? []).filter((g) => g.isExternal !== false),
-    [weekGuests]
-  );
+  const externalGuests = useMemo(() => filterExternalGuestShifts(weekGuests ?? []), [weekGuests]);
 
   const coverageHeaderLabel = useMemo(
     () =>
@@ -673,19 +680,32 @@ export function ScheduleViewClient({
             </div>
           )}
           {timeScope === 'month' && (
-            <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist">
+            <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist" aria-label={t('schedule.month') ?? 'Month'}>
               <button
                 type="button"
                 role="tab"
-                aria-selected={viewMode === 'grid'}
-                onClick={() => setViewMode('grid')}
+                aria-selected={viewMode === 'excel'}
+                onClick={() => setViewMode('excel')}
                 className={`min-w-[5rem] h-full rounded-md px-3 text-sm font-medium transition-colors ${
-                  viewMode === 'grid'
+                  viewMode === 'excel'
                     ? 'bg-surface text-foreground shadow-sm border border-border'
                     : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
                 }`}
               >
-                {t('schedule.gridView')}
+                {t('schedule.monthViewClassic')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === 'grid' || viewMode === 'mobile'}
+                onClick={() => setViewMode('grid')}
+                className={`min-w-[5rem] h-full rounded-md px-3 text-sm font-medium transition-colors ${
+                  viewMode === 'grid' || viewMode === 'mobile'
+                    ? 'bg-surface text-foreground shadow-sm border border-border'
+                    : 'bg-surface-subtle text-muted hover:bg-surface-subtle'
+                }`}
+              >
+                {t('schedule.monthViewCurrent')}
               </button>
             </div>
           )}
@@ -771,7 +791,9 @@ export function ScheduleViewClient({
                 <button
                   type="button"
                   onClick={() => setMonth(addMonths(month, -1))}
-                  disabled={monthExcelLoading}
+                  disabled={
+                    viewMode === 'grid' || viewMode === 'mobile' ? monthGridLoading : monthExcelLoading
+                  }
                   title={t('schedule.previousMonth')}
                   className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.previousMonth')}
@@ -784,7 +806,9 @@ export function ScheduleViewClient({
                 <button
                   type="button"
                   onClick={() => setMonth(addMonths(month, 1))}
-                  disabled={monthExcelLoading}
+                  disabled={
+                    viewMode === 'grid' || viewMode === 'mobile' ? monthGridLoading : monthExcelLoading
+                  }
                   title={t('schedule.nextMonth')}
                   className="h-9 rounded-lg border border-border bg-surface px-3 text-foreground hover:bg-surface-subtle disabled:pointer-events-none disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   aria-label={t('schedule.nextMonth')}
@@ -882,37 +906,39 @@ export function ScheduleViewClient({
 
         {timeScope === 'month' && (
           <>
-            {viewMode === 'grid' && monthGridLoading && (
+            {(viewMode === 'grid' || viewMode === 'mobile') && monthGridLoading && (
               <p className="text-muted">
                 {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
               </p>
             )}
-            {viewMode === 'grid' && !monthGridLoading && monthWeekGrids.map((w) => (
-              <div key={w.weekStart} className="mb-6">
-                <div className="mb-2 text-sm font-semibold text-foreground">
-                  {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
-                    .replace('{start}', formatWeekRangeLabel(w.weekStart, locale).start)
-                    .replace('{end}', formatWeekRangeLabel(w.weekStart, locale).end)}
+            {(viewMode === 'grid' || viewMode === 'mobile') &&
+              !monthGridLoading &&
+              monthWeekGrids.map((w) => (
+                <div key={w.weekStart} className="mb-6">
+                  <div className="mb-2 text-sm font-semibold text-foreground">
+                    {(t('schedule.weekOf') ?? 'Week of {start} – {end}')
+                      .replace('{start}', formatWeekRangeLabel(w.weekStart, locale).start)
+                      .replace('{end}', formatWeekRangeLabel(w.weekStart, locale).end)}
+                  </div>
+                  <ScheduleGridView
+                    gridData={w.gridData}
+                    dayRefs={dayRefs}
+                    formatDDMM={formatDDMM}
+                    getDayName={(d: string) => getDayName(d, locale)}
+                    t={t}
+                    fullGrid={fullGrid}
+                    validationsByDay={[]}
+                    focusDay={() => {}}
+                    weekGuests={w.weekGuests}
+                  />
                 </div>
-                <ScheduleGridView
-                  gridData={w.gridData}
-                  dayRefs={dayRefs}
-                  formatDDMM={formatDDMM}
-                  getDayName={(d: string) => getDayName(d, locale)}
-                  t={t}
-                  fullGrid={fullGrid}
-                  validationsByDay={[]}
-                  focusDay={() => {}}
-                  weekGuests={w.weekGuests}
-                />
-              </div>
-            ))}
-            {viewMode !== 'grid' && monthExcelLoading && (
+              ))}
+            {viewMode === 'excel' && monthExcelLoading && (
               <p className="text-muted">
                 {typeof t('common.loading') === 'string' ? t('common.loading') : 'Loading…'}
               </p>
             )}
-            {viewMode !== 'grid' && !monthExcelLoading && monthExcelData && (
+            {viewMode === 'excel' && !monthExcelLoading && monthExcelData && (
               <ScheduleMonthExcelViewClient
                 month={monthExcelData.month}
                 dayRows={monthExcelData.dayRows}

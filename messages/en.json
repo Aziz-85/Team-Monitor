@@ -581,6 +581,8 @@
     "monthlyExcelView": "Monthly Excel View",
     "teamsView": "Teams View",
     "gridView": "Grid View",
+    "monthViewClassic": "Classic month table",
+    "monthViewCurrent": "Week-by-week grid",
     "view": {
       "excelBanner": "You are viewing Classic Excel Mode",
       "modernBanner": "You are viewing Modern Mode"
