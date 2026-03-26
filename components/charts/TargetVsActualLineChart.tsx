@@ -6,7 +6,7 @@
  * Theme prop controls colors and sizing; 0 stays at bottom; tooltips and labels preserved.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChartEmptyState } from './ChartEmptyState';
 import {
   CHART_ACTUAL_COLOR,
@@ -69,6 +69,8 @@ export function TargetVsActualLineChart({
   emptyLabel = 'No sales data yet',
   theme = 'home',
 }: TargetVsActualLineChartProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [homeContainerWidth, setHomeContainerWidth] = useState(0);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -79,7 +81,19 @@ export function TargetVsActualLineChart({
   } | null>(null);
 
   const cfg = THEME_CONFIG[theme];
-  const { padding, width: w } = cfg;
+  const { padding } = cfg;
+  const w = theme === 'home' && homeContainerWidth > 0 ? homeContainerWidth : cfg.width;
+
+  useEffect(() => {
+    if (theme !== 'home') return;
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setHomeContainerWidth(el.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [theme]);
 
   const values = data.map((d) => d.value);
   const targetValues = targetLine ?? [];
@@ -142,7 +156,7 @@ export function TargetVsActualLineChart({
     label.length > (theme === 'home' ? 6 : 7) ? label.slice(-2) : label;
 
   return (
-    <div className="relative w-full max-w-full overflow-hidden">
+    <div ref={containerRef} className="relative w-full min-w-0 max-w-full overflow-hidden">
       <svg
         width="100%"
         height={height}

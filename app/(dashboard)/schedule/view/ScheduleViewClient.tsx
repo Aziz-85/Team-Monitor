@@ -1088,17 +1088,17 @@ function ScheduleGridView({
   weekGuests?: Array<{ id: string; date: string; empId: string; shift: string; reason?: string; sourceBoutiqueId?: string; sourceBoutique?: { id: string; name: string } | null; employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string } }>;
 }) {
   const { days, rows, counts } = gridData;
-  const guestsBySource = useMemo(() => {
+  // STRICT OPERATIONAL VIEW: show a single host-centric External Coverage row (never "Other Boutique Coverage" sections).
+  const guestsByDate = useMemo(() => {
     const list = weekGuests ?? [];
-    const bySource = new Map<string, { sourceBoutiqueName: string; guests: typeof list }>();
+    const byDate = new Map<string, typeof list>();
     for (const g of list) {
-      const sid = g.sourceBoutiqueId ?? '';
-      const name = g.sourceBoutique?.name ?? g.employee.homeBoutiqueName ?? 'External';
-      const existing = bySource.get(sid);
-      if (existing) existing.guests.push(g);
-      else bySource.set(sid, { sourceBoutiqueName: name, guests: [g] });
+      const d = g.date;
+      const existing = byDate.get(d);
+      if (existing) existing.push(g);
+      else byDate.set(d, [g]);
     }
-    return Array.from(bySource.entries()).sort((a, b) => a[1].sourceBoutiqueName.localeCompare(b[1].sourceBoutiqueName));
+    return byDate;
   }, [weekGuests]);
   return (
     <>
@@ -1200,39 +1200,31 @@ function ScheduleGridView({
                 })}
               </tr>
             ))}
-            {guestsBySource.map(([sourceId, { sourceBoutiqueName, guests: sourceGuests }]) => {
-              const byDate = new Map<string, typeof sourceGuests>();
-              for (const g of sourceGuests) {
-                const list = byDate.get(g.date) ?? [];
-                list.push(g);
-                byDate.set(g.date, list);
-              }
-              return (
-                <tr key={sourceId || 'external'} className="border-t-2 border-border bg-surface-subtle">
-                  {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border" />}
-                  <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border py-2 font-medium text-foreground">
-                    {sourceBoutiqueName} Coverage
-                  </LuxuryTd>
-                  {days.map((day) => {
-                    const guests = byDate.get(day.date) ?? [];
-                    return (
-                      <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
-                        <div className="space-y-1.5">
-                          {guests.map((g) => (
-                            <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs">
-                              <span className="font-medium text-foreground">{g.employee.name}</span>
-                              <span className="ms-1 font-medium text-foreground">
-                                {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </LuxuryTd>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+            {(weekGuests?.length ?? 0) > 0 && (
+              <tr key="external-coverage" className="border-t-2 border-border bg-surface-subtle">
+                {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border" />}
+                <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border py-2 font-medium text-foreground">
+                  {t('schedule.externalCoverage') ?? 'External Coverage'}
+                </LuxuryTd>
+                {days.map((day) => {
+                  const guests = guestsByDate.get(day.date) ?? [];
+                  return (
+                    <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
+                      <div className="space-y-1.5">
+                        {guests.map((g) => (
+                          <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs">
+                            <span className="font-medium text-foreground">{g.employee.name}</span>
+                            <span className="ms-1 font-medium text-foreground">
+                              {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </LuxuryTd>
+                  );
+                })}
+              </tr>
+            )}
             {/* Count row moved to bottom (after coverage rows) */}
             <tr className={`${SCHEDULE_UI.headerRow} text-center`}>
               {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border"></LuxuryTd>}

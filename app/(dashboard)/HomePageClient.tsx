@@ -396,12 +396,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               <ChartCard
                 title="Target vs Actual (MTD)"
                 subtitle="Cumulative sales vs target by day"
-                className="md:p-8 [&>div:first-child]:mb-6"
+                className="w-full md:p-8 [&>div:first-child]:mb-6"
               >
                 <PerformanceLineChart
                   data={chartData}
                   targetLine={targetLine}
-                  height={260}
+                  height={340}
                   valueFormat={(n) => formatSarInt(n)}
                   emptyLabel="No sales data yet"
                 />

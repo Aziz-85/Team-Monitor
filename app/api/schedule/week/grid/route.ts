@@ -129,16 +129,9 @@ export async function GET(request: NextRequest) {
   // Guest shifts: host boutique = current scope, or boutiqueId null (legacy) with employee from another boutique.
   const guestOverrides = await prisma.shiftOverride.findMany({
     where: {
-      OR: [
-        { boutiqueId: { in: scheduleScope.boutiqueIds } },
-        {
-          boutiqueId: null,
-          employee: {
-            boutiqueId: { notIn: scheduleScope.boutiqueIds },
-            active: true,
-          },
-        },
-      ],
+      // STRICT: operational schedule view is host-boutique only.
+      // Do not include legacy boutiqueId=null overrides here; they have no host boutique and can leak cross-boutique data.
+      boutiqueId: { in: scheduleScope.boutiqueIds },
       date: { gte: first, lte: last },
       isActive: true,
       overrideShift: { in: ['MORNING', 'EVENING'] },
