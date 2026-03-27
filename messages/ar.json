@@ -46,6 +46,7 @@
     "roleAdmin": "مدير نظام",
     "roleAreaManager": "مدير منطقه",
     "roleSuperAdmin": "سوبر أدمن",
+    "roleDemoViewer": "مشاهد تجريبي",
     "disabled": "الحساب معطّل",
     "mustChangePassword": "يجب تغيير كلمة المرور",
     "noAccount": "لا يوجد حساب",
@@ -110,7 +111,7 @@
     "more": "المزيد",
     "employeeHome": "صفحتي",
     "changePassword": "تغيير كلمة المرور",
-    "compliance": "الامتثال",
+    "compliance": "الوثائق الحكومية",
     "group": {
       "DASHBOARD": "لوحة القيادة",
       "TEAM": "الفريق",
