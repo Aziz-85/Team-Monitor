@@ -34,7 +34,7 @@ export function MobileTopBar({
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface px-3 py-2 md:hidden">
+      <div className="sticky top-0 z-20 flex min-w-0 items-center justify-between border-b border-border bg-surface px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
@@ -45,9 +45,9 @@ export function MobileTopBar({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           {!pathname.startsWith('/admin') && (
-            <div className="min-w-0 max-w-[140px] flex items-center gap-1">
+            <div className="flex min-w-0 max-w-[55vw] items-center gap-1 overflow-hidden">
               <span className="text-xs text-muted shrink-0">{t('common.workingOnBoutiqueShort')}:</span>
               {role === 'SUPER_ADMIN' ? (
                 <SuperAdminBoutiqueContextPicker />
@@ -59,7 +59,7 @@ export function MobileTopBar({
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-            className="h-8 shrink-0 rounded-md border border-border bg-surface px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            className="h-8 shrink-0 max-w-[40vw] rounded-md border border-border bg-surface px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="en">{t('common.english')}</option>
             <option value="ar">{t('common.arabic')}</option>

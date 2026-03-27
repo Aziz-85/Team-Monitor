@@ -14,6 +14,7 @@ import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { normShift } from '@/lib/shiftNorm';
+import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -133,7 +134,7 @@ type MonthWeekGrid = {
     reason?: string;
     sourceBoutiqueId?: string;
     sourceBoutique?: { id: string; name: string } | null;
-    employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string };
+    employee: { name: string; nameAr?: string | null; homeBoutiqueCode: string; homeBoutiqueName?: string };
     isExternal?: boolean;
   }>;
 };
@@ -146,7 +147,7 @@ type GridCell = {
   baseShift: string;
 };
 
-type GridRow = { empId: string; name: string; team: string; cells: GridCell[] };
+type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: GridCell[] };
 
 type GridDay = { date: string; dayName: string; dayOfWeek: number; minAm: number; minPm: number };
 
@@ -196,7 +197,7 @@ export function ScheduleViewClient({
     reason?: string;
     sourceBoutiqueId?: string;
     sourceBoutique?: { id: string; name: string } | null;
-    employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string };
+    employee: { name: string; nameAr?: string | null; homeBoutiqueCode: string; homeBoutiqueName?: string };
     /** true = from another boutique (show in External Coverage); false = same branch, do not show */
     isExternal?: boolean;
   }>>([]);
@@ -567,7 +568,7 @@ export function ScheduleViewClient({
         continue;
       }
       if (!map[dateKey]) map[dateKey] = { am: [], pm: [] };
-      const baseName = g.employee?.name ?? g.empId ?? '';
+      const baseName = getEmployeeDisplayName(g.employee, locale) || g.empId || '';
       const name = (g as { pending?: boolean }).pending ? `${baseName} (${t('schedule.pendingApproval') ?? 'في انتظار الموافقة'})` : baseName;
       const item = { id: g.id, name };
       if (shiftNorm === 'AM') map[dateKey].am.push(item);
@@ -578,7 +579,7 @@ export function ScheduleViewClient({
       console.log('[View] guestsByDay keys', Object.keys(map).slice(0, 7));
     }
     return map;
-  }, [externalGuests, t]);
+  }, [externalGuests, locale, t]);
 
   // Excel view: per-day lists by shift (boutique AM/PM); external coverage from guestsByDay
   const excelData = useMemo(() => {
@@ -595,10 +596,11 @@ export function ScheduleViewClient({
       for (const row of gridData.rows) {
         const cell = row.cells[i];
         if (cell.availability !== 'WORK') continue;
-        if (cell.effectiveShift === 'MORNING') morning.push(row.name);
-        if (cell.effectiveShift === 'EVENING') evening.push(row.name);
-        if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(row.name);
-        if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(row.name);
+        const displayName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
+        if (cell.effectiveShift === 'MORNING') morning.push(displayName);
+        if (cell.effectiveShift === 'EVENING') evening.push(displayName);
+        if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(displayName);
+        if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(displayName);
       }
       morningByDay.push(morning);
       eveningByDay.push(evening);
@@ -619,7 +621,7 @@ export function ScheduleViewClient({
       rashidAmSlots,
       rashidPmSlots,
     };
-  }, [gridData]);
+  }, [gridData, locale]);
 
   return (
     <div className="p-4 md:p-6">
@@ -1085,8 +1087,9 @@ function ScheduleGridView({
   fullGrid: boolean;
   validationsByDay: Array<{ date: string; validations: ValidationResult[] }>;
   focusDay: (date: string) => void;
-  weekGuests?: Array<{ id: string; date: string; empId: string; shift: string; reason?: string; sourceBoutiqueId?: string; sourceBoutique?: { id: string; name: string } | null; employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string } }>;
+  weekGuests?: Array<{ id: string; date: string; empId: string; shift: string; reason?: string; sourceBoutiqueId?: string; sourceBoutique?: { id: string; name: string } | null; employee: { name: string; nameAr?: string | null; homeBoutiqueCode: string; homeBoutiqueName?: string } }>;
 }) {
+  const { locale } = useT();
   const { days, rows, counts } = gridData;
   // STRICT OPERATIONAL VIEW: show a single host-centric External Coverage row (never "Other Boutique Coverage" sections).
   const guestsByDate = useMemo(() => {
@@ -1168,7 +1171,7 @@ function ScheduleGridView({
                   </LuxuryTd>
                 )}
                 <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface font-medium">
-                  <NameChip name={row.name} empId={row.empId} variant="rashid" />
+                  <NameChip name={getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale)} empId={row.empId} variant="rashid" />
                 </LuxuryTd>
                 {row.cells.map((cell) => {
                   const locked = cell.availability !== 'WORK';
@@ -1213,7 +1216,7 @@ function ScheduleGridView({
                       <div className="space-y-1.5">
                         {guests.map((g) => (
                           <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs">
-                            <span className="font-medium text-foreground">{g.employee.name}</span>
+                            <span className="font-medium text-foreground">{getEmployeeDisplayName(g.employee, locale)}</span>
                             <span className="ms-1 font-medium text-foreground">
                               {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
                             </span>

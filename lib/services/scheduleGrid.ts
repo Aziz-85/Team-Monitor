@@ -33,6 +33,7 @@ export type GridCell = {
 export type GridRow = {
   empId: string;
   name: string;
+  nameAr?: string | null;
   team: string;
   cells: GridCell[];
   /** Cross-boutique guest: shown only on dates with host-boutique override; home boutique code for badge */
@@ -163,7 +164,7 @@ export async function getScheduleGridForWeek(
   // Option 1: Base roster only (Employee.boutiqueId = host). Guest coverage shown separately per day via External Coverage.
   const employeesRaw = await prisma.employee.findMany({
     where: empWhere,
-    select: { empId: true, name: true, team: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true, isSystemOnly: true },
+    select: { empId: true, name: true, nameAr: true, team: true, weeklyOffDay: true, weeklyOffOverrideDay: true, boutiqueId: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
   const employees = filterOperationalEmployees(employeesRaw);
@@ -419,6 +420,7 @@ export async function getScheduleGridForWeek(
     rows.push({
       empId: emp.empId,
       name: emp.name,
+      nameAr: emp.nameAr ?? null,
       team: rowTeam,
       cells,
     });

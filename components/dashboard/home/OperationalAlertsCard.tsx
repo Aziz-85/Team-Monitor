@@ -32,7 +32,7 @@ export function OperationalAlertsCard({ alerts, title = 'Operational Alerts', al
           {displayAlerts.map((a) => (
             <div
               key={a.key}
-              className={`flex items-center justify-between rounded-lg px-4 py-2.5 text-sm ${
+              className={`flex min-w-0 flex-col gap-1 rounded-lg px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between ${
                 a.severity === 'error'
                   ? 'bg-red-50 text-red-800'
                   : a.severity === 'warn'
@@ -40,8 +40,8 @@ export function OperationalAlertsCard({ alerts, title = 'Operational Alerts', al
                     : 'bg-slate-50 text-slate-700'
               }`}
             >
-              <span className="font-medium">{a.label}</span>
-              <span className="tabular-nums">{a.value}</span>
+              <span className="min-w-0 font-medium">{a.label}</span>
+              <span className="min-w-0 break-words sm:text-end">{a.value}</span>
             </div>
           ))}
         </div>

@@ -11,6 +11,7 @@ import {
   LuxuryTd,
 } from '@/components/ui/LuxuryTable';
 import { formatDateTimeDisplayRiyadh } from '@/lib/time';
+import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 
 /** Task Monitor-only grid table for perfect header/body column alignment. NOT used by schedule. */
 function TaskMonitorGridTable({
@@ -47,6 +48,7 @@ type TaskMonitorRow = {
   type: string;
   dueDate: string;
   assignedTo: string | null;
+  assignedToAr?: string | null;
   assignedEmpId: string | null;
   status: 'done' | 'pending';
   completedAt: string | null;
@@ -60,6 +62,7 @@ type TaskMonitorRow = {
 type EmployeeStatRow = {
   empId: string;
   name: string;
+  nameAr?: string | null;
   assigned: number;
   completed: number;
   pending: number;
@@ -72,6 +75,7 @@ type EmployeeStatRow = {
 type SuspiciousBurstRow = {
   empId: string;
   empName: string;
+  empNameAr?: string | null;
   burstCount: number;
   biggestBurstSize: number;
   burstStart: string;
@@ -81,7 +85,7 @@ type SuspiciousBurstRow = {
 
 type MonitorData = {
   dateStr: string;
-  employees: { empId: string; name: string }[];
+  employees: { empId: string; name: string; nameAr?: string | null }[];
   summary: { completed: number; pending: number; overdue: number; suspicious: number };
   completedTasks: TaskMonitorRow[];
   pendingTasks: TaskMonitorRow[];
@@ -92,7 +96,7 @@ type MonitorData = {
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 
 export function TasksMonitorClient() {
-  const { t: tBase } = useT();
+  const { t: tBase, locale } = useT();
   const t = (key: string) => tBase(`tasks.${key}`) || tBase(key);
 
   const [data, setData] = useState<MonitorData | null>(null);
@@ -240,7 +244,7 @@ export function TasksMonitorClient() {
               <option value="all">{t('all')}</option>
               {data?.employees?.map((emp) => (
                 <option key={emp.empId} value={emp.empId}>
-                  {emp.name}
+                  {getEmployeeDisplayName(emp, locale)}
                 </option>
               ))}
             </select>
@@ -350,7 +354,9 @@ export function TasksMonitorClient() {
                     <div className={BODY_CELL}>{row.title}</div>
                     <div className={BODY_CELL}>{row.type}</div>
                     <div className={BODY_CELL}>{row.dueDate}</div>
-                    <div className={BODY_CELL}>{row.assignedTo ?? '—'}</div>
+                    <div className={BODY_CELL}>
+                      {row.assignedTo ? getEmployeeDisplayName({ name: row.assignedTo, nameAr: row.assignedToAr ?? null }, locale) : '—'}
+                    </div>
                     <div className={BODY_CELL}>{row.completedAt ? formatDate(row.completedAt) : '—'}</div>
                     <div className={BODY_CELL}>
                       {row.completionDelay ? (
@@ -396,7 +402,9 @@ export function TasksMonitorClient() {
                     <div className={BODY_CELL}>{row.title}</div>
                     <div className={BODY_CELL}>{row.type}</div>
                     <div className={BODY_CELL}>{row.dueDate}</div>
-                    <div className={BODY_CELL}>{row.assignedTo ?? '—'}</div>
+                    <div className={BODY_CELL}>
+                      {row.assignedTo ? getEmployeeDisplayName({ name: row.assignedTo, nameAr: row.assignedToAr ?? null }, locale) : '—'}
+                    </div>
                     <div className={BODY_CELL}>
                       {row.isSuspiciousBurst ? (
                         <span className="text-violet-600">{t('summarySuspicious')}</span>
@@ -449,7 +457,7 @@ export function TasksMonitorClient() {
                 ) : (
                   data.employeeStats.map((row) => (
                     <tr key={row.empId}>
-                      <LuxuryTd className="truncate">{row.name}</LuxuryTd>
+                      <LuxuryTd className="truncate">{getEmployeeDisplayName(row, locale)}</LuxuryTd>
                       <LuxuryTd>{row.assigned}</LuxuryTd>
                       <LuxuryTd>{row.completed}</LuxuryTd>
                       <LuxuryTd>{row.pending}</LuxuryTd>
@@ -478,7 +486,7 @@ export function TasksMonitorClient() {
                     key={burst.empId}
                     className="rounded-xl border border-violet-200 bg-violet-50/50 p-3"
                   >
-                    <p className="font-medium text-foreground">{burst.empName}</p>
+                    <p className="font-medium text-foreground">{getEmployeeDisplayName({ name: burst.empName, nameAr: burst.empNameAr ?? null }, locale)}</p>
                     <p className="text-xs text-muted">
                       {t('burstSize')}: {burst.biggestBurstSize} · {t('burstWindow')}: {burst.burstCount}
                     </p>

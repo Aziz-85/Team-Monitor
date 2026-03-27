@@ -44,18 +44,18 @@ export function TasksTodayCard({
       )}
       {!loading && !error && total > 0 && (
         <>
-          <div className="mb-4 flex gap-4">
+          <div className="mb-4 flex flex-wrap gap-4">
             <div>
               <span className="text-2xl font-bold tabular-nums text-foreground">{total}</span>
-              <span className="ml-1 text-xs text-muted">due</span>
+              <span className="ms-1 text-xs text-muted">due</span>
             </div>
             <div>
               <span className="text-2xl font-bold tabular-nums text-emerald-600">{completed}</span>
-              <span className="ml-1 text-xs text-muted">{doneLabel}</span>
+              <span className="ms-1 text-xs text-muted">{doneLabel}</span>
             </div>
             <div>
               <span className="text-2xl font-bold tabular-nums text-amber-600">{pending}</span>
-              <span className="ml-1 text-xs text-muted">pending</span>
+              <span className="ms-1 text-xs text-muted">pending</span>
             </div>
           </div>
           <ul className="space-y-2">{children}</ul>

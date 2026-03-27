@@ -21,6 +21,7 @@ export type TaskMonitorRow = {
   type: string;
   dueDate: string;
   assignedTo: string | null;
+  assignedToAr?: string | null;
   assignedEmpId: string | null;
   status: 'done' | 'pending';
   completedAt: string | null;
@@ -34,6 +35,7 @@ export type TaskMonitorRow = {
 export type EmployeeStatRow = {
   empId: string;
   name: string;
+  nameAr?: string | null;
   assigned: number;
   completed: number;
   pending: number;
@@ -46,6 +48,7 @@ export type EmployeeStatRow = {
 export type SuspiciousBurstRow = {
   empId: string;
   empName: string;
+  empNameAr?: string | null;
   burstCount: number;
   biggestBurstSize: number;
   burstStart: string;
@@ -121,7 +124,7 @@ function formatDelay(completedAt: Date, dueDateStr: string): { kind: 'early' | '
 
 function detectBursts(
   completions: { taskId: string; userId: string; completedAt: Date; task: { name: string }; user: { empId: string } }[],
-  empIdToName: Map<string, string>
+  empIdToName: Map<string, { name: string; nameAr?: string | null }>
 ): SuspiciousBurstRow[] {
   const byUser = new Map<string, { taskId: string; completedAt: Date; title: string }[]>();
   for (const c of completions) {
@@ -164,7 +167,8 @@ function detectBursts(
     const biggestBurst = burstWindows.find((w: { count: number }) => w.count === biggestSize);
     result.push({
       empId,
-      empName: empIdToName.get(empId) ?? empId,
+      empName: empIdToName.get(empId)?.name ?? empId,
+      empNameAr: empIdToName.get(empId)?.nameAr ?? null,
       burstCount,
       biggestBurstSize: biggestSize,
       burstStart: biggestStart?.toISOString() ?? '',
@@ -230,9 +234,9 @@ export async function GET(request: NextRequest) {
       taskSchedules: true,
       taskPlans: {
         include: {
-          primary: { select: { empId: true, name: true } },
-          backup1: { select: { empId: true, name: true } },
-          backup2: { select: { empId: true, name: true } },
+          primary: { select: { empId: true, name: true, nameAr: true } },
+          backup1: { select: { empId: true, name: true, nameAr: true } },
+          backup2: { select: { empId: true, name: true, nameAr: true } },
         },
       },
     },
@@ -276,11 +280,11 @@ export async function GET(request: NextRequest) {
 
   const employeesRaw = await prisma.employee.findMany({
     where: buildEmployeeWhereForOperational(scope.boutiqueIds),
-    select: { empId: true, name: true, isSystemOnly: true },
+    select: { empId: true, name: true, nameAr: true, isSystemOnly: true },
     orderBy: employeeOrderByStable,
   });
   const employees = filterOperationalEmployees(employeesRaw);
-  const empIdToName = new Map(employees.map((e) => [e.empId, e.name]));
+  const empIdToName = new Map(employees.map((e) => [e.empId, { name: e.name, nameAr: e.nameAr ?? null }]));
   const operationalEmpIds = new Set(employees.map((e) => e.empId));
 
   const suspiciousBursts = detectBursts(
@@ -339,6 +343,7 @@ export async function GET(request: NextRequest) {
         type,
         dueDate: dateStrItem,
         assignedTo: a.assignedName ?? null,
+        assignedToAr: a.assignedEmpId ? (empIdToName.get(a.assignedEmpId)?.nameAr ?? null) : null,
         assignedEmpId: a.assignedEmpId,
         status: status === 'suspicious' ? 'pending' : status,
         completedAt: comp ? comp.completedAt.toISOString() : null,
@@ -372,13 +377,14 @@ export async function GET(request: NextRequest) {
 
   const empStats = new Map<
     string,
-    { name: string; assigned: number; completed: number; pending: number; overdue: number; delaySum: number; delayCount: number; onTimeCount: number }
+    { name: string; nameAr?: string | null; assigned: number; completed: number; pending: number; overdue: number; delaySum: number; delayCount: number; onTimeCount: number }
   >();
   for (const r of rows) {
     const eid = r.assignedEmpId ?? '__unassigned__';
     const name = r.assignedTo ?? '—';
+    const nameAr = r.assignedToAr ?? null;
     if (!empStats.has(eid)) {
-      empStats.set(eid, { name, assigned: 0, completed: 0, pending: 0, overdue: 0, delaySum: 0, delayCount: 0, onTimeCount: 0 });
+      empStats.set(eid, { name, nameAr, assigned: 0, completed: 0, pending: 0, overdue: 0, delaySum: 0, delayCount: 0, onTimeCount: 0 });
     }
     const s = empStats.get(eid)!;
     s.assigned++;
@@ -404,6 +410,7 @@ export async function GET(request: NextRequest) {
     employeeStats.push({
       empId: eid,
       name: s.name,
+      nameAr: s.nameAr ?? null,
       assigned: s.assigned,
       completed: s.completed,
       pending: s.pending,
@@ -420,7 +427,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     dateStr,
-    employees: employees.map((e) => ({ empId: e.empId, name: e.name })),
+    employees: employees.map((e) => ({ empId: e.empId, name: e.name, nameAr: e.nameAr ?? null })),
     summary: {
       completed: completedRows.length,
       pending: pendingRows.length,

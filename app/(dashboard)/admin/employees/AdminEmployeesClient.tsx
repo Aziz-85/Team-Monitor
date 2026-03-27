@@ -8,6 +8,7 @@ import { AdminFilterBar } from '@/components/admin/AdminFilterBar';
 import type { AdminFilterJson } from '@/lib/scope/adminFilter';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 
 type EmployeePosition = 'BOUTIQUE_MANAGER' | 'ASSISTANT_MANAGER' | 'SENIOR_SALES' | 'SALES';
 
@@ -16,6 +17,7 @@ type BoutiqueRef = { id: string; code: string; name: string };
 type Employee = {
   empId: string;
   name: string;
+  nameAr?: string | null;
   email: string | null;
   phone: string | null;
   team: string;
@@ -55,7 +57,7 @@ type TeamPreview = {
 };
 
 export function AdminEmployeesClient() {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [list, setList] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +68,7 @@ export function AdminEmployeesClient() {
   const [form, setForm] = useState({
     empId: '',
     name: '',
+    nameAr: '',
     email: '',
     phone: '',
     team: 'A' as 'A' | 'B',
@@ -79,6 +82,7 @@ export function AdminEmployeesClient() {
   const [editEmployeeModal, setEditEmployeeModal] = useState<Employee | null>(null);
   const [editEmployeeForm, setEditEmployeeForm] = useState({
     name: '',
+    nameAr: '',
     email: '',
     phone: '',
     team: 'A' as 'A' | 'B',
@@ -219,6 +223,7 @@ export function AdminEmployeesClient() {
         body: JSON.stringify({
           empId: form.empId.trim(),
           name: form.name.trim(),
+          nameAr: form.nameAr.trim() || null,
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
           team: form.team,
@@ -237,6 +242,7 @@ export function AdminEmployeesClient() {
       setForm({
         empId: '',
         name: '',
+        nameAr: '',
         email: '',
         phone: '',
         team: 'A',
@@ -318,6 +324,7 @@ export function AdminEmployeesClient() {
     const eff: number | -1 = emp.weeklyOffOverrideDay === -1 ? -1 : (emp.weeklyOffOverrideDay ?? emp.weeklyOffDay);
     setEditEmployeeForm({
       name: emp.name,
+      nameAr: emp.nameAr ?? '',
       email: emp.email ?? '',
       phone: emp.phone ?? '',
       team: displayTeam,
@@ -340,6 +347,7 @@ export function AdminEmployeesClient() {
         body: JSON.stringify({
           empId: editEmployeeModal.empId,
           name: editEmployeeForm.name.trim(),
+          nameAr: editEmployeeForm.nameAr.trim() || null,
           email: editEmployeeForm.email.trim() || null,
           phone: editEmployeeForm.phone.trim() || null,
           weeklyOffOverrideDay: (() => {
@@ -449,6 +457,13 @@ export function AdminEmployeesClient() {
           />
           <input
             type="text"
+            placeholder={`${t('common.name')} (AR)`}
+            value={form.nameAr}
+            onChange={(e) => setForm((f) => ({ ...f, nameAr: e.target.value }))}
+            className="rounded border border-border px-3 py-2 text-base"
+          />
+          <input
+            type="text"
             placeholder={t('common.email')}
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -553,13 +568,13 @@ export function AdminEmployeesClient() {
             {list.map((e) => (
               <tr key={e.empId} className={e.active ? '' : 'opacity-70'}>
                 <LuxuryTd>{e.empId}</LuxuryTd>
-                <LuxuryTd>{e.name}</LuxuryTd>
+                <LuxuryTd>{getEmployeeDisplayName({ name: e.name, nameAr: e.nameAr }, locale)}</LuxuryTd>
                 <LuxuryTd>
                   {e.boutique ? `${e.boutique.name} (${e.boutique.code})` : '—'}
                   <button
                     type="button"
                     onClick={() => {
-                      setBoutiqueChangeModal({ empId: e.empId, name: e.name, currentBoutiqueId: e.boutique?.id ?? '' });
+                      setBoutiqueChangeModal({ empId: e.empId, name: getEmployeeDisplayName({ name: e.name, nameAr: e.nameAr }, locale), currentBoutiqueId: e.boutique?.id ?? '' });
                       setBoutiqueChangeToId(e.boutique?.id ?? '');
                       fetch('/api/admin/boutiques')
                         .then((r) => r.json())
@@ -613,7 +628,7 @@ export function AdminEmployeesClient() {
                       onClick={() => {
                         setError('');
                         const currentTeam = e.currentTeam ?? e.team;
-                        setTeamChangeModal({ empId: e.empId, name: e.name, currentTeam });
+                        setTeamChangeModal({ empId: e.empId, name: getEmployeeDisplayName({ name: e.name, nameAr: e.nameAr }, locale), currentTeam });
                         setTeamChangeForm({
                           newTeam: (currentTeam === 'A' ? 'B' : 'A') as 'A' | 'B',
                           effectiveFrom: new Date().toISOString().slice(0, 10),
@@ -730,6 +745,15 @@ export function AdminEmployeesClient() {
                   onChange={(e) => setEditEmployeeForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full rounded border border-border px-3 py-2 text-base"
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">{t('common.name')} (AR)</label>
+                <input
+                  type="text"
+                  value={editEmployeeForm.nameAr}
+                  onChange={(e) => setEditEmployeeForm((f) => ({ ...f, nameAr: e.target.value }))}
+                  className="w-full rounded border border-border px-3 py-2 text-base"
                 />
               </div>
               <div>

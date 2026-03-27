@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
       employee: {
         select: {
           name: true,
+          nameAr: true,
           empId: true,
           boutiqueId: true,
           boutique: { select: { id: true, code: true, name: true } },
@@ -174,6 +175,7 @@ export async function GET(request: NextRequest) {
       isExternal,
       employee: {
         name: o.employee.name,
+        nameAr: o.employee.nameAr ?? null,
         empId: o.employee.empId,
         boutiqueId: o.employee.boutiqueId,
         homeBoutiqueCode: o.employee.boutique?.code ?? '',
@@ -209,6 +211,7 @@ export async function GET(request: NextRequest) {
             select: {
               empId: true,
               name: true,
+              nameAr: true,
               boutiqueId: true,
               isSystemOnly: true,
               boutique: { select: { id: true, code: true, name: true } },
@@ -216,7 +219,7 @@ export async function GET(request: NextRequest) {
           })
         ).map((e) => [e.empId, e])
       )
-    : new Map<string, { empId: string; name: string; boutiqueId: string; boutique: { id: string; code: string; name: string } | null }>();
+    : new Map<string, { empId: string; name: string; nameAr?: string | null; boutiqueId: string; boutique: { id: string; code: string; name: string } | null }>();
   const pendingGuestShifts = pendingRequests.map((req) => {
     const p = req.payload as { empId?: string; date?: string; overrideShift?: string; reason?: string; sourceBoutiqueId?: string };
     const empId = String(p?.empId ?? '');
@@ -238,6 +241,7 @@ export async function GET(request: NextRequest) {
       pending: true,
       employee: {
         name: emp?.name ?? empId,
+        nameAr: emp?.nameAr ?? null,
         empId,
         boutiqueId: emp?.boutiqueId ?? '',
         homeBoutiqueCode: emp?.boutique?.code ?? '',

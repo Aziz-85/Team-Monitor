@@ -416,6 +416,7 @@ model Employee {
   empId                    String            @id
   boutiqueId               String           @default("bout_dhhrn_001") // current boutique assignment (canonical)
   name                     String
+  nameAr                   String?
   email                    String?
   phone                    String?
   team                     Team              // denormalized "current" team; kept in sync when history is appended

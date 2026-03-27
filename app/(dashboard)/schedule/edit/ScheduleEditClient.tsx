@@ -20,6 +20,7 @@ import {
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import type { Role } from '@prisma/client';
 
 function formatDDMM(d: string): string {
@@ -176,7 +177,7 @@ type GridCell = {
   baseShift: string;
 };
 
-type GridRow = { empId: string; name: string; team: string; cells: GridCell[] };
+type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: GridCell[] };
 
 type GridDay = { date: string; dayName: string; dayOfWeek: number; minAm: number; minPm: number };
 
@@ -354,7 +355,7 @@ export function ScheduleEditClient({
     reason?: string;
     sourceBoutiqueId?: string;
     sourceBoutique?: { id: string; name: string } | null;
-    employee: { name: string; homeBoutiqueCode: string; homeBoutiqueName?: string };
+    employee: { name: string; nameAr?: string | null; homeBoutiqueCode: string; homeBoutiqueName?: string };
     /** true = from another boutique (show in External Coverage); false = same branch */
     isExternal?: boolean;
   };
@@ -902,12 +903,12 @@ export function ScheduleEditClient({
           newShift,
           originalEffectiveShift: cell.effectiveShift,
           overrideId: cell.overrideId,
-          employeeName: row.name,
+          employeeName: getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale),
         });
         return next;
       });
     },
-    []
+    [locale]
   );
 
   const clearPendingEdit = useCallback((empId: string, date: string) => {
@@ -1823,11 +1824,13 @@ export function ScheduleEditClient({
                         .slice()
                         .sort((a, b) => {
                           if (a.team !== b.team) return a.team.localeCompare(b.team);
-                          return a.name.localeCompare(b.name);
+                          return getEmployeeDisplayName({ name: a.name, nameAr: a.nameAr }, locale).localeCompare(
+                            getEmployeeDisplayName({ name: b.name, nameAr: b.nameAr }, locale)
+                          );
                         })
                         .map((row) => (
                           <tr key={row.empId}>
-                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-surface font-medium" title={`${row.name} (${row.empId})`}>
+                            <LuxuryTd className="sticky left-0 z-10 w-[18%] min-w-0 bg-surface font-medium" title={`${getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale)} (${row.empId})`}>
                               <span className="inline-flex items-center gap-2">
                                 <span
                                   className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full text-[10px] font-semibold ${row.team === 'A' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-800'}`}
@@ -1836,7 +1839,7 @@ export function ScheduleEditClient({
                                   {row.team}
                                 </span>
                                                 <span className="whitespace-nowrap">
-                                  {getFirstName(row.name)}
+                                  {getFirstName(getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale))}
                                 </span>
                                 {gridData.compBalanceByEmpId && (gridData.compBalanceByEmpId[row.empId] ?? 0) !== 0 && (
                                   <span
@@ -2046,7 +2049,7 @@ export function ScheduleEditClient({
                                         >
                                           <option value="__delete__">—</option>
                                           <option value={g.id}>
-                                            {g.employee.name} {g.shift === 'MORNING' ? 'AM' : 'PM'}
+                                            {getEmployeeDisplayName(g.employee, locale)} {g.shift === 'MORNING' ? 'AM' : 'PM'}
                                           </option>
                                         </select>
                                       ))
@@ -2449,7 +2452,7 @@ export function ScheduleEditClient({
               })}
               {localPendingGuests.map((g) => (
                 <li key={g.id} className="flex justify-between gap-2 py-0.5">
-                  <span className="text-foreground">{formatDDMM(g.date)} {g.employee.name}</span>
+                  <span className="text-foreground">{formatDDMM(g.date)} {getEmployeeDisplayName(g.employee, locale)}</span>
                   <span className="text-muted">
                     Add External → {g.shift === 'MORNING' ? 'AM' : 'PM'}
                   </span>

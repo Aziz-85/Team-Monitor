@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       OR: [
         { empId: { contains: q, mode: 'insensitive' } },
         { name: { contains: q, mode: 'insensitive' } },
+        { nameAr: { contains: q, mode: 'insensitive' } },
       ],
     });
   }
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const empId = String(body.empId ?? '').trim();
   const name = String(body.name ?? '').trim();
+  const nameAr = body.nameAr != null ? String(body.nameAr).trim() : '';
   const team = String(body.team ?? 'A').toUpperCase() as Team;
   const weeklyOffDay = Number(body.weeklyOffDay ?? 5);
   const weeklyOffOverrideDay = body.weeklyOffOverrideDay === undefined
@@ -147,6 +149,7 @@ export async function POST(request: NextRequest) {
       data: {
         empId,
         name,
+        nameAr: nameAr || null,
         team,
         weeklyOffDay,
         ...(weeklyOffOverrideDay !== undefined && { weeklyOffOverrideDay: weeklyOffOverrideDay === null ? null : weeklyOffOverrideDay }),
@@ -202,6 +205,7 @@ export async function PATCH(request: NextRequest) {
 
   const update: {
     name?: string;
+    nameAr?: string | null;
     email?: string | null;
     phone?: string | null;
     weeklyOffDay?: number;
@@ -212,6 +216,10 @@ export async function PATCH(request: NextRequest) {
     boutiqueId?: string;
   } = {};
   if (body.name !== undefined) update.name = String(body.name).trim();
+  if (body.nameAr !== undefined) {
+    const raw = body.nameAr;
+    update.nameAr = raw == null ? null : (String(raw).trim() || null);
+  }
   if (body.active !== undefined) update.active = Boolean(body.active);
   if (body.email !== undefined) update.email = body.email != null ? String(body.email).trim() : null;
   if (body.phone !== undefined) update.phone = body.phone != null ? String(body.phone).trim() : null;
