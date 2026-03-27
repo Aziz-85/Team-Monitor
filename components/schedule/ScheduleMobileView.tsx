@@ -1,8 +1,10 @@
 'use client';
 
 /** Uses same row height (38px) and text-sm as schedule table tokens in lib/scheduleUi */
+import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
+
 type GridDay = { date: string; dayName?: string; dayOfWeek: number };
-type GridRow = { empId: string; name: string; team: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> };
+type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> };
 type GridData = { days: GridDay[]; rows: GridRow[]; counts?: Array<{ amCount: number; pmCount: number }> };
 
 export type GuestsByDayMobile = Record<string, { am: Array<{ id: string; name: string }>; pm: Array<{ id: string; name: string }> }>;
@@ -31,10 +33,11 @@ export function ScheduleMobileView({
     for (const row of rows) {
       const cell = row.cells[i];
       if (!cell || cell.availability !== 'WORK') continue;
-      if (cell.effectiveShift === 'MORNING') morning.push(row.name);
-      if (cell.effectiveShift === 'EVENING') evening.push(row.name);
-      if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(row.name);
-      if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(row.name);
+      const displayName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
+      if (cell.effectiveShift === 'MORNING') morning.push(displayName);
+      if (cell.effectiveShift === 'EVENING') evening.push(displayName);
+      if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(displayName);
+      if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(displayName);
     }
     return {
       date: day.date,
