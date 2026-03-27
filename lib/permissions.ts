@@ -262,6 +262,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   SUPER_ADMIN: [
     '/',
     '/dashboard',
+    '/company',
     '/executive',
     '/executive/monthly',
     '/executive/insights',

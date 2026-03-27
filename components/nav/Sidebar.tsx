@@ -16,6 +16,7 @@ const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
   TASKS: false,
   INVENTORY: false,
   REPORTS: false,
+  COMPANY: false,
   ORGANIZATION: false,
   RULES_TEMPLATES: false,
   INTEGRATIONS: false,

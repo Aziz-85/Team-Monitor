@@ -142,6 +142,19 @@ const GROUP_REPORTS: NavGroup = {
   ],
 };
 
+/** Company / Backoffice — read-first network scope (SUPER_ADMIN only, Phase 1). */
+const GROUP_COMPANY: NavGroup = {
+  key: 'COMPANY',
+  labelKey: 'nav.group.COMPANY',
+  items: [
+    item('/company', 'nav.company.overview', ['SUPER_ADMIN'], 'CORE'),
+    item('/company/branches', 'nav.company.branches', ['SUPER_ADMIN'], 'CORE'),
+    item('/company/employees', 'nav.company.employees', ['SUPER_ADMIN'], 'CORE'),
+    item('/company/alerts', 'nav.company.alerts', ['SUPER_ADMIN'], 'CORE'),
+    item('/company/governance', 'nav.company.governance', ['SUPER_ADMIN'], 'CORE'),
+  ],
+};
+
 /** 7. ORGANIZATION — Boutiques, Regions, Boutique Groups, Users, Memberships */
 const GROUP_ORGANIZATION: NavGroup = {
   key: 'ORGANIZATION',
@@ -220,6 +233,7 @@ export const NAV_GROUPS: NavGroup[] = [
   GROUP_TASKS,
   GROUP_INVENTORY,
   GROUP_REPORTS,
+  GROUP_COMPANY,
   GROUP_ORGANIZATION,
   GROUP_RULES_TEMPLATES,
   GROUP_INTEGRATIONS,

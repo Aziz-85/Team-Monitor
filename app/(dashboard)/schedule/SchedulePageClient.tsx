@@ -9,15 +9,18 @@ import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getFirstName } from '@/lib/name';
+import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 
 function formatDDMM(d: string): string {
-  const [, m, day] = d.split('-');
+  const ymd = String(d).slice(0, 10);
+  const [, m, day] = ymd.split('-');
   return `${day}/${m}`;
 }
 
 function getDayName(dateStr: string, locale: string): string {
-  const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB', { weekday: 'long' });
+  const d = dateFromCalendarDayString(dateStr);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(intlLocaleForGregorianCalendar(locale), { weekday: 'long' });
 }
 
 function weekStartSaturday(dateStr: string): string {
@@ -43,9 +46,9 @@ function addMonths(monthStr: string, delta: number): string {
 
 function formatWeekRangeLabel(weekStart: string, locale: string): { start: string; end: string } {
   const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
-  const startD = new Date(weekStart + 'T12:00:00Z');
-  const endD = new Date(addDays(weekStart, 6) + 'T12:00:00Z');
-  const loc = locale === 'ar' ? 'ar-SA' : 'en-GB';
+  const startD = dateFromCalendarDayString(weekStart);
+  const endD = dateFromCalendarDayString(addDays(weekStart, 6));
+  const loc = intlLocaleForGregorianCalendar(locale);
   return {
     start: startD.toLocaleDateString(loc, opts),
     end: endD.toLocaleDateString(loc, opts),
@@ -55,7 +58,7 @@ function formatWeekRangeLabel(weekStart: string, locale: string): { start: strin
 function formatMonthYear(monthStr: string, locale: string): string {
   const [y, m] = monthStr.split('-').map(Number);
   const d = new Date(Date.UTC(y, m - 1, 1));
-  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-GB', { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString(intlLocaleForGregorianCalendar(locale), { month: 'long', year: 'numeric' });
 }
 
 function parseWeekStartFromUrl(value: string | null): string {
