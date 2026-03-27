@@ -1574,7 +1574,7 @@ export function ScheduleEditClient({
                 <table className="w-full min-w-[600px] text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="py-1 pr-2 text-left font-medium text-muted">{t('schedule.day') ?? 'Day'}</th>
+                      <th className="py-1 pe-2 text-start font-medium text-muted">{t('schedule.day') ?? 'Day'}</th>
                       {keyPlan.days.map((d) => {
                         const dayWarnings = d.warnings ?? [];
                         const hasDayWarnings = dayWarnings.length > 0;
@@ -1593,7 +1593,7 @@ export function ScheduleEditClient({
                   </thead>
                   <tbody>
                     <tr className="border-b border-border">
-                      <td className="py-1 pr-2 text-muted">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
+                      <td className="py-1 pe-2 text-muted">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.amEligible ?? [];
@@ -1627,7 +1627,7 @@ export function ScheduleEditClient({
                       })}
                     </tr>
                     <tr>
-                      <td className="py-1 pr-2 text-muted">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
+                      <td className="py-1 pe-2 text-muted">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
                       {keyPlan.days.map((day) => {
                         const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
                         const options = day.pmEligible ?? [];
@@ -1838,7 +1838,7 @@ export function ScheduleEditClient({
                                 >
                                   {row.team}
                                 </span>
-                                                <span className="whitespace-nowrap">
+                                                <span className="truncate">
                                   {getFirstName(getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale))}
                                 </span>
                                 {gridData.compBalanceByEmpId && (gridData.compBalanceByEmpId[row.empId] ?? 0) !== 0 && (

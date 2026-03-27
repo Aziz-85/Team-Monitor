@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
+import { PaceCard } from '@/components/analytics/PaceCard';
+import { ForecastCard } from '@/components/analytics/ForecastCard';
+import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 
 type DetailData = {
@@ -54,6 +57,9 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
     createdAt?: string;
   } | null>(null);
   const [kpiLoading, setKpiLoading] = useState(false);
+  const [mtdAnalytics, setMtdAnalytics] = useState<{
+    employees?: Array<{ pace: PaceMetrics; forecast: ForecastMetrics }>;
+  } | null>(null);
 
   useEffect(() => {
     fetch('/api/me/scope')
@@ -92,6 +98,18 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
       .catch(() => setKpiSnapshot(null))
       .finally(() => setKpiLoading(false));
   }, [empId, kpiPeriod]);
+
+  useEffect(() => {
+    if (!empId.trim() || role == null) return;
+    const global =
+      (role === 'ADMIN' || role === 'SUPER_ADMIN') && viewMode === 'global'
+        ? '&global=true'
+        : '';
+    fetch(`/api/analytics/performance?empId=${encodeURIComponent(empId)}${global}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setMtdAnalytics)
+      .catch(() => setMtdAnalytics(null));
+  }, [empId, viewMode, role]);
 
   if (loading) return <div className="p-4 text-sm text-muted">{t('common.loading')}</div>;
   if (!data) return <div className="p-4 text-sm text-amber-700">{t('executive.employees.error')}</div>;
@@ -148,6 +166,28 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
           <p className="text-2xl font-semibold text-foreground tabular-nums">{data.consistencyScore}</p>
         </OpsCard>
       </div>
+
+      {mtdAnalytics?.employees?.[0] && (
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <PaceCard
+            title={t('analytics.monthPaceTitle')}
+            pace={mtdAnalytics.employees[0].pace}
+            expectedLabel={t('analytics.expectedByNow')}
+            bandLabels={{
+              ahead: t('analytics.ahead'),
+              onTrack: t('analytics.onTrack'),
+              behind: t('analytics.behind'),
+            }}
+          />
+          <ForecastCard
+            title={t('analytics.monthForecastTitle')}
+            linear={mtdAnalytics.employees[0].forecast}
+            rolling7={null}
+            disclaimer={t('analytics.projectionOnly')}
+            rollingTitle={t('analytics.forecastRolling7')}
+          />
+        </div>
+      )}
 
       <OpsCard title={t('executive.employees.byBoutique')} className="mb-6">
         <AdminDataTable>

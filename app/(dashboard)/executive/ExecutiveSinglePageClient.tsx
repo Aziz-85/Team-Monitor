@@ -12,6 +12,13 @@ import { ExecViewTabs, type ExecPageView } from '@/components/dashboard-ui/ExecV
 import { ExecBullet } from '@/components/dashboard-ui/ExecBullet';
 import { ExecKpiBlock } from '@/components/dashboard-ui/ExecKpiBlock';
 import { ExecPanel } from '@/components/dashboard-ui/ExecPanel';
+import { useT } from '@/lib/i18n/useT';
+import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
+import { PaceCard } from '@/components/analytics/PaceCard';
+import { ForecastCard } from '@/components/analytics/ForecastCard';
+import { ProductivityTable } from '@/components/analytics/ProductivityTable';
+import { OpsCard } from '@/components/ui/OpsCard';
+import { formatSarInt } from '@/lib/utils/money';
 
 type ExecutiveKpis = {
   revenue: number;
@@ -198,7 +205,27 @@ function calculateRiskScore(input: {
   return { score: clampedScore, level };
 }
 
+type AnalyticsPerformanceResponse = {
+  boutique?: {
+    forecastRolling7: {
+      forecastedTotal: number;
+      forecastDelta: number;
+      forecastRatio: number | null;
+      avgDailyActual: number;
+    } | null;
+  };
+  employees?: Array<{
+    userId: string;
+    name: string;
+    totalSalesMTD: number;
+    activeDays: number;
+    avgDailySales: number;
+    contributionPct: number;
+  }>;
+};
+
 export function ExecutiveSinglePageClient() {
+  const { t } = useT();
   const [view, setView] = useState<ExecPageView>('Executive');
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
   const [employees, setEmployees] = useState<EmployeeRow[] | null>(null);
@@ -213,6 +240,9 @@ export function ExecutiveSinglePageClient() {
   const [calibrationMaxAdjPct, setCalibrationMaxAdjPct] = useState(8);
   const [calibrationLockDaysLeft, setCalibrationLockDaysLeft] = useState(7);
   const [calibrationUseYoY, setCalibrationUseYoY] = useState(true);
+  const [analyticsPerformance, setAnalyticsPerformance] =
+    useState<AnalyticsPerformanceResponse | null>(null);
+  const [analyticsPerformanceLoading, setAnalyticsPerformanceLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/executive')
@@ -262,6 +292,28 @@ export function ExecutiveSinglePageClient() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed'))))
       .then((data) => setEmployees(data.employees ?? []))
       .catch(() => setEmployees([]));
+  }, [view]);
+
+  useEffect(() => {
+    if (view !== 'Executive') {
+      return;
+    }
+    let cancelled = false;
+    setAnalyticsPerformanceLoading(true);
+    fetch('/api/analytics/performance?employees=true')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: AnalyticsPerformanceResponse | null) => {
+        if (!cancelled) setAnalyticsPerformance(d);
+      })
+      .catch(() => {
+        if (!cancelled) setAnalyticsPerformance(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAnalyticsPerformanceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [view]);
 
   useEffect(() => {
@@ -349,6 +401,24 @@ export function ExecutiveSinglePageClient() {
   }, [monthSnapshot]);
 
   const daysLeft = totalDays - daysPassed;
+
+  const smartLayer = useMemo(() => {
+    if (!kpis || !riyadhParsed) return null;
+    const pace = computePaceMetrics({
+      actualMTD: kpis.revenue,
+      monthlyTarget: kpis.target,
+      totalDaysInMonth: riyadhParsed.totalDays,
+      daysPassed: riyadhParsed.daysPassed,
+    });
+    const forecast = computeForecast({
+      actualMTD: kpis.revenue,
+      monthlyTarget: kpis.target,
+      totalDaysInMonth: riyadhParsed.totalDays,
+      daysPassed: riyadhParsed.daysPassed,
+    });
+    const remaining = Math.max(0, kpis.target - kpis.revenue);
+    return { pace, forecast, remaining };
+  }, [kpis, riyadhParsed]);
 
   const targetCalibration = useMemo(() => {
     if (!kpis || !metrics) return null;
@@ -626,6 +696,90 @@ export function ExecutiveSinglePageClient() {
           <div className="rounded-xl border border-border bg-surface p-6">
             <p className="text-muted">Loading executive data…</p>
           </div>
+        </section>
+      )}
+
+      {!(loading || !kpis) && view === 'Executive' && smartLayer && kpis && (
+        <section className="min-w-0 space-y-4">
+          <OpsCard title={t('analytics.smartLayerTitle')}>
+            <p className="mb-4 text-sm text-muted">{t('analytics.smartLayerSubtitle')}</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="rounded-lg border border-border bg-surface-subtle/60 p-3">
+                <p className="text-[11px] font-medium text-muted">{t('analytics.actualMtd')}</p>
+                <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+                  {formatSarInt(Math.round(kpis.revenue))}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-subtle/60 p-3">
+                <p className="text-[11px] font-medium text-muted">{t('analytics.target')}</p>
+                <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+                  {formatSarInt(Math.round(kpis.target))}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-subtle/60 p-3">
+                <p className="text-[11px] font-medium text-muted">{t('analytics.remaining')}</p>
+                <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+                  {formatSarInt(smartLayer.remaining)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-subtle/60 p-3">
+                <p className="text-[11px] font-medium text-muted">{t('analytics.paceVsPlan')}</p>
+                <p
+                  className={`mt-1 text-base font-semibold tabular-nums ${
+                    smartLayer.pace.paceDelta >= 0 ? 'text-emerald-700' : 'text-red-700'
+                  }`}
+                >
+                  {smartLayer.pace.paceDelta >= 0 ? '+' : ''}
+                  {Math.abs(smartLayer.pace.paceDelta).toLocaleString('en-US')} SAR
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-subtle/60 p-3 col-span-2 sm:col-span-1 lg:col-span-1">
+                <p className="text-[11px] font-medium text-muted">{t('analytics.forecastEom')}</p>
+                <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+                  {formatSarInt(smartLayer.forecast.forecastedTotal)}
+                </p>
+              </div>
+            </div>
+          </OpsCard>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PaceCard
+              title={t('analytics.monthPaceTitle')}
+              pace={smartLayer.pace}
+              expectedLabel={t('analytics.expectedByNow')}
+              bandLabels={{
+                ahead: t('analytics.ahead'),
+                onTrack: t('analytics.onTrack'),
+                behind: t('analytics.behind'),
+              }}
+            />
+            <ForecastCard
+              title={t('analytics.monthForecastTitle')}
+              linear={smartLayer.forecast}
+              rolling7={analyticsPerformance?.boutique?.forecastRolling7 ?? null}
+              disclaimer={t('analytics.projectionOnly')}
+              rollingTitle={t('analytics.forecastRolling7')}
+            />
+          </div>
+          <ProductivityTable
+            title={t('analytics.productivityTitle')}
+            subtitle={t('analytics.productivitySubtitle')}
+            loading={analyticsPerformanceLoading}
+            labels={{
+              employee: t('analytics.employee'),
+              totalMtd: t('analytics.totalMtd'),
+              activeDays: t('analytics.activeDays'),
+              avgDaily: t('analytics.avgDaily'),
+              contribution: t('analytics.contribution'),
+            }}
+            rows={(analyticsPerformance?.employees ?? []).map((e) => ({
+              id: e.userId,
+              name: e.name,
+              totalSalesMTD: e.totalSalesMTD,
+              activeDays: e.activeDays,
+              avgDailySales: e.avgDailySales,
+              contributionPct: e.contributionPct,
+            }))}
+          />
         </section>
       )}
 

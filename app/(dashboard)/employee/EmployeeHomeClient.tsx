@@ -6,6 +6,9 @@ import { ShiftCard } from '@/components/ui/ShiftCard';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
 import { getPerformanceBgClass } from '@/lib/performanceColors';
+import { PaceCard } from '@/components/analytics/PaceCard';
+import { ForecastCard } from '@/components/analytics/ForecastCard';
+import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
 
 type EmployeeHomeData = {
   date: string;
@@ -33,6 +36,9 @@ export function EmployeeHomeClient() {
   const [salesEntrySaving, setSalesEntrySaving] = useState(false);
   const [salesEntryError, setSalesEntryError] = useState<string | null>(null);
   const [lastEntries, setLastEntries] = useState<Array<{ id: string; date: string; amount: number }>>([]);
+  const [selfAnalytics, setSelfAnalytics] = useState<{
+    employees?: Array<{ pace: PaceMetrics; forecast: ForecastMetrics }>;
+  } | null>(null);
 
   const fetchLastEntries = useCallback(() => {
     fetch('/api/me/sales?days=7')
@@ -101,6 +107,13 @@ export function EmployeeHomeClient() {
   }, []);
 
   useEffect(() => {
+    fetch('/api/analytics/performance')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setSelfAnalytics)
+      .catch(() => setSelfAnalytics(null));
+  }, []);
+
+  useEffect(() => {
     fetch(`/api/employee/home?date=${date}`)
       .then((r) => r.json().catch(() => null))
       .then(setData)
@@ -157,6 +170,30 @@ export function EmployeeHomeClient() {
               <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.mtdPct)}%</p>
             </OpsCard>
             </div>
+          </div>
+        )}
+
+        {selfAnalytics?.employees?.[0] && (
+          <div className="mb-4 grid min-w-0 gap-4 md:grid-cols-2">
+            <PaceCard
+              title={t('analytics.monthPaceTitle')}
+              pace={selfAnalytics.employees[0].pace}
+              expectedLabel={t('analytics.expectedByNow')}
+              bandLabels={{
+                ahead: t('analytics.ahead'),
+                onTrack: t('analytics.onTrack'),
+                behind: t('analytics.behind'),
+              }}
+              className="!p-3"
+            />
+            <ForecastCard
+              title={t('analytics.monthForecastTitle')}
+              linear={selfAnalytics.employees[0].forecast}
+              rolling7={null}
+              disclaimer={t('analytics.projectionOnly')}
+              rollingTitle={t('analytics.forecastRolling7')}
+              className="!p-3"
+            />
           </div>
         )}
 

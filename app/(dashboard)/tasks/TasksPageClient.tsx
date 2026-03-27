@@ -110,13 +110,13 @@ export function TasksPageClient({ role }: { role: Role }) {
   const isOverdue = (dueDate: string) => dueDate < todayStr;
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mx-auto max-w-4xl">
+    <div className="w-full min-w-0 max-w-full p-4 md:p-6">
+      <div className="mx-auto w-full min-w-0 max-w-4xl">
         {/* Header: title + primary action */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold text-foreground">{t('tasks.pageTitle')}</h1>
           {(role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleExport}
@@ -141,7 +141,7 @@ export function TasksPageClient({ role }: { role: Role }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('tasks.searchPlaceholder')}
-            className="w-full max-w-sm rounded border border-border px-3 py-2 text-sm"
+            className="w-full min-w-0 max-w-sm rounded border border-border px-3 py-2 text-sm"
             aria-label={t('tasks.searchPlaceholder')}
           />
         </div>
@@ -170,9 +170,9 @@ export function TasksPageClient({ role }: { role: Role }) {
         </div>
 
         {/* Secondary: Status, Assigned */}
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="mb-4 flex min-w-0 flex-wrap items-center gap-4">
           <span className="text-sm font-medium text-muted">{t('tasks.colStatus')}:</span>
-          <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5">
+          <div className="inline-flex min-w-0 rounded-lg border border-border bg-surface-subtle p-0.5">
             {(['all', 'open', 'done'] as const).map((s) => (
               <button
                 key={s}
@@ -189,7 +189,7 @@ export function TasksPageClient({ role }: { role: Role }) {
           {canSeeAllAssigned && (
             <>
               <span className="text-sm font-medium text-muted">{t('tasks.colAssignee')}:</span>
-              <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5">
+              <div className="inline-flex min-w-0 rounded-lg border border-border bg-surface-subtle p-0.5">
                 <button
                   type="button"
                   onClick={() => setAssigned('me')}

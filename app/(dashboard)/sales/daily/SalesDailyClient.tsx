@@ -342,7 +342,7 @@ export function SalesDailyClient() {
           </div>
         )}
         {actionError && (
-          <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mb-4 flex min-w-0 flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
             <span>{actionError}</span>
             <button
               type="button"
@@ -357,7 +357,7 @@ export function SalesDailyClient() {
           <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
             Yearly Excel Import (Import_2026)
           </h3>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             <input
               ref={yearlyFileInputRef}
               type="file"
@@ -373,18 +373,18 @@ export function SalesDailyClient() {
             <button
               type="button"
               onClick={() => yearlyFileInputRef.current?.click()}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
+              className="w-full min-w-0 rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle sm:w-auto"
             >
               {yearlyFile ? yearlyFile.name : 'Choose file'}
             </button>
-            <div>
+            <div className="min-w-0">
               <label className="me-1 text-xs text-muted">Month (optional)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={yearlyMonth}
                 onChange={(e) => setYearlyMonth(e.target.value)}
-                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
+                className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
               />
             </div>
             <label className="flex items-center gap-1.5 text-sm text-foreground">
@@ -399,7 +399,7 @@ export function SalesDailyClient() {
               type="button"
               disabled={!yearlyFile || yearlyLoading}
               onClick={runYearlyImport}
-              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
             >
               {yearlyLoading ? '…' : yearlyDryRun ? 'Preview (Dry Run)' : 'Import Now'}
             </button>
@@ -484,22 +484,22 @@ export function SalesDailyClient() {
           <p className="mb-2 text-xs text-muted">
             Expected days = scheduled (not off, not leave). Missing only flagged when consecutive missing &gt; maxSalesGapDays.
           </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="min-w-0">
               <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
               <input
                 type="text"
                 placeholder="YYYY-MM"
                 value={coverageMonth}
                 onChange={(e) => setCoverageMonth(e.target.value)}
-                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
+                className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
               />
             </div>
             <button
               type="button"
               disabled={!coverageMonth.trim() || coverageLoading}
               onClick={loadCoverage}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
+              className="w-full rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50 sm:w-auto"
             >
               {coverageLoading ? '…' : 'Load Coverage'}
             </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
@@ -19,6 +19,9 @@ import { OperationalAlertsCard } from '@/components/dashboard/home/OperationalAl
 import { ComplianceExpiryCard } from '@/components/dashboard/home/ComplianceExpiryCard';
 import { CardShell } from '@/components/dashboard/cards/CardShell';
 import { ChartCard } from '@/components/ui/ChartCard';
+import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
+import { PaceCard } from '@/components/analytics/PaceCard';
+import { ForecastCard } from '@/components/analytics/ForecastCard';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -235,6 +238,32 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
       });
   }, []);
 
+  const monthSmartLayer = useMemo(() => {
+    if (
+      !performance?.monthly ||
+      performance.daysInMonth == null ||
+      performance.todayDayOfMonth == null ||
+      performance.daysInMonth <= 0
+    ) {
+      return null;
+    }
+    const daysPassed = Math.max(1, performance.todayDayOfMonth);
+    return {
+      pace: computePaceMetrics({
+        actualMTD: performance.monthly.sales,
+        monthlyTarget: performance.monthly.target,
+        totalDaysInMonth: performance.daysInMonth,
+        daysPassed,
+      }),
+      forecast: computeForecast({
+        actualMTD: performance.monthly.sales,
+        monthlyTarget: performance.monthly.target,
+        totalDaysInMonth: performance.daysInMonth,
+        daysPassed,
+      }),
+    };
+  }, [performance]);
+
   if (!data) {
     return (
       <div className="p-4">
@@ -392,6 +421,27 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               actualPct={performance.daily.percent}
             />
             </div>
+            {monthSmartLayer && (
+              <div className="mt-10 grid gap-4 lg:grid-cols-2">
+                <PaceCard
+                  title={t('analytics.monthPaceTitle')}
+                  pace={monthSmartLayer.pace}
+                  expectedLabel={t('analytics.expectedByNow')}
+                  bandLabels={{
+                    ahead: t('analytics.ahead'),
+                    onTrack: t('analytics.onTrack'),
+                    behind: t('analytics.behind'),
+                  }}
+                />
+                <ForecastCard
+                  title={t('analytics.monthForecastTitle')}
+                  linear={monthSmartLayer.forecast}
+                  rolling7={null}
+                  disclaimer={t('analytics.projectionOnly')}
+                  rollingTitle={t('analytics.forecastRolling7')}
+                />
+              </div>
+            )}
             <div className="mt-10">
               <ChartCard
                 title="Target vs Actual (MTD)"

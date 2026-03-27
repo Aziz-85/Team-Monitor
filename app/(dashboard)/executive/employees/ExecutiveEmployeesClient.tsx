@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
+import { ProductivityTable } from '@/components/analytics/ProductivityTable';
+
+type ProductivityEmployeeRow = {
+  userId: string;
+  name: string;
+  totalSalesMTD: number;
+  activeDays: number;
+  avgDailySales: number;
+  contributionPct: number;
+};
 
 type EmployeeRow = {
   empId: string;
@@ -30,6 +40,8 @@ export function ExecutiveEmployeesClient() {
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [data, setData] = useState<{ year: string; employees: EmployeeRow[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [productivityLoading, setProductivityLoading] = useState(true);
+  const [productivityRows, setProductivityRows] = useState<ProductivityEmployeeRow[]>([]);
 
   useEffect(() => {
     fetch('/api/me/scope')
@@ -47,6 +59,19 @@ export function ExecutiveEmployeesClient() {
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [year, viewMode, role]);
+
+  useEffect(() => {
+    if (role == null) return;
+    setProductivityLoading(true);
+    const global = (role === 'ADMIN' || role === 'SUPER_ADMIN') && viewMode === 'global' ? '&global=true' : '';
+    fetch(`/api/analytics/performance?employees=true${global}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { employees?: ProductivityEmployeeRow[] } | null) => {
+        setProductivityRows(Array.isArray(d?.employees) ? d!.employees! : []);
+      })
+      .catch(() => setProductivityRows([]))
+      .finally(() => setProductivityLoading(false));
+  }, [viewMode, role]);
 
   const list = data?.employees ?? [];
 
@@ -87,6 +112,29 @@ export function ExecutiveEmployeesClient() {
       </div>
 
       {loading && <p className="text-sm text-muted">{t('common.loading')}</p>}
+      <div className="mb-6">
+        <ProductivityTable
+          title={t('analytics.productivityTitle')}
+          subtitle={t('analytics.productivitySubtitle')}
+          loading={productivityLoading}
+          labels={{
+            employee: t('analytics.employee'),
+            totalMtd: t('analytics.totalMtd'),
+            activeDays: t('analytics.activeDays'),
+            avgDaily: t('analytics.avgDaily'),
+            contribution: t('analytics.contribution'),
+          }}
+          rows={productivityRows.map((e) => ({
+            id: e.userId,
+            name: e.name,
+            totalSalesMTD: e.totalSalesMTD,
+            activeDays: e.activeDays,
+            avgDailySales: e.avgDailySales,
+            contributionPct: e.contributionPct,
+          }))}
+        />
+      </div>
+
       {!loading && data && (
         <OpsCard title={t('executive.employees.annualTotals')}>
           <AdminDataTable>
