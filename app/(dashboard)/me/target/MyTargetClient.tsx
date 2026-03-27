@@ -5,6 +5,7 @@ import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarInt } from '@/lib/utils/money';
 import { getPerformanceBgClass } from '@/lib/performanceColors';
+import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 /** Add delta months to YYYY-MM. Returns YYYY-MM (month zero-padded). */
 function addMonths(monthKey: string, delta: number): string {
@@ -93,14 +94,14 @@ const WEEKDAY_LABELS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 export function MyTargetClient() {
   const { t } = useT();
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => getRiyadhMonthKey());
   const [data, setData] = useState<TargetsData | null>(null);
   const [monthEntries, setMonthEntries] = useState<SalesEntry[]>([]);
   const [canEditDates, setCanEditDates] = useState<string[]>([]);
   const [pendingRequests, setPendingRequests] = useState<{ id: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getRiyadhDateKey());
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -199,7 +200,7 @@ export function MyTargetClient() {
 
   const goPrevMonth = () => setMonth((m) => addMonths(m, -1));
   const goNextMonth = () => setMonth((m) => addMonths(m, 1));
-  const goThisMonth = () => setMonth(new Date().toISOString().slice(0, 7));
+  const goThisMonth = () => setMonth(getRiyadhMonthKey());
 
   const goPrevDay = () => {
     const prev = addDays(date, -1);
@@ -212,7 +213,7 @@ export function MyTargetClient() {
     if (monthKeyFromDate(next) !== month) setMonth(monthKeyFromDate(next));
   };
   const goToday = () => {
-    const today = data?.todayStr ?? new Date().toISOString().slice(0, 10);
+    const today = data?.todayStr ?? getRiyadhDateKey();
     setDate(today);
     setMonth(monthKeyFromDate(today));
   };
@@ -554,7 +555,7 @@ export function MyTargetClient() {
         {false && (
         <OpsCard title={t('targets.thisMonthEntries')}>
           {monthEntries.length > 0 && (() => {
-            const isCurrentMonth = month === new Date().toISOString().slice(0, 7);
+            const isCurrentMonth = month === getRiyadhMonthKey();
             return (
               <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
                 {isCurrentMonth ? (
@@ -595,7 +596,7 @@ export function MyTargetClient() {
               .slice()
               .sort((a, b) => a.date.localeCompare(b.date))
               .map((e) => {
-                const isCurrentMonth = month === new Date().toISOString().slice(0, 7);
+                const isCurrentMonth = month === getRiyadhMonthKey();
                 const canDeleteEntry = e.canEdit && !isCurrentMonth;
                 return (
                 <li

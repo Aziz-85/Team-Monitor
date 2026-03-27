@@ -14,6 +14,7 @@ import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import type { Role } from '@prisma/client';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 export type CompareBoutiqueRow = {
   boutiqueId: string;
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
   const monthKey =
     monthParam && /^\d{4}-\d{2}$/.test(monthParam)
       ? monthParam
-      : new Date().toISOString().slice(0, 7);
+      : getRiyadhMonthKey();
 
   const [boutiques, revenueByBoutique, targets, groupMembers] = await Promise.all([
     prisma.boutique.findMany({

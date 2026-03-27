@@ -452,7 +452,7 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line no-console
     console.log('[dashboard.scheduleOverview]', {
       boutiqueId: boutiqueId ?? null,
-      date: now.toISOString().slice(0, 10),
+      date: todayStr,
       amCount: amCountToday,
       pmCount: pmCountToday,
       imbalanceHighlight: amCountToday > pmCountToday,

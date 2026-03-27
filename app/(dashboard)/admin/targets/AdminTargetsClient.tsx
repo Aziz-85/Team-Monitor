@@ -74,7 +74,7 @@ type ImportResult = {
 
 export function AdminTargetsClient() {
   const { t } = useT();
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => getCurrentMonthKeyRiyadh());
   const [boutiqueAmount, setBoutiqueAmount] = useState('');
   const [data, setData] = useState<AdminTargetsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,7 +111,7 @@ export function AdminTargetsClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- defaultWeights is stable
   }, [data?.roleWeights]);
   const [importMode, setImportMode] = useState<'simple' | 'msr'>('simple');
-  const [importMonth, setImportMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [importMonth, setImportMonth] = useState(() => getCurrentMonthKeyRiyadh());
   const [showImportDetails, setShowImportDetails] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');

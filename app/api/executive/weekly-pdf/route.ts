@@ -17,6 +17,7 @@ import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
 import type { Role } from '@prisma/client';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 const BURST_WINDOW_MS = 3 * 60 * 1000;
 const BURST_MIN_TASKS = 4;
@@ -166,7 +167,7 @@ export async function GET(request: NextRequest) {
   let totalWeekly = 0;
   let completed = 0;
   let overdue = 0;
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getRiyadhDateKey();
   for (const dateStr of weekDates) {
     const date = new Date(dateStr + 'T00:00:00Z');
     const isPast = dateStr < todayStr;

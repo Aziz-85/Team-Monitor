@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 type Boutique = { id: string; code: string; name: string };
 type Employee = { empId: string; name: string };
@@ -25,7 +26,7 @@ export function KpiUploadClient() {
   const [uploads, setUploads] = useState<UploadRow[]>([]);
   const [boutiqueId, setBoutiqueId] = useState('');
   const [empId, setEmpId] = useState('');
-  const [periodKey, setPeriodKey] = useState(() => new Date().toISOString().slice(0, 7));
+  const [periodKey, setPeriodKey] = useState(() => getRiyadhMonthKey());
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; status: string; snapshot?: unknown; error?: string } | null>(null);

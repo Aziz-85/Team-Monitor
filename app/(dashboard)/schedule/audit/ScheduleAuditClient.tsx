@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import { getRiyadhNow } from '@/lib/dates/riyadhDate';
+import { getWeekStart } from '@/lib/utils/week';
 
 type AuditItem = {
   id: string;
@@ -44,12 +46,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function getCurrentWeekStart(): string {
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const day = today.getUTCDay();
-  const daysBack = (day - 6 + 7) % 7;
-  today.setUTCDate(today.getUTCDate() - daysBack);
-  return today.toISOString().slice(0, 10);
+  return getWeekStart(getRiyadhNow());
 }
 
 function auditActionColor(action: string, module: string | null): string {

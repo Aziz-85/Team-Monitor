@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { prisma } from '@/lib/db';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
   const boutiqueId = scope.boutiqueId;
   const empId = scope.empId;
 
-  const dateParam = request.nextUrl.searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
+  const dateParam = request.nextUrl.searchParams.get('date') ?? getRiyadhDateKey();
   const date = new Date(dateParam + 'T00:00:00Z');
 
   const tasks = await prisma.task.findMany({

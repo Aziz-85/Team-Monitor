@@ -3,17 +3,18 @@
 import { useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { useT } from '@/lib/i18n/useT';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type PlannerRow = { Title: string; AssignedTo: string; 'Start Date': string; 'Due Date': string; Notes: string };
 
 export function PlannerExportClient() {
   const { t } = useT();
-  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [from, setFrom] = useState(() => getRiyadhDateKey());
+  const [to, setTo] = useState(() => getRiyadhDateKey());
   const [loading, setLoading] = useState(false);
 
-  const [scheduleFrom, setScheduleFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [scheduleTo, setScheduleTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [scheduleFrom, setScheduleFrom] = useState(() => getRiyadhDateKey());
+  const [scheduleTo, setScheduleTo] = useState(() => getRiyadhDateKey());
   const [boutiqueOnly, setBoutiqueOnly] = useState(false);
   const [rashidOnly, setRashidOnly] = useState(false);
   const [schedulePreview, setSchedulePreview] = useState<PlannerRow[] | null>(null);

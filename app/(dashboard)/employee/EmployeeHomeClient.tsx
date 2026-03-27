@@ -9,6 +9,7 @@ import { getPerformanceBgClass } from '@/lib/performanceColors';
 import { PaceCard } from '@/components/analytics/PaceCard';
 import { ForecastCard } from '@/components/analytics/ForecastCard';
 import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type EmployeeHomeData = {
   date: string;
@@ -20,7 +21,7 @@ type EmployeeHomeData = {
 export function EmployeeHomeClient() {
   const { t } = useT();
   const [data, setData] = useState<EmployeeHomeData | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getRiyadhDateKey());
   const [targetsData, setTargetsData] = useState<{
     todayTarget: number;
     todaySales: number;
@@ -31,7 +32,7 @@ export function EmployeeHomeClient() {
     remaining: number;
   } | null>(null);
 
-  const [salesEntryDate, setSalesEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
   const [salesEntryAmount, setSalesEntryAmount] = useState<string>('');
   const [salesEntrySaving, setSalesEntrySaving] = useState(false);
   const [salesEntryError, setSalesEntryError] = useState<string | null>(null);

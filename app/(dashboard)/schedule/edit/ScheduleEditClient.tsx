@@ -22,6 +22,7 @@ import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
+import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import type { Role } from '@prisma/client';
 
 function formatDDMM(d: string): string {
@@ -248,13 +249,13 @@ type ValidationResult = { type: string; message: string; amCount: number; pmCoun
 const DEFAULT_REASON = 'Schedule adjustment';
 
 function parseWeekStartFromUrl(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(new Date().toISOString().slice(0, 10));
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(getRiyadhDateKey());
   const normalized = weekStartSaturday(value);
   return normalized;
 }
 
 function parseMonthFromUrl(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}$/.test(value)) return new Date().toISOString().slice(0, 7);
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return getRiyadhMonthKey();
   return value;
 }
 

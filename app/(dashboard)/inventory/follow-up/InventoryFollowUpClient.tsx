@@ -6,15 +6,9 @@ import { OpsCard } from '@/components/ui/OpsCard';
 import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
-import { getWeekStartSaturday } from '@/lib/utils/week';
-
-function weekStartFor(date: Date): string {
-  const start = getWeekStartSaturday(date);
-  const y = start.getFullYear();
-  const m = String(start.getMonth() + 1).padStart(2, '0');
-  const day = String(start.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+import { getWeekStart } from '@/lib/utils/week';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
+import { normalizeDateOnlyRiyadh, addDays, formatDateRiyadh } from '@/lib/time';
 
 function formatDDMM(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00Z');
@@ -89,12 +83,8 @@ function StatusPill({ status, effectiveStatus, label }: { status: string; effect
 export function InventoryFollowUpClient() {
   const { t } = useT();
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const defaultFrom = (() => {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() - 14);
-    return d.toISOString().slice(0, 10);
-  })();
+  const todayStr = getRiyadhDateKey();
+  const defaultFrom = formatDateRiyadh(addDays(normalizeDateOnlyRiyadh(todayStr), -14));
 
   const [tab, setTab] = useState<'daily' | 'weekly' | 'audit'>('daily');
   const [dailyFrom, setDailyFrom] = useState(defaultFrom);
@@ -107,7 +97,7 @@ export function InventoryFollowUpClient() {
   } | null>(null);
   const [nextData, setNextData] = useState<{ from: string; days: number; projections: Projection[] } | null>(null);
   const [nextDaysCount, setNextDaysCount] = useState(14);
-  const [weekStart, setWeekStart] = useState(weekStartFor(new Date()));
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(normalizeDateOnlyRiyadh(getRiyadhDateKey())));
   const [weeklyData, setWeeklyData] = useState<WeeklyData | null>(null);
 
   useEffect(() => {
@@ -142,7 +132,7 @@ export function InventoryFollowUpClient() {
 
   useEffect(() => {
     if (tab !== 'daily') return;
-    fetch(`/api/inventory/follow-up/weekly?weekStart=${weekStartFor(new Date())}`)
+    fetch(`/api/inventory/follow-up/weekly?weekStart=${getWeekStart(normalizeDateOnlyRiyadh(getRiyadhDateKey()))}`)
       .then((r) => r.json())
       .then((data: unknown) => {
         if (data && typeof data === 'object' && 'summary' in data && Array.isArray((data as WeeklyData).byEmployee)) {

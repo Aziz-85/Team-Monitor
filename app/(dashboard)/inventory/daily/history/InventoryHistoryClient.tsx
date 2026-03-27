@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 type Stats = {
   byEmployee: Array<{ empId: string; name: string; completed: number }>;
@@ -13,7 +14,7 @@ type Stats = {
 
 export function InventoryHistoryClient() {
   const { t } = useT();
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => getRiyadhMonthKey());
   const [stats, setStats] = useState<Stats | null>(null);
   const [rebalancing, setRebalancing] = useState(false);
 

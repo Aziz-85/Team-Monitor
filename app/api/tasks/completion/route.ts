@@ -2,18 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
+import { normalizeDateOnlyRiyadh } from '@/lib/time';
 
 type ToggleAction = 'done' | 'undo';
 
 function getTodayDateInKsa(): { dateStr: string; date: Date } {
-  const now = new Date();
-  const ksaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-  const year = ksaNow.getFullYear();
-  const month = String(ksaNow.getMonth() + 1).padStart(2, '0');
-  const day = String(ksaNow.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
-  const date = new Date(`${dateStr}T00:00:00Z`);
-  return { dateStr, date };
+  const dateStr = getRiyadhDateKey();
+  return { dateStr, date: normalizeDateOnlyRiyadh(dateStr) };
 }
 
 export async function POST(request: NextRequest) {

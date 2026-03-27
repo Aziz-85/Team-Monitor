@@ -16,6 +16,7 @@ import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { normShift } from '@/lib/shiftNorm';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
+import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -65,15 +66,12 @@ function formatWeekRangeLabel(weekStart: string, locale: string): { start: strin
 }
 
 function parseWeekStartFromUrl(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(new Date().toISOString().slice(0, 10));
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(getRiyadhDateKey());
   return weekStartSaturday(value);
 }
 
 function currentMonthStr(): string {
-  const d = new Date();
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
+  return getRiyadhMonthKey();
 }
 
 function addMonths(monthStr: string, delta: number): string {

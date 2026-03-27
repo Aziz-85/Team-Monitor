@@ -10,6 +10,7 @@ import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getFirstName } from '@/lib/name';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
+import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -62,12 +63,12 @@ function formatMonthYear(monthStr: string, locale: string): string {
 }
 
 function parseWeekStartFromUrl(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(new Date().toISOString().slice(0, 10));
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(getRiyadhDateKey());
   return weekStartSaturday(value);
 }
 
 function parseMonthFromUrl(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}$/.test(value)) return new Date().toISOString().slice(0, 7);
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return getRiyadhMonthKey();
   return value;
 }
 

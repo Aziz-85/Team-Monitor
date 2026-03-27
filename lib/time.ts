@@ -33,11 +33,8 @@ export function getRiyadhNow(): Date {
  * Format date as YYYY-MM-DD in Riyadh. Use for SalesEntry.dateKey and day-key logic.
  */
 export function toRiyadhDateString(date: Date): string {
-  if (Number.isNaN(date.getTime())) {
-    const n = new Date();
-    return n.toISOString().slice(0, 10);
-  }
-  return date.toLocaleDateString('en-CA', { timeZone: RIYADH_TZ }).replace(/\//g, '-');
+  const d = Number.isNaN(date.getTime()) ? new Date() : date;
+  return d.toLocaleDateString('en-CA', { timeZone: RIYADH_TZ }).replace(/\//g, '-');
 }
 
 /**

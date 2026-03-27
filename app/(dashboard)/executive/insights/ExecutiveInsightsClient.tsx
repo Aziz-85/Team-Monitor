@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
 import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type Risk = { score: number; level: string; reasons: string[] };
 type Narrative = { whatChanged: string[]; why: string[]; nextActions: string[] };
@@ -116,7 +117,7 @@ export function ExecutiveInsightsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() =>
-    getSaturday(new Date().toISOString().slice(0, 10))
+    getSaturday(getRiyadhDateKey())
   );
 
   const toggleReasons = useCallback((userId: string) => {

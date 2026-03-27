@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatBusinessDate } from '@/lib/utils/formatBusinessDate';
 import { useT } from '@/lib/i18n/useT';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type DailyRun = {
   date: string;
@@ -58,7 +59,7 @@ const SKIP_LABELS: Record<string, string> = {
 
 export function InventoryDailyClient() {
   const { t } = useT();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getRiyadhDateKey());
   const [run, setRun] = useState<DailyRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);

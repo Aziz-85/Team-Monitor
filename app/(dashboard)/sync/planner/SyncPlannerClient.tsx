@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekNumber, getWeekStartSaturday, getWeekEndFriday } from '@/lib/utils/week';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type CompareRow = {
   taskKey: string | null;
@@ -95,7 +96,7 @@ export function SyncPlannerClient() {
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = isV2 ? `planner-export-${generatedKey}.csv` : `site-export-${generatedKey}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = isV2 ? `planner-export-${generatedKey}.csv` : `site-export-${generatedKey}-${getRiyadhDateKey()}.csv`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e) {
@@ -122,7 +123,7 @@ export function SyncPlannerClient() {
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `site-export-${generatedKey}-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `site-export-${generatedKey}-${getRiyadhDateKey()}.csv`;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e) {

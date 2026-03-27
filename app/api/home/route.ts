@@ -8,6 +8,7 @@ import { getCoverageSuggestion } from '@/lib/services/coverageSuggestion';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { assertOperationalBoutiqueId } from '@/lib/guards/assertOperationalBoutique';
 import type { Role } from '@prisma/client';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +27,12 @@ export async function GET(request: NextRequest) {
     }
     const scopeOptions = { boutiqueIds: scope.boutiqueIds };
 
-    const dateParam = request.nextUrl.searchParams.get('date') ?? new Date().toISOString().slice(0, 10);
+    const dateParam = request.nextUrl.searchParams.get('date') ?? getRiyadhDateKey();
     const date = new Date(dateParam + 'T00:00:00Z');
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('RIYADH TODAY:', getRiyadhDateKey());
+    }
 
     const [roster, coverageValidation, suggestionResult] = await Promise.all([
       rosterForDate(date, scopeOptions),
@@ -69,7 +74,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      date: date.toISOString().slice(0, 10),
+      date: dateParam,
       roster,
       coverageValidation,
       coverageSuggestion: suggestionResult.suggestion,

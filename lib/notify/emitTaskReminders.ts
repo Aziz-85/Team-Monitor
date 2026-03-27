@@ -6,26 +6,16 @@
 import { prisma } from '@/lib/db';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { emitEvent } from './emitEvent';
-
-function getKsaDateStr(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getTodayKsa(): Date {
-  const now = new Date();
-  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-}
+import { getRiyadhNow, formatDateRiyadh, addDays, normalizeDateOnlyRiyadh } from '@/lib/time';
 
 /**
  * Emit due_soon for tasks due tomorrow and overdue for tasks due before today.
  * Uses todayKsa as "today" (default: current KSA date).
  */
 export async function emitTaskReminders(todayKsa?: Date): Promise<{ dueSoon: number; overdue: number }> {
-  const today = todayKsa ?? getTodayKsa();
-  const todayStr = getKsaDateStr(today);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = getKsaDateStr(tomorrow);
+  const today = todayKsa ?? getRiyadhNow();
+  const todayStr = formatDateRiyadh(today);
+  const tomorrowStr = formatDateRiyadh(addDays(normalizeDateOnlyRiyadh(todayStr), 1));
 
   const boutiques = await prisma.boutique.findMany({ select: { id: true } });
   let dueSoonCount = 0;

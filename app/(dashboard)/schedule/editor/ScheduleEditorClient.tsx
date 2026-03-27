@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { useT } from '@/lib/i18n/useT';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type Roster = {
   amEmployees: Array<{ empId: string; name: string }>;
@@ -20,7 +21,7 @@ type CoverageSuggestion = {
 
 export function ScheduleEditorClient() {
   const { t } = useT();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getRiyadhDateKey());
   const [roster, setRoster] = useState<Roster | null>(null);
   const [coverageSuggestion, setCoverageSuggestion] = useState<CoverageSuggestion | null>(null);
   const [applying, setApplying] = useState(false);

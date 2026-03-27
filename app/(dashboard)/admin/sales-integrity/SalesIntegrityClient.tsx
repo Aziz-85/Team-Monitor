@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { useT } from '@/lib/i18n/useT';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 type ParityPayload = {
   ok: boolean;
@@ -28,7 +29,7 @@ type ParityPayload = {
 export function SalesIntegrityClient() {
   const { t } = useT();
   const [boutiqueId, setBoutiqueId] = useState('');
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(() => getRiyadhMonthKey());
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

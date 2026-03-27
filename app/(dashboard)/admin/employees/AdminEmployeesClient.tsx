@@ -9,6 +9,7 @@ import type { AdminFilterJson } from '@/lib/scope/adminFilter';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 type EmployeePosition = 'BOUTIQUE_MANAGER' | 'ASSISTANT_MANAGER' | 'SENIOR_SALES' | 'SALES';
 
@@ -631,7 +632,7 @@ export function AdminEmployeesClient() {
                         setTeamChangeModal({ empId: e.empId, name: getEmployeeDisplayName({ name: e.name, nameAr: e.nameAr }, locale), currentTeam });
                         setTeamChangeForm({
                           newTeam: (currentTeam === 'A' ? 'B' : 'A') as 'A' | 'B',
-                          effectiveFrom: new Date().toISOString().slice(0, 10),
+                          effectiveFrom: getRiyadhDateKey(),
                           reason: '',
                           allowImbalanceOverride: false,
                         });

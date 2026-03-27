@@ -12,6 +12,7 @@ import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { getMonthRange } from '@/lib/time';
 import { formatDateRiyadh } from '@/lib/time';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'] as const;
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
   const scopeId = scopeResult.boutiqueId;
 
   const monthParam = request.nextUrl.searchParams.get('month');
-  const month = (monthParam ?? '').trim() || new Date().toISOString().slice(0, 7);
+  const month = (monthParam ?? '').trim() || getRiyadhMonthKey();
   const [yearStr, monthStr] = month.split('-').map(Number);
   if (!Number.isFinite(yearStr) || !Number.isFinite(monthStr) || monthStr < 1 || monthStr > 12) {
     return NextResponse.json({ error: 'Invalid month; use YYYY-MM' }, { status: 400 });

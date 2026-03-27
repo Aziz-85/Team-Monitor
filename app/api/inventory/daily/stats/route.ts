@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
 import { getDailyStats } from '@/lib/services/inventoryDaily';
 import type { Role } from '@prisma/client';
+import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   if (!scopeResult.ok) return scopeResult.res;
   const { boutiqueId } = scopeResult;
 
-  const month = request.nextUrl.searchParams.get('month') || new Date().toISOString().slice(0, 7);
+  const month = request.nextUrl.searchParams.get('month') || getRiyadhMonthKey();
   if (!/^\d{4}-\d{2}$/.test(month)) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }

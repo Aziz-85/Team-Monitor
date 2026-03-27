@@ -22,6 +22,7 @@ import { ChartCard } from '@/components/ui/ChartCard';
 import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
 import { PaceCard } from '@/components/analytics/PaceCard';
 import { ForecastCard } from '@/components/analytics/ForecastCard';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -101,7 +102,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   const { t } = useT();
   const [data, setData] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getRiyadhDateKey());
   const [weekSummary, setWeekSummary] = useState<Array<{
     date: string;
     dayName: string;
@@ -276,7 +277,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     );
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getRiyadhDateKey();
   const isSelectedToday = date === todayStr;
 
   const roster = data.roster ?? {

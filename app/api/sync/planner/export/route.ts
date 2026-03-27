@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth';
 import { exportSiteTasksForPeriod, exportRowsToCsv } from '@/lib/sync/exportSiteTasks';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import type { Role } from '@prisma/client';
+import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 const ALLOWED_ROLES: Role[] = ['MANAGER', 'ADMIN'];
 
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   try {
     const { rows } = await exportSiteTasksForPeriod(periodType, periodKey.trim(), scheduleScope.boutiqueId);
     const csv = exportRowsToCsv(rows);
-    const filename = `site-export-${periodKey}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `site-export-${periodKey}-${getRiyadhDateKey()}.csv`;
     return new NextResponse(csv, {
       status: 200,
       headers: {
