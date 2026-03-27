@@ -34,7 +34,7 @@ export function MobileTopBar({
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 flex min-w-0 items-center justify-between border-b border-border bg-surface px-3 py-2 md:hidden">
+      <div className="sticky top-0 z-20 flex min-w-0 max-w-full items-center justify-between overflow-x-clip border-b border-border bg-surface px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
@@ -78,8 +78,8 @@ export function MobileTopBar({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 z-50 h-full w-64 bg-surface shadow-lg transition-transform md:hidden ${
-          isRtl ? 'end-0' : 'start-0'
+        className={`fixed inset-y-0 z-50 h-full w-64 max-w-[85vw] bg-surface shadow-lg transition-transform md:hidden ${
+          isRtl ? 'right-0' : 'left-0'
         } ${drawerOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'}`}
       >
         <div className="flex h-full flex-col">

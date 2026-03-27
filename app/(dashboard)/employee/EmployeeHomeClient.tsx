@@ -109,29 +109,29 @@ export function EmployeeHomeClient() {
 
   if (!data) {
     return (
-      <div className="p-4">
+      <div className="w-full min-w-0 max-w-full p-4">
         <p className="text-muted">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-4">
+    <div className="w-full min-w-0 max-w-full p-4 md:p-6">
+      <div className="mx-auto w-full min-w-0 max-w-4xl">
+        <div className="mb-4 min-w-0">
           <label className="me-2 text-base font-medium text-foreground">{t('common.date')}</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-border px-3 py-2 text-base"
+            className="w-full min-w-0 rounded border border-border px-3 py-2 text-base sm:w-auto"
           />
         </div>
 
         {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
-          <div className="mb-4">
+          <div className="mb-4 min-w-0">
             <p className="mb-2 text-xs text-muted">{t('home.targetsTodayOnlySubtitle')}</p>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-muted">
                 {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
@@ -162,17 +162,17 @@ export function EmployeeHomeClient() {
 
         <OpsCard title="My Sales" className="mb-4">
           <p className="mb-2 text-sm text-muted">Enter daily sales (SAR). Zero is valid.</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="min-w-0 sm:w-auto">
               <label className="me-1 text-xs text-muted">Date</label>
               <input
                 type="date"
                 value={salesEntryDate}
                 onChange={(e) => setSalesEntryDate(e.target.value)}
-                className="rounded border border-border px-2 py-1.5 text-sm"
+                className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-auto"
               />
             </div>
-            <div>
+            <div className="min-w-0 sm:w-auto">
               <label className="me-1 text-xs text-muted">Amount (SAR)</label>
               <input
                 type="number"
@@ -181,29 +181,29 @@ export function EmployeeHomeClient() {
                 value={salesEntryAmount}
                 onChange={(e) => setSalesEntryAmount(e.target.value)}
                 placeholder="0"
-                className="w-28 rounded border border-border px-2 py-1.5 text-sm"
+                className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
               />
             </div>
             <button
               type="button"
               disabled={salesEntrySaving}
               onClick={saveSalesEntry}
-              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
             >
               {salesEntrySaving ? 'Saving…' : 'Save'}
             </button>
           </div>
           {salesEntryError && <p className="mt-2 text-sm text-red-600">{salesEntryError}</p>}
           <p className="mt-2 text-xs text-muted">Last 7 entries:</p>
-          <ul className="mt-1 list-inside list-disc text-sm text-foreground">
+          <ul className="mt-1 list-inside list-disc ps-4 text-sm text-foreground">
             {lastEntries.length === 0 && <li>—</li>}
             {lastEntries.map((e) => (
-              <li key={e.id}>{e.date}: {formatSarInt(e.amount)}</li>
+              <li key={e.id} className="break-words">{e.date}: {formatSarInt(e.amount)}</li>
             ))}
           </ul>
         </OpsCard>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid min-w-0 gap-4 md:grid-cols-2">
           <ShiftCard variant="morning" title={t('schedule.morning')}>
             {data.todaySchedule.am ? (
               <p className="text-base">You are on shift</p>
@@ -221,9 +221,9 @@ export function EmployeeHomeClient() {
         </div>
 
         <OpsCard title={t('tasks.today')} className="mt-6">
-          <ul className="list-disc space-y-1 pl-4">
+          <ul className="list-disc space-y-1 ps-4">
             {data.todayTasks.map((t) => (
-              <li key={t.taskName}>
+              <li key={t.taskName} className="break-words">
                 {t.taskName} <span className="text-muted">({t.reason})</span>
               </li>
             ))}
@@ -233,11 +233,11 @@ export function EmployeeHomeClient() {
 
         <OpsCard title={t('schedule.week')} className="mt-6">
           <p className="mb-2 text-base text-muted">{t('schedule.morning')}</p>
-          <p className="mb-2 text-base">
+          <p className="mb-2 text-base break-words">
             {data.weekRoster.am.map((e) => e.name).join(', ') || '—'}
           </p>
           <p className="mb-2 text-base text-muted">{t('schedule.evening')}</p>
-          <p className="text-base">
+          <p className="text-base break-words">
             {data.weekRoster.pm.map((e) => e.name).join(', ') || '—'}
           </p>
         </OpsCard>
