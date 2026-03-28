@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
 import { ChartCard } from '@/components/ui/ChartCard';
@@ -88,6 +88,14 @@ type WeekReportJson = {
   }>;
 };
 
+function interpolateMessage(template: string, vars: Record<string, string | number>) {
+  let s = template;
+  for (const [k, val] of Object.entries(vars)) {
+    s = s.split(`{${k}}`).join(String(val));
+  }
+  return s;
+}
+
 type MonthDailyJson = {
   error?: string;
   labelNote?: string;
@@ -137,7 +145,7 @@ export function TeamMonitorKpiPanel({
   const [reportsError, setReportsError] = useState<string | null>(null);
 
   const monthKey = performance.monthKey ?? '';
-  const trajectory = performance.dailyTrajectory ?? [];
+  const trajectory = useMemo(() => performance.dailyTrajectory ?? [], [performance.dailyTrajectory]);
   const chartData = trajectory.map((d) => ({
     label: d.dateKey.slice(-2),
     value: d.actualCumulative,
@@ -186,6 +194,43 @@ export function TeamMonitorKpiPanel({
   const monthPosted = performance.monthly.sales;
   const reportingDaily = performance.reportingDailyAllocationSar ?? 0;
   const reportingWeekly = performance.reportingWeeklyAllocationSar ?? 0;
+
+  const reportingChartChrome = useMemo(
+    () => ({
+      dateKeys: trajectory.map((d) => d.dateKey),
+      daysInMonth: performance.daysInMonth ?? Math.max(1, trajectory.length),
+      monthKey: monthKey,
+      postedLastRecordedDateKey: performance.postedLastRecordedDateKey ?? null,
+      todayInSelectedMonth: performance.todayInSelectedMonth ?? false,
+      labels: {
+        kpiAheadBy: (v: string) =>
+          interpolateMessage(t('home.teamMonitor.chartReportingKpiAheadBy'), { v }),
+        kpiBehindBy: (v: string) =>
+          interpolateMessage(t('home.teamMonitor.chartReportingKpiBehindBy'), { v }),
+        targetReachedOnDay: (day: number) =>
+          interpolateMessage(t('home.teamMonitor.chartReportingTargetReachedOnDay'), { day }),
+        lastRecordedDay: t('home.teamMonitor.chartReportingLastRecordedDay'),
+        todayNotPosted: t('home.teamMonitor.chartReportingTodayNotPosted'),
+        statusAhead: t('home.teamMonitor.chartReportingStatusAhead'),
+        statusBehind: t('home.teamMonitor.chartReportingStatusBehind'),
+        legendActual: t('home.teamMonitor.chartReportingLegendActual'),
+        legendTarget: t('home.teamMonitor.chartReportingLegendTarget'),
+        dayLine: (day: number) => interpolateMessage(t('home.teamMonitor.chartReportingDayLine'), { day }),
+        tooltipActual: t('home.teamMonitor.chartReportingTooltipActual'),
+        tooltipTarget: t('home.teamMonitor.chartReportingTooltipTarget'),
+        tooltipVariance: t('home.teamMonitor.chartReportingTooltipVariance'),
+        tooltipStatus: t('home.teamMonitor.chartReportingTooltipStatus'),
+      },
+    }),
+    [
+      trajectory,
+      monthKey,
+      performance.daysInMonth,
+      performance.postedLastRecordedDateKey,
+      performance.todayInSelectedMonth,
+      t,
+    ]
+  );
 
   return (
     <section className="mb-10 rounded-2xl border border-border/60 bg-surface/50 p-6 md:p-8">
@@ -379,6 +424,7 @@ export function TeamMonitorKpiPanel({
             height={320}
             valueFormat={(n) => formatSarInt(n)}
             emptyLabel={t('home.teamMonitor.chartEmpty')}
+            reportingChrome={reportingChartChrome}
           />
         </ChartCard>
       </div>

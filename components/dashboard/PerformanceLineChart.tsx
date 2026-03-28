@@ -1,6 +1,9 @@
 'use client';
 
-import { TargetVsActualLineChart } from '@/components/charts/TargetVsActualLineChart';
+import {
+  TargetVsActualLineChart,
+  type TargetVsActualReportingChrome,
+} from '@/components/charts/TargetVsActualLineChart';
 
 type Point = { label: string; value: number };
 type Props = {
@@ -9,6 +12,7 @@ type Props = {
   height?: number;
   valueFormat?: (n: number) => string;
   emptyLabel?: string;
+  reportingChrome?: TargetVsActualReportingChrome;
 };
 
 /** Home theme target-vs-actual line chart. Wraps shared TargetVsActualLineChart. */
@@ -18,6 +22,7 @@ export function PerformanceLineChart({
   height = 240,
   valueFormat = (n) => n.toLocaleString(),
   emptyLabel = 'No sales data yet',
+  reportingChrome,
 }: Props) {
   return (
     <TargetVsActualLineChart
@@ -27,6 +32,7 @@ export function PerformanceLineChart({
       valueFormat={valueFormat}
       emptyLabel={emptyLabel}
       theme="home"
+      reportingChrome={reportingChrome}
     />
   );
 }
