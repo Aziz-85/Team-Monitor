@@ -95,6 +95,33 @@ type PerformanceSummary = {
   };
   daysInMonth?: number;
   todayDayOfMonth?: number;
+  linearForecast?: {
+    forecastedTotal: number;
+    forecastDelta: number;
+    avgDailyActual: number;
+  };
+  smartOutlook?: {
+    required: {
+      smartDailyRequiredSar: number;
+      smartWeeklyRequiredSar: number;
+      linearDailyRequiredSar: number;
+      linearWeeklyRequiredSar: number;
+      usedEqualWeightFallback: boolean;
+      explain: string;
+    };
+    forecast: {
+      forecastSmartSar: number;
+      projectedRemainingSmartSar: number;
+      varianceVsTargetSar: number;
+      confidence: 'high' | 'medium' | 'low';
+      rangeConservativeSar: number;
+      rangeExpectedSar: number;
+      rangeStretchSar: number;
+      linearForecastTotalSar: number;
+      usedHistoryFallbackForForecast: boolean;
+      explain: string;
+    };
+  } | null;
 };
 
 type HomePageClientProps = {
@@ -374,7 +401,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
 
         {/* Performance section (always today) */}
         {performance && (
-          <TeamMonitorKpiPanel performance={performance} monthSmartLayer={monthSmartLayer} />
+          <TeamMonitorKpiPanel
+            performance={performance}
+            monthSmartLayer={monthSmartLayer}
+            smartOutlook={performance.smartOutlook ?? null}
+            linearForecastApi={performance.linearForecast ?? null}
+          />
         )}
 
         {/* Operational section (selected date) */}

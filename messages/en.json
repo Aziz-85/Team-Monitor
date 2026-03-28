@@ -1296,7 +1296,27 @@
       "colDailyTargetReporting": "Daily target (reporting)",
       "colAchievedDay": "Achieved (posted)",
       "colRemaining": "Remaining",
-      "colPct": "%"
+      "colPct": "%",
+      "smartForecastTitle": "Smart forecast",
+      "smartForecastBlurb": "Weighted by historical branch day-of-week totals (SalesEntry). Compared with the linear month-end projection beside it.",
+      "smartForecastMonthEnd": "Smart month-end (expected)",
+      "smartForecastVsTarget": "Variance vs monthly target",
+      "smartConfidenceLabel": "Confidence: {level}",
+      "smartConfidence": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "smartRangeConservative": "Conservative range (month-end)",
+      "smartRangeExpected": "Expected range (month-end)",
+      "smartRangeStretch": "Stretch range (month-end)",
+      "smartVsLinearForecast": "Linear month-end (baseline for comparison): {v} SAR",
+      "smartRequiredTitle": "Smart required (operational)",
+      "smartRequiredBlurb": "Splits remaining monthly target across remaining calendar days using weekday weights from branch history. Falls back to equal split when history is thin.",
+      "smartRequiredToday": "Smart required today",
+      "smartRequiredWeek": "Smart required this week",
+      "smartVsLinearDaily": "Linear required today (comparison): {v} SAR",
+      "smartVsLinearWeek": "Linear required this week (comparison): {v} SAR"
     }
   },
   "compliance": {

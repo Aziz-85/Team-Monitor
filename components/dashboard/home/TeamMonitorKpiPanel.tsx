@@ -8,6 +8,7 @@ import { PerformanceLineChart } from '@/components/dashboard/PerformanceLineChar
 import { LuxuryTopSellerCard } from '@/components/dashboard/LuxuryTopSellerCard';
 import { PaceCard } from '@/components/analytics/PaceCard';
 import { ForecastCard } from '@/components/analytics/ForecastCard';
+import { OpsCard } from '@/components/ui/OpsCard';
 import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
 
 type DailyTrajectoryPoint = { dateKey: string; targetCumulative: number; actualCumulative: number };
@@ -39,6 +40,29 @@ export type TeamMonitorPerformance = {
     month: TopSellerEntry[];
   };
   daysInMonth?: number;
+};
+
+export type SmartOutlookPayload = {
+  required: {
+    smartDailyRequiredSar: number;
+    smartWeeklyRequiredSar: number;
+    linearDailyRequiredSar: number;
+    linearWeeklyRequiredSar: number;
+    usedEqualWeightFallback: boolean;
+    explain: string;
+  };
+  forecast: {
+    forecastSmartSar: number;
+    projectedRemainingSmartSar: number;
+    varianceVsTargetSar: number;
+    confidence: 'high' | 'medium' | 'low';
+    rangeConservativeSar: number;
+    rangeExpectedSar: number;
+    rangeStretchSar: number;
+    linearForecastTotalSar: number;
+    usedHistoryFallbackForForecast: boolean;
+    explain: string;
+  };
 };
 
 type WeekReportJson = {
@@ -97,9 +121,16 @@ function KpiTile({
 type Props = {
   performance: TeamMonitorPerformance;
   monthSmartLayer: { pace: PaceMetrics; forecast: ForecastMetrics } | null;
+  smartOutlook: SmartOutlookPayload | null;
+  linearForecastApi: { forecastedTotal: number; forecastDelta: number; avgDailyActual: number } | null;
 };
 
-export function TeamMonitorKpiPanel({ performance, monthSmartLayer }: Props) {
+export function TeamMonitorKpiPanel({
+  performance,
+  monthSmartLayer,
+  smartOutlook,
+  linearForecastApi,
+}: Props) {
   const { t } = useT();
   const [weekReport, setWeekReport] = useState<WeekReportJson | null>(null);
   const [dailyReport, setDailyReport] = useState<MonthDailyJson | null>(null);
@@ -240,6 +271,100 @@ export function TeamMonitorKpiPanel({ performance, monthSmartLayer }: Props) {
             disclaimer={t('analytics.projectionOnly')}
             rollingTitle={t('analytics.forecastRolling7')}
           />
+        </div>
+      )}
+      {monthSmartLayer && smartOutlook && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <OpsCard title={t('home.teamMonitor.smartForecastTitle')} className="border border-border/80">
+            <p className="mb-3 text-xs text-muted">{t('home.teamMonitor.smartForecastBlurb')}</p>
+            <p className="text-xs text-muted">{smartOutlook.forecast.explain}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t('home.teamMonitor.smartForecastMonthEnd')}
+                </p>
+                <p className="text-lg font-bold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.forecast.forecastSmartSar)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t('home.teamMonitor.smartForecastVsTarget')}
+                </p>
+                <p className="text-lg font-bold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.forecast.varianceVsTargetSar)}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs font-medium text-foreground">
+              {t('home.teamMonitor.smartConfidenceLabel').replace(
+                '{level}',
+                t(`home.teamMonitor.smartConfidence.${smartOutlook.forecast.confidence}`)
+              )}
+            </p>
+            <div className="mt-4 grid gap-2 text-sm text-muted">
+              <p>
+                {t('home.teamMonitor.smartRangeConservative')}:{' '}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.forecast.rangeConservativeSar)}
+                </span>
+              </p>
+              <p>
+                {t('home.teamMonitor.smartRangeExpected')}:{' '}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.forecast.rangeExpectedSar)}
+                </span>
+              </p>
+              <p>
+                {t('home.teamMonitor.smartRangeStretch')}:{' '}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.forecast.rangeStretchSar)}
+                </span>
+              </p>
+            </div>
+            {linearForecastApi != null && (
+              <p className="mt-4 border-t border-border pt-3 text-xs text-muted">
+                {t('home.teamMonitor.smartVsLinearForecast').replace(
+                  '{v}',
+                  formatSarInt(linearForecastApi.forecastedTotal)
+                )}
+              </p>
+            )}
+          </OpsCard>
+          <OpsCard title={t('home.teamMonitor.smartRequiredTitle')} className="border border-border/80">
+            <p className="mb-3 text-xs text-muted">{t('home.teamMonitor.smartRequiredBlurb')}</p>
+            <p className="text-xs text-muted">{smartOutlook.required.explain}</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t('home.teamMonitor.smartRequiredToday')}
+                </p>
+                <p className="text-xl font-bold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.required.smartDailyRequiredSar)}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {t('home.teamMonitor.smartVsLinearDaily').replace(
+                    '{v}',
+                    formatSarInt(smartOutlook.required.linearDailyRequiredSar)
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t('home.teamMonitor.smartRequiredWeek')}
+                </p>
+                <p className="text-xl font-bold tabular-nums text-foreground">
+                  {formatSarInt(smartOutlook.required.smartWeeklyRequiredSar)}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {t('home.teamMonitor.smartVsLinearWeek').replace(
+                    '{v}',
+                    formatSarInt(smartOutlook.required.linearWeeklyRequiredSar)
+                  )}
+                </p>
+              </div>
+            </div>
+          </OpsCard>
         </div>
       )}
       <div className="mt-8">

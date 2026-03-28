@@ -1296,7 +1296,27 @@
       "colDailyTargetReporting": "الهدف اليومي (تقارير)",
       "colAchievedDay": "المحقق (مُسجّل)",
       "colRemaining": "المتبقي",
-      "colPct": "%"
+      "colPct": "%",
+      "smartForecastTitle": "التوقع الذكي",
+      "smartForecastBlurb": "موزّع حسب متوسط مبيعات الفرع لكل يوم أسبوع (SalesEntry). يُقارَن مع الإسقاط الخطي لنهاية الشهر بجانبه.",
+      "smartForecastMonthEnd": "نهاية الشهر (توقع ذكي)",
+      "smartForecastVsTarget": "الفرق مقابل الهدف الشهري",
+      "smartConfidenceLabel": "الثقة: {level}",
+      "smartConfidence": {
+        "high": "عالية",
+        "medium": "متوسطة",
+        "low": "منخفضة"
+      },
+      "smartRangeConservative": "مدى محافظ (نهاية الشهر)",
+      "smartRangeExpected": "مدى متوقع (نهاية الشهر)",
+      "smartRangeStretch": "مدى طموح (نهاية الشهر)",
+      "smartVsLinearForecast": "نهاية الشهر خطية (للمقارنة): {v} ر.س",
+      "smartRequiredTitle": "المطلوب الذكي (تشغيلي)",
+      "smartRequiredBlurb": "يقسّم المتبقي من الهدف الشهري على الأيام المتبقية بأوزان أيام الأسبوع من تاريخ الفرع. عند قلة البيانات يُستخدم تقسيم متساوٍ.",
+      "smartRequiredToday": "المطلوب الذكي اليوم",
+      "smartRequiredWeek": "المطلوب الذكي هذا الأسبوع",
+      "smartVsLinearDaily": "المطلوب الخطي اليوم (مقارنة): {v} ر.س",
+      "smartVsLinearWeek": "المطلوب الخطي هذا الأسبوع (مقارنة): {v} ر.س"
     }
   },
   "compliance": {
