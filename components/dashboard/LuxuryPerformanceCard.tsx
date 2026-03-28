@@ -7,11 +7,18 @@ import { PerformanceKpiCard } from '@/components/ui/PerformanceKpiCard';
 
 type Props = {
   title: string;
+  subtitle?: string;
+  /** Label before target amount (e.g. "Required to stay on track"). */
+  targetLineLabel?: string;
+  /** Label before remaining/gap (e.g. "Gap vs required pace"). */
+  remainingLineLabel?: string;
   target: number;
   sales: number;
   remaining: number;
   percent: number;
   sparklineValues?: number[];
+  hideAchievementProgress?: boolean;
+  progressPendingHint?: string;
 };
 
 function CircularPercentRing({ percent }: { percent: number }) {
@@ -59,31 +66,42 @@ function CircularPercentRing({ percent }: { percent: number }) {
 
 export function LuxuryPerformanceCard({
   title,
+  subtitle,
+  targetLineLabel = 'Target',
+  remainingLineLabel = 'Remaining',
   target,
   sales,
   remaining,
   percent,
   sparklineValues,
+  hideAchievementProgress = false,
+  progressPendingHint,
 }: Props) {
   return (
     <PerformanceKpiCard
       title={title}
+      subtitle={subtitle}
       mainValue={formatSarInt(sales)}
       valueSuffix={
-        <p className="mt-0.5 text-xs text-muted">Target {formatSarInt(target)}</p>
+        <p className="mt-0.5 text-xs text-muted">
+          {targetLineLabel} {formatSarInt(target)}
+        </p>
       }
       metricsAfterProgress={
         <p className="text-xs text-muted">
-          Remaining <span className="font-semibold tabular-nums text-foreground">{formatSarInt(remaining)}</span>
+          {remainingLineLabel}{' '}
+          <span className="font-semibold tabular-nums text-foreground">{formatSarInt(remaining)}</span>
         </p>
       }
       percent={percent}
+      hideAchievementProgress={hideAchievementProgress}
+      progressPendingHint={progressPendingHint}
       headerSlot={
         sparklineValues && sparklineValues.length >= 2 ? (
           <MiniSparkline values={sparklineValues} height={28} className="text-muted" />
         ) : undefined
       }
-      leadingSlot={<CircularPercentRing percent={percent} />}
+      leadingSlot={hideAchievementProgress ? undefined : <CircularPercentRing percent={percent} />}
       progressBarSize="sm"
     />
   );

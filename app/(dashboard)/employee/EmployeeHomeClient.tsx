@@ -30,6 +30,9 @@ export function EmployeeHomeClient() {
     mtdSales: number;
     mtdPct: number;
     remaining: number;
+    reportingDailyAllocationSar?: number;
+    remainingMonthTargetSar?: number;
+    dailyAchievementPending?: boolean;
   } | null>(null);
 
   const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
@@ -78,11 +81,38 @@ export function EmployeeHomeClient() {
       }
       setSalesEntryAmount('');
       fetchLastEntries();
-      fetch('/api/me/targets').then((r) => r.json()).then((d: { todaySales?: number; mtdSales?: number }) => {
-        if (d && (typeof d.todaySales === 'number' || typeof d.mtdSales === 'number')) {
-          setTargetsData((prev) => prev ? { ...prev, todaySales: d.todaySales ?? 0, mtdSales: d.mtdSales ?? 0 } : null);
-        }
-      }).catch(() => {});
+      fetch('/api/me/targets')
+        .then((r) => r.json())
+        .then(
+          (d: {
+            todayTarget?: number;
+            todaySales?: number;
+            todayPct?: number;
+            monthlyTarget?: number;
+            mtdSales?: number;
+            mtdPct?: number;
+            remaining?: number;
+            reportingDailyAllocationSar?: number;
+            remainingMonthTargetSar?: number;
+            dailyAchievementPending?: boolean;
+          }) => {
+            if (d && typeof d.todayTarget === 'number') {
+              setTargetsData({
+                todayTarget: d.todayTarget ?? 0,
+                todaySales: d.todaySales ?? 0,
+                todayPct: d.todayPct ?? 0,
+                monthlyTarget: d.monthlyTarget ?? 0,
+                mtdSales: d.mtdSales ?? 0,
+                mtdPct: d.mtdPct ?? 0,
+                remaining: d.remaining ?? 0,
+                reportingDailyAllocationSar: d.reportingDailyAllocationSar,
+                remainingMonthTargetSar: d.remainingMonthTargetSar,
+                dailyAchievementPending: d.dailyAchievementPending === true,
+              });
+            }
+          }
+        )
+        .catch(() => {});
     } finally {
       setSalesEntrySaving(false);
     }
@@ -91,7 +121,19 @@ export function EmployeeHomeClient() {
   useEffect(() => {
     fetch('/api/me/targets')
       .then((r) => r.json())
-      .then((d: { todayTarget?: number; todaySales?: number; todayPct?: number; monthlyTarget?: number; mtdSales?: number; mtdPct?: number; remaining?: number }) => {
+      .then(
+        (d: {
+          todayTarget?: number;
+          todaySales?: number;
+          todayPct?: number;
+          monthlyTarget?: number;
+          mtdSales?: number;
+          mtdPct?: number;
+          remaining?: number;
+          reportingDailyAllocationSar?: number;
+          remainingMonthTargetSar?: number;
+          dailyAchievementPending?: boolean;
+        }) => {
         if (d && typeof d.todayTarget === 'number') {
           setTargetsData({
             todayTarget: d.todayTarget ?? 0,
@@ -101,9 +143,13 @@ export function EmployeeHomeClient() {
             mtdSales: d.mtdSales ?? 0,
             mtdPct: d.mtdPct ?? 0,
             remaining: d.remaining ?? 0,
+            reportingDailyAllocationSar: d.reportingDailyAllocationSar,
+            remainingMonthTargetSar: d.remainingMonthTargetSar,
+            dailyAchievementPending: d.dailyAchievementPending === true,
           });
         }
-      })
+      }
+      )
       .catch(() => setTargetsData(null));
   }, []);
 
@@ -148,19 +194,31 @@ export function EmployeeHomeClient() {
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-muted">
-                {t('home.target')}: {formatSarInt(targetsData.todayTarget)} · {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
+                {t('targets.dailyRequiredPace')}: {formatSarInt(targetsData.todayTarget)} · {t('targets.reportingDailyShort')}:{' '}
+                {formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} · {t('home.sales')}:{' '}
+                {formatSarInt(targetsData.todaySales)}
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
-                <div
-                  className={`h-full rounded-full ${targetsData.todayPct > 100 ? getPerformanceBgClass(targetsData.todayPct) : 'bg-accent'}`}
-                  style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
-                />
-              </div>
-              <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.todayPct)}%</p>
+              {targetsData.dailyAchievementPending ? (
+                <p className="mt-2 text-sm text-muted">{t('targets.dailyAchievementPending')}</p>
+              ) : (
+                <>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
+                    <div
+                      className={`h-full rounded-full ${targetsData.todayPct > 100 ? getPerformanceBgClass(targetsData.todayPct) : 'bg-accent'}`}
+                      style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.todayPct)}%</p>
+                </>
+              )}
             </OpsCard>
             <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
               <p className="text-sm text-muted">
-                {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} · {t('home.remaining')}: {formatSarInt(targetsData.remaining)}
+                {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} ·{' '}
+                {t('targets.remainingMonthlyTarget')}:{' '}
+                {formatSarInt(
+                  targetsData.remainingMonthTargetSar ?? Math.max(0, targetsData.monthlyTarget - targetsData.mtdSales)
+                )}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
                 <div
@@ -179,7 +237,9 @@ export function EmployeeHomeClient() {
             <PaceCard
               title={t('analytics.monthPaceTitle')}
               pace={selfAnalytics.employees[0].pace}
-              expectedLabel={t('analytics.expectedByNow')}
+              expectedLabel={t('analytics.expectedByToday')}
+              actualMtdLabel={t('analytics.actualMtdPace')}
+              deltaLabel={t('analytics.deltaVsExpected')}
               bandLabels={{
                 ahead: t('analytics.ahead'),
                 onTrack: t('analytics.onTrack'),

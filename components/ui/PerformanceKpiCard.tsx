@@ -16,6 +16,10 @@ export type PerformanceKpiCardProps = {
   /** Slot after progress bar (e.g. "Remaining X") */
   metricsAfterProgress?: ReactNode;
   percent: number;
+  /** Hide ring/bar when the day is not yet a completed business day (no SalesEntry for today). */
+  hideAchievementProgress?: boolean;
+  /** Shown under the value row when progress is hidden */
+  progressPendingHint?: string;
   /** Show percent as text before progress bar (Sales Summary style) */
   showPercentInline?: boolean;
   headerSlot?: ReactNode;
@@ -42,6 +46,8 @@ export function PerformanceKpiCard({
   metricsSlot,
   metricsAfterProgress,
   percent,
+  hideAchievementProgress = false,
+  progressPendingHint,
   showPercentInline = false,
   headerSlot,
   leadingSlot,
@@ -63,8 +69,8 @@ export function PerformanceKpiCard({
         {headerSlot}
       </div>
 
-      <div className={`flex items-start gap-5 ${leadingSlot ? '' : 'flex-col'}`}>
-        {leadingSlot}
+      <div className={`flex items-start gap-5 ${leadingSlot && !hideAchievementProgress ? '' : 'flex-col'}`}>
+        {!hideAchievementProgress ? leadingSlot : null}
         <div className="min-w-0 flex-1 space-y-3">
           <div>
             <p className="text-2xl font-bold tabular-nums text-foreground md:text-3xl">{mainValue}</p>
@@ -74,16 +80,22 @@ export function PerformanceKpiCard({
 
           {metricsSlot}
 
-          {showPercentInline && (
+          {hideAchievementProgress && progressPendingHint && (
+            <p className="text-sm text-muted">{progressPendingHint}</p>
+          )}
+
+          {showPercentInline && !hideAchievementProgress && (
             <p className="text-sm font-bold tabular-nums">{Math.round(percent)}%</p>
           )}
 
-          <div className={`w-full overflow-hidden rounded-full bg-surface-subtle ${progressHeight}`}>
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${bgClass}`}
-              style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
-            />
-          </div>
+          {!hideAchievementProgress && (
+            <div className={`w-full overflow-hidden rounded-full bg-surface-subtle ${progressHeight}`}>
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${bgClass}`}
+                style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+              />
+            </div>
+          )}
 
           {metricsAfterProgress}
         </div>

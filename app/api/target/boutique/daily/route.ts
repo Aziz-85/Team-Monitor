@@ -7,7 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { parseMonthKeyOrThrow, parseIsoDateOrThrow } from '@/lib/time/parse';
-import { toRiyadhDateString, getDaysRemainingInMonthIncluding, normalizeMonthKey } from '@/lib/time';
+import {
+  getRiyadhNow,
+  toRiyadhDateString,
+  getDaysRemainingInMonthIncluding,
+  normalizeMonthKey,
+} from '@/lib/time';
+import { dailyRequiredTargetSar, remainingMonthTargetSar } from '@/lib/targets/requiredPaceTargets';
 import { prisma } from '@/lib/db';
 import { aggregateSalesEntrySum, salesEntryWhereForBoutiqueMonth } from '@/lib/sales/readSalesAggregate';
 
@@ -46,7 +52,9 @@ export async function GET(request: NextRequest) {
 
   const bid = scope.effectiveBoutiqueId;
 
-  const [boutiqueTarget, monthAchievedSar, todayAchievedSar] = await Promise.all([
+  const riyadhToday = toRiyadhDateString(getRiyadhNow());
+
+  const [boutiqueTarget, monthAchievedSar, todayAchievedSar, entryCountForDate] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { boutiqueId: bid, month: normMonth },
       select: { amount: true },
@@ -56,14 +64,20 @@ export async function GET(request: NextRequest) {
       boutiqueId: bid,
       dateKey: dateStr,
     }),
+    dateStr === riyadhToday
+      ? prisma.salesEntry.count({ where: { boutiqueId: bid, dateKey: dateStr } })
+      : Promise.resolve(1),
   ]);
 
   const monthTargetSar = boutiqueTarget?.amount ?? 0;
-  const remainingSar = Math.max(monthTargetSar - monthAchievedSar, 0);
-  const dailyRequiredSar =
-    daysRemaining > 0 ? Math.ceil(remainingSar / daysRemaining) : remainingSar;
-  const todayPct =
-    dailyRequiredSar > 0 ? Math.floor((todayAchievedSar * 100) / dailyRequiredSar) : 0;
+  const remainingSar = remainingMonthTargetSar(monthTargetSar, monthAchievedSar);
+  const dailyRequiredSar = dailyRequiredTargetSar(remainingSar, daysRemaining);
+  const dailyProgressPending = dateStr === riyadhToday && entryCountForDate === 0;
+  const todayPct = dailyProgressPending
+    ? null
+    : dailyRequiredSar > 0
+      ? Math.floor((todayAchievedSar * 100) / dailyRequiredSar)
+      : 0;
 
   return NextResponse.json({
     boutiqueId: scope.effectiveBoutiqueId,
@@ -76,5 +90,6 @@ export async function GET(request: NextRequest) {
     dailyRequiredSar,
     todayAchievedSar,
     todayPct,
+    dailyProgressPending,
   });
 }

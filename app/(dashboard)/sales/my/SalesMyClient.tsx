@@ -60,7 +60,8 @@ type BoutiqueDailyTarget = {
   daysRemaining: number;
   dailyRequiredSar: number;
   todayAchievedSar: number;
-  todayPct: number;
+  todayPct: number | null;
+  dailyProgressPending?: boolean;
 };
 
 type BoutiqueBreakdown = {
@@ -628,8 +629,15 @@ export function SalesMyClient() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Today %</span>
-                <span className="font-semibold">{boutiqueDaily.todayPct}%</span>
+                <span className="font-semibold">
+                  {boutiqueDaily.dailyProgressPending || boutiqueDaily.todayPct == null
+                    ? '—'
+                    : `${boutiqueDaily.todayPct}%`}
+                </span>
               </div>
+              {boutiqueDaily.dailyProgressPending && (
+                <p className="text-xs text-muted">Waiting for end-of-day sales entry (Riyadh).</p>
+              )}
             </div>
           )}
         </div>

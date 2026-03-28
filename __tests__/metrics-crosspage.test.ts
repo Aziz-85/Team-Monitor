@@ -28,6 +28,7 @@ describe('metrics-crosspage: MTD consistency across aggregator outputs', () => {
   it('dashboard currentMonthActual === target mtdSales === sales netSalesTotal for same scope (mocked Prisma)', async () => {
     const prismaMock = {
       salesEntry: {
+        count: jest.fn().mockResolvedValue(1),
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: FIXTURE_MTD_SAR }, _count: { id: 3 } }),
         groupBy: jest.fn().mockImplementation((args: { by: string[] }) => {
           if (args.by.includes('userId')) {
@@ -175,12 +176,18 @@ describe('metrics-crosspage: API same-month MTD equality (employee branch)', () 
         weekSales: 0,
         dailyTarget: 357,
         weekTarget: 2500,
+        reportingDailyAllocationSar: 357,
+        reportingWeeklyAllocationSar: 2500,
+        paceDailyRequiredSar: 357,
+        paceWeeklyRequiredSar: 2500,
+        remainingMonthTargetSar: 5000,
         remaining: 5000,
         pctDaily: 0,
         pctWeek: 0,
         pctMonth: 50,
         todayStr: '2026-02-15',
         todayInSelectedMonth: true,
+        dailyAchievementPending: false,
         weekRangeLabel: '2026-02-14 – 2026-02-20',
         daysInMonth: 28,
         leaveDaysInMonth: null,

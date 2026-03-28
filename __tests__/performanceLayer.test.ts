@@ -3,6 +3,7 @@ import {
   computePaceMetrics,
   computeProductivityMetrics,
   effectiveDaysPassed,
+  paceDaysPassedForMonth,
 } from '@/lib/analytics/performanceLayer';
 
 describe('performanceLayer', () => {
@@ -34,6 +35,24 @@ describe('performanceLayer', () => {
     expect(p.activeDays).toBe(0);
     expect(p.avgDailySales).toBe(0);
     expect(p.contributionPct).toBe(0);
+  });
+
+  test('paceDaysPassedForMonth respects SalesEntry gate', () => {
+    expect(paceDaysPassedForMonth(5, 31, false)).toBe(4);
+    expect(paceDaysPassedForMonth(5, 31, true)).toBe(5);
+    expect(paceDaysPassedForMonth(1, 31, false)).toBe(0);
+    expect(paceDaysPassedForMonth(1, 31, true)).toBe(1);
+  });
+
+  test('computePaceMetrics zero completed business days', () => {
+    const m = computePaceMetrics({
+      actualMTD: 0,
+      monthlyTarget: 310000,
+      totalDaysInMonth: 31,
+      daysPassed: 0,
+    });
+    expect(m.expectedToDate).toBe(0);
+    expect(m.band).toBe('onTrack');
   });
 
   test('computePaceMetrics beginning of month', () => {

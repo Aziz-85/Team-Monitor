@@ -17,8 +17,10 @@ import {
 import {
   getRiyadhNow,
   formatMonthKey,
+  getDaysInMonth,
   toRiyadhDateString,
 } from '@/lib/time';
+import { paceDaysPassedForMonth } from '@/lib/analytics/performanceLayer';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { rosterForDate } from '@/lib/services/roster';
 import { validateCoverage } from '@/lib/services/coverageValidation';
@@ -148,6 +150,7 @@ export async function GET(request: NextRequest) {
     zoneRuns,
     scheduleEditAudits,
     allUsers,
+    salesEntryTodayCount,
   ] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { month: monthKey, ...boutiqueFilter },
@@ -209,7 +212,19 @@ export async function GET(request: NextRequest) {
       where: { disabled: false },
       select: { id: true, empId: true, employee: { select: { name: true } } },
     }),
+    prisma.salesEntry.count({
+      where: { month: monthKey, ...boutiqueFilter, dateKey: todayStr },
+    }),
   ]);
+
+  const hasSalesEntryToday = salesEntryTodayCount > 0;
+  const daysInMonthExec = getDaysInMonth(monthKey);
+  const calendarDayOfMonth = new Date(todayStr + 'T00:00:00.000Z').getUTCDate();
+  const paceDaysPassed = paceDaysPassedForMonth(
+    calendarDayOfMonth,
+    daysInMonthExec,
+    hasSalesEntryToday
+  );
 
   const empIdToUserId = new Map(allUsers.map((u) => [u.empId, u.id]));
   const userIdToName = new Map(
@@ -371,6 +386,14 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     scopeUsed: { boutiqueIds: scope.boutiqueIds, global: false },
+    monthContext: {
+      monthKey,
+      todayStr,
+      daysInMonth: daysInMonthExec,
+      calendarDayOfMonth,
+      hasSalesEntryToday,
+      paceDaysPassed,
+    },
     kpis: {
       revenue,
       target,

@@ -8,12 +8,17 @@
 import { prisma } from '@/lib/db';
 import {
   addDays,
+  formatMonthKey,
   getDaysInMonth,
+  getMonthRange,
+  getWeekRangeForDate,
+  intersectRanges,
   normalizeDateOnlyRiyadh,
+  normalizeMonthKey,
   toRiyadhDateString,
   getRiyadhNow,
 } from '@/lib/time';
-import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
+import { computeReportingAndPaceSnapshot } from '@/lib/targets/requiredPaceTargets';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { tasksRunnableOnDate } from '@/lib/services/tasks';
 import { rosterForDate } from '@/lib/services/roster';
@@ -45,6 +50,7 @@ export async function getManagerDashboard(
     tasksWithSchedules,
     completionsCount,
     salesSum,
+    mtdSum,
     boutiqueTarget,
     roster,
     coverageRule,
@@ -62,6 +68,10 @@ export async function getManagerDashboard(
     }),
     prisma.salesEntry.aggregate({
       where: { boutiqueId, dateKey: dateStr },
+      _sum: { amount: true },
+    }),
+    prisma.salesEntry.aggregate({
+      where: { boutiqueId, month: monthKey, dateKey: { lte: dateStr } },
       _sum: { amount: true },
     }),
     prisma.boutiqueMonthlyTarget.findUnique({
@@ -85,11 +95,25 @@ export async function getManagerDashboard(
   ).length;
 
   const achieved = salesSum._sum.amount ?? 0;
+  const mtdAchieved = mtdSum._sum.amount ?? 0;
   const monthlyTarget = boutiqueTarget?.amount ?? 0;
   const daysInMonth = getDaysInMonth(monthKey);
   const dayOfMonth1Based = dayStart.getUTCDate();
-  const dailyTarget =
-    daysInMonth > 0 ? getDailyTargetForDay(monthlyTarget, daysInMonth, dayOfMonth1Based) : 0;
+  const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
+  const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(dayStart);
+  const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
+  const todayInSelectedMonth = normalizeMonthKey(monthKey) === normalizeMonthKey(formatMonthKey(getRiyadhNow()));
+  const snap = computeReportingAndPaceSnapshot({
+    monthTarget: monthlyTarget,
+    mtdAchieved,
+    daysInMonth,
+    monthKey,
+    todayDateKey: dateStr,
+    todayDayOfMonth: dayOfMonth1Based,
+    todayInSelectedMonth,
+    weekInMonth,
+  });
+  const dailyTarget = snap.paceDailyRequiredSar;
   const perf = calculatePerformance({ target: dailyTarget, sales: achieved });
   const percent = perf.percent;
 

@@ -32,7 +32,9 @@ import {
   normalizeMonthKey,
 } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
+import { computeReportingAndPaceSnapshot } from '@/lib/targets/requiredPaceTargets';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
+import { paceDaysPassedForMonth } from '@/lib/analytics/performanceLayer';
 
 export type SalesMetricsInput = {
   /** When null/undefined and userId set: employee totals across ALL boutiques. */
@@ -76,14 +78,27 @@ export type TargetMetricsResult = {
   mtdSales: number;
   todaySales: number;
   weekSales: number;
+  /** Operational: pace daily required (remaining month ÷ remaining days). */
   dailyTarget: number;
+  /** Operational: sum of sequential daily-required for rest of Riyadh week in month. */
   weekTarget: number;
+  /** Reporting: calendar slice of month target for today. */
+  reportingDailyAllocationSar: number;
+  /** Reporting: sum of daily allocations for days in the current Riyadh week ∩ month. */
+  reportingWeeklyAllocationSar: number;
+  paceDailyRequiredSar: number;
+  paceWeeklyRequiredSar: number;
+  /** max(monthTarget − MTD, 0) — gap still to reach month goal. */
+  remainingMonthTargetSar: number;
+  /** Signed monthTarget − MTD (negative = ahead of monthly target). */
   remaining: number;
   pctDaily: number;
   pctWeek: number;
   pctMonth: number;
   todayStr: string;
   todayInSelectedMonth: boolean;
+  /** True when viewing current calendar month in Riyadh and the user has no SalesEntry rows for today. */
+  dailyAchievementPending: boolean;
   weekRangeLabel: string;
   daysInMonth: number;
   leaveDaysInMonth: number | null;
@@ -115,7 +130,8 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     input.employeeCrossBoutique ? null : input.boutiqueId
   );
 
-  const [boutiqueTarget, employeeTargetResult, mtdSales, todaySales, weekSales] = await Promise.all([
+  const [boutiqueTarget, employeeTargetResult, mtdSales, todaySales, weekSales, todayEntryCount] =
+    await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { boutiqueId: input.boutiqueId, month: monthKey },
     }),
@@ -138,6 +154,9 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
           date: { gte: weekInMonth.start, lt: weekInMonth.end },
         })
       : Promise.resolve(0),
+    todayInSelectedMonth
+      ? prisma.salesEntry.count({ where: { ...salesWhereBoutique, dateKey: todayStr } })
+      : Promise.resolve(0),
   ]);
 
   const monthTargetSar = input.employeeCrossBoutique
@@ -146,21 +165,24 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
   const monthTarget = monthTargetSar;
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
-  const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
-
-  let weekTarget = 0;
-  if (weekInMonth && daysInMonth > 0) {
-    const start = weekInMonth.start.getTime();
-    const end = weekInMonth.end.getTime();
-    const dayMs = 24 * 60 * 60 * 1000;
-    for (let t = start; t < end; t += dayMs) {
-      const d = new Date(t);
-      weekTarget += getDailyTargetForDay(monthTarget, daysInMonth, d.getUTCDate());
-    }
-  }
+  const targetSnap = computeReportingAndPaceSnapshot({
+    monthTarget,
+    mtdAchieved: mtdSales,
+    daysInMonth,
+    monthKey,
+    todayDateKey: todayStr,
+    todayDayOfMonth,
+    todayInSelectedMonth,
+    weekInMonth,
+  });
+  const dailyTarget = targetSnap.paceDailyRequiredSar;
+  const weekTarget = targetSnap.paceWeeklyRequiredSar;
 
   const remaining = monthTarget - mtdSales;
-  const dailyPerf = calculatePerformance({ target: dailyTarget, sales: todaySales });
+  const dailyAchievementPending = todayInSelectedMonth && todayEntryCount === 0;
+  const dailyPerf = dailyAchievementPending
+    ? { target: dailyTarget, sales: 0, remaining: dailyTarget, percent: 0 }
+    : calculatePerformance({ target: dailyTarget, sales: todaySales });
   const weekPerf = calculatePerformance({ target: weekTarget, sales: weekSales });
   const monthPerf = calculatePerformance({ target: monthTarget, sales: mtdSales });
   const pctDaily = dailyPerf.percent;
@@ -183,12 +205,18 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     weekSales,
     dailyTarget,
     weekTarget,
+    reportingDailyAllocationSar: targetSnap.reportingDailyAllocationSar,
+    reportingWeeklyAllocationSar: targetSnap.reportingWeeklyAllocationSar,
+    paceDailyRequiredSar: targetSnap.paceDailyRequiredSar,
+    paceWeeklyRequiredSar: targetSnap.paceWeeklyRequiredSar,
+    remainingMonthTargetSar: targetSnap.remainingMonthTargetSar,
     remaining,
     pctDaily,
     pctWeek,
     pctMonth,
     todayStr,
     todayInSelectedMonth,
+    dailyAchievementPending,
     weekRangeLabel,
     daysInMonth,
     leaveDaysInMonth: firstTarget?.leaveDaysInMonth ?? null,
@@ -272,9 +300,21 @@ export type PerformancePeriod = {
 };
 
 export type PerformanceSummaryResult = {
+  /** Operational required pace vs actuals for the period. */
   daily: PerformancePeriod;
   weekly: PerformancePeriod;
   monthly: PerformancePeriod;
+  /** Calendar allocation (reporting), not required pace. */
+  reportingDailyAllocationSar: number;
+  reportingWeeklyAllocationSar: number;
+  paceDailyRequiredSar: number;
+  paceWeeklyRequiredSar: number;
+  remainingMonthTargetSar: number;
+  /** Any SalesEntry row for Riyadh today in this metrics scope. */
+  hasSalesEntryForToday: boolean;
+  /** Completed business days in month for linear MTD pace (see paceDaysPassedForMonth). */
+  paceDaysPassed: number;
+  todayInSelectedMonth: boolean;
 };
 
 export type DailyTrajectoryPoint = {
@@ -290,12 +330,20 @@ export type TopSellerEntry = {
   rank: number;
 };
 
+export type TopSellersTodaySource = 'posted_today' | 'yesterday_fallback' | 'empty';
+
 export type PerformanceSummaryExtendedResult = PerformanceSummaryResult & {
+  monthKey: string;
+  /** Latest calendar day ≤ Riyadh today with posted sales; if today has entries, equals today. */
+  postedLastRecordedDateKey: string | null;
+  postedLastRecordedDaySalesSar: number;
   dailyTrajectory: DailyTrajectoryPoint[];
   topSellers: {
+    /** Deprecated: always empty; use posted last day + week/month top sellers only. */
     today: TopSellerEntry[];
     week: TopSellerEntry[];
     month: TopSellerEntry[];
+    todaySource?: TopSellersTodaySource;
   };
   /** Per-user MTD sales when !employeeOnly. Used by Dashboard sales breakdown. */
   byUserId: Record<string, number>;
@@ -330,7 +378,8 @@ export async function getPerformanceSummary(
     employeeCrossBoutique: input.employeeCrossBoutique,
   });
 
-  const [targetRow, targetRowsAll, mtdSales, todaySales, weekSales] = await Promise.all([
+  const [targetRow, targetRowsAll, mtdSales, todaySales, weekSales, salesEntryCountToday] =
+    await Promise.all([
     input.employeeOnly && input.userId && !input.employeeCrossBoutique
       ? prisma.employeeMonthlyTarget.findFirst({
           where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
@@ -356,6 +405,9 @@ export async function getPerformanceSummary(
           date: { gte: weekInMonth.start, lt: weekInMonth.end },
         })
       : Promise.resolve(0),
+    todayInSelectedMonth
+      ? prisma.salesEntry.count({ where: { ...wherePerf, dateKey: todayStr } })
+      : Promise.resolve(0),
   ]);
 
   const monthTarget =
@@ -364,27 +416,44 @@ export async function getPerformanceSummary(
       : (targetRow?.amount ?? 0);
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
-  const dailyTarget = daysInMonth > 0 ? getDailyTargetForDay(monthTarget, daysInMonth, todayDayOfMonth) : 0;
+  const targetSnap = computeReportingAndPaceSnapshot({
+    monthTarget,
+    mtdAchieved: mtdSales,
+    daysInMonth,
+    monthKey,
+    todayDateKey: todayStr,
+    todayDayOfMonth,
+    todayInSelectedMonth,
+    weekInMonth,
+  });
+  const paceDaily = targetSnap.paceDailyRequiredSar;
+  const paceWeekly = targetSnap.paceWeeklyRequiredSar;
 
-  let weekTarget = 0;
-  if (weekInMonth && daysInMonth > 0) {
-    const start = weekInMonth.start.getTime();
-    const end = weekInMonth.end.getTime();
-    const dayMs = 24 * 60 * 60 * 1000;
-    for (let t = start; t < end; t += dayMs) {
-      const d = new Date(t);
-      weekTarget += getDailyTargetForDay(monthTarget, daysInMonth, d.getUTCDate());
-    }
-  }
-
-  const daily = calculatePerformance({ target: dailyTarget, sales: todaySales });
-  const weekly = calculatePerformance({ target: weekTarget, sales: weekSales });
+  const hasSalesEntryForToday = !todayInSelectedMonth || salesEntryCountToday > 0;
+  const paceDaysPassed = paceDaysPassedForMonth(
+    todayDayOfMonth,
+    daysInMonth,
+    hasSalesEntryForToday
+  );
+  const dailyDayNotStarted = todayInSelectedMonth && !hasSalesEntryForToday;
+  const daily = dailyDayNotStarted
+    ? { target: paceDaily, sales: 0, remaining: paceDaily, percent: 0 }
+    : calculatePerformance({ target: paceDaily, sales: todaySales });
+  const weekly = calculatePerformance({ target: paceWeekly, sales: weekSales });
   const monthly = calculatePerformance({ target: monthTarget, sales: mtdSales });
 
   return {
     daily: { target: daily.target, sales: daily.sales, remaining: daily.remaining, percent: daily.percent },
     weekly: { target: weekly.target, sales: weekly.sales, remaining: weekly.remaining, percent: weekly.percent },
     monthly: { target: monthly.target, sales: monthly.sales, remaining: monthly.remaining, percent: monthly.percent },
+    reportingDailyAllocationSar: targetSnap.reportingDailyAllocationSar,
+    reportingWeeklyAllocationSar: targetSnap.reportingWeeklyAllocationSar,
+    paceDailyRequiredSar: targetSnap.paceDailyRequiredSar,
+    paceWeeklyRequiredSar: targetSnap.paceWeeklyRequiredSar,
+    remainingMonthTargetSar: targetSnap.remainingMonthTargetSar,
+    hasSalesEntryForToday,
+    paceDaysPassed,
+    todayInSelectedMonth,
   };
 }
 
@@ -416,19 +485,14 @@ export async function getPerformanceSummaryExtended(
     employeeCrossBoutique: input.employeeCrossBoutique,
   });
 
-  const [salesByDate, todayByUser, weekByUser, monthByUser] = await Promise.all([
+  const hasSalesEntryForToday = base.hasSalesEntryForToday;
+
+  const [salesByDate, weekByUser, monthByUser] = await Promise.all([
     prisma.salesEntry.groupBy({
       by: ['dateKey'],
       where: { ...wherePerf, dateKey: { lte: todayStr } },
       _sum: { amount: true },
     }),
-    todayInSelectedMonth && !input.employeeOnly
-      ? prisma.salesEntry.groupBy({
-          by: ['userId'],
-          where: { ...wherePerf, dateKey: todayStr },
-          _sum: { amount: true },
-        })
-      : Promise.resolve([]),
     weekInMonth && !input.employeeOnly
       ? prisma.salesEntry.groupBy({
           by: ['userId'],
@@ -447,13 +511,34 @@ export async function getPerformanceSummaryExtended(
 
   const salesByDateKey = new Map(salesByDate.map((r) => [r.dateKey, r._sum?.amount ?? 0]));
 
+  let postedLastRecordedDateKey: string | null = null;
+  let postedLastRecordedDaySalesSar = 0;
+  if (todayInSelectedMonth && hasSalesEntryForToday) {
+    postedLastRecordedDateKey = todayStr;
+    postedLastRecordedDaySalesSar = Math.floor(salesByDateKey.get(todayStr) ?? 0);
+  } else {
+    const prior = Array.from(salesByDateKey.entries())
+      .filter(([dk, v]) => v > 0 && dk < todayStr)
+      .sort((a, b) => b[0].localeCompare(a[0]))[0];
+    if (prior) {
+      postedLastRecordedDateKey = prior[0];
+      postedLastRecordedDaySalesSar = Math.floor(prior[1]);
+    }
+  }
+
   const monthTarget = base.monthly.target;
   let cumTarget = 0;
   let cumActual = 0;
   const dailyTrajectory: DailyTrajectoryPoint[] = [];
   const [y, m] = monthKey.split('-').map(Number);
   const mm = String(m).padStart(2, '0');
-  for (let d = 1; d <= (todayInSelectedMonth ? todayDayOfMonth : 0); d++) {
+  const trajectoryLastDay =
+    !todayInSelectedMonth
+      ? 0
+      : hasSalesEntryForToday
+        ? todayDayOfMonth
+        : Math.max(0, todayDayOfMonth - 1);
+  for (let d = 1; d <= trajectoryLastDay; d++) {
     const dateKey = `${y}-${mm}-${String(d).padStart(2, '0')}`;
     cumTarget += getDailyTargetForDay(monthTarget, daysInMonth, d);
     cumActual += salesByDateKey.get(dateKey) ?? 0;
@@ -487,11 +572,7 @@ export async function getPerformanceSummaryExtended(
     });
   };
 
-  const [topToday, topWeek, topMonth] = await Promise.all([
-    pickTop3(todayByUser),
-    pickTop3(weekByUser),
-    pickTop3(monthByUser),
-  ]);
+  const [topWeek, topMonth] = await Promise.all([pickTop3(weekByUser), pickTop3(monthByUser)]);
 
   const byUserId: Record<string, number> = input.employeeOnly
     ? {}
@@ -499,8 +580,11 @@ export async function getPerformanceSummaryExtended(
 
   return {
     ...base,
+    monthKey,
+    postedLastRecordedDateKey,
+    postedLastRecordedDaySalesSar,
     dailyTrajectory,
-    topSellers: { today: topToday, week: topWeek, month: topMonth },
+    topSellers: { today: [], week: topWeek, month: topMonth },
     byUserId,
     daysInMonth,
     todayDayOfMonth,

@@ -14,6 +14,8 @@ import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
 import { getWeekStart } from '@/lib/services/scheduleLock';
+import { getRiyadhNow, toRiyadhDateString, formatMonthKey } from '@/lib/time';
+import { paceDaysPassedForMonth } from '@/lib/analytics/performanceLayer';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
@@ -219,7 +221,17 @@ export async function GET(request: NextRequest) {
   let cumActual = 0;
   const dailyTrajectory: { dateKey: string; targetCumulative: number; actualCumulative: number }[] = [];
   const mm = String(toDate.getUTCMonth() + 1).padStart(2, '0');
-  for (let d = 1; d <= todayDayOfMonth; d++) {
+  const riyadhTodayStr = toRiyadhDateString(getRiyadhNow());
+  const currentMonthRiyadh = formatMonthKey(getRiyadhNow());
+  let trajectoryEndDay = todayDayOfMonth;
+  if (monthKey === currentMonthRiyadh && toParam === riyadhTodayStr) {
+    const hasEntry =
+      (await prisma.salesEntry.count({
+        where: { boutiqueId, dateKey: riyadhTodayStr },
+      })) > 0;
+    trajectoryEndDay = paceDaysPassedForMonth(todayDayOfMonth, daysInMonth, hasEntry);
+  }
+  for (let d = 1; d <= trajectoryEndDay; d++) {
     const dateKey = `${year}-${mm}-${String(d).padStart(2, '0')}`;
     cumTarget += getDailyTargetForDay(monthTargetSar, daysInMonth, d);
     cumActual += salesByDateKey.get(dateKey) ?? 0;

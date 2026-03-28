@@ -6,11 +6,7 @@ import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { ZonesMapDialog } from '@/components/inventory/ZonesMapDialog';
 import { getZoneBadgeClasses } from '@/lib/zones';
-import { LuxuryPerformanceCard } from '@/components/dashboard/LuxuryPerformanceCard';
-import { LuxuryPaceCard } from '@/components/dashboard/LuxuryPaceCard';
-import { LuxuryTopSellerCard } from '@/components/dashboard/LuxuryTopSellerCard';
-import { PerformanceLineChart } from '@/components/dashboard/PerformanceLineChart';
-import { formatSarInt } from '@/lib/utils/money';
+import { TeamMonitorKpiPanel } from '@/components/dashboard/home/TeamMonitorKpiPanel';
 import { CoverageStatusCard } from '@/components/dashboard/home/CoverageStatusCard';
 import { ShiftSnapshotCard } from '@/components/dashboard/home/ShiftSnapshotCard';
 import { KeyHolderCard } from '@/components/dashboard/home/KeyHolderCard';
@@ -18,10 +14,7 @@ import { TasksTodayCard } from '@/components/dashboard/home/TasksTodayCard';
 import { OperationalAlertsCard } from '@/components/dashboard/home/OperationalAlertsCard';
 import { ComplianceExpiryCard } from '@/components/dashboard/home/ComplianceExpiryCard';
 import { CardShell } from '@/components/dashboard/cards/CardShell';
-import { ChartCard } from '@/components/ui/ChartCard';
 import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
-import { PaceCard } from '@/components/analytics/PaceCard';
-import { ForecastCard } from '@/components/analytics/ForecastCard';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 
 function weekStartFor(dateStr: string): string {
@@ -81,12 +74,22 @@ type MyTodayTask = {
 };
 
 type PerformanceSummary = {
+  monthKey?: string;
+  postedLastRecordedDateKey?: string | null;
+  postedLastRecordedDaySalesSar?: number;
   daily: { target: number; sales: number; remaining: number; percent: number };
   weekly: { target: number; sales: number; remaining: number; percent: number };
   monthly: { target: number; sales: number; remaining: number; percent: number };
+  hasSalesEntryForToday?: boolean;
+  paceDaysPassed?: number;
+  todayInSelectedMonth?: boolean;
+  reportingDailyAllocationSar?: number;
+  reportingWeeklyAllocationSar?: number;
+  paceDailyRequiredSar?: number;
+  paceWeeklyRequiredSar?: number;
+  remainingMonthTargetSar?: number;
   dailyTrajectory?: { dateKey: string; targetCumulative: number; actualCumulative: number }[];
   topSellers?: {
-    today: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
     week: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
     month: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;
   };
@@ -243,12 +246,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     if (
       !performance?.monthly ||
       performance.daysInMonth == null ||
-      performance.todayDayOfMonth == null ||
+      performance.paceDaysPassed == null ||
       performance.daysInMonth <= 0
     ) {
       return null;
     }
-    const daysPassed = Math.max(1, performance.todayDayOfMonth);
+    const daysPassed = performance.paceDaysPassed;
     return {
       pace: computePaceMetrics({
         actualMTD: performance.monthly.sales,
@@ -289,11 +292,6 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   const coverageSuggestion = data.coverageSuggestion ?? null;
   const coverageSuggestionExplanation = data.coverageSuggestionExplanation;
   const todayTasks = data.todayTasks ?? [];
-
-  const expectedPct =
-    performance && performance.daysInMonth && performance.todayDayOfMonth && performance.daysInMonth > 0
-      ? Math.floor((performance.todayDayOfMonth / performance.daysInMonth) * 100)
-      : 0;
 
   const applySuggestion = async () => {
     if (!coverageSuggestion || applyingSuggestion) return;
@@ -337,13 +335,6 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     ? (t('inventory.myZoneBadge') as string).replace('{zone}', myZone.zone)
     : t('inventory.zoneNotAssignedShort');
 
-  const trajectory = performance?.dailyTrajectory ?? [];
-  const chartData = trajectory.map((d) => ({
-    label: d.dateKey.slice(-2),
-    value: d.actualCumulative,
-  }));
-  const targetLine = trajectory.map((d) => d.targetCumulative);
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--app-bg)]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -383,106 +374,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
 
         {/* Performance section (always today) */}
         {performance && (
-          <section className="mb-10 rounded-2xl border border-border/60 bg-surface/50 p-6 md:p-8">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-              {t('home.performanceTodayOnly')}
-            </h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <LuxuryPerformanceCard
-                title="Today"
-                target={performance.daily.target}
-                sales={performance.daily.sales}
-                remaining={performance.daily.remaining}
-                percent={performance.daily.percent}
-              />
-              <LuxuryPerformanceCard
-                title="This Week"
-                target={performance.weekly.target}
-                sales={performance.weekly.sales}
-                remaining={performance.weekly.remaining}
-                percent={performance.weekly.percent}
-                sparklineValues={
-                  trajectory.length >= 2
-                    ? trajectory.slice(0, Math.min(7, trajectory.length)).map((d) => d.actualCumulative)
-                    : undefined
-                }
-              />
-              <LuxuryPerformanceCard
-                title="This Month"
-                target={performance.monthly.target}
-                sales={performance.monthly.sales}
-                remaining={performance.monthly.remaining}
-                percent={performance.monthly.percent}
-                sparklineValues={trajectory.map((d) => d.actualCumulative)}
-              />
-            </div>
-            <div className="mt-10">
-              <LuxuryPaceCard
-              expectedPct={expectedPct}
-              actualPct={performance.daily.percent}
-            />
-            </div>
-            {monthSmartLayer && (
-              <div className="mt-10 grid gap-4 lg:grid-cols-2">
-                <PaceCard
-                  title={t('analytics.monthPaceTitle')}
-                  pace={monthSmartLayer.pace}
-                  expectedLabel={t('analytics.expectedByNow')}
-                  bandLabels={{
-                    ahead: t('analytics.ahead'),
-                    onTrack: t('analytics.onTrack'),
-                    behind: t('analytics.behind'),
-                  }}
-                />
-                <ForecastCard
-                  title={t('analytics.monthForecastTitle')}
-                  linear={monthSmartLayer.forecast}
-                  rolling7={null}
-                  disclaimer={t('analytics.projectionOnly')}
-                  rollingTitle={t('analytics.forecastRolling7')}
-                />
-              </div>
-            )}
-            <div className="mt-10">
-              <ChartCard
-                title="Target vs Actual (MTD)"
-                subtitle="Cumulative sales vs target by day"
-                className="w-full md:p-8 [&>div:first-child]:mb-6"
-              >
-                <PerformanceLineChart
-                  data={chartData}
-                  targetLine={targetLine}
-                  height={340}
-                  valueFormat={(n) => formatSarInt(n)}
-                  emptyLabel="No sales data yet"
-                />
-              </ChartCard>
-            </div>
-            {performance.topSellers && (
-            <>
-            <h2 className="mt-10 mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
-              Top Sellers
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <LuxuryTopSellerCard
-                title="Top Seller Today"
-                entries={performance.topSellers.today ?? []}
-                emptyLabel="No sales yet today"
-              />
-              <LuxuryTopSellerCard
-                title="Top Seller Week"
-                entries={performance.topSellers.week ?? []}
-                emptyLabel="No sales yet this week"
-              />
-              <LuxuryTopSellerCard
-                title="Top Seller Month"
-                entries={performance.topSellers.month ?? []}
-                emptyLabel="No sales yet this month"
-              />
-            </div>
-            </>
-            )}
-          </section>
+          <TeamMonitorKpiPanel performance={performance} monthSmartLayer={monthSmartLayer} />
         )}
 
         {/* Operational section (selected date) */}

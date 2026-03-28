@@ -172,7 +172,9 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
           <PaceCard
             title={t('analytics.monthPaceTitle')}
             pace={mtdAnalytics.employees[0].pace}
-            expectedLabel={t('analytics.expectedByNow')}
+            expectedLabel={t('analytics.expectedByToday')}
+            actualMtdLabel={t('analytics.actualMtdPace')}
+            deltaLabel={t('analytics.deltaVsExpected')}
             bandLabels={{
               ahead: t('analytics.ahead'),
               onTrack: t('analytics.onTrack'),

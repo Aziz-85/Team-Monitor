@@ -32,10 +32,13 @@ type EmployeeRow = {
   mtdPct: number;
   todaySales: number;
   todayTarget: number;
-  todayPct: number;
+  todayPct: number | null;
   weekSales: number;
   weekTarget: number;
   weekPct: number;
+  paceDailyRequiredSar: number;
+  paceWeeklyRequiredSar: number;
+  remainingMonthTargetSar: number;
 };
 
 type AdminTargetsData = {
@@ -711,8 +714,11 @@ export function AdminTargetsClient() {
                     <th className="p-2 font-medium text-foreground">MTD %</th>
                     <th className="p-2 font-medium text-foreground">{t('targets.todaySales')}</th>
                     <th className="p-2 font-medium text-foreground">{t('targets.todayTarget')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.paceDailyColumn')}</th>
                     <th className="p-2 font-medium text-foreground">{t('targets.weekSales')}</th>
                     <th className="p-2 font-medium text-foreground">{t('targets.weekTarget')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.paceWeeklyColumn')}</th>
+                    <th className="p-2 font-medium text-foreground">{t('targets.remainingMonthColumn')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -812,8 +818,11 @@ export function AdminTargetsClient() {
                       <td className="p-2">{formatPct(row.mtdPct)}</td>
                       <td className="p-2">{formatNum(row.todaySales)}</td>
                       <td className="p-2">{formatNum(row.todayTarget)}</td>
+                      <td className="p-2">{formatNum(row.paceDailyRequiredSar)}</td>
                       <td className="p-2">{formatNum(row.weekSales)}</td>
                       <td className="p-2">{formatNum(row.weekTarget)}</td>
+                      <td className="p-2">{formatNum(row.paceWeeklyRequiredSar)}</td>
+                      <td className="p-2">{formatNum(row.remainingMonthTargetSar)}</td>
                     </tr>
                   ))}
                 </tbody>

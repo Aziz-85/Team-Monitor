@@ -7,13 +7,28 @@ import { formatSarInt } from '@/lib/utils/money';
 type Props = {
   title: string;
   pace: PaceMetrics;
+  /** e.g. "Expected by today" (linear MTD expectation) */
   expectedLabel: string;
+  /** e.g. "Actual (MTD)" */
+  actualMtdLabel: string;
+  /** e.g. "Delta vs expected" */
+  deltaLabel: string;
   bandLabels: { ahead: string; onTrack: string; behind: string };
   className?: string;
 };
 
-export function PaceCard({ title, pace, expectedLabel, bandLabels, className = '' }: Props) {
-  const { band, paceDelta, expectedToDate, paceRatio } = pace;
+export function PaceCard({
+  title,
+  pace,
+  expectedLabel,
+  actualMtdLabel,
+  deltaLabel,
+  bandLabels,
+  className = '',
+}: Props) {
+  const { band, paceDelta, expectedToDate } = pace;
+  const actualMtd = expectedToDate + paceDelta;
+
   const cfg =
     band === 'ahead'
       ? {
@@ -32,11 +47,11 @@ export function PaceCard({ title, pace, expectedLabel, bandLabels, className = '
             delta: 'text-red-700',
           }
         : {
-            border: 'border-amber-200',
-            bg: 'bg-amber-50/60',
-            dot: 'bg-amber-500',
-            text: 'text-amber-900',
-            delta: 'text-amber-800',
+            border: 'border-slate-200',
+            bg: 'bg-slate-50/70',
+            dot: 'bg-slate-400',
+            text: 'text-slate-800',
+            delta: 'text-slate-700',
           };
 
   const bandLabel =
@@ -49,31 +64,30 @@ export function PaceCard({ title, pace, expectedLabel, bandLabels, className = '
         ? `+${formatSarInt(paceDelta)}`
         : formatSarInt(paceDelta);
 
-  const ratioStr =
-    paceRatio != null && Number.isFinite(paceRatio) ? `${(paceRatio * 100).toFixed(0)}%` : '—';
-
   return (
     <OpsCard title={title} className={`border-2 ${cfg.border} ${cfg.bg} ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-2 text-sm font-semibold ${cfg.text}`}>
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${cfg.dot}`} aria-hidden />
+          {bandLabel}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <p className="text-xs text-muted">{expectedLabel}</p>
-          <p className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground md:text-xl">
             {formatSarInt(expectedToDate)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${cfg.dot}`} aria-hidden />
-          <span className={`text-sm font-semibold ${cfg.text}`}>{bandLabel}</span>
-        </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
         <div>
-          <p className="text-xs text-muted">Δ vs expected</p>
-          <p className={`mt-0.5 font-semibold tabular-nums ${cfg.delta}`}>{deltaStr}</p>
+          <p className="text-xs text-muted">{actualMtdLabel}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground md:text-xl">
+            {formatSarInt(actualMtd)}
+          </p>
         </div>
         <div>
-          <p className="text-xs text-muted">Pace ratio</p>
-          <p className="mt-0.5 font-medium tabular-nums text-foreground">{ratioStr}</p>
+          <p className="text-xs text-muted">{deltaLabel}</p>
+          <p className={`mt-1 text-lg font-semibold tabular-nums md:text-xl ${cfg.delta}`}>{deltaStr}</p>
         </div>
       </div>
     </OpsCard>

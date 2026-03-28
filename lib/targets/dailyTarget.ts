@@ -1,7 +1,10 @@
 /**
- * Daily target computation — single source of truth for web and mobile.
- * Used by /api/me/targets (employee) and manager dashboard (boutique-level).
- * Formula: distribute monthTarget across calendar days; first `remainder` days get base+1, rest get base.
+ * Reporting (calendar allocation) — NOT operational required pace.
+ * Distributes integer monthTarget across calendar days for reports / MTD trajectory:
+ *   base = floor(monthTarget / daysInMonth), first `remainder` days get base+1.
+ *
+ * Operational “daily required to stay on track” uses
+ * `lib/targets/requiredPaceTargets` (remaining month ÷ remaining days).
  */
 export function getDailyTargetForDay(
   monthTarget: number,

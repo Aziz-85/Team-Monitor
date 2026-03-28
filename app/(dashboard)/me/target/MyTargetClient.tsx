@@ -72,6 +72,11 @@ type TargetsData = {
   monthTarget: number;
   dailyTarget: number;
   weekTarget: number;
+  reportingDailyAllocationSar?: number;
+  reportingWeeklyAllocationSar?: number;
+  paceDailyRequiredSar?: number;
+  paceWeeklyRequiredSar?: number;
+  remainingMonthTargetSar?: number;
   todaySales: number;
   mtdSales: number;
   weekSales: number;
@@ -82,6 +87,7 @@ type TargetsData = {
   daysInMonth: number;
   todayStr: string;
   todayInSelectedMonth?: boolean;
+  dailyAchievementPending?: boolean;
   weekRangeLabel?: string;
   leaveDaysInMonth?: number | null;
   presenceFactor?: number | null;
@@ -295,6 +301,11 @@ export function MyTargetClient() {
     monthTarget: 0,
     dailyTarget: 0,
     weekTarget: 0,
+    reportingDailyAllocationSar: 0,
+    reportingWeeklyAllocationSar: 0,
+    paceDailyRequiredSar: 0,
+    paceWeeklyRequiredSar: 0,
+    remainingMonthTargetSar: 0,
     todaySales: 0,
     mtdSales: 0,
     weekSales: 0,
@@ -305,6 +316,7 @@ export function MyTargetClient() {
     daysInMonth: 30,
     todayStr: '',
     todayInSelectedMonth: false,
+    dailyAchievementPending: false,
     weekRangeLabel: '',
   };
 
@@ -361,21 +373,32 @@ export function MyTargetClient() {
             )}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.dailyTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.dailyRequiredPace')}</td><td className="p-1 text-end font-medium">{formatSar(d.paceDailyRequiredSar ?? d.dailyTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.reportingDailyShort')}</td><td className="p-1 text-end font-medium">{formatSar(d.reportingDailyAllocationSar ?? 0)}</td></tr>
                 <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatSar(d.todaySales)}</td></tr>
-                <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctDaily)}</td></tr>
+                <tr>
+                  <td className="p-1 text-muted">%</td>
+                  <td className="p-1 text-end font-medium">
+                    {d.dailyAchievementPending ? '—' : formatPct(d.pctDaily)}
+                  </td>
+                </tr>
               </tbody>
             </table>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
-              <div className={`h-full rounded-full transition-all ${d.pctDaily > 100 ? getPerformanceBgClass(d.pctDaily) : 'bg-accent'}`} style={{ width: `${progress(d.pctDaily)}%` }} />
-            </div>
+            {d.dailyAchievementPending ? (
+              <p className="mt-2 text-xs text-muted">{t('targets.dailyAchievementPending')}</p>
+            ) : (
+              <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
+                <div className={`h-full rounded-full transition-all ${d.pctDaily > 100 ? getPerformanceBgClass(d.pctDaily) : 'bg-accent'}`} style={{ width: `${progress(d.pctDaily)}%` }} />
+              </div>
+            )}
           </OpsCard>
 
           <OpsCard title={t('targets.weekProgress')}>
             {d.weekRangeLabel && <p className="mb-2 text-xs text-muted">{d.weekRangeLabel}</p>}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.weekTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.weeklyRequiredPace')}</td><td className="p-1 text-end font-medium">{formatSar(d.paceWeeklyRequiredSar ?? d.weekTarget)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.reportingWeeklyShort')}</td><td className="p-1 text-end font-medium">{formatSar(d.reportingWeeklyAllocationSar ?? 0)}</td></tr>
                 <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatSar(d.weekSales)}</td></tr>
                 <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctWeek)}</td></tr>
               </tbody>
@@ -390,8 +413,8 @@ export function MyTargetClient() {
               <tbody>
                 <tr><td className="p-1 text-muted">{t('targets.target')}</td><td className="p-1 text-end font-medium">{formatSar(d.monthTarget)}</td></tr>
                 <tr><td className="p-1 text-muted">MTD</td><td className="p-1 text-end font-medium">{formatSar(d.mtdSales)}</td></tr>
+                <tr><td className="p-1 text-muted">{t('targets.remainingMonthlyTarget')}</td><td className="p-1 text-end font-medium">{formatSar(d.remainingMonthTargetSar ?? Math.max(0, d.monthTarget - d.mtdSales))}</td></tr>
                 <tr><td className="p-1 text-muted">%</td><td className="p-1 text-end font-medium">{formatPct(d.pctMonth)}</td></tr>
-                <tr><td className="p-1 text-muted">{t('targets.remaining')}</td><td className="p-1 text-end font-medium">{formatSar(d.remaining)}</td></tr>
               </tbody>
             </table>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { parseMonthKeyOrThrow, parseIsoDateOrThrow } from '@/lib/time/parse';
 import { toRiyadhDateString, getDaysRemainingInMonthIncluding, normalizeMonthKey } from '@/lib/time';
+import { dailyRequiredTargetSar, remainingMonthTargetSar } from '@/lib/targets/requiredPaceTargets';
 import { prisma } from '@/lib/db';
 import { aggregateSalesEntrySum, salesEntryWhereForUserMonth } from '@/lib/sales/readSalesAggregate';
 
@@ -57,9 +58,8 @@ export async function GET(request: NextRequest) {
   ]);
 
   const monthTargetSar = targetRows.reduce((s, r) => s + r.amount, 0);
-  const remainingSar = Math.max(monthTargetSar - achievedToDateSar, 0);
-  const dailyRequiredSar =
-    daysRemaining > 0 ? Math.ceil(remainingSar / daysRemaining) : remainingSar;
+  const remainingSar = remainingMonthTargetSar(monthTargetSar, achievedToDateSar);
+  const dailyRequiredSar = dailyRequiredTargetSar(remainingSar, daysRemaining);
 
   return NextResponse.json({
     month: normMonth,

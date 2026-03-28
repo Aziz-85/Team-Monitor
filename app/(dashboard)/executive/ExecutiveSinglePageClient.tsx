@@ -228,6 +228,14 @@ export function ExecutiveSinglePageClient() {
   const { t } = useT();
   const [view, setView] = useState<ExecPageView>('Executive');
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
+  const [monthContext, setMonthContext] = useState<{
+    monthKey: string;
+    todayStr: string;
+    daysInMonth: number;
+    calendarDayOfMonth: number;
+    hasSalesEntryToday: boolean;
+    paceDaysPassed: number;
+  } | null>(null);
   const [employees, setEmployees] = useState<EmployeeRow[] | null>(null);
   const [compareBoutiques, setCompareBoutiques] = useState<CompareBoutiqueRow[] | null>(null);
   const [yoyData, setYoyData] = useState<YoYData | null>(null);
@@ -252,6 +260,7 @@ export function ExecutiveSinglePageClient() {
       })
       .then((data) => {
         setKpis(data.kpis);
+        setMonthContext(data.monthContext ?? null);
         lastRefreshRef.current = new Date();
       })
       .catch(() => setError('Failed to load executive data'))
@@ -259,10 +268,10 @@ export function ExecutiveSinglePageClient() {
   }, []);
 
   useEffect(() => {
-    const todayKey = getTodayRiyadh();
-    const parsed = parseRiyadhDateKey(todayKey);
-    if (!parsed) return;
-    fetch(`/api/executive/yoy?month=${encodeURIComponent(parsed.monthKey)}&daysPassed=${parsed.daysPassed}`)
+    if (!monthContext) return;
+    fetch(
+      `/api/executive/yoy?month=${encodeURIComponent(monthContext.monthKey)}&daysPassed=${monthContext.paceDaysPassed}`
+    )
       .then((r) => {
         if (r.status === 204) return null;
         if (!r.ok) return null;
@@ -270,7 +279,7 @@ export function ExecutiveSinglePageClient() {
       })
       .then(setYoyData)
       .catch(() => setYoyData(null));
-  }, []);
+  }, [monthContext]);
 
   useEffect(() => {
     const todayKey = getTodayRiyadh();
@@ -326,8 +335,17 @@ export function ExecutiveSinglePageClient() {
 
   const riyadhToday = useMemo(() => getTodayRiyadh(), []);
   const riyadhParsed = useMemo(() => parseRiyadhDateKey(riyadhToday), [riyadhToday]);
-  const totalDays = riyadhParsed?.totalDays ?? new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const daysPassed = riyadhParsed?.daysPassed ?? Math.min(new Date().getDate(), new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
+  const totalDays =
+    monthContext?.daysInMonth ??
+    riyadhParsed?.totalDays ??
+    new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const daysPassed =
+    monthContext?.paceDaysPassed ??
+    riyadhParsed?.daysPassed ??
+    Math.min(
+      new Date().getDate(),
+      new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+    );
 
   const last7Prev7 = useMemo(() => {
     if (!monthSnapshot?.daily?.length) return { last7: null as number | null, prev7: null as number | null, trendConfidence: 'Low' as const };
@@ -403,22 +421,22 @@ export function ExecutiveSinglePageClient() {
   const daysLeft = totalDays - daysPassed;
 
   const smartLayer = useMemo(() => {
-    if (!kpis || !riyadhParsed) return null;
+    if (!kpis || totalDays <= 0) return null;
     const pace = computePaceMetrics({
       actualMTD: kpis.revenue,
       monthlyTarget: kpis.target,
-      totalDaysInMonth: riyadhParsed.totalDays,
-      daysPassed: riyadhParsed.daysPassed,
+      totalDaysInMonth: totalDays,
+      daysPassed,
     });
     const forecast = computeForecast({
       actualMTD: kpis.revenue,
       monthlyTarget: kpis.target,
-      totalDaysInMonth: riyadhParsed.totalDays,
-      daysPassed: riyadhParsed.daysPassed,
+      totalDaysInMonth: totalDays,
+      daysPassed,
     });
     const remaining = Math.max(0, kpis.target - kpis.revenue);
     return { pace, forecast, remaining };
-  }, [kpis, riyadhParsed]);
+  }, [kpis, totalDays, daysPassed]);
 
   const targetCalibration = useMemo(() => {
     if (!kpis || !metrics) return null;
@@ -745,7 +763,9 @@ export function ExecutiveSinglePageClient() {
             <PaceCard
               title={t('analytics.monthPaceTitle')}
               pace={smartLayer.pace}
-              expectedLabel={t('analytics.expectedByNow')}
+              expectedLabel={t('analytics.expectedByToday')}
+              actualMtdLabel={t('analytics.actualMtdPace')}
+              deltaLabel={t('analytics.deltaVsExpected')}
               bandLabels={{
                 ahead: t('analytics.ahead'),
                 onTrack: t('analytics.onTrack'),

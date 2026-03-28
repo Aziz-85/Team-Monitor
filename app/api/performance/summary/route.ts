@@ -1,13 +1,14 @@
 /**
  * GET /api/performance/summary
  * Unified performance API: daily, weekly, monthly targets, sales, remaining, percent.
- * All values SAR_INT. Uses lib/performance/performanceEngine.
+ * All values SAR_INT. Pace uses MTD SAR vs linear expectation (completed business days only).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getRiyadhNow, formatMonthKey } from '@/lib/time';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { getPerformanceSummaryExtended } from '@/lib/metrics/aggregator';
+import { computePaceMetrics } from '@/lib/analytics/performanceLayer';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,24 +36,40 @@ export async function GET(request: NextRequest) {
   });
 
   const daysInMonth = summary.daysInMonth ?? 0;
-  const todayDayOfMonth = summary.todayDayOfMonth ?? 0;
-  const expectedPercent = daysInMonth > 0 ? Math.floor((todayDayOfMonth / daysInMonth) * 100) : 0;
-  const actualPercent = summary.daily.percent;
-  const deltaPercent = actualPercent - expectedPercent;
+  const paceDaysPassed = summary.paceDaysPassed ?? 0;
+  const pace = computePaceMetrics({
+    actualMTD: summary.monthly.sales,
+    monthlyTarget: summary.monthly.target,
+    totalDaysInMonth: daysInMonth,
+    daysPassed: paceDaysPassed,
+  });
 
   return NextResponse.json({
+    monthKey: summary.monthKey,
+    postedLastRecordedDateKey: summary.postedLastRecordedDateKey,
+    postedLastRecordedDaySalesSar: summary.postedLastRecordedDaySalesSar,
     daily: summary.daily,
     weekly: summary.weekly,
     monthly: summary.monthly,
     pace: {
-      expectedPercent,
-      actualPercent,
-      deltaPercent,
-      status: deltaPercent >= 5 ? 'ahead' : deltaPercent >= -5 ? 'onpace' : 'behind',
+      expectedToDate: pace.expectedToDate,
+      actualMtd: summary.monthly.sales,
+      paceDelta: pace.paceDelta,
+      band: pace.band,
+      paceDaysPassed,
+      daysInMonth,
     },
+    hasSalesEntryForToday: summary.hasSalesEntryForToday,
+    reportingDailyAllocationSar: summary.reportingDailyAllocationSar,
+    reportingWeeklyAllocationSar: summary.reportingWeeklyAllocationSar,
+    paceDailyRequiredSar: summary.paceDailyRequiredSar,
+    paceWeeklyRequiredSar: summary.paceWeeklyRequiredSar,
+    remainingMonthTargetSar: summary.remainingMonthTargetSar,
+    paceDaysPassed,
+    todayInSelectedMonth: summary.todayInSelectedMonth,
     dailyTrajectory: summary.dailyTrajectory,
     topSellers: summary.topSellers,
     daysInMonth,
-    todayDayOfMonth,
+    todayDayOfMonth: summary.todayDayOfMonth,
   });
 }

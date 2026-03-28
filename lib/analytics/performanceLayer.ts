@@ -18,6 +18,23 @@ export function effectiveDaysPassed(daysPassed: number, totalDaysInMonth: number
   return Math.min(d, cap);
 }
 
+/**
+ * Linear MTD pace uses completed business days, not the calendar day, until a SalesEntry exists
+ * for the Riyadh calendar "today" (end-of-day posting). If there is no entry yet for today,
+ * today counts as not started → use (calendarDay − 1) capped to [0, daysInMonth].
+ */
+export function paceDaysPassedForMonth(
+  todayDayOfMonth: number,
+  daysInMonth: number,
+  hasSalesEntryForCalendarToday: boolean
+): number {
+  const D = Math.max(0, toSarInt(daysInMonth));
+  const cal = toSarInt(todayDayOfMonth);
+  if (D <= 0 || cal < 1) return 0;
+  const raw = hasSalesEntryForCalendarToday ? cal : cal - 1;
+  return Math.min(Math.max(0, raw), D);
+}
+
 export type ProductivityMetrics = {
   totalSalesMTD: SarInt;
   activeDays: SarInt;
@@ -76,10 +93,10 @@ export function computePaceMetrics(input: {
   const monthlyTarget = toSarInt(input.monthlyTarget);
   const D = Math.max(0, toSarInt(input.totalDaysInMonth));
   const dRaw = toSarInt(input.daysPassed);
-  const d = D > 0 ? Math.min(Math.max(1, dRaw), D) : 1;
+  const d = D > 0 ? Math.min(Math.max(0, dRaw), D) : 0;
 
   const expectedToDate =
-    D > 0 ? Math.round((monthlyTarget * d) / D) : 0;
+    D > 0 && d > 0 ? Math.round((monthlyTarget * d) / D) : 0;
 
   const paceDelta = actualMTD - expectedToDate;
 
@@ -119,7 +136,9 @@ export function computeForecast(input: {
   const actualMTD = toSarInt(input.actualMTD);
   const monthlyTarget = toSarInt(input.monthlyTarget);
   const D = Math.max(0, toSarInt(input.totalDaysInMonth));
-  const dEff = effectiveDaysPassed(input.daysPassed, D);
+  const dRaw = toSarInt(input.daysPassed);
+  /** Match accounting-day pace: 0 completed days → divisor 1 so MTD/1 is well-defined when MTD is 0. */
+  const dEff = D > 0 ? Math.min(Math.max(1, dRaw < 1 ? 1 : dRaw), D) : 1;
   const avgDailyActual = Math.round(actualMTD / dEff);
   const forecastedTotal = D > 0 ? avgDailyActual * D : 0;
   const forecastDelta = forecastedTotal - monthlyTarget;

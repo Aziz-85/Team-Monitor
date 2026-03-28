@@ -1,0 +1,387 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/useT';
+import { formatSarInt } from '@/lib/utils/money';
+import { ChartCard } from '@/components/ui/ChartCard';
+import { PerformanceLineChart } from '@/components/dashboard/PerformanceLineChart';
+import { LuxuryTopSellerCard } from '@/components/dashboard/LuxuryTopSellerCard';
+import { PaceCard } from '@/components/analytics/PaceCard';
+import { ForecastCard } from '@/components/analytics/ForecastCard';
+import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
+
+type DailyTrajectoryPoint = { dateKey: string; targetCumulative: number; actualCumulative: number };
+
+type TopSellerEntry = {
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  rank: number;
+};
+
+export type TeamMonitorPerformance = {
+  monthly: { target: number; sales: number; remaining: number; percent: number };
+  weekly: { sales: number };
+  hasSalesEntryForToday?: boolean;
+  paceDaysPassed?: number;
+  todayInSelectedMonth?: boolean;
+  reportingDailyAllocationSar?: number;
+  reportingWeeklyAllocationSar?: number;
+  paceDailyRequiredSar?: number;
+  paceWeeklyRequiredSar?: number;
+  remainingMonthTargetSar?: number;
+  postedLastRecordedDateKey?: string | null;
+  postedLastRecordedDaySalesSar?: number;
+  monthKey?: string;
+  dailyTrajectory?: DailyTrajectoryPoint[];
+  topSellers?: {
+    week: TopSellerEntry[];
+    month: TopSellerEntry[];
+  };
+  daysInMonth?: number;
+};
+
+type WeekReportJson = {
+  error?: string;
+  labelNote?: string;
+  boutique?: {
+    weekAchievedSar: number;
+    reportingWeeklyAllocationSar: number;
+    reportingWeeklyRemainingSar: number;
+    reportingWeeklyAchievementPct: number;
+    paceWeeklyRequiredSar: number;
+    paceWeeklyRemainingSar: number;
+    paceWeeklyAchievementPct: number;
+  };
+  employees?: Array<{
+    empId: string;
+    name: string;
+    weekAchievedSar: number;
+    reportingWeeklyAllocationSar: number;
+    reportingWeeklyAchievementPct: number;
+    paceWeeklyRequiredSar: number;
+    paceWeeklyAchievementPct: number;
+  }>;
+};
+
+type MonthDailyJson = {
+  error?: string;
+  labelNote?: string;
+  rows?: Array<{
+    dateKey: string;
+    reportingDailyAllocationSar: number;
+    achievedSar: number;
+    remainingSar: number;
+    achievementPct: number;
+  }>;
+};
+
+function KpiTile({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/80 bg-surface px-4 py-4 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-2 text-xl font-bold tabular-nums text-foreground md:text-2xl">{value}</p>
+      {sub ? <p className="mt-1 text-xs text-muted">{sub}</p> : null}
+    </div>
+  );
+}
+
+type Props = {
+  performance: TeamMonitorPerformance;
+  monthSmartLayer: { pace: PaceMetrics; forecast: ForecastMetrics } | null;
+};
+
+export function TeamMonitorKpiPanel({ performance, monthSmartLayer }: Props) {
+  const { t } = useT();
+  const [weekReport, setWeekReport] = useState<WeekReportJson | null>(null);
+  const [dailyReport, setDailyReport] = useState<MonthDailyJson | null>(null);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+
+  const monthKey = performance.monthKey ?? '';
+  const trajectory = performance.dailyTrajectory ?? [];
+  const chartData = trajectory.map((d) => ({
+    label: d.dateKey.slice(-2),
+    value: d.actualCumulative,
+  }));
+  const targetLine = trajectory.map((d) => d.targetCumulative);
+
+  useEffect(() => {
+    if (!monthKey) return;
+    let cancelled = false;
+    setReportsError(null);
+    Promise.all([
+      fetch(`/api/metrics/reports/week?month=${encodeURIComponent(monthKey)}`).then((r) => r.json()),
+      fetch(`/api/metrics/reports/month-daily?month=${encodeURIComponent(monthKey)}`).then((r) => r.json()),
+    ])
+      .then(([w, d]) => {
+        if (cancelled) return;
+        if (typeof w?.error === 'string' && w.error.toLowerCase().includes('forbidden')) {
+          setReportsError(t('home.teamMonitor.reportsForbidden'));
+          setWeekReport(null);
+          setDailyReport(null);
+          return;
+        }
+        setWeekReport(typeof w?.error === 'string' ? null : w);
+        setDailyReport(typeof d?.error === 'string' ? null : d);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReportsError(t('home.teamMonitor.reportsLoadError'));
+          setWeekReport(null);
+          setDailyReport(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- t stable per locale; refetch only when month changes
+  }, [monthKey]);
+
+  const achievedMtd = performance.monthly.sales;
+  const remMonth = performance.remainingMonthTargetSar ?? 0;
+  const dailyReq = performance.paceDailyRequiredSar ?? 0;
+  const weeklyReq = performance.paceWeeklyRequiredSar ?? 0;
+  const postedDayKey = performance.postedLastRecordedDateKey;
+  const postedDaySar = performance.postedLastRecordedDaySalesSar ?? 0;
+  const weekPosted = performance.weekly.sales;
+  const monthPosted = performance.monthly.sales;
+  const reportingDaily = performance.reportingDailyAllocationSar ?? 0;
+  const reportingWeekly = performance.reportingWeeklyAllocationSar ?? 0;
+
+  return (
+    <section className="mb-10 rounded-2xl border border-border/60 bg-surface/50 p-6 md:p-8">
+      {/* SECTION 1 — Executive control (required pace + MTD facts; no % vs “today”) */}
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+        {t('home.teamMonitor.section1Title')}
+      </h2>
+      <p className="mb-4 max-w-3xl text-xs text-muted">{t('home.teamMonitor.section1Blurb')}</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiTile label={t('home.teamMonitor.achievedMtd')} value={formatSarInt(achievedMtd)} />
+        <KpiTile label={t('home.teamMonitor.remainingMonthlyTarget')} value={formatSarInt(remMonth)} />
+        <KpiTile
+          label={t('home.teamMonitor.dailyRequiredStayOnTrack')}
+          value={formatSarInt(dailyReq)}
+          sub={t('home.teamMonitor.reportingDailyNote').replace('{v}', formatSarInt(reportingDaily))}
+        />
+        <KpiTile
+          label={t('home.teamMonitor.weeklyRequiredStayOnTrack')}
+          value={formatSarInt(weeklyReq)}
+          sub={t('home.teamMonitor.reportingWeeklyNote').replace('{v}', formatSarInt(reportingWeekly))}
+        />
+      </div>
+
+      {/* SECTION 2 — Posted performance (achieved only) */}
+      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+        {t('home.teamMonitor.section2Title')}
+      </h2>
+      <p className="mb-4 max-w-3xl text-xs text-muted">{t('home.teamMonitor.section2Blurb')}</p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-border/80 bg-surface px-4 py-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {t('home.teamMonitor.lastRecordedDay')}
+          </p>
+          {postedDayKey ? (
+            <>
+              <p className="mt-2 text-sm font-medium text-foreground">{postedDayKey}</p>
+              <p className="mt-1 text-xl font-bold tabular-nums text-foreground">{formatSarInt(postedDaySar)}</p>
+              {performance.hasSalesEntryForToday === false && (
+                <p className="mt-2 text-xs text-amber-800">{t('home.teamMonitor.noPostTodayYet')}</p>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-muted">{t('home.teamMonitor.noPostedDayInMonth')}</p>
+          )}
+        </div>
+        <div className="rounded-xl border border-border/80 bg-surface px-4 py-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {t('home.teamMonitor.currentWeekAchievedPosted')}
+          </p>
+          <p className="mt-2 text-xl font-bold tabular-nums text-foreground">{formatSarInt(weekPosted)}</p>
+          <p className="mt-1 text-xs text-muted">{t('home.teamMonitor.riyadhWeekSatFri')}</p>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-surface px-4 py-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {t('home.teamMonitor.currentMonthAchieved')}
+          </p>
+          <p className="mt-2 text-xl font-bold tabular-nums text-foreground">{formatSarInt(monthPosted)}</p>
+        </div>
+      </div>
+
+      {/* SECTION 3 — Analysis */}
+      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+        {t('home.teamMonitor.section3Title')}
+      </h2>
+      {monthSmartLayer && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PaceCard
+            title={t('home.teamMonitor.monthlyPaceVsTarget')}
+            pace={monthSmartLayer.pace}
+            expectedLabel={t('home.teamMonitor.expectedLinearMtd')}
+            actualMtdLabel={t('analytics.actualMtdPace')}
+            deltaLabel={t('analytics.deltaVsExpected')}
+            bandLabels={{
+              ahead: t('analytics.ahead'),
+              onTrack: t('analytics.onTrack'),
+              behind: t('analytics.behind'),
+            }}
+          />
+          <ForecastCard
+            title={t('home.teamMonitor.monthEndProjection')}
+            linear={monthSmartLayer.forecast}
+            rolling7={null}
+            disclaimer={t('analytics.projectionOnly')}
+            rollingTitle={t('analytics.forecastRolling7')}
+          />
+        </div>
+      )}
+      <div className="mt-8">
+        <ChartCard
+          title={t('home.teamMonitor.chartReportingCumulativeTitle')}
+          subtitle={t('home.teamMonitor.chartReportingCumulativeSubtitle')}
+          className="w-full md:p-8 [&>div:first-child]:mb-6"
+        >
+          <PerformanceLineChart
+            data={chartData}
+            targetLine={targetLine}
+            height={320}
+            valueFormat={(n) => formatSarInt(n)}
+            emptyLabel={t('home.teamMonitor.chartEmpty')}
+          />
+        </ChartCard>
+      </div>
+
+      {/* SECTION 4 — Reporting */}
+      <h2 className="mb-3 mt-10 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+        {t('home.teamMonitor.section4Title')}
+      </h2>
+      <p className="mb-4 max-w-3xl text-xs text-muted">{t('home.teamMonitor.section4Blurb')}</p>
+      {reportsError && <p className="mb-4 text-sm text-amber-800">{reportsError}</p>}
+
+      {weekReport?.boutique && (
+        <div className="mb-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('home.teamMonitor.weeklyBoutiqueReport')}
+          </h3>
+          {weekReport.labelNote ? <p className="mb-2 text-xs text-muted">{weekReport.labelNote}</p> : null}
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[640px] border-collapse text-start text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedWeek')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsReporting')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsPace')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border">
+                  <td className="p-2 font-semibold tabular-nums">{formatSarInt(weekReport.boutique.weekAchievedSar)}</td>
+                  <td className="p-2 tabular-nums">{formatSarInt(weekReport.boutique.reportingWeeklyAllocationSar)}</td>
+                  <td className="p-2 tabular-nums">{formatSarInt(weekReport.boutique.paceWeeklyRequiredSar)}</td>
+                  <td className="p-2 tabular-nums">{weekReport.boutique.reportingWeeklyAchievementPct}%</td>
+                  <td className="p-2 tabular-nums">{weekReport.boutique.paceWeeklyAchievementPct}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {weekReport?.employees && weekReport.employees.length > 0 && (
+        <div className="mb-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('home.teamMonitor.weeklyEmployeeReport')}
+          </h3>
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[720px] border-collapse text-start text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface-subtle">
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colEmployee')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedWeek')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsReporting')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsPace')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weekReport.employees.map((e) => (
+                  <tr key={e.empId} className="border-b border-border">
+                    <td className="p-2">{e.name}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(e.weekAchievedSar)}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(e.reportingWeeklyAllocationSar)}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(e.paceWeeklyRequiredSar)}</td>
+                    <td className="p-2 tabular-nums">{e.reportingWeeklyAchievementPct}%</td>
+                    <td className="p-2 tabular-nums">{e.paceWeeklyAchievementPct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {dailyReport?.rows && dailyReport.rows.length > 0 && (
+        <div className="mb-6">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('home.teamMonitor.dailyReportTable')}
+          </h3>
+          {dailyReport.labelNote ? <p className="mb-2 text-xs text-muted">{dailyReport.labelNote}</p> : null}
+          <div className="max-h-72 overflow-auto rounded-xl border border-border">
+            <table className="w-full min-w-[520px] border-collapse text-start text-sm">
+              <thead className="sticky top-0 bg-surface-subtle">
+                <tr className="border-b border-border">
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colDailyTargetReporting')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
+                  <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyReport.rows.map((r) => (
+                  <tr key={r.dateKey} className="border-b border-border">
+                    <td className="p-2 font-mono text-xs">{r.dateKey}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(r.reportingDailyAllocationSar)}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
+                    <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
+                    <td className="p-2 tabular-nums">{r.achievementPct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {performance.topSellers && (
+        <>
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('home.teamMonitor.topSellersHeading')}
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <LuxuryTopSellerCard
+              title={t('home.teamMonitor.topSellersThisWeek')}
+              entries={performance.topSellers.week ?? []}
+              emptyLabel={t('home.teamMonitor.topSellersWeekEmpty')}
+            />
+            <LuxuryTopSellerCard
+              title={t('home.teamMonitor.topSellersThisMonth')}
+              entries={performance.topSellers.month ?? []}
+              emptyLabel={t('home.teamMonitor.topSellersMonthEmpty')}
+            />
+          </div>
+        </>
+      )}
+    </section>
+  );
+}

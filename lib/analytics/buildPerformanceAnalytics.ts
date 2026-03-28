@@ -18,6 +18,7 @@ import {
   computeForecastRolling7,
   computePaceMetrics,
   computeProductivityMetrics,
+  paceDaysPassedForMonth,
 } from '@/lib/analytics/performanceLayer';
 
 export type PerformanceAnalyticsEmployeeRow = {
@@ -77,17 +78,18 @@ function buildMtdWhere(
   return base;
 }
 
-function resolveDaysPassed(
+function resolveDaysPassedWithAccounting(
   monthKey: string,
   todayStr: string,
   todayMonthKey: string,
-  daysInMonth: number
+  daysInMonth: number,
+  hasSalesEntryForToday: boolean
 ): number {
   const sel = normalizeMonthKey(monthKey);
-  if (sel < todayMonthKey) return Math.max(1, daysInMonth);
+  if (sel < todayMonthKey) return Math.max(0, daysInMonth);
   if (sel > todayMonthKey) return 1;
   const day = new Date(todayStr + 'T00:00:00.000Z').getUTCDate();
-  return Math.min(Math.max(1, day), Math.max(1, daysInMonth));
+  return paceDaysPassedForMonth(day, daysInMonth, hasSalesEntryForToday);
 }
 
 export async function buildPerformanceAnalytics(input: {
@@ -106,8 +108,26 @@ export async function buildPerformanceAnalytics(input: {
     input.monthKey?.trim() || todayMonthKey
   );
   const daysInMonth = getDaysInMonth(monthKey);
-  const daysPassed = resolveDaysPassed(monthKey, todayStr, todayMonthKey, daysInMonth);
   const mtdWhere = buildMtdWhere(boutiqueIds, monthKey, todayStr, todayMonthKey);
+  const selNorm = normalizeMonthKey(monthKey);
+  let hasSalesEntryForToday = false;
+  if (selNorm === todayMonthKey && boutiqueIds.length > 0) {
+    hasSalesEntryForToday =
+      (await prisma.salesEntry.count({
+        where: {
+          month: selNorm,
+          boutiqueId: { in: boutiqueIds },
+          dateKey: todayStr,
+        },
+      })) > 0;
+  }
+  const daysPassed = resolveDaysPassedWithAccounting(
+    monthKey,
+    todayStr,
+    todayMonthKey,
+    daysInMonth,
+    hasSalesEntryForToday
+  );
 
   const includeEmployees = input.includeEmployees !== false;
   const needUserBreakdown = includeEmployees || Boolean(input.userIdFilter);

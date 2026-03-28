@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     monthParam && /^\d{4}-\d{2}$/.test(monthParam.trim())
       ? normalizeMonthKey(monthParam.trim())
       : undefined;
-  const ctx = buildCompanyMonthContext(monthKey);
+  const ctx = await buildCompanyMonthContext(monthKey, { boutiqueIds });
   const employees = await buildCompanyEmployees(boutiqueIds, ctx);
 
   return NextResponse.json({ monthKey: ctx.monthKey, employees });

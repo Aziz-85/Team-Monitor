@@ -13,12 +13,6 @@ import {
   normalizeMonthKey,
 } from '@/lib/time';
 
-function getDailyTargetForDay(monthTarget: number, daysInMonth: number, dayOfMonth1Based: number): number {
-  if (daysInMonth <= 0) return 0;
-  const base = Math.floor(monthTarget / daysInMonth);
-  const remainder = monthTarget - base * daysInMonth;
-  return base + (dayOfMonth1Based <= remainder ? 1 : 0);
-}
 import {
   SALES_TARGET_ROLE_LABELS,
   getWeightForRole,
@@ -31,6 +25,7 @@ import {
   computeDiff,
   getAllocationStatus,
 } from '@/lib/targets/reconcile';
+import { computeReportingAndPaceSnapshot } from '@/lib/targets/requiredPaceTargets';
 
 const ADMIN_ROLES = ['MANAGER', 'ADMIN', 'AREA_MANAGER'] as const;
 
@@ -54,7 +49,9 @@ export async function GET(request: NextRequest) {
   const { start: monthStart, endExclusive: monthEnd } = getMonthRange(monthKey);
   const daysInMonth = getDaysInMonth(monthKey);
   const todayStr = toRiyadhDateString(getRiyadhNow());
-  const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(getRiyadhNow());
+  const currentMonthKey = formatMonthKey(getRiyadhNow());
+  const todayInSelectedMonth = normalizeMonthKey(monthKey) === normalizeMonthKey(currentMonthKey);
+  const { startSat, endExclusiveFriPlus1 } = getWeekRangeForDate(new Date(todayStr + 'T12:00:00.000Z'));
   const weekInMonth = intersectRanges(startSat, endExclusiveFriPlus1, monthStart, monthEnd);
 
   const [boutiqueTarget, employeeTargets, salesInMonth, todayEntries, weekEntriesByUser, roleWeights] =
@@ -103,6 +100,7 @@ export async function GET(request: NextRequest) {
 
   const mtdByUser = Object.fromEntries(salesInMonth.map((r) => [r.userId, r._sum.amount ?? 0]));
   const todayByUser = Object.fromEntries(todayEntries.map((e) => [e.userId, e.amount]));
+  const usersWithPostedToday = new Set(todayEntries.map((e) => e.userId));
   const weekByUser = Object.fromEntries(
     weekEntriesByUser.map((r) => [r.userId, r._sum.amount ?? 0])
   );
@@ -120,19 +118,22 @@ export async function GET(request: NextRequest) {
 
   const employees = employeeTargets.map((et) => {
     const monthlyTarget = et.amount;
-    const todayTarget = daysInMonth > 0 ? getDailyTargetForDay(monthlyTarget, daysInMonth, todayDayOfMonth) : 0;
-    let weekTarget = 0;
-    if (weekInMonth && daysInMonth > 0) {
-      const start = weekInMonth.start.getTime();
-      const end = weekInMonth.end.getTime();
-      const dayMs = 24 * 60 * 60 * 1000;
-      for (let t = start; t < end; t += dayMs) {
-        weekTarget += getDailyTargetForDay(monthlyTarget, daysInMonth, new Date(t).getUTCDate());
-      }
-    }
     const mtdSales = mtdByUser[et.userId] ?? 0;
     const todaySales = todayByUser[et.userId] ?? 0;
+    const hasPostedToday = usersWithPostedToday.has(et.userId);
     const weekSales = weekByUser[et.userId] ?? 0;
+    const empSnap = computeReportingAndPaceSnapshot({
+      monthTarget: monthlyTarget,
+      mtdAchieved: mtdSales,
+      daysInMonth,
+      monthKey,
+      todayDateKey: todayStr,
+      todayDayOfMonth,
+      todayInSelectedMonth,
+      weekInMonth,
+    });
+    const todayTarget = empSnap.reportingDailyAllocationSar;
+    const weekTarget = empSnap.reportingWeeklyAllocationSar;
     const roleAtGen = (et.roleAtGeneration as SalesTargetRole) ?? null;
     const weightAtGen = et.weightAtGeneration ?? null;
     const currentRole =
@@ -166,10 +167,27 @@ export async function GET(request: NextRequest) {
       mtdPct: monthlyTarget > 0 ? (mtdSales / monthlyTarget) * 100 : 0,
       todaySales,
       todayTarget,
-      todayPct: todayTarget > 0 ? (todaySales / todayTarget) * 100 : 0,
+      paceDailyRequiredSar: empSnap.paceDailyRequiredSar,
+      paceWeeklyRequiredSar: empSnap.paceWeeklyRequiredSar,
+      remainingMonthTargetSar: empSnap.remainingMonthTargetSar,
+      todayPct:
+        hasPostedToday && empSnap.paceDailyRequiredSar > 0
+          ? (todaySales / empSnap.paceDailyRequiredSar) * 100
+          : hasPostedToday
+            ? empSnap.paceDailyRequiredSar <= 0
+              ? todaySales > 0
+                ? 100
+                : 0
+              : 0
+            : null,
       weekSales,
       weekTarget,
-      weekPct: weekTarget > 0 ? (weekSales / weekTarget) * 100 : 0,
+      weekPct:
+        empSnap.paceWeeklyRequiredSar > 0
+          ? (weekSales / empSnap.paceWeeklyRequiredSar) * 100
+          : weekSales > 0 && empSnap.remainingMonthTargetSar <= 0
+            ? 100
+            : 0,
     };
   });
 
