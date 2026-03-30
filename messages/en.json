@@ -107,6 +107,7 @@
     "inventoryFollowUp": "Inventory Follow-up",
     "syncPlanner": "Sync Planner",
     "plannerIntegration": "Planner Integration",
+    "plannerCompletions": "Planner Completions",
     "about": "About",
     "more": "More",
     "employeeHome": "My Home",
@@ -510,7 +511,22 @@
       "localPriorityOptional": "Local priority (optional)",
       "noUserMappings": "No user mappings. Click Add to link a Microsoft email to an employee.",
       "noBucketMappings": "No bucket mappings. Click Add to link a Planner bucket to local.",
-      "confirmDeleteUserMap": "Delete this user mapping?"
+      "confirmDeleteUserMap": "Delete this user mapping?",
+      "completionsTitle": "Planner completion events",
+      "completionsSubtitle": "Read-only normalized completion records ingested from Planner task updates.",
+      "filterDateFrom": "Date from",
+      "filterDateTo": "Date to",
+      "filterType": "Type",
+      "filterBranch": "Branch",
+      "totalRows": "Total: {n}",
+      "colTaskKey": "Task key",
+      "colTaskTitle": "Task title",
+      "colType": "Type",
+      "colBranch": "Branch",
+      "colCompletedBy": "Completed by",
+      "colMatchedUser": "Matched user",
+      "colSource": "Source",
+      "noCompletions": "No planner completions found for current filters."
     }
   },
   "auth": {

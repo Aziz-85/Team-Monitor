@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { getSessionUser } from '@/lib/auth';
+import { getServerTranslations } from '@/lib/i18n/serverTranslate';
 import { ImportSubpageLayout } from '@/components/admin/ImportSubpageLayout';
 import { HistoricalImportClient } from '@/app/(dashboard)/admin/historical-import/HistoricalImportClient';
 
@@ -10,7 +10,7 @@ export default async function AdminImportHistoricalPage() {
   if (!user) redirect('/login');
   if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') redirect('/');
 
-  const t = await getTranslations('admin.importCenter');
+  const t = await getServerTranslations('admin.importCenter');
 
   return (
     <ImportSubpageLayout title="Historical Import">

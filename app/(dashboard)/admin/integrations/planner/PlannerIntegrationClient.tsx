@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
@@ -294,7 +295,15 @@ export function PlannerIntegrationClient() {
 
   return (
     <div className="min-w-0 space-y-4 p-4 md:p-5">
-      <h1 className="mb-2 text-xl font-semibold tracking-tight text-foreground">{t('nav.plannerIntegration')}</h1>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{t('nav.plannerIntegration')}</h1>
+        <Link
+          href="/admin/integrations/planner/completions"
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-surface-subtle"
+        >
+          {t('nav.plannerCompletions')}
+        </Link>
+      </div>
 
       <OpsCard title={t('admin.planner.overview') ?? 'Integration Overview'} className={cardClass}>
         <div className="grid gap-2 sm:grid-cols-2">

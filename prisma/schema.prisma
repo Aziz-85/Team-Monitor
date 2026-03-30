@@ -99,6 +99,19 @@ enum PlannerSyncLogStatus {
   SKIPPED
 }
 
+enum PlannerTaskFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PlannerTaskEventStatus {
+  COMPLETED
+  UPDATED
+  REOPENED
+  UNKNOWN
+}
+
 enum EmployeePosition {
   BOUTIQUE_MANAGER
   ASSISTANT_MANAGER
@@ -300,6 +313,7 @@ model User {
   delegationGrantsRevokedBy  DelegationGrant[] @relation("DelegationGrantRevokedBy")
   employeeTransferAudits     EmployeeTransferAudit[] @relation("EmployeeTransferAuditActor")
   targetChangeAudits         TargetChangeAudit[]     @relation("TargetChangeAuditActor")
+  plannerTaskCompletions     PlannerTaskCompletion[]
 
   @@index([boutiqueId])
 }
@@ -887,6 +901,87 @@ model PlannerInboundEvent {
   @@unique([eventHash])
   @@index([integrationId])
   @@index([processed, createdAt])
+}
+
+model PlannerTaskMapping {
+  id                String              @id @default(cuid())
+  boutiqueId        String?
+  plannerTaskId     String?
+  plannerBucketId   String?
+  plannerBucketName String?
+  plannerTaskTitle  String
+  internalTaskKey   String
+  taskType          PlannerTaskFrequency
+  branchCode        String?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([boutiqueId, isActive])
+  @@index([plannerTaskId])
+  @@index([plannerBucketId])
+  @@index([internalTaskKey, taskType])
+  @@index([branchCode])
+}
+
+model PlannerTaskEvent {
+  id               String                 @id @default(cuid())
+  plannerTaskId    String?
+  plannerTaskTitle String?
+  internalTaskKey  String?
+  taskType         PlannerTaskFrequency?
+  branchCode       String?
+  bucketName       String?
+  assignedToName   String?
+  assignedToEmail  String?
+  completedByName  String?
+  completedByEmail String?
+  status           PlannerTaskEventStatus
+  eventAt          DateTime
+  payloadJson      Json?
+  source           String                 @default("POWER_AUTOMATE")
+  receivedAt       DateTime               @default(now())
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  completions      PlannerTaskCompletion[]
+
+  @@index([plannerTaskId])
+  @@index([eventAt])
+  @@index([status, eventAt])
+  @@index([internalTaskKey, taskType])
+  @@index([branchCode, eventAt])
+}
+
+model PlannerTaskCompletion {
+  id                   String               @id @default(cuid())
+  boutiqueId           String?
+  internalTaskKey      String
+  taskType             PlannerTaskFrequency
+  branchCode           String?
+  plannerTaskId        String?
+  plannerTaskTitle     String?
+  completedByUserId    String?
+  completedByName      String?
+  completedByEmail     String?
+  completedByIdentityKey String
+  completedOnDateKey   String
+  completedAt          DateTime
+  source               String               @default("PLANNER")
+  rawEventId           String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  completedByUser      User?                @relation(fields: [completedByUserId], references: [id], onDelete: SetNull)
+  rawEvent             PlannerTaskEvent?    @relation(fields: [rawEventId], references: [id], onDelete: SetNull)
+
+  @@unique([internalTaskKey, completedByIdentityKey, completedOnDateKey])
+  @@index([boutiqueId, completedOnDateKey])
+  @@index([completedOnDateKey, taskType])
+  @@index([internalTaskKey])
+  @@index([completedByUserId])
+  @@index([branchCode, completedOnDateKey])
+  @@index([plannerTaskId])
 }
 
 model TaskPlan {

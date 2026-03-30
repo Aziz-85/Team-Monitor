@@ -107,6 +107,7 @@
     "inventoryFollowUp": "متابعة الجرد",
     "syncPlanner": "مزامنة المخطط",
     "plannerIntegration": "تكامل المخطط",
+    "plannerCompletions": "اكتمالات المخطط",
     "about": "حول",
     "more": "المزيد",
     "employeeHome": "صفحتي",
@@ -510,7 +511,22 @@
       "localPriorityOptional": "الأولوية المحلية (اختياري)",
       "noUserMappings": "لا توجد ربطات مستخدمين. انقر «إضافة» لربط بريد Microsoft بموظف.",
       "noBucketMappings": "لا توجد ربطات حاويات. انقر «إضافة» لربط حاوية Planner بالمحلي.",
-      "confirmDeleteUserMap": "حذف ربط المستخدم هذا؟"
+      "confirmDeleteUserMap": "حذف ربط المستخدم هذا؟",
+      "completionsTitle": "أحداث اكتمال مهام Planner",
+      "completionsSubtitle": "سجلات اكتمال مطبّعة للعرض فقط، تم إدخالها من تحديثات مهام Planner.",
+      "filterDateFrom": "من تاريخ",
+      "filterDateTo": "إلى تاريخ",
+      "filterType": "النوع",
+      "filterBranch": "الفرع",
+      "totalRows": "الإجمالي: {n}",
+      "colTaskKey": "مفتاح المهمة",
+      "colTaskTitle": "عنوان المهمة",
+      "colType": "النوع",
+      "colBranch": "الفرع",
+      "colCompletedBy": "أكملها",
+      "colMatchedUser": "المستخدم المطابق",
+      "colSource": "المصدر",
+      "noCompletions": "لا توجد اكتمالات Planner حسب المرشحات الحالية."
     }
   },
   "auth": {

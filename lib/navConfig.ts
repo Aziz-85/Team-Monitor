@@ -186,6 +186,7 @@ const GROUP_INTEGRATIONS: NavGroup = {
   items: [
     item('/sync/planner', 'nav.syncPlanner', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'INTEGRATION'),
     item('/admin/integrations/planner', 'nav.plannerIntegration', ['ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'INTEGRATION'),
+    item('/admin/integrations/planner/completions', 'nav.plannerCompletions', ['ADMIN', 'SUPER_ADMIN'], 'INTEGRATION'),
   ],
 };
 
