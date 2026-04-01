@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { formatSarInt } from '@/lib/utils/money';
 import { useT } from '@/lib/i18n/useT';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +18,17 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TargetVsActualLineChart } from '@/components/charts/TargetVsActualLineChart';
 import { PerformanceKpiCard } from '@/components/ui/PerformanceKpiCard';
+import {
+  EmptyStateBlock,
+  InsightCard,
+  InsightGrid,
+  KPIGrid,
+  KPIStatCard,
+  PageContainer,
+  RecommendationCard,
+  SectionBlock,
+} from '@/components/ui/ExecutiveIntelligence';
+import { attentionSeverity, paceSignal } from '@/lib/presentation/executiveIntelligence';
 
 type BoutiqueOption = { id: string; code: string; name: string };
 
@@ -253,69 +263,219 @@ export function SalesSummaryClient() {
     return traj.map((d) => d.targetCumulative);
   }, [targets?.dailyTrajectory]);
 
+  const monthPacePct = Math.max(0, Math.round(targets?.month.pct ?? 0));
+  const monthPaceUi = paceSignal(monthPacePct);
+  const paceToneForKpi = monthPaceUi.tone === 'success' ? 'default' : monthPaceUi.tone;
+  const remainingTarget = targets?.month.remainingSar ?? 0;
+  const remainingToneForKpi = remainingTarget > 0 ? (monthPaceUi.tone === 'danger' ? 'danger' : 'warning') : 'success';
+  const dayCount = summary
+    ? Math.max(1, Math.ceil((new Date(summary.to).getTime() - new Date(summary.from).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+    : 1;
+  const avgDailyNet = summary ? Math.round(summary.netSalesTotal / dayCount) : 0;
+  const activeEmployees = summary?.breakdownByEmployee.length ?? 0;
+  const returnsAttentionCount = summary
+    ? summary.grossSalesTotal > 0 && summary.returnsTotal / summary.grossSalesTotal >= 0.1
+      ? 4
+      : summary.returnsTotal > 0
+        ? 2
+        : 0
+    : 0;
+  const returnsUi = attentionSeverity(returnsAttentionCount, {
+    none: t('sales.summary.executive.returnsControlled'),
+    low: t('sales.summary.executive.returnsWatch'),
+    high: t('sales.summary.executive.returnsRisk'),
+    noneHint: t('sales.summary.executive.returnsControlledHint'),
+    lowHint: t('sales.summary.executive.returnsWatchHint'),
+    highHint: t('sales.summary.executive.returnsRiskHint'),
+  });
+  const sortedEmployees = useMemo(
+    () => [...(summary?.breakdownByEmployee ?? [])].sort((a, b) => b.netSales - a.netSales),
+    [summary?.breakdownByEmployee]
+  );
+  const topEmployee = sortedEmployees[0];
+  const lowestEmployee = sortedEmployees[sortedEmployees.length - 1];
+  const topSharePct = summary?.netSalesTotal ? Math.round(((topEmployee?.netSales ?? 0) * 100) / summary.netSalesTotal) : 0;
+
+  const recommendationCards: Array<{ title: string; message: string; tone: 'warning' | 'danger' | 'info' | 'success' }> = [];
+  if (monthPaceUi.tone === 'danger' || monthPaceUi.tone === 'warning') {
+    recommendationCards.push({
+      title: t('sales.summary.executive.recoPaceTitle'),
+      message: t('sales.summary.executive.recoPaceMessage'),
+      tone: monthPaceUi.tone,
+    });
+  }
+  if (returnsUi.tone === 'danger' || returnsUi.tone === 'warning') {
+    recommendationCards.push({
+      title: t('sales.summary.executive.recoReturnsTitle'),
+      message: t('sales.summary.executive.recoReturnsMessage'),
+      tone: returnsUi.tone,
+    });
+  } else if (lowestEmployee) {
+    recommendationCards.push({
+      title: t('sales.summary.executive.recoSupportTitle'),
+      message: t('sales.summary.executive.recoSupportMessage').replace('{name}', lowestEmployee.employeeName),
+      tone: 'info',
+    });
+  }
+
+  const heroTitle =
+    monthPaceUi.tone === 'danger'
+      ? t('sales.summary.executive.heroBehind')
+      : monthPaceUi.tone === 'warning'
+        ? t('sales.summary.executive.heroNear')
+        : t('sales.summary.executive.heroAhead');
+  const heroHint =
+    monthPaceUi.tone === 'danger'
+      ? t('sales.summary.executive.heroBehindHint')
+      : monthPaceUi.tone === 'warning'
+        ? t('sales.summary.executive.heroNearHint')
+        : t('sales.summary.executive.heroAheadHint');
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <PageHeader
+    <PageContainer className="mx-auto max-w-6xl space-y-8 md:space-y-10">
+      <SectionBlock
         title={t('sales.summary.boardTitle')}
         subtitle={from && to ? `${selectedBoutique?.name ?? ''} • ${from} → ${to}` : t('sales.summary.subtitle')}
-      />
-      <FilterBar
-        activeFilters={activeFilters}
-        quickPeriods={QUICK_PERIODS}
-        selectedPeriodId={selectedPeriodId}
-        onPeriodSelect={handlePeriodSelect}
-        summaryLine={summaryLine}
-        onReset={handleReset}
       >
-        <Input
-          type="date"
-          label="From"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setSelectedPeriodId('custom');
-          }}
-          className="min-w-[10rem]"
-        />
-        <Input
-          type="date"
-          label="To"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            setSelectedPeriodId('custom');
-          }}
-          className="min-w-[10rem]"
-        />
-        {scopeReady && (
-          <Select
-            label={t('sales.summary.boutique')}
-            value={boutiqueId}
-            onChange={(e) => setBoutiqueId(e.target.value)}
-            disabled={allowedBoutiques.length <= 1}
-            options={boutiqueOptions}
-            className="min-w-[10rem]"
-            aria-label={t('sales.summary.boutique')}
-          />
-        )}
-        <Button
-          variant="primary"
-          onClick={() => { load(); loadTargets(); }}
-          disabled={loading}
+        <FilterBar
+          activeFilters={activeFilters}
+          quickPeriods={QUICK_PERIODS}
+          selectedPeriodId={selectedPeriodId}
+          onPeriodSelect={handlePeriodSelect}
+          summaryLine={summaryLine}
+          onReset={handleReset}
         >
-          {loading ? t('sales.summary.loading') : t('sales.summary.apply')}
-        </Button>
-      </FilterBar>
+          <Input
+            type="date"
+            label="From"
+            value={from}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setSelectedPeriodId('custom');
+            }}
+            className="min-w-[10rem]"
+          />
+          <Input
+            type="date"
+            label="To"
+            value={to}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setSelectedPeriodId('custom');
+            }}
+            className="min-w-[10rem]"
+          />
+          {scopeReady && (
+            <Select
+              label={t('sales.summary.boutique')}
+              value={boutiqueId}
+              onChange={(e) => setBoutiqueId(e.target.value)}
+              disabled={allowedBoutiques.length <= 1}
+              options={boutiqueOptions}
+              className="min-w-[10rem]"
+              aria-label={t('sales.summary.boutique')}
+            />
+          )}
+          <Button
+            variant="primary"
+            onClick={() => {
+              load();
+              loadTargets();
+            }}
+            disabled={loading}
+          >
+            {loading ? t('sales.summary.loading') : t('sales.summary.apply')}
+          </Button>
+        </FilterBar>
+      </SectionBlock>
       {error && <p className="text-sm text-luxury-error">{error}</p>}
 
       {targetsLoading && !targets && <p className="text-sm text-muted">{t('sales.summary.loadingTargets')}</p>}
 
-      {/* Part 2 — Top KPI Section */}
       {targets && (
-        <section>
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            {t('sales.summary.boutiqueTargets')}
-          </h2>
+        <RecommendationCard title={heroTitle} message={heroHint} tone={monthPaceUi.tone} className="border-2 p-5 md:p-6" />
+      )}
+
+      {targets && (
+        <SectionBlock title={t('sales.summary.executive.kpiTitle')} subtitle={t('sales.summary.executive.kpiSubtitle')}>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <KPIStatCard
+              title={t('sales.summary.executive.primaryTargetPct')}
+              value={`${monthPacePct}%`}
+              tone={paceToneForKpi}
+              emphasis="strong"
+              trendLabel={monthPaceUi.shortLabel}
+            />
+            <KPIStatCard
+              title={t('sales.summary.remaining')}
+              value={formatSarInt(remainingTarget)}
+              tone={remainingToneForKpi}
+              emphasis="strong"
+            />
+          </div>
+          <KPIGrid cols={4} className="mt-3">
+            <KPIStatCard title={t('sales.summary.netSales')} value={formatSarInt(summary?.netSalesTotal ?? 0)} tone="default" />
+            <KPIStatCard title={t('sales.summary.executive.avgDailyNet')} value={formatSarInt(avgDailyNet)} tone="default" />
+            <KPIStatCard title={t('sales.summary.returns')} value={formatSarInt(summary?.returnsTotal ?? 0)} tone={returnsUi.tone === 'success' ? 'default' : returnsUi.tone} />
+            <KPIStatCard title={t('sales.summary.executive.activeSellers')} value={activeEmployees} tone="default" />
+          </KPIGrid>
+        </SectionBlock>
+      )}
+
+      {targets && (
+        <SectionBlock title={t('sales.summary.executive.insightsTitle')} subtitle={t('sales.summary.executive.insightsSubtitle')}>
+          <InsightGrid className="gap-4">
+            <InsightCard
+              title={t('sales.summary.executive.insightPaceTitle')}
+              description={monthPaceUi.shortLabel}
+              tone={monthPaceUi.tone}
+              className="md:col-span-2"
+            />
+            <InsightCard
+              title={t('sales.summary.executive.insightTopTitle')}
+              description={
+                topEmployee
+                  ? t('sales.summary.executive.insightTopDesc')
+                      .replace('{name}', topEmployee.employeeName)
+                      .replace('{pct}', String(topSharePct))
+                  : t('sales.summary.executive.insightNoEmployee')
+              }
+              tone={topEmployee ? 'success' : 'default'}
+            />
+            <InsightCard
+              title={t('sales.summary.executive.insightReturnsTitle')}
+              description={returnsUi.shortLabel}
+              tone={returnsUi.tone}
+            />
+            <InsightCard
+              title={t('sales.summary.executive.insightFocusTitle')}
+              description={
+                lowestEmployee
+                  ? t('sales.summary.executive.insightFocusDesc').replace('{name}', lowestEmployee.employeeName)
+                  : t('sales.summary.executive.insightNoEmployee')
+              }
+              tone={lowestEmployee ? 'warning' : 'default'}
+            />
+          </InsightGrid>
+        </SectionBlock>
+      )}
+
+      {targets && (
+        <SectionBlock title={t('sales.summary.executive.recommendedActionTitle')} subtitle={t('sales.summary.executive.recommendedActionSubtitle')}>
+          {recommendationCards.length === 0 ? (
+            <EmptyStateBlock title={t('sales.summary.executive.noRecommendationsTitle')} description={t('sales.summary.executive.noRecommendationsDesc')} />
+          ) : (
+            <InsightGrid>
+              {recommendationCards.slice(0, 2).map((r, idx) => (
+                <RecommendationCard key={`${r.title}-${idx}`} title={r.title} message={r.message} tone={r.tone} />
+              ))}
+            </InsightGrid>
+          )}
+        </SectionBlock>
+      )}
+
+      <SectionBlock title={t('sales.summary.executive.mainDataTitle')} subtitle={t('sales.summary.executive.mainDataSubtitle')}>
+        {targets && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {[
               {
@@ -353,15 +513,9 @@ export function SalesSummaryClient() {
               />
             ))}
           </div>
-        </section>
-      )}
+        )}
 
-      {/* Part 4 — Visual Analytics Section */}
-      {targets?.dailyTrajectory && targets.dailyTrajectory.length > 0 && (
-        <section>
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Target vs Actual (MTD)
-          </h2>
+        {targets?.dailyTrajectory && targets.dailyTrajectory.length > 0 && (
           <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md md:p-8">
             <p className="mb-6 text-xs text-muted">
               {t('sales.summary.chartMtdSubtitle')}{targets.monthKey ? ` · ${targets.monthKey}` : ''}
@@ -375,15 +529,11 @@ export function SalesSummaryClient() {
               theme="home"
             />
           </div>
-        </section>
-      )}
+        )}
+      </SectionBlock>
 
-      {/* Part 5 — Sales Breakdown Strip */}
       {summary && (
-        <section>
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Sales Summary
-          </h2>
+        <SectionBlock title={t('sales.summary.executive.secondaryTitle')} subtitle={t('sales.summary.sourcesNote')}>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
               { label: t('sales.summary.netSales'), value: summary.netSalesTotal, primary: true },
@@ -404,16 +554,11 @@ export function SalesSummaryClient() {
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted">{t('sales.summary.sourcesNote')}</p>
-        </section>
+        </SectionBlock>
       )}
 
-      {/* Part 6 — Employee Contribution Board */}
       {summary && (
-        <section>
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Employee Contribution
-          </h2>
+        <SectionBlock title={t('sales.summary.executive.employeeContributionTitle')}>
           {summary.netSalesTotal === 0 && summary.breakdownByEmployee.length === 0 ? (
             <div className="rounded-2xl border border-border bg-surface p-12">
               <EmptyState title={t('sales.summary.noDataForPeriod')} />
@@ -472,8 +617,8 @@ export function SalesSummaryClient() {
               );
             })()
           ) : null}
-        </section>
+        </SectionBlock>
       )}
-    </div>
+    </PageContainer>
   );
 }
