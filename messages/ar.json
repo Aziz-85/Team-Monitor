@@ -142,9 +142,13 @@
     },
     "sidebar": {
       "primary": "الأساسي",
+      "team": "الفريق",
       "operations": "العمليات",
       "analytics": "التحليلات",
-      "system": "النظام / الإعدادات"
+      "system": "النظام / الإعدادات",
+      "schedule": "الجدول",
+      "editDay": "تعديل اليوم",
+      "scheduleAudit": "التدقيق"
     },
     "company": {
       "overview": "نظرة عامة",
@@ -1706,11 +1710,11 @@
         "recommendedActionTitle": "الإجراء الموصى به",
         "recommendedActionSubtitle": "إجراءات مختصرة مبنية على الإشارات الحالية.",
         "recoPaceTitle": "استعادة الوتيرة خلال الفترة",
-        "recoPaceMessage": "ركّز على فترات البيع الأعلى أثرًا قبل الإغلاق.",
+        "recoPaceMessage": "ارفع المبيعات في ساعات الذروة بعد الظهر لاستعادة الوتيرة.",
         "recoReturnsTitle": "التحكم في أثر المرتجعات",
-        "recoReturnsMessage": "راجع أسباب المرتجعات وعزّز جودة التحويل.",
+        "recoReturnsMessage": "راجع أسباب المرتجعات الآن وخفّض تكرارها.",
         "recoSupportTitle": "توازن مساهمة الفريق",
-        "recoSupportMessage": "نفّذ متابعة مركزة مع {name} خلال ساعات الذروة.",
+        "recoSupportMessage": "نفّذ تدريبًا مركّزًا مع {name} قبل نهاية اليوم.",
         "noRecommendationsTitle": "لا يوجد إجراء عاجل مقترح",
         "noRecommendationsDesc": "إشارات المبيعات مستقرة حاليًا؛ استمر بنفس الإيقاع.",
         "mainDataTitle": "البيانات الأساسية",

@@ -332,7 +332,7 @@ export function SalesSummaryClient() {
         : t('sales.summary.executive.heroAheadHint');
 
   return (
-    <PageContainer className="mx-auto max-w-6xl space-y-8 md:space-y-10">
+    <PageContainer className="mx-auto max-w-6xl space-y-10 md:space-y-12">
       <SectionBlock
         title={t('sales.summary.boardTitle')}
         subtitle={from && to ? `${selectedBoutique?.name ?? ''} • ${from} → ${to}` : t('sales.summary.subtitle')}
@@ -393,7 +393,20 @@ export function SalesSummaryClient() {
       {targetsLoading && !targets && <p className="text-sm text-muted">{t('sales.summary.loadingTargets')}</p>}
 
       {targets && (
-        <RecommendationCard title={heroTitle} message={heroHint} tone={monthPaceUi.tone} className="border-2 p-5 md:p-6" />
+        <RecommendationCard
+          title={heroTitle}
+          message={heroHint}
+          tone={monthPaceUi.tone}
+          className={`border-2 p-6 md:p-7 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:text-sm [&_p]:text-foreground/85 ${
+            monthPaceUi.tone === 'danger'
+              ? 'bg-red-50/50'
+              : monthPaceUi.tone === 'warning'
+                ? 'bg-amber-50/40'
+                : monthPaceUi.tone === 'success'
+                  ? 'bg-emerald-50/40'
+                  : 'bg-surface'
+          }`}
+        />
       )}
 
       {targets && (
@@ -405,19 +418,41 @@ export function SalesSummaryClient() {
               tone={paceToneForKpi}
               emphasis="strong"
               trendLabel={monthPaceUi.shortLabel}
+              className="[&>p:first-of-type]:text-4xl md:[&>p:first-of-type]:text-5xl"
             />
             <KPIStatCard
               title={t('sales.summary.remaining')}
               value={formatSarInt(remainingTarget)}
               tone={remainingToneForKpi}
               emphasis="strong"
+              className="border-border/90"
             />
           </div>
           <KPIGrid cols={4} className="mt-3">
-            <KPIStatCard title={t('sales.summary.netSales')} value={formatSarInt(summary?.netSalesTotal ?? 0)} tone="default" />
-            <KPIStatCard title={t('sales.summary.executive.avgDailyNet')} value={formatSarInt(avgDailyNet)} tone="default" />
-            <KPIStatCard title={t('sales.summary.returns')} value={formatSarInt(summary?.returnsTotal ?? 0)} tone={returnsUi.tone === 'success' ? 'default' : returnsUi.tone} />
-            <KPIStatCard title={t('sales.summary.executive.activeSellers')} value={activeEmployees} tone="default" />
+            <KPIStatCard
+              title={t('sales.summary.netSales')}
+              value={formatSarInt(summary?.netSalesTotal ?? 0)}
+              tone="default"
+              className="[&>p:first-of-type]:text-xl md:[&>p:first-of-type]:text-2xl [&>p:first-of-type]:text-foreground/85"
+            />
+            <KPIStatCard
+              title={t('sales.summary.executive.avgDailyNet')}
+              value={formatSarInt(avgDailyNet)}
+              tone="default"
+              className="[&>p:first-of-type]:text-xl md:[&>p:first-of-type]:text-2xl [&>p:first-of-type]:text-foreground/85"
+            />
+            <KPIStatCard
+              title={t('sales.summary.returns')}
+              value={formatSarInt(summary?.returnsTotal ?? 0)}
+              tone={returnsUi.tone === 'danger' ? 'danger' : 'default'}
+              className="[&>p:first-of-type]:text-xl md:[&>p:first-of-type]:text-2xl [&>p:first-of-type]:text-foreground/85"
+            />
+            <KPIStatCard
+              title={t('sales.summary.executive.activeSellers')}
+              value={activeEmployees}
+              tone="default"
+              className="[&>p:first-of-type]:text-xl md:[&>p:first-of-type]:text-2xl [&>p:first-of-type]:text-foreground/85"
+            />
           </KPIGrid>
         </SectionBlock>
       )}
@@ -429,7 +464,7 @@ export function SalesSummaryClient() {
               title={t('sales.summary.executive.insightPaceTitle')}
               description={monthPaceUi.shortLabel}
               tone={monthPaceUi.tone}
-              className="md:col-span-2"
+              className="md:col-span-2 border-border/90 bg-surface"
             />
             <InsightCard
               title={t('sales.summary.executive.insightTopTitle')}
@@ -441,11 +476,13 @@ export function SalesSummaryClient() {
                   : t('sales.summary.executive.insightNoEmployee')
               }
               tone={topEmployee ? 'success' : 'default'}
+              className="[&_h3]:text-foreground/85"
             />
             <InsightCard
               title={t('sales.summary.executive.insightReturnsTitle')}
               description={returnsUi.shortLabel}
               tone={returnsUi.tone}
+              className="[&_h3]:text-foreground/85"
             />
             <InsightCard
               title={t('sales.summary.executive.insightFocusTitle')}
@@ -455,6 +492,7 @@ export function SalesSummaryClient() {
                   : t('sales.summary.executive.insightNoEmployee')
               }
               tone={lowestEmployee ? 'warning' : 'default'}
+              className="[&_h3]:text-foreground/85"
             />
           </InsightGrid>
         </SectionBlock>

@@ -142,9 +142,13 @@
     },
     "sidebar": {
       "primary": "Primary",
+      "team": "Team",
       "operations": "Operations",
       "analytics": "Analytics",
-      "system": "System / Settings"
+      "system": "System / Settings",
+      "schedule": "Schedule",
+      "editDay": "Edit Day",
+      "scheduleAudit": "Audit"
     },
     "company": {
       "overview": "Overview",
@@ -1706,11 +1710,11 @@
         "recommendedActionTitle": "Recommended Action",
         "recommendedActionSubtitle": "Short actions based on current signals.",
         "recoPaceTitle": "Recover pace this period",
-        "recoPaceMessage": "Focus on high-impact selling windows before close.",
+        "recoPaceMessage": "Increase sales in peak afternoon hours to recover pace.",
         "recoReturnsTitle": "Control return leakage",
-        "recoReturnsMessage": "Review return drivers and reinforce conversion quality.",
+        "recoReturnsMessage": "Review return reasons now and reduce repeat return patterns.",
         "recoSupportTitle": "Coach contribution balance",
-        "recoSupportMessage": "Pair with {name} on focused follow-up during peak hours.",
+        "recoSupportMessage": "Assign focused coaching with {name} before end of day.",
         "noRecommendationsTitle": "No urgent action suggested",
         "noRecommendationsDesc": "Current sales signals are stable; keep execution steady.",
         "mainDataTitle": "Main Data",
