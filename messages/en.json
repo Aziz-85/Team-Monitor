@@ -150,6 +150,137 @@
       "editDay": "Edit Day",
       "scheduleAudit": "Audit"
     },
+    "drilldown": {
+      "breadcrumbs": {
+        "home": "Home"
+      },
+      "sections": {
+        "team": { "title": "Team", "subtitle": "People, schedules, and leave operations." },
+        "operations": { "title": "Operations", "subtitle": "Daily execution for tasks and inventory." },
+        "analytics": { "title": "Analytics", "subtitle": "Sales and performance intelligence." },
+        "system": { "title": "System", "subtitle": "Administration, imports, and system tools." }
+      },
+      "team": {
+        "schedule": { "title": "Schedule", "hint": "View and manage schedule workflows." },
+        "employees": { "title": "Employees", "hint": "Access employee management surfaces." },
+        "leaves": { "title": "Leaves", "hint": "Handle leave requests and compliance context." },
+        "approvals": { "title": "Approvals", "hint": "Review and approve pending actions." },
+        "compliance": { "title": "Compliance", "hint": "Track government document validity." }
+      },
+      "operations": {
+        "tasks": { "title": "Tasks", "hint": "Daily task execution and monitoring." },
+        "inventory": { "title": "Inventory", "hint": "Inventory routines and follow-up." },
+        "boutiqueTasks": { "title": "Boutique Tasks", "hint": "Boutique-level task board." },
+        "sync": { "title": "Planner Sync", "hint": "Sync and planner operational tools." }
+      },
+      "analytics": {
+        "sales": { "title": "Sales", "hint": "Sales performance and quality views." },
+        "reports": { "title": "Reports", "hint": "Executive and target reporting views." },
+        "targets": { "title": "Targets", "hint": "Target planning and tracking." },
+        "company": { "title": "Company", "hint": "Company-level intelligence and governance." }
+      },
+      "system": {
+        "admin": { "title": "Administration", "hint": "Users, access, audit, and settings." },
+        "imports": { "title": "Imports", "hint": "Import center, issues, and historical tools." },
+        "integrations": { "title": "Integrations", "hint": "Planner integration management." },
+        "about": { "title": "About", "hint": "Platform and product context." }
+      },
+      "routes": {
+        "schedule": {
+          "view": { "title": "Schedule", "hint": "Open schedule view." },
+          "edit": { "title": "Schedule Editor", "hint": "Open weekly schedule editor." },
+          "dayEditor": { "title": "Edit Day", "hint": "Edit single day allocation." },
+          "audit": { "title": "Schedule Audit", "hint": "Review audit activity." },
+          "auditEdits": { "title": "Audit Edits", "hint": "Inspect detailed edit logs." },
+          "approvals": { "title": "Approvals", "hint": "Approve pending governance actions." }
+        },
+        "employees": {
+          "admin": { "title": "Employees", "hint": "Manage boutique employees." },
+          "area": { "title": "Area Employees", "hint": "View employees by area scope." },
+          "areaTargets": { "title": "Area Targets", "hint": "Track area-level target assignments." }
+        },
+        "leaves": {
+          "myRequests": { "title": "My Leaves", "hint": "Review personal leave requests." },
+          "manage": { "title": "Leaves", "hint": "Manage leave requests and approvals." },
+          "boutique": { "title": "Boutique Leaves", "hint": "View boutique leave board." },
+          "delegation": { "title": "Delegation", "hint": "Manage delegation workflows." },
+          "compliance": { "title": "Compliance", "hint": "Review compliance alerts." }
+        },
+        "tasks": {
+          "list": { "title": "Tasks", "hint": "View daily tasks." },
+          "monitor": { "title": "Task Monitor", "hint": "Monitor team task completion." },
+          "setup": { "title": "Task Setup", "hint": "Manage task templates and setup." },
+          "boutique": { "title": "Boutique Tasks", "hint": "Access boutique task board." }
+        },
+        "inventory": {
+          "daily": { "title": "Daily Inventory", "hint": "Run daily inventory checks." },
+          "history": { "title": "Inventory History", "hint": "Review daily inventory history." },
+          "zones": { "title": "Inventory Zones", "hint": "Manage zone inventory." },
+          "followup": { "title": "Inventory Follow-up", "hint": "Track pending follow-up actions." }
+        },
+        "sales": {
+          "my": { "title": "My Sales", "hint": "View personal sales entries." },
+          "summary": { "title": "Sales Summary", "hint": "Review boutique sales summary." },
+          "daily": { "title": "Daily Sales", "hint": "Inspect daily sales ledger." },
+          "returns": { "title": "Returns", "hint": "Manage returns and exchanges." },
+          "leadership": { "title": "Leadership Impact", "hint": "View leadership sales impact." },
+          "myTarget": { "title": "My Target", "hint": "Review personal target progress." },
+          "kpi": { "title": "KPI Upload", "hint": "Upload KPI appraisal data." },
+          "importAdmin": { "title": "Import Sales", "hint": "Run sales import workflow." },
+          "import": { "title": "Sales Import", "hint": "Open sales import tools." },
+          "importMatrix": { "title": "Import Matrix", "hint": "Use matrix import workflow." },
+          "importIssues": { "title": "Import Issues", "hint": "Review import issues." },
+          "monthlyMatrix": { "title": "Monthly Matrix", "hint": "Open monthly matrix view." },
+          "editRequests": { "title": "Edit Requests", "hint": "Review sales edit requests." }
+        },
+        "reports": {
+          "executive": { "title": "Performance Overview", "hint": "Open executive overview." },
+          "monthly": { "title": "Monthly Performance", "hint": "Open monthly executive view." },
+          "insights": { "title": "Insights", "hint": "Open executive insights." },
+          "compare": { "title": "Compare Branches", "hint": "Compare branch performance." },
+          "employees": { "title": "Team Performance", "hint": "Review employee performance." },
+          "weekly": { "title": "Weekly Report", "hint": "Open weekly report board." },
+          "targets": { "title": "Targets", "hint": "Open targets workspace." },
+          "targetsAdmin": { "title": "Admin Targets", "hint": "Manage admin target inputs." },
+          "targetsBoutiques": { "title": "Boutique Targets", "hint": "View boutique target breakdown." },
+          "targetsEmployees": { "title": "Employee Targets", "hint": "View employee target breakdown." },
+          "targetsImport": { "title": "Targets Import", "hint": "Import targets in bulk." },
+          "company": { "title": "Company", "hint": "Open company overview." }
+        },
+        "admin": {
+          "administration": { "title": "Administration", "hint": "Open administration dashboard." },
+          "loginAudit": { "title": "Login Audit", "hint": "Review login audit log." },
+          "system": { "title": "System Settings", "hint": "Manage system-level settings." },
+          "version": { "title": "System Version", "hint": "Review deployment version details." },
+          "systemAudit": { "title": "System Audit", "hint": "Inspect system audit records." },
+          "users": { "title": "Users", "hint": "Manage platform users." },
+          "memberships": { "title": "Memberships", "hint": "Manage role memberships." },
+          "boutiques": { "title": "Boutiques", "hint": "Manage boutique structure." },
+          "regions": { "title": "Regions", "hint": "Manage regional structure." },
+          "groups": { "title": "Boutique Groups", "hint": "Manage boutique groups." },
+          "coverageRules": { "title": "Coverage Rules", "hint": "Edit coverage rule sets." },
+          "kpiTemplates": { "title": "KPI Templates", "hint": "Manage KPI template library." },
+          "resetPassword": { "title": "Reset Password", "hint": "Run password reset utility." },
+          "resetEmpId": { "title": "Reset Employee ID", "hint": "Run employee ID reset utility." },
+          "planner": { "title": "Planner Integration", "hint": "Manage planner integration setup." },
+          "plannerCompletions": { "title": "Planner Completions", "hint": "Review planner completion logs." },
+          "about": { "title": "About", "hint": "Platform about page." }
+        },
+        "imports": {
+          "center": { "title": "Import Center", "hint": "Open import control center." },
+          "centerLegacy": { "title": "Import Center (Legacy)", "hint": "Open legacy import center entry." },
+          "historicalLegacy": { "title": "Historical Import (Legacy)", "hint": "Open legacy historical import page." },
+          "monthlySnapshot": { "title": "Monthly Snapshot Import", "hint": "Import monthly snapshot data." },
+          "historical": { "title": "Historical Import", "hint": "Import historical data sets." },
+          "issues": { "title": "Import Issues", "hint": "Review data import issues." },
+          "salesAdmin": { "title": "Sales Import (Admin)", "hint": "Run admin sales import workflow." },
+          "sales": { "title": "Sales Import", "hint": "Open sales import tools." },
+          "matrix": { "title": "Sales Matrix Import", "hint": "Run matrix-based import." },
+          "salesIssues": { "title": "Sales Import Issues", "hint": "Inspect sales import issues." },
+          "monthlyMatrix": { "title": "Monthly Matrix", "hint": "Open monthly matrix workspace." }
+        }
+      }
+    },
     "company": {
       "overview": "Overview",
       "branches": "Branches",

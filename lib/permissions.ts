@@ -70,6 +70,7 @@ export function requiresApproval(role: Role): boolean {
  */
 export const ROLE_ROUTES: Record<Role, string[]> = {
   EMPLOYEE: [
+    '/nav',
     '/dashboard',
     '/employee',
     '/schedule/view',
@@ -84,6 +85,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   MANAGER: [
+    '/nav',
     '/',
     '/dashboard',
     '/executive',
@@ -132,6 +134,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   /** مساعد المدير: نفس صلاحيات الموظف + تعديل الجدول الأسبوعي + المصفوفة الشهرية */
   ASSISTANT_MANAGER: [
+    '/nav',
     '/dashboard',
     '/employee',
     '/schedule/view',
@@ -153,6 +156,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   ADMIN: [
+    '/nav',
     '/',
     '/dashboard',
     '/executive',
@@ -218,6 +222,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   AREA_MANAGER: [
+    '/nav',
     '/',
     '/dashboard',
     '/executive',
@@ -252,6 +257,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   DEMO_VIEWER: [
+    '/nav',
     '/dashboard',
     '/executive',
     '/executive/monthly',
@@ -264,6 +270,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
   ],
   SUPER_ADMIN: [
+    '/nav',
     '/',
     '/dashboard',
     '/company',
