@@ -16,6 +16,23 @@ import { ComplianceExpiryCard } from '@/components/dashboard/home/ComplianceExpi
 import { CardShell } from '@/components/dashboard/cards/CardShell';
 import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
+import { formatSarInt } from '@/lib/utils/money';
+import {
+  EmptyStateBlock,
+  InsightCard,
+  InsightGrid,
+  KPIGrid,
+  KPIStatCard,
+  PageContainer,
+  RecommendationCard,
+  SectionBlock,
+} from '@/components/ui/ExecutiveIntelligence';
+import {
+  attentionSeverity,
+  completionSignal,
+  coverageSignal,
+  paceSignal,
+} from '@/lib/presentation/executiveIntelligence';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -297,13 +314,12 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
 
   if (!data) {
     return (
-      <div className="p-4">
-        {loadError ? (
-          <p className="text-red-600">{loadError}</p>
-        ) : (
-          <p className="text-muted">Loading…</p>
-        )}
-      </div>
+      <PageContainer>
+        <EmptyStateBlock
+          title={loadError ? t('home.homeLoadFailed') : t('home.homeLoading')}
+          description={loadError ?? t('home.homeLoadingDescription')}
+        />
+      </PageContainer>
     );
   }
 
@@ -318,6 +334,78 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   const coverageValidation: ValidationResult[] = data.coverageValidation ?? [];
   const coverageSuggestion = data.coverageSuggestion ?? null;
   const coverageSuggestionExplanation = data.coverageSuggestionExplanation;
+  const totalWarnings = coverageValidation.length + weekSummary.length + complianceAlerts.length;
+  const tasksTotal = myTodayTasks?.length ?? 0;
+  const tasksCompleted = myTodayTasks?.filter((tt) => tt.isCompleted).length ?? 0;
+  const tasksPending = Math.max(0, tasksTotal - tasksCompleted);
+  const taskCompletionPct = tasksTotal > 0 ? Math.round((tasksCompleted * 100) / tasksTotal) : 100;
+  const weekCoveragePct = Math.round(((7 - Math.min(7, weekSummary.length)) * 100) / 7);
+  const pace = performance?.monthly.percent ?? 0;
+  const paceUi = paceSignal(
+    pace,
+    {
+      ahead: t('home.executive.ahead'),
+      near: t('home.executive.slightlyBelow'),
+      behind: t('home.executive.behind'),
+      aheadHint: t('home.executive.paceAheadHint'),
+      nearHint: t('home.executive.paceNearHint'),
+      behindHint: t('home.executive.paceBehindHint'),
+    }
+  );
+  const tasksUi = completionSignal(
+    taskCompletionPct,
+    {
+      healthy: t('home.executive.tasksHealthy'),
+      attention: t('home.executive.tasksAttention'),
+      critical: t('home.executive.tasksRisk'),
+      healthyHint: t('home.executive.tasksHealthyHint'),
+      attentionHint: t('home.executive.tasksAttentionHint'),
+      criticalHint: t('home.executive.tasksRiskHint'),
+    }
+  );
+  const coverageUi = coverageSignal(
+    weekCoveragePct,
+    {
+      healthy: t('home.executive.coverageHealthy'),
+      watch: t('home.executive.coverageWatch'),
+      weak: t('home.executive.coverageWeak'),
+      healthyHint: t('home.executive.coverageHealthyHint'),
+      watchHint: t('home.executive.coverageWatchHint'),
+      weakHint: t('home.executive.coverageWeakHint'),
+    }
+  );
+  const attentionUi = attentionSeverity(
+    totalWarnings,
+    {
+      none: t('home.executive.noImmediateIssues'),
+      low: t('home.executive.someAttention'),
+      high: t('home.executive.highAttention'),
+      noneHint: t('home.executive.noImmediateIssuesHint'),
+      lowHint: t('home.executive.someAttentionHint'),
+      highHint: t('home.executive.highAttentionHint'),
+    }
+  );
+  const recommendationCards: Array<{ title: string; message: string; tone: 'warning' | 'danger' | 'info' | 'success' }> = [];
+  if (paceUi.tone === 'danger' || paceUi.tone === 'warning') {
+    recommendationCards.push({
+      title: t('home.executive.recoPaceTitle'),
+      message: t('home.executive.recoPaceMessage'),
+      tone: paceUi.tone,
+    });
+  }
+  if (tasksUi.tone === 'danger' || tasksUi.tone === 'warning') {
+    recommendationCards.push({
+      title: t('home.executive.recoTasksTitle'),
+      message: t('home.executive.recoTasksMessage'),
+      tone: tasksUi.tone,
+    });
+  } else if (coverageUi.tone === 'warning' || coverageUi.tone === 'danger') {
+    recommendationCards.push({
+      title: t('home.executive.recoCoverageTitle'),
+      message: t('home.executive.recoCoverageMessage'),
+      tone: coverageUi.tone,
+    });
+  }
   const todayTasks = data.todayTasks ?? [];
 
   const applySuggestion = async () => {
@@ -363,22 +451,11 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     : t('inventory.zoneNotAssignedShort');
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--app-bg)]">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-muted">{t('common.date')}</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
-              />
-            </div>
-            <p className="text-xs text-muted">{t('home.dateContextHint')}</p>
-          </div>
+    <PageContainer className="overflow-x-hidden">
+      <SectionBlock
+        title={t('nav.home')}
+        subtitle={t('home.executiveHeaderSubtitle')}
+        rightSlot={
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -397,20 +474,92 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
               </button>
             )}
           </div>
-        </div>
-
-        {/* Performance section (always today) */}
-        {performance && (
-          <TeamMonitorKpiPanel
-            performance={performance}
-            monthSmartLayer={monthSmartLayer}
-            smartOutlook={performance.smartOutlook ?? null}
-            linearForecastApi={performance.linearForecast ?? null}
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm font-medium text-muted">{t('common.date')}</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
           />
-        )}
+          <p className="text-xs text-muted">{t('home.dateContextHint')}</p>
+        </div>
+      </SectionBlock>
 
-        {/* Operational section (selected date) */}
+      <SectionBlock title={t('home.executiveKpiTitle')} subtitle={t('home.executiveKpiSubtitle')}>
+        <KPIGrid cols={6}>
+          <KPIStatCard
+            title={t('home.teamMonitor.achievedMtd')}
+            value={formatSarInt(performance?.monthly.sales ?? 0)}
+            tone={paceUi.tone}
+            trendLabel={paceUi.shortLabel}
+          />
+          <KPIStatCard
+            title={t('home.teamMonitor.remainingMonthlyTarget')}
+            value={formatSarInt(performance?.remainingMonthTargetSar ?? 0)}
+            tone={(performance?.remainingMonthTargetSar ?? 0) > 0 ? 'warning' : 'success'}
+          />
+          <KPIStatCard
+            title={t('home.todayTasksTitle')}
+            value={`${tasksCompleted}/${tasksTotal}`}
+            subtitle={t('home.executive.pendingCount').replace('{count}', String(tasksPending))}
+            tone={tasksUi.tone}
+          />
+          <KPIStatCard
+            title={t('home.coverageStatus')}
+            value={`${weekCoveragePct}%`}
+            subtitle={t('coverage.thisWeekDaysNeedAttention').replace('{count}', String(weekSummary.length))}
+            tone={coverageUi.tone}
+          />
+          <KPIStatCard
+            title={t('home.complianceAlerts')}
+            value={complianceAlerts.length}
+            subtitle={t('home.executive.alertsAndWarnings').replace('{count}', String(totalWarnings))}
+            tone={attentionUi.tone}
+          />
+          <KPIStatCard
+            title={t('home.teamMonitor.currentWeekAchievedPosted')}
+            value={formatSarInt(performance?.weekly.sales ?? 0)}
+            subtitle={t('home.teamMonitor.riyadhWeekSatFri')}
+            tone="info"
+          />
+        </KPIGrid>
+      </SectionBlock>
+
+      <SectionBlock title={t('home.executiveInsightsTitle')} subtitle={t('home.executiveInsightsSubtitle')}>
+        <InsightGrid>
+          <InsightCard title={paceUi.shortLabel} description={paceUi.hint} tone={paceUi.tone} />
+          <InsightCard title={tasksUi.shortLabel} description={tasksUi.hint} tone={tasksUi.tone} />
+          <InsightCard title={coverageUi.shortLabel} description={coverageUi.hint} tone={coverageUi.tone} />
+          <InsightCard title={attentionUi.shortLabel} description={attentionUi.hint} tone={attentionUi.tone} />
+        </InsightGrid>
+      </SectionBlock>
+
+      <SectionBlock title={t('home.executiveRecommendationsTitle')} subtitle={t('home.executiveRecommendationsSubtitle')}>
+        {recommendationCards.length === 0 ? (
+          <EmptyStateBlock title={t('home.executive.noRecommendationsTitle')} description={t('home.executive.noRecommendationsDesc')} />
+        ) : (
+          <InsightGrid>
+            {recommendationCards.slice(0, 2).map((r, idx) => (
+              <RecommendationCard key={`${r.title}-${idx}`} title={r.title} message={r.message} tone={r.tone} />
+            ))}
+          </InsightGrid>
+        )}
+      </SectionBlock>
+
+      <SectionBlock title={t('home.executiveOperationalTitle')} subtitle={t('home.executiveOperationalSubtitle')}>
         <div className="space-y-6">
+          {performance && (
+            <TeamMonitorKpiPanel
+              performance={performance}
+              monthSmartLayer={monthSmartLayer}
+              smartOutlook={performance.smartOutlook ?? null}
+              linearForecastApi={performance.linearForecast ?? null}
+            />
+          )}
+
           {/* Compliance & Expiry */}
           <ComplianceExpiryCard
             alerts={complianceAlerts}
@@ -646,33 +795,36 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
             </CardShell>
           )}
         </div>
+      </SectionBlock>
 
-        {zoneDialogOpen && myZone && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/50"
-              aria-hidden
-              onClick={() => setZoneDialogOpen(false)}
-            />
-            <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-base font-semibold text-foreground">
-                  {t('inventory.zonesMapTitle')}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setZoneDialogOpen(false)}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-sm text-muted hover:bg-surface-subtle"
-                  aria-label={t('common.close') ?? 'Close'}
-                >
-                  ×
-                </button>
-              </div>
-              <ZonesMapDialog selectedZoneKey={myZone.zone as 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'} />
+      <SectionBlock title={t('home.executiveSecondaryTitle')} subtitle={t('home.executiveSecondarySubtitle')}>
+        <p className="text-sm text-muted">{t('home.executiveSecondaryHint')}</p>
+      </SectionBlock>
+      {zoneDialogOpen && myZone && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            aria-hidden
+            onClick={() => setZoneDialogOpen(false)}
+          />
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-foreground">
+                {t('inventory.zonesMapTitle')}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setZoneDialogOpen(false)}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-sm text-muted hover:bg-surface-subtle"
+                aria-label={t('common.close') ?? 'Close'}
+              >
+                ×
+              </button>
             </div>
-          </>
-        )}
-      </div>
-    </div>
+            <ZonesMapDialog selectedZoneKey={myZone.zone as 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G'} />
+          </div>
+        </>
+      )}
+    </PageContainer>
   );
 }
