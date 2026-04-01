@@ -385,6 +385,29 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
       highHint: t('home.executive.highAttentionHint'),
     }
   );
+  const paceToneForKpi = paceUi.tone === 'warning' || paceUi.tone === 'danger' ? paceUi.tone : 'default';
+  const remainingToneForKpi =
+    (performance?.remainingMonthTargetSar ?? 0) > 0
+      ? paceUi.tone === 'danger'
+        ? 'danger'
+        : 'warning'
+      : 'success';
+  const coverageToneForKpi = coverageUi.tone === 'warning' || coverageUi.tone === 'danger' ? coverageUi.tone : 'default';
+  const taskToneForKpi = tasksUi.tone === 'warning' || tasksUi.tone === 'danger' ? tasksUi.tone : 'default';
+  const attentionToneForKpi = attentionUi.tone === 'warning' || attentionUi.tone === 'danger' ? attentionUi.tone : 'default';
+
+  const heroTitle =
+    paceUi.tone === 'danger'
+      ? t('home.executive.heroBehind')
+      : paceUi.tone === 'warning'
+        ? t('home.executive.heroNear')
+        : t('home.executive.heroAhead');
+  const heroHint =
+    paceUi.tone === 'danger'
+      ? t('home.executive.heroBehindHint')
+      : paceUi.tone === 'warning'
+        ? t('home.executive.heroNearHint')
+        : t('home.executive.heroAheadHint');
   const recommendationCards: Array<{ title: string; message: string; tone: 'warning' | 'danger' | 'info' | 'success' }> = [];
   if (paceUi.tone === 'danger' || paceUi.tone === 'warning') {
     recommendationCards.push({
@@ -451,7 +474,7 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     : t('inventory.zoneNotAssignedShort');
 
   return (
-    <PageContainer className="overflow-x-hidden">
+    <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
       <SectionBlock
         title={t('nav.home')}
         subtitle={t('home.executiveHeaderSubtitle')}
@@ -488,56 +511,74 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         </div>
       </SectionBlock>
 
+      <RecommendationCard
+        title={heroTitle}
+        message={heroHint}
+        tone={paceUi.tone}
+        className="border-2 p-5 md:p-6"
+      />
+
       <SectionBlock title={t('home.executiveKpiTitle')} subtitle={t('home.executiveKpiSubtitle')}>
-        <KPIGrid cols={6}>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <KPIStatCard
-            title={t('home.teamMonitor.achievedMtd')}
-            value={formatSarInt(performance?.monthly.sales ?? 0)}
-            tone={paceUi.tone}
+            title={t('home.executive.primaryTargetPct')}
+            value={`${Math.max(0, Math.round(pace))}%`}
+            tone={paceToneForKpi}
+            emphasis="strong"
             trendLabel={paceUi.shortLabel}
+            supportLabel={t('home.executive.primarySignal')}
           />
           <KPIStatCard
             title={t('home.teamMonitor.remainingMonthlyTarget')}
             value={formatSarInt(performance?.remainingMonthTargetSar ?? 0)}
-            tone={(performance?.remainingMonthTargetSar ?? 0) > 0 ? 'warning' : 'success'}
+            tone={remainingToneForKpi}
+            emphasis="strong"
+            supportLabel={t('home.executive.primarySignal')}
           />
+        </div>
+        <KPIGrid cols={4} className="mt-3">
           <KPIStatCard
             title={t('home.todayTasksTitle')}
             value={`${tasksCompleted}/${tasksTotal}`}
             subtitle={t('home.executive.pendingCount').replace('{count}', String(tasksPending))}
-            tone={tasksUi.tone}
+            tone={taskToneForKpi}
           />
           <KPIStatCard
             title={t('home.coverageStatus')}
             value={`${weekCoveragePct}%`}
             subtitle={t('coverage.thisWeekDaysNeedAttention').replace('{count}', String(weekSummary.length))}
-            tone={coverageUi.tone}
+            tone={coverageToneForKpi}
           />
           <KPIStatCard
             title={t('home.complianceAlerts')}
             value={complianceAlerts.length}
             subtitle={t('home.executive.alertsAndWarnings').replace('{count}', String(totalWarnings))}
-            tone={attentionUi.tone}
+            tone={attentionToneForKpi}
           />
           <KPIStatCard
             title={t('home.teamMonitor.currentWeekAchievedPosted')}
             value={formatSarInt(performance?.weekly.sales ?? 0)}
             subtitle={t('home.teamMonitor.riyadhWeekSatFri')}
-            tone="info"
+            tone="default"
           />
         </KPIGrid>
       </SectionBlock>
 
       <SectionBlock title={t('home.executiveInsightsTitle')} subtitle={t('home.executiveInsightsSubtitle')}>
-        <InsightGrid>
-          <InsightCard title={paceUi.shortLabel} description={paceUi.hint} tone={paceUi.tone} />
-          <InsightCard title={tasksUi.shortLabel} description={tasksUi.hint} tone={tasksUi.tone} />
-          <InsightCard title={coverageUi.shortLabel} description={coverageUi.hint} tone={coverageUi.tone} />
-          <InsightCard title={attentionUi.shortLabel} description={attentionUi.hint} tone={attentionUi.tone} />
+        <InsightGrid className="gap-4">
+          <InsightCard
+            title={t('home.executive.insightPaceTitle')}
+            description={paceUi.shortLabel}
+            tone={paceUi.tone}
+            className="md:col-span-2"
+          />
+          <InsightCard title={t('home.executive.insightTasksTitle')} description={tasksUi.shortLabel} tone={tasksUi.tone} />
+          <InsightCard title={t('home.executive.insightCoverageTitle')} description={coverageUi.shortLabel} tone={coverageUi.tone} />
+          <InsightCard title={t('home.executive.insightAttentionTitle')} description={attentionUi.shortLabel} tone={attentionUi.tone} />
         </InsightGrid>
       </SectionBlock>
 
-      <SectionBlock title={t('home.executiveRecommendationsTitle')} subtitle={t('home.executiveRecommendationsSubtitle')}>
+      <SectionBlock title={t('home.executive.recommendedActionTitle')} subtitle={t('home.executiveRecommendationsSubtitle')}>
         {recommendationCards.length === 0 ? (
           <EmptyStateBlock title={t('home.executive.noRecommendationsTitle')} description={t('home.executive.noRecommendationsDesc')} />
         ) : (

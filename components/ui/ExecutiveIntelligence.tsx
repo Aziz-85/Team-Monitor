@@ -122,6 +122,7 @@ export type KPIStatCardProps = {
   subtitle?: string;
   icon?: ReactNode;
   tone?: ExecutiveTone;
+  emphasis?: 'normal' | 'strong';
   trendLabel?: string;
   supportLabel?: string;
   className?: string;
@@ -133,6 +134,7 @@ export function KPIStatCard({
   subtitle,
   icon,
   tone = 'default',
+  emphasis = 'normal',
   trendLabel,
   supportLabel,
   className = '',
@@ -146,7 +148,13 @@ export function KPIStatCard({
           <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c.icon}`}>{icon}</span>
         ) : null}
       </div>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-foreground md:text-3xl">{value}</p>
+      <p
+        className={`mt-2 font-bold tabular-nums text-foreground ${
+          emphasis === 'strong' ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl'
+        }`}
+      >
+        {value}
+      </p>
       {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
       {trendLabel || supportLabel ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">

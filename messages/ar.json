@@ -140,6 +140,12 @@
       "KPI": "تقييم KPI",
       "COMPANY": "الشركة"
     },
+    "sidebar": {
+      "primary": "الأساسي",
+      "operations": "العمليات",
+      "analytics": "التحليلات",
+      "system": "النظام / الإعدادات"
+    },
     "company": {
       "overview": "نظرة عامة",
       "branches": "الفروع",
@@ -1259,6 +1265,19 @@
     "executiveSecondarySubtitle": "سياق أقل أولوية مع الحفاظ على الاستمرارية التشغيلية.",
     "executiveSecondaryHint": "الأقسام التفصيلية بالأسفل تحتفظ بنفس البيانات والسلوك مع تنظيم بصري أوضح.",
     "executive": {
+      "heroBehind": "الأداء أقل من وتيرة الهدف",
+      "heroNear": "الأداء قريب من وتيرة الهدف",
+      "heroAhead": "الأداء على المسار المستهدف",
+      "heroBehindHint": "ركّز على المبيعات الأعلى أثرًا خلال الفترة القادمة لتعويض الوتيرة.",
+      "heroNearHint": "حافظ على الانضباط التشغيلي لتجنب التراجع عن الوتيرة.",
+      "heroAheadHint": "استمر بنفس الإيقاع مع الحفاظ على جودة التنفيذ.",
+      "primaryTargetPct": "نسبة تحقيق الهدف",
+      "primarySignal": "المؤشر الرئيسي",
+      "recommendedActionTitle": "الإجراء الموصى به",
+      "insightPaceTitle": "إشارة الوتيرة",
+      "insightTasksTitle": "إشارة المهام",
+      "insightCoverageTitle": "إشارة التغطية",
+      "insightAttentionTitle": "إشارة المتابعة",
       "ahead": "متقدم على الهدف",
       "slightlyBelow": "أقل قليلاً من الوتيرة",
       "behind": "متأخر عن الوتيرة",

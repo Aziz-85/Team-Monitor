@@ -140,6 +140,12 @@
       "KPI": "KPI Appraisal",
       "COMPANY": "Company"
     },
+    "sidebar": {
+      "primary": "Primary",
+      "operations": "Operations",
+      "analytics": "Analytics",
+      "system": "System / Settings"
+    },
     "company": {
       "overview": "Overview",
       "branches": "Branches",
@@ -1259,6 +1265,19 @@
     "executiveSecondarySubtitle": "Lower-priority context retained for operational continuity.",
     "executiveSecondaryHint": "Detailed sections below keep the same data and behavior, with improved visual grouping.",
     "executive": {
+      "heroBehind": "Behind target pace",
+      "heroNear": "Near target pace",
+      "heroAhead": "On track and stable",
+      "heroBehindHint": "Prioritize high-impact sales follow-up in the next shift window.",
+      "heroNearHint": "Maintain execution discipline to avoid slipping below pace.",
+      "heroAheadHint": "Keep current rhythm and protect conversion quality.",
+      "primaryTargetPct": "Target achievement %",
+      "primarySignal": "Primary signal",
+      "recommendedActionTitle": "Recommended Action",
+      "insightPaceTitle": "Pace signal",
+      "insightTasksTitle": "Task signal",
+      "insightCoverageTitle": "Coverage signal",
+      "insightAttentionTitle": "Attention signal",
       "ahead": "Ahead of target",
       "slightlyBelow": "Slightly below pace",
       "behind": "Behind pace",
