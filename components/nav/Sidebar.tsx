@@ -25,6 +25,13 @@ export function Sidebar({
   const { t, isRtl } = useT();
   void canEditSchedule;
   void canApproveWeek;
+  const quickAccessItems = useMemo(
+    () => [
+      { key: 'DASHBOARD', label: t('nav.dashboard'), href: '/dashboard' },
+      { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' },
+    ],
+    [t]
+  );
   const topSections = useMemo(
     () => [
       { key: 'TEAM', label: t('nav.sidebar.team'), href: '/nav/team' },
@@ -61,6 +68,35 @@ export function Sidebar({
         </div>
 
         <nav className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-4 pt-2">
+          <p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted">{t('nav.sidebar.overview')}</p>
+          <ul className="space-y-1.5">
+            {quickAccessItems.map((item) => {
+              const active = isItemActive(item.href);
+              return (
+                <li key={item.key} className="min-w-0">
+                  <Link
+                    href={item.href}
+                    className={`group relative flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active ? 'bg-accent/10 text-accent' : 'text-foreground/85 hover:bg-muted/40'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
+                        active ? 'bg-accent' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground/70'
+                      }`}
+                    />
+                    <span className="min-w-0 truncate">{item.label}</span>
+                    {active ? (
+                      <span className={`absolute inset-y-1 ${isRtl ? 'right-0.5' : 'left-0.5'} w-0.5 rounded-full bg-accent/70`} />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="my-4" />
+
           <ul className="space-y-2">
             {topSections.map((section) => {
               const active = isItemActive(section.href);
