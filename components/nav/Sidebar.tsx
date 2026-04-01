@@ -27,6 +27,7 @@ export function Sidebar({
   void canApproveWeek;
   const quickAccessItems = useMemo(
     () => [
+      { key: 'HOME', label: t('nav.home'), href: '/' },
       { key: 'DASHBOARD', label: t('nav.dashboard'), href: '/dashboard' },
       { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' },
     ],
