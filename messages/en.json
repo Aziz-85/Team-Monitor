@@ -1688,6 +1688,19 @@
     "executiveSecondaryTitle": "Secondary Detail",
     "executiveSecondarySubtitle": "Lower-priority context retained for operational continuity.",
     "executiveSecondaryHint": "Detailed sections below keep the same data and behavior, with improved visual grouping.",
+    "quickActionsTitle": "Quick Actions",
+    "quickActionsSubtitle": "Your most-used actions, updated automatically.",
+    "quickActionsGo": "Open",
+    "quickActions": {
+      "dashboard": { "title": "Dashboard", "hint": "Open your performance dashboard." },
+      "schedule": { "title": "Schedule", "hint": "View schedule for today and this week." },
+      "tasks": { "title": "Tasks", "hint": "Review and close today’s tasks." },
+      "salesSummary": { "title": "Sales Summary", "hint": "Check boutique sales performance and pace." },
+      "inventoryDaily": { "title": "Daily Inventory", "hint": "Run today’s inventory routine." },
+      "targets": { "title": "Targets", "hint": "Track achieved vs remaining targets." },
+      "weeklyReport": { "title": "Weekly Report", "hint": "Review the weekly report board." },
+      "executive": { "title": "Executive Overview", "hint": "Open executive performance overview." }
+    },
     "executive": {
       "heroBehind": "Behind target pace",
       "heroNear": "Near target pace",

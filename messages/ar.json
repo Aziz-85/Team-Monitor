@@ -1688,6 +1688,19 @@
     "executiveSecondaryTitle": "تفاصيل ثانوية",
     "executiveSecondarySubtitle": "سياق أقل أولوية مع الحفاظ على الاستمرارية التشغيلية.",
     "executiveSecondaryHint": "الأقسام التفصيلية بالأسفل تحتفظ بنفس البيانات والسلوك مع تنظيم بصري أوضح.",
+    "quickActionsTitle": "إجراءات سريعة",
+    "quickActionsSubtitle": "الأكثر استخدامًا لديك — تتحدث تلقائيًا.",
+    "quickActionsGo": "فتح",
+    "quickActions": {
+      "dashboard": { "title": "لوحة القيادة", "hint": "افتح لوحة الأداء." },
+      "schedule": { "title": "الجدول", "hint": "عرض جدول اليوم وهذا الأسبوع." },
+      "tasks": { "title": "المهام", "hint": "راجع وأغلق مهام اليوم." },
+      "salesSummary": { "title": "ملخص المبيعات", "hint": "تحقق من أداء المبيعات والوتيرة." },
+      "inventoryDaily": { "title": "الجرد اليومي", "hint": "نفّذ روتين الجرد لليوم." },
+      "targets": { "title": "الأهداف", "hint": "تابع المحقق مقابل المتبقي." },
+      "weeklyReport": { "title": "التقرير الأسبوعي", "hint": "راجع لوحة التقرير الأسبوعي." },
+      "executive": { "title": "نظرة تنفيذية", "hint": "افتح نظرة الأداء التنفيذية." }
+    },
     "executive": {
       "heroBehind": "الأداء أقل من وتيرة الهدف",
       "heroNear": "الأداء قريب من وتيرة الهدف",

@@ -17,6 +17,7 @@ import { CardShell } from '@/components/dashboard/cards/CardShell';
 import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { formatSarInt } from '@/lib/utils/money';
+import Link from 'next/link';
 import {
   EmptyStateBlock,
   InsightCard,
@@ -33,6 +34,7 @@ import {
   coverageSignal,
   paceSignal,
 } from '@/lib/presentation/executiveIntelligence';
+import { useQuickActions } from '@/lib/nav/useQuickActions';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -147,6 +149,7 @@ type HomePageClientProps = {
 
 export function HomePageClient({ myZone }: HomePageClientProps) {
   const { t } = useT();
+  const { actions: quickActions, track: trackQuickAction } = useQuickActions(5);
   const [data, setData] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [date, setDate] = useState(() => getRiyadhDateKey());
@@ -517,6 +520,27 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         tone={paceUi.tone}
         className="border-2 p-5 md:p-6"
       />
+
+      <SectionBlock title={t('home.quickActionsTitle')} subtitle={t('home.quickActionsSubtitle')}>
+        <InsightGrid className="gap-4">
+          {quickActions.slice(0, 5).map((a) => (
+            <Link
+              key={a.key}
+              href={a.href}
+              onClick={() => trackQuickAction(a.key)}
+              className="block"
+            >
+              <RecommendationCard
+                title={t(a.titleKey)}
+                message={t(a.hintKey)}
+                tone="info"
+                className="hover:bg-surface-subtle"
+                actionSlot={<span className="text-xs font-medium text-muted">{t('home.quickActionsGo')}</span>}
+              />
+            </Link>
+          ))}
+        </InsightGrid>
+      </SectionBlock>
 
       <SectionBlock title={t('home.executiveKpiTitle')} subtitle={t('home.executiveKpiSubtitle')}>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
