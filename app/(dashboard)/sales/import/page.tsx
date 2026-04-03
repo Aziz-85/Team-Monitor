@@ -1,10 +1,14 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
+import { SalesImportClient } from './SalesImportClient';
+import type { Role } from '@prisma/client';
+
+const ALLOWED: Role[] = ['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 
 export default async function SalesImportPage() {
   const user = await getSessionUser();
   if (!user) redirect('/login');
-  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER' && user.role !== 'AREA_MANAGER') redirect('/');
+  if (!ALLOWED.includes(user.role as Role)) redirect('/');
 
-  redirect('/admin/import/sales?section=import');
+  return <SalesImportClient />;
 }

@@ -29,29 +29,83 @@ import {
   SectionBlock,
 } from '@/components/ui/ExecutiveIntelligence';
 import { attentionSeverity, paceSignal } from '@/lib/presentation/executiveIntelligence';
+import { getRiyadhNow, getWeekRangeForDate, toRiyadhDateString } from '@/lib/time';
 
 type BoutiqueOption = { id: string; code: string; name: string };
 
-const QUICK_PERIODS = [
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'quarter', label: 'Quarter' },
-  { id: 'custom', label: 'Custom' },
-] as const;
+/** Riyadh calendar date keys are YYYY-MM-DD; display as DD/MM/YYYY without timezone shift. */
+function formatYmdAsDdMmYyyy(ymd: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!match) return ymd;
+  const [, y, mo, d] = match;
+  return `${d}/${mo}/${y}`;
+}
 
-function getDateRangeForPeriod(periodId: string): { from: string; to: string } {
-  const end = new Date();
-  const start = new Date(end);
-  if (periodId === 'week') start.setDate(start.getDate() - 7);
-  else if (periodId === 'month') start.setDate(start.getDate() - 30);
-  else if (periodId === 'quarter') start.setDate(start.getDate() - 90);
-  else {
-    start.setDate(start.getDate() - 30);
+function formatSummaryDateRange(fromYmd: string, toYmd: string): string {
+  return `${formatYmdAsDdMmYyyy(fromYmd)} → ${formatYmdAsDdMmYyyy(toYmd)}`;
+}
+
+/** Calendar quarter in Riyadh (Q1 Jan–Mar … Q4 Oct–Dec). */
+function getQuarterMetaForRiyadhYmd(riyadhToYmd: string): { startYmd: string; label: string } {
+  const y = parseInt(riyadhToYmd.slice(0, 4), 10);
+  const month = parseInt(riyadhToYmd.slice(5, 7), 10);
+  let startMonth: number;
+  let q: number;
+  if (month <= 3) {
+    q = 1;
+    startMonth = 1;
+  } else if (month <= 6) {
+    q = 2;
+    startMonth = 4;
+  } else if (month <= 9) {
+    q = 3;
+    startMonth = 7;
+  } else {
+    q = 4;
+    startMonth = 10;
   }
   return {
-    from: start.toISOString().slice(0, 10),
-    to: end.toISOString().slice(0, 10),
+    startYmd: `${y}-${String(startMonth).padStart(2, '0')}-01`,
+    label: `Q${q}`,
   };
+}
+
+/** If fromYmd is the first day of a calendar quarter, returns e.g. "Q2 2026" for subtitles. */
+function quarterSubtitleFromFromYmd(fromYmd: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fromYmd.trim());
+  if (!match) return null;
+  const y = match[1];
+  const mo = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  if (day !== 1 || ![1, 4, 7, 10].includes(mo)) return null;
+  const q = mo === 1 ? 1 : mo === 4 ? 2 : mo === 7 ? 3 : 4;
+  return `Q${q} ${y}`;
+}
+
+/**
+ * Preset ranges use Asia/Riyadh "today" and app week (Sat–Fri).
+ * Month / quarter: first day of period through today (MTD / QTD).
+ * Week: Saturday of current week through today.
+ */
+function getDateRangeForPeriod(periodId: string): { from: string; to: string } {
+  const now = getRiyadhNow();
+  const to = toRiyadhDateString(now);
+  if (periodId === 'week') {
+    const { startSat } = getWeekRangeForDate(now);
+    return { from: toRiyadhDateString(startSat), to };
+  }
+  if (periodId === 'month') {
+    const y = to.slice(0, 4);
+    const m = to.slice(5, 7);
+    return { from: `${y}-${m}-01`, to };
+  }
+  if (periodId === 'quarter') {
+    const { startYmd } = getQuarterMetaForRiyadhYmd(to);
+    return { from: startYmd, to };
+  }
+  const y = to.slice(0, 4);
+  const m = to.slice(5, 7);
+  return { from: `${y}-${m}-01`, to };
 }
 
 function getDefaultDateRange(): { from: string; to: string } {
@@ -93,6 +147,16 @@ export function SalesSummaryClient() {
   const { t } = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const quickPeriods = useMemo(() => {
+    const { label: quarterLabel } = getQuarterMetaForRiyadhYmd(toRiyadhDateString(getRiyadhNow()));
+    return [
+      { id: 'week', label: t('sales.summary.week') },
+      { id: 'month', label: t('sales.summary.month') },
+      { id: 'quarter', label: t('sales.summary.quarterWithLabel').replace('{q}', quarterLabel) },
+      { id: 'custom', label: t('sales.summary.customPeriod') },
+    ] as const;
+  }, [t]);
 
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -214,7 +278,7 @@ export function SalesSummaryClient() {
   }, [from, to, boutiqueId, scopeReady, load, loadTargets]);
 
   const activeFilters: { label: string; value: string }[] = [];
-  if (from && to) activeFilters.push({ label: 'From–To', value: `${from} – ${to}` });
+  if (from && to) activeFilters.push({ label: 'From–To', value: formatSummaryDateRange(from, to) });
   const selectedBoutique = allowedBoutiques.find((b) => b.id === boutiqueId);
   if (selectedBoutique) activeFilters.push({ label: t('sales.summary.boutique'), value: `${selectedBoutique.name} (${selectedBoutique.code})` });
 
@@ -238,8 +302,12 @@ export function SalesSummaryClient() {
     if (defaultId) setBoutiqueId(defaultId);
   }, [operationalBoutique?.boutiqueId, allowedBoutiques]);
 
+  const quarterSubtitle =
+    selectedPeriodId === 'quarter' && from ? quarterSubtitleFromFromYmd(from) : null;
   const summaryLine = from && to
-    ? `Viewing ${selectedBoutique?.name ?? '—'} • ${from} → ${to}`
+    ? `Viewing ${selectedBoutique?.name ?? '—'} • ${formatSummaryDateRange(from, to)}${
+        quarterSubtitle ? ` · ${quarterSubtitle}` : ''
+      }`
     : undefined;
 
   const boutiqueOptions = useMemo(() => {
@@ -335,11 +403,17 @@ export function SalesSummaryClient() {
     <PageContainer className="mx-auto max-w-6xl space-y-10 md:space-y-12">
       <SectionBlock
         title={t('sales.summary.boardTitle')}
-        subtitle={from && to ? `${selectedBoutique?.name ?? ''} • ${from} → ${to}` : t('sales.summary.subtitle')}
+        subtitle={
+          from && to
+            ? `${selectedBoutique?.name ?? ''} • ${formatSummaryDateRange(from, to)}${
+                quarterSubtitle ? ` · ${quarterSubtitle}` : ''
+              }`
+            : t('sales.summary.subtitle')
+        }
       >
         <FilterBar
           activeFilters={activeFilters}
-          quickPeriods={QUICK_PERIODS}
+          quickPeriods={quickPeriods}
           selectedPeriodId={selectedPeriodId}
           onPeriodSelect={handlePeriodSelect}
           summaryLine={summaryLine}

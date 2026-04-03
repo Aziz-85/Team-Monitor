@@ -1,6 +1,7 @@
 import { DrilldownLayout } from '@/components/nav/DrilldownCards';
 import { getServerTranslations } from '@/lib/i18n/serverTranslate';
 import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
+import { AnalyticsSalesLedgerBelow } from './AnalyticsSalesLedgerBelow';
 
 const ROUTES = [
   { href: '/sales/my', key: 'sales.my' },
@@ -33,6 +34,7 @@ export default async function NavAnalyticsSalesPage() {
         { label: t('analytics.sales.title') },
       ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
+      belowCards={allowed.has('/sales/daily') ? <AnalyticsSalesLedgerBelow /> : undefined}
     />
   );
 }

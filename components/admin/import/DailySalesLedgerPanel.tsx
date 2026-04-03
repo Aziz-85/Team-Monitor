@@ -6,7 +6,7 @@ import { SalesDailyClient } from '@/app/(dashboard)/sales/daily/SalesDailyClient
 export function DailySalesLedgerPanel() {
   return (
     <div className="min-h-0">
-      <SalesDailyClient />
+      <SalesDailyClient embedded />
     </div>
   );
 }

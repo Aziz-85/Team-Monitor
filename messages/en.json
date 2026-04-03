@@ -216,7 +216,9 @@
       "analytics": {
         "sales": {
           "title": "Sales",
-          "hint": "Sales performance and quality views."
+          "hint": "Sales performance and quality views.",
+          "ledgerSectionTitle": "Daily Sales Ledger",
+          "ledgerSectionHint": "Day-level boutique totals, employee lines, lock, and coverage — same tool as the full ledger page."
         },
         "reports": {
           "title": "Reports",
@@ -701,7 +703,15 @@
       "importIssues": "Import Issues",
       "importIssuesDesc": "View and resolve import validation errors.",
       "monthlyMatrix": "Monthly Matrix",
-      "monthlyMatrixDesc": "Upload .xlsx DATA_MATRIX (ScopeId, Date, employee columns)."
+      "monthlyMatrixDesc": "Upload .xlsx DATA_MATRIX (ScopeId, Date, employee columns).",
+      "salesHubBreadcrumb": "Import · Sales",
+      "salesHubTitle": "Sales import hub",
+      "salesHubSubtitle": "Matrix tools, daily ledger, issues, and monthly matrix — same order as elsewhere.",
+      "salesHubTabImport": "Import sales",
+      "salesHubTabMatrix": "Monthly import (matrix)",
+      "salesHubTabIssues": "Import issues",
+      "salesHubTabLedger": "Daily sales ledger",
+      "salesHubTabMonthly": "Monthly matrix"
     },
     "importCenter": {
       "title": "Import Center",
@@ -2086,6 +2096,34 @@
       "daysWindow": "Days",
       "onlyNonZero": "Only with sales"
     },
+    "dailyLedger": {
+      "pageTitle": "Daily Sales Ledger",
+      "pageSubtitle": "Manager totals, per-employee lines, lock when balanced, and optional yearly or coverage tools."
+    },
+    "importTool": {
+      "pageTitle": "Sales import",
+      "pageSubtitle": "DATA_MATRIX template download, preview, apply, and Excel export — aligned with operational boutique scope.",
+      "templateTitle": "Template",
+      "templateHint": "Download an Excel template (DATA_MATRIX sheet) with days and employee columns for the selected month.",
+      "monthYm": "Month (YYYY-MM)",
+      "downloadTemplate": "Download template",
+      "importTitle": "Import",
+      "importHint": "Upload .xlsx with DATA_MATRIX sheet. Preview (dry run) first; Apply writes to the database when there are no blocking errors.",
+      "chooseFile": "Choose .xlsx file",
+      "includePreviousMonth": "Include previous month",
+      "preview": "Preview",
+      "apply": "Apply",
+      "exportTitle": "Export",
+      "exportHint": "Export sales from the database to Excel in the same DATA_MATRIX format as the template.",
+      "exportDb": "Export DB to Excel",
+      "applyBlocked": "Apply blocked:",
+      "blockingErrors": "Blocking errors:",
+      "mappedEmployees": "Mapped employees:",
+      "unmappedEmployees": "Unmapped employees:",
+      "insertedUpdated": "Inserted: {inserted} · Updated: {updated} · Skipped empty: {skipped}",
+      "sampleCells": "Sample non-blank cells (up to 12)",
+      "loadingShort": "…"
+    },
     "summary": {
       "title": "Sales Summary",
       "boardTitle": "Boutique Performance Board",
@@ -2119,6 +2157,8 @@
       "failedToLoad": "Failed to load",
       "chartMtdSubtitle": "MTD for month of end date",
       "weekOfEndDate": "Week of end date",
+      "customPeriod": "Custom",
+      "quarterWithLabel": "Quarter ({q})",
       "executive": {
         "heroBehind": "Behind target pace",
         "heroNear": "Near target pace",

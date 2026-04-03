@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
+import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
 import { useT } from '@/lib/i18n/useT';
 
 function toLocalDateString(d: Date): string {
@@ -37,7 +39,7 @@ type DailyData = {
   summaries: Summary[];
 };
 
-export function SalesDailyClient() {
+export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
@@ -303,11 +305,9 @@ export function SalesDailyClient() {
     d === 0 ? 'text-green-700' : d >= 1 ? 'text-amber-700' : 'text-red-700';
   const diffText = (d: number) => (d === 0 ? '0' : d >= 1 ? `+${d}` : d);
 
-  return (
-    <div className="overflow-x-hidden p-4 md:p-6">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-xl font-semibold text-foreground">Daily Sales Ledger</h1>
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+  const mainInner = (
+    <>
+      <div className="mb-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -635,8 +635,30 @@ export function SalesDailyClient() {
               </div>
             </OpsCard>
           ))}
-      </div>
-    </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="min-w-0 max-w-5xl">{mainInner}</div>;
+  }
+
+  return (
+    <PageContainer className="mx-auto max-w-6xl space-y-8 md:space-y-10">
+      <SectionBlock
+        title={t('sales.dailyLedger.pageTitle')}
+        subtitle={t('sales.dailyLedger.pageSubtitle')}
+        rightSlot={
+          <Link
+            href="/nav/analytics/sales"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+          >
+            {t('common.back')}
+          </Link>
+        }
+      >
+        <div className="mx-auto max-w-5xl">{mainInner}</div>
+      </SectionBlock>
+    </PageContainer>
   );
 }
 

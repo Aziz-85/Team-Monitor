@@ -6,7 +6,7 @@ import { SalesImportClient } from '@/app/(dashboard)/sales/import/SalesImportCli
 export function ImportSalesPanel() {
   return (
     <div className="min-h-0">
-      <SalesImportClient />
+      <SalesImportClient embedded />
     </div>
   );
 }

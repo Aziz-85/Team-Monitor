@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
+import { Button } from '@/components/ui/Button';
+import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
+import { useT } from '@/lib/i18n/useT';
 
 function getCurrentMonthRiyadh(): string {
   const d = new Date();
@@ -31,7 +35,13 @@ type PreviewResult = {
   error?: string;
 };
 
-export function SalesImportClient() {
+export type SalesImportClientProps = {
+  /** When true, skip page chrome (used inside admin import tabs). */
+  embedded?: boolean;
+};
+
+export function SalesImportClient({ embedded = false }: SalesImportClientProps) {
+  const { t } = useT();
   const [templateMonth, setTemplateMonth] = useState(() => getCurrentMonthRiyadh());
   const [templateLoading, setTemplateLoading] = useState(false);
 
@@ -54,7 +64,7 @@ export function SalesImportClient() {
       const res = await fetch(`/api/sales/import/template?month=${encodeURIComponent(templateMonth.trim())}`, { cache: 'no-store' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(j.error ?? 'Failed to download template');
+        alert(j.error ?? t('sales.summary.failedToLoad'));
         return;
       }
       const blob = await res.blob();
@@ -132,7 +142,7 @@ export function SalesImportClient() {
       const res = await fetch(`/api/sales/import/export?${params}`, { cache: 'no-store' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(j.error ?? 'Export failed');
+        alert(j.error ?? t('sales.summary.failedToLoad'));
         return;
       }
       const blob = await res.blob();
@@ -147,199 +157,232 @@ export function SalesImportClient() {
     }
   };
 
-  return (
-    <div className="overflow-x-hidden p-4 md:p-6">
-      <div className="mx-auto max-w-4xl">
-        <h1 className="mb-4 text-xl font-semibold text-foreground">Sales Import</h1>
-
-        {/* 1) Template */}
-        <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Template</h3>
-          <p className="mb-3 text-xs text-muted">
-            Download an Excel template (DATA_MATRIX sheet) with days and employee columns for the selected month.
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
-              <input
-                type="text"
-                placeholder="YYYY-MM"
-                value={templateMonth}
-                onChange={(e) => setTemplateMonth(e.target.value)}
-                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={!templateMonth.trim() || templateLoading}
-              onClick={downloadTemplate}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
-            >
-              {templateLoading ? '…' : 'Download Template'}
-            </button>
+  const inner = (
+    <div className={`mx-auto min-w-0 ${embedded ? '' : 'max-w-4xl'}`}>
+      <OpsCard className="mb-6">
+        <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
+          {t('sales.importTool.templateTitle')}
+        </h3>
+        <p className="mb-3 text-xs text-muted">{t('sales.importTool.templateHint')}</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="me-1 text-xs text-muted">{t('sales.importTool.monthYm')}</label>
+            <input
+              type="text"
+              placeholder="YYYY-MM"
+              value={templateMonth}
+              onChange={(e) => setTemplateMonth(e.target.value)}
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
+            />
           </div>
-        </OpsCard>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!templateMonth.trim() || templateLoading}
+            onClick={downloadTemplate}
+            className="h-9 px-3 text-sm"
+          >
+            {templateLoading ? t('sales.importTool.loadingShort') : t('sales.importTool.downloadTemplate')}
+          </Button>
+        </div>
+      </OpsCard>
 
-        {/* 2) Import */}
-        <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Import</h3>
-          <p className="mb-3 text-xs text-muted">
-            Upload .xlsx with DATA_MATRIX sheet. Preview (dry run) first; Apply writes to DB when there are no blocking errors.
-          </p>
-          <input
-            ref={importFileInputRef}
-            type="file"
-            accept=".xlsx"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              setImportFile(f ?? null);
-              setImportPreviewResult(null);
-              e.target.value = '';
-            }}
-          />
-          <div className="flex flex-wrap items-end gap-3">
-            <button
-              type="button"
-              onClick={() => importFileInputRef.current?.click()}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
-            >
-              {importFile ? importFile.name : 'Choose .xlsx file'}
-            </button>
-            <div>
-              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
-              <input
-                type="text"
-                placeholder="YYYY-MM"
-                value={importMonth}
-                onChange={(e) => setImportMonth(e.target.value)}
-                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
-              />
-            </div>
-            <label className="flex items-center gap-1.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={importIncludePrevious}
-                onChange={(e) => setImportIncludePrevious(e.target.checked)}
-              />
-              Include previous month
-            </label>
-            <button
-              type="button"
-              disabled={!importFile || !importMonth.trim() || importLoading}
-              onClick={runPreview}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
-            >
-              {importLoading ? '…' : 'Preview'}
-            </button>
-            <button
-              type="button"
-              disabled={
-                !importFile ||
-                !importMonth.trim() ||
-                importApplyLoading ||
-                (importPreviewResult != null && !importPreviewResult.applyAllowed)
-              }
-              onClick={runApply}
-              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              {importApplyLoading ? '…' : 'Apply'}
-            </button>
+      <OpsCard className="mb-6">
+        <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
+          {t('sales.importTool.importTitle')}
+        </h3>
+        <p className="mb-3 text-xs text-muted">{t('sales.importTool.importHint')}</p>
+        <input
+          ref={importFileInputRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setImportFile(f ?? null);
+            setImportPreviewResult(null);
+            e.target.value = '';
+          }}
+        />
+        <div className="flex flex-wrap items-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => importFileInputRef.current?.click()}
+            className="h-9 px-3 text-sm"
+          >
+            {importFile ? importFile.name : t('sales.importTool.chooseFile')}
+          </Button>
+          <div>
+            <label className="me-1 text-xs text-muted">{t('sales.importTool.monthYm')}</label>
+            <input
+              type="text"
+              placeholder="YYYY-MM"
+              value={importMonth}
+              onChange={(e) => setImportMonth(e.target.value)}
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
+            />
           </div>
+          <label className="flex items-center gap-1.5 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={importIncludePrevious}
+              onChange={(e) => setImportIncludePrevious(e.target.checked)}
+            />
+            {t('sales.importTool.includePreviousMonth')}
+          </label>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!importFile || !importMonth.trim() || importLoading}
+            onClick={runPreview}
+            className="h-9 px-3 text-sm"
+          >
+            {importLoading ? t('sales.importTool.loadingShort') : t('sales.importTool.preview')}
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={
+              !importFile ||
+              !importMonth.trim() ||
+              importApplyLoading ||
+              (importPreviewResult != null && !importPreviewResult.applyAllowed)
+            }
+            onClick={runApply}
+            className="h-9 px-3 text-sm"
+          >
+            {importApplyLoading ? t('sales.importTool.loadingShort') : t('sales.importTool.apply')}
+          </Button>
+        </div>
 
-          {importPreviewResult && (
-            <div className="mt-4 space-y-2">
-              {importPreviewResult.error && (
-                <p className="text-sm text-red-600">{importPreviewResult.error}</p>
-              )}
-              {importPreviewResult.applyAllowed === false && importPreviewResult.applyBlockReasons?.length ? (
-                <p className="text-sm text-amber-600">
-                  Apply blocked: {importPreviewResult.applyBlockReasons.join(', ')}
+        {importPreviewResult && (
+          <div className="mt-4 space-y-2">
+            {importPreviewResult.error && <p className="text-sm text-red-600">{importPreviewResult.error}</p>}
+            {importPreviewResult.applyAllowed === false && importPreviewResult.applyBlockReasons?.length ? (
+              <p className="text-sm text-amber-600">
+                {t('sales.importTool.applyBlocked')} {importPreviewResult.applyBlockReasons.join(', ')}
+              </p>
+            ) : null}
+            {importPreviewResult.blockingErrorsCount ? (
+              <>
+                <p className="text-sm text-red-600">
+                  {t('sales.importTool.blockingErrors')} {importPreviewResult.blockingErrorsCount}
                 </p>
-              ) : null}
-              {importPreviewResult.blockingErrorsCount ? (
-                <>
-                  <p className="text-sm text-red-600">Blocking errors: {importPreviewResult.blockingErrorsCount}</p>
-                  <div className="max-h-48 overflow-auto rounded border border-red-200 bg-red-50 p-2">
-                    <table className="w-full border-collapse text-xs text-red-800">
-                      <thead>
-                        <tr className="text-start">
-                          <th className="pr-2">Row</th>
-                          <th className="pr-2">Col</th>
-                          <th className="pr-2">Type</th>
-                          <th>Message</th>
+                <div className="max-h-48 overflow-auto rounded border border-red-200 bg-red-50 p-2">
+                  <table className="w-full border-collapse text-xs text-red-800">
+                    <thead>
+                      <tr className="text-start">
+                        <th className="pr-2">Row</th>
+                        <th className="pr-2">Col</th>
+                        <th className="pr-2">Type</th>
+                        <th>Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(importPreviewResult.blockingErrors ?? []).slice(0, 50).map((err, i) => (
+                        <tr key={i}>
+                          <td className="pr-2">{err.row}</td>
+                          <td className="pr-2">{err.col}</td>
+                          <td className="pr-2">{err.type}</td>
+                          <td>{err.message}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {(importPreviewResult.blockingErrors ?? []).slice(0, 50).map((err, i) => (
-                          <tr key={i}>
-                            <td className="pr-2">{err.row}</td>
-                            <td className="pr-2">{err.col}</td>
-                            <td className="pr-2">{err.type}</td>
-                            <td>{err.message}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              ) : null}
-              <div className="rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
-                <p>Mapped employees: {importPreviewResult.mappedEmployees?.length ?? 0}</p>
-                <p>Unmapped employees: {importPreviewResult.unmappedEmployees?.length ?? 0}</p>
-                <p>Inserted: {importPreviewResult.inserted ?? 0} · Updated: {importPreviewResult.updated ?? 0} · Skipped empty: {importPreviewResult.skippedEmpty ?? 0}</p>
-                {importPreviewResult.diagnostic && (
-                  <p>Cols: {importPreviewResult.diagnostic.employeeStartCol}–{importPreviewResult.diagnostic.employeeEndCol} · Rows: {importPreviewResult.diagnostic.totalRows} · Total cols: {importPreviewResult.diagnostic.totalCols}</p>
-                )}
-                {importPreviewResult.sampleNonBlankCells && importPreviewResult.sampleNonBlankCells.length > 0 && (
-                  <details className="mt-2">
-                    <summary>Sample non-blank cells (up to 12)</summary>
-                    <pre className="mt-1 max-h-32 overflow-auto">
-                      {JSON.stringify(importPreviewResult.sampleNonBlankCells.slice(0, 12), null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : null}
+            <div className="rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
+              <p>
+                {t('sales.importTool.mappedEmployees')} {importPreviewResult.mappedEmployees?.length ?? 0}
+              </p>
+              <p>
+                {t('sales.importTool.unmappedEmployees')} {importPreviewResult.unmappedEmployees?.length ?? 0}
+              </p>
+              <p>
+                {t('sales.importTool.insertedUpdated')
+                  .replace('{inserted}', String(importPreviewResult.inserted ?? 0))
+                  .replace('{updated}', String(importPreviewResult.updated ?? 0))
+                  .replace('{skipped}', String(importPreviewResult.skippedEmpty ?? 0))}
+              </p>
+              {importPreviewResult.diagnostic && (
+                <p>
+                  Cols: {importPreviewResult.diagnostic.employeeStartCol}–{importPreviewResult.diagnostic.employeeEndCol} · Rows:{' '}
+                  {importPreviewResult.diagnostic.totalRows} · Total cols: {importPreviewResult.diagnostic.totalCols}
+                </p>
+              )}
+              {importPreviewResult.sampleNonBlankCells && importPreviewResult.sampleNonBlankCells.length > 0 && (
+                <details className="mt-2">
+                  <summary>{t('sales.importTool.sampleCells')}</summary>
+                  <pre className="mt-1 max-h-32 overflow-auto">
+                    {JSON.stringify(importPreviewResult.sampleNonBlankCells.slice(0, 12), null, 2)}
+                  </pre>
+                </details>
+              )}
             </div>
-          )}
-        </OpsCard>
-
-        {/* 3) Export */}
-        <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">Export</h3>
-          <p className="mb-3 text-xs text-muted">
-            Export sales from DB to Excel in the same DATA_MATRIX format as the template.
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
-              <input
-                type="text"
-                placeholder="YYYY-MM"
-                value={exportMonth}
-                onChange={(e) => setExportMonth(e.target.value)}
-                className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
-              />
-            </div>
-            <label className="flex items-center gap-1.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={exportIncludePrevious}
-                onChange={(e) => setExportIncludePrevious(e.target.checked)}
-              />
-              Include previous month
-            </label>
-            <button
-              type="button"
-              disabled={!exportMonth.trim() || exportLoading}
-              onClick={runExport}
-              className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              {exportLoading ? '…' : 'Export DB to Excel'}
-            </button>
           </div>
-        </OpsCard>
-      </div>
+        )}
+      </OpsCard>
+
+      <OpsCard className="mb-6">
+        <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
+          {t('sales.importTool.exportTitle')}
+        </h3>
+        <p className="mb-3 text-xs text-muted">{t('sales.importTool.exportHint')}</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="me-1 text-xs text-muted">{t('sales.importTool.monthYm')}</label>
+            <input
+              type="text"
+              placeholder="YYYY-MM"
+              value={exportMonth}
+              onChange={(e) => setExportMonth(e.target.value)}
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground"
+            />
+          </div>
+          <label className="flex items-center gap-1.5 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={exportIncludePrevious}
+              onChange={(e) => setExportIncludePrevious(e.target.checked)}
+            />
+            {t('sales.importTool.includePreviousMonth')}
+          </label>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!exportMonth.trim() || exportLoading}
+            onClick={runExport}
+            className="h-9 px-3 text-sm"
+          >
+            {exportLoading ? t('sales.importTool.loadingShort') : t('sales.importTool.exportDb')}
+          </Button>
+        </div>
+      </OpsCard>
     </div>
+  );
+
+  if (embedded) {
+    return <div className="min-w-0">{inner}</div>;
+  }
+
+  return (
+    <PageContainer className="mx-auto max-w-6xl space-y-8 md:space-y-10">
+      <SectionBlock
+        title={t('sales.importTool.pageTitle')}
+        subtitle={t('sales.importTool.pageSubtitle')}
+        rightSlot={
+          <Link
+            href="/nav/analytics/sales"
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+          >
+            {t('common.back')}
+          </Link>
+        }
+      >
+        {inner}
+      </SectionBlock>
+    </PageContainer>
   );
 }

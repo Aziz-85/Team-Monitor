@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
@@ -20,11 +21,14 @@ export function DrilldownLayout({
   subtitle,
   breadcrumbs,
   cards,
+  belowCards,
 }: {
   title: string;
   subtitle: string;
   breadcrumbs: BreadcrumbItem[];
   cards: NavRouteCardItem[];
+  /** Optional region below the route grid (e.g. embedded tool on hub pages). */
+  belowCards?: ReactNode;
 }) {
   const router = useRouter();
   return (
@@ -71,6 +75,7 @@ export function DrilldownLayout({
           </Link>
         ))}
       </section>
+      {belowCards != null ? <div className="mt-10 min-w-0 space-y-6">{belowCards}</div> : null}
     </PageContainer>
   );
 }

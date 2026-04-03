@@ -216,7 +216,9 @@
       "analytics": {
         "sales": {
           "title": "المبيعات",
-          "hint": "عرض أداء المبيعات والجودة."
+          "hint": "عرض أداء المبيعات والجودة.",
+          "ledgerSectionTitle": "دفتر المبيعات اليومي",
+          "ledgerSectionHint": "إجماليات الفرع اليومية وأسطر الموظفين والقفل والتغطية — نفس أداة صفحة الدفتر الكاملة."
         },
         "reports": {
           "title": "التقارير",
@@ -701,7 +703,15 @@
       "importIssues": "مشاكل الاستيراد",
       "importIssuesDesc": "عرض وحل أخطاء التحقق من الاستيراد.",
       "monthlyMatrix": "المصفوفة الشهرية",
-      "monthlyMatrixDesc": "رفع ملف .xlsx DATA_MATRIX (ScopeId، التاريخ، أعمدة الموظفين)."
+      "monthlyMatrixDesc": "رفع ملف .xlsx DATA_MATRIX (ScopeId، التاريخ، أعمدة الموظفين).",
+      "salesHubBreadcrumb": "الاستيراد · المبيعات",
+      "salesHubTitle": "مركز استيراد المبيعات",
+      "salesHubSubtitle": "أدوات المصفوفة، الدفتر اليومي، المشاكل، والمصفوفة الشهرية — نفس الترتيب في كل مكان.",
+      "salesHubTabImport": "استيراد المبيعات",
+      "salesHubTabMatrix": "استيراد شهري (مصفوفة)",
+      "salesHubTabIssues": "مشاكل الاستيراد",
+      "salesHubTabLedger": "دفتر المبيعات اليومي",
+      "salesHubTabMonthly": "المصفوفة الشهرية"
     },
     "importCenter": {
       "title": "مركز الاستيراد",
@@ -2086,6 +2096,34 @@
       "daysWindow": "أيام",
       "onlyNonZero": "ذوو مبيعات فقط"
     },
+    "dailyLedger": {
+      "pageTitle": "دفتر المبيعات اليومي",
+      "pageSubtitle": "إجماليات المدير، أسطر الموظفين، القفل عند التوازن، وأدوات اختيارية للسنوية أو التغطية."
+    },
+    "importTool": {
+      "pageTitle": "استيراد المبيعات",
+      "pageSubtitle": "تنزيل قالب DATA_MATRIX، المعاينة، التطبيق، والتصدير إلى Excel — بما يتوافق مع نطاق الفرع التشغيلي.",
+      "templateTitle": "القالب",
+      "templateHint": "نزّل قالب Excel (ورقة DATA_MATRIX) بأعمدة الأيام والموظفين للشهر المحدد.",
+      "monthYm": "الشهر (YYYY-MM)",
+      "downloadTemplate": "تنزيل القالب",
+      "importTitle": "الاستيراد",
+      "importHint": "ارفع ملف .xlsx يحتوي ورقة DATA_MATRIX. عاين أولاً؛ التطبيق يكتب في قاعدة البيانات عند عدم وجود أخطاء حاسمة.",
+      "chooseFile": "اختر ملف .xlsx",
+      "includePreviousMonth": "تضمين الشهر السابق",
+      "preview": "معاينة",
+      "apply": "تطبيق",
+      "exportTitle": "التصدير",
+      "exportHint": "صدّر المبيعات من قاعدة البيانات إلى Excel بنفس تنسيق DATA_MATRIX كالقالب.",
+      "exportDb": "تصدير القاعدة إلى Excel",
+      "applyBlocked": "التطبيق موقوف:",
+      "blockingErrors": "أخطاء حاسمة:",
+      "mappedEmployees": "موظفون مربوطون:",
+      "unmappedEmployees": "موظفون غير مربوطين:",
+      "insertedUpdated": "مُدرج: {inserted} · مُحدَّث: {updated} · تخطّي فارغ: {skipped}",
+      "sampleCells": "عيّنة خلايا غير فارغة (حتى 12)",
+      "loadingShort": "…"
+    },
     "summary": {
       "title": "ملخص المبيعات",
       "boardTitle": "لوحة أداء الفرع",
@@ -2119,6 +2157,8 @@
       "failedToLoad": "فشل التحميل",
       "chartMtdSubtitle": "المتراكم حتى نهاية شهر تاريخ النهاية",
       "weekOfEndDate": "أسبوع تاريخ النهاية",
+      "customPeriod": "مخصص",
+      "quarterWithLabel": "الربع ({q})",
       "executive": {
         "heroBehind": "الأداء أقل من وتيرة الهدف",
         "heroNear": "الأداء قريب من وتيرة الهدف",
