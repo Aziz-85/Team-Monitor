@@ -6,6 +6,37 @@ const publicPaths = ['/login'];
 const MUTATION_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 const DEMO_LOGOUT_PATH = '/api/auth/logout';
 
+/**
+ * Origin used when middleware calls same-app APIs (session role check).
+ * `request.nextUrl.origin` is often wrong behind nginx/Docker (internal host, [::]:port, etc.),
+ * which breaks the internal fetch and shows "Unable to verify session for write".
+ *
+ * Override with APP_INTERNAL_ORIGIN (e.g. http://127.0.0.1:3002) if the server cannot hairpin to its public URL.
+ */
+function getMiddlewareInternalOrigin(request: NextRequest): string {
+  const explicit = process.env.APP_INTERNAL_ORIGIN?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    const v = vercel.replace(/\/$/, '');
+    return v.startsWith('http') ? v : `https://${v}`;
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const proto = forwardedProto === 'http' || forwardedProto === 'https' ? forwardedProto : 'https';
+    try {
+      return new URL(`${proto}://${forwardedHost}`).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  return request.nextUrl.origin;
+}
+
 function isPublic(pathname: string): boolean {
   return publicPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
@@ -85,7 +116,7 @@ export async function middleware(request: NextRequest) {
     pathname !== DEMO_LOGOUT_PATH
   ) {
     try {
-      const base = request.nextUrl.origin;
+      const base = getMiddlewareInternalOrigin(request);
       const res = await fetch(`${base}/api/internal/session-role`, {
         headers: { Cookie: request.headers.get('cookie') ?? '' },
         cache: 'no-store',
