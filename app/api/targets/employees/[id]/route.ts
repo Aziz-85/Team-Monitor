@@ -20,7 +20,13 @@ export async function GET(
     where: { id },
     include: {
       boutique: { select: { id: true, code: true, name: true } },
-      user: { select: { id: true, empId: true }, include: { employee: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          empId: true,
+          employee: { select: { name: true } },
+        },
+      },
     },
   });
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -66,7 +72,13 @@ export async function PUT(
     data,
     include: {
       boutique: { select: { id: true, code: true, name: true } },
-      user: { select: { id: true, empId: true }, include: { employee: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          empId: true,
+          employee: { select: { name: true } },
+        },
+      },
     },
   });
   return NextResponse.json(updated);

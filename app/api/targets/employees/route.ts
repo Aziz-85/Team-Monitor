@@ -38,7 +38,13 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       boutique: { select: { id: true, code: true, name: true } },
-      user: { select: { id: true, empId: true }, include: { employee: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          empId: true,
+          employee: { select: { name: true } },
+        },
+      },
     },
     orderBy: [{ month: 'desc' }, { boutiqueId: 'asc' }, { userId: 'asc' }],
   });
@@ -93,7 +99,13 @@ export async function POST(request: NextRequest) {
     update: { amount, source, notes, updatedAt: new Date() },
     include: {
       boutique: { select: { id: true, code: true, name: true } },
-      user: { select: { id: true, empId: true }, include: { employee: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          empId: true,
+          employee: { select: { name: true } },
+        },
+      },
     },
   });
 
