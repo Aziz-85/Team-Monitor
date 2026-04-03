@@ -1,11 +1,17 @@
-import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth';
-import { AdminTargetsClient } from './AdminTargetsClient';
+import { permanentRedirect } from 'next/navigation';
 
-export default async function AdminTargetsPage() {
-  const user = await getSessionUser();
-  if (!user) redirect('/login');
-  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER' && user.role !== 'AREA_MANAGER') redirect('/');
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  return <AdminTargetsClient />;
+/** Canonical targets admin UI lives at `/targets`. */
+export default async function AdminTargetsPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const boutiqueId = sp.boutiqueId;
+  const q = new URLSearchParams();
+  if (typeof boutiqueId === 'string' && boutiqueId.trim()) {
+    q.set('boutiqueId', boutiqueId.trim());
+  }
+  const suffix = q.toString() ? `?${q.toString()}` : '';
+  permanentRedirect(`/targets${suffix}`);
 }

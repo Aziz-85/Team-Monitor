@@ -15,7 +15,7 @@ const ACCESS_LINKS: LinkItem[] = [
 ];
 
 const DATA_LINKS: LinkItem[] = [
-  { href: '/admin/targets', labelKey: 'companyBackoffice.linkTargets' },
+  { href: '/targets', labelKey: 'companyBackoffice.linkTargets' },
   { href: '/admin/import', labelKey: 'companyBackoffice.linkImports' },
   { href: '/admin/import/issues', labelKey: 'companyBackoffice.linkImportIssues' },
 ];

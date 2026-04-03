@@ -7,9 +7,7 @@ import { useT } from '@/lib/i18n/useT';
 import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBoutiqueSelector';
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
-
-/** Same roles as nav item `/admin/targets` in GROUP_REPORTS. */
-const ADMIN_TARGETS_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
+import { ADMIN_TARGETS_PAGE_ROLES } from '@/lib/targets/adminTargetsPageRoles';
 
 export function Sidebar({
   role,
@@ -33,11 +31,11 @@ export function Sidebar({
       { key: 'DASHBOARD', label: t('nav.dashboard'), href: '/dashboard' },
       { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' },
     ];
-    if (ADMIN_TARGETS_SIDEBAR_ROLES.includes(role)) {
+    if (ADMIN_TARGETS_PAGE_ROLES.includes(role)) {
       items.push({
         key: 'ADMIN_TARGETS',
         label: t('nav.sidebar.adminTargets'),
-        href: '/admin/targets',
+        href: '/targets',
       });
     }
     return items;
