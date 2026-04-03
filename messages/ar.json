@@ -2098,7 +2098,9 @@
     },
     "dailyLedger": {
       "pageTitle": "دفتر المبيعات اليومي",
-      "pageSubtitle": "إجماليات المدير، أسطر الموظفين، القفل عند التوازن، وأدوات اختيارية للسنوية أو التغطية."
+      "pageSubtitle": "إجماليات المدير، أسطر الموظفين، القفل عند التوازن، وأدوات اختيارية للسنوية أو التغطية.",
+      "linkMatrixImport": "استيراد المصفوفة",
+      "jumpToDate": "الانتقال إلى التاريخ"
     },
     "importTool": {
       "pageTitle": "استيراد المبيعات",
@@ -2122,7 +2124,10 @@
       "unmappedEmployees": "موظفون غير مربوطين:",
       "insertedUpdated": "مُدرج: {inserted} · مُحدَّث: {updated} · تخطّي فارغ: {skipped}",
       "sampleCells": "عيّنة خلايا غير فارغة (حتى 12)",
-      "loadingShort": "…"
+      "loadingShort": "…",
+      "templateDownloaded": "تم تنزيل القالب.",
+      "exportDownloaded": "تم تنزيل التصدير.",
+      "templateExportFailed": "تعذّر إكمال التنزيل. تحقق من صيغة الشهر وحاول مرة أخرى."
     },
     "summary": {
       "title": "ملخص المبيعات",

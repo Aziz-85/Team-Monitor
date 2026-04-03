@@ -33,6 +33,14 @@ export const designTokens = {
     fontFamily: 'var(--font-geist-sans), ui-sans-serif, system-ui, "Inter", sans-serif',
     headerWeight: '500',
   },
+  /**
+   * Focus: CSS uses --accent + --background offset (see globals.css :focus-visible).
+   * Components use matching Tailwind: focus-visible:ring-accent ring-offset-background.
+   */
+  focus: {
+    ringColor: 'var(--accent)',
+    ringOffset: 'var(--background)',
+  },
 } as const;
 
 export type DesignTokens = typeof designTokens;

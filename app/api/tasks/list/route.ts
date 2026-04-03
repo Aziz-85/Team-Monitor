@@ -3,6 +3,11 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
+import {
+  getOverdueYmdKeysBefore,
+  getRiyadhTaskListToday,
+  getSaturdayWeekYmdKeysForAnchor,
+} from '@/lib/tasks/taskListDates';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 export type TaskListRow = {
   taskId: string;
@@ -15,44 +20,6 @@ export type TaskListRow = {
   reason: string;
 };
 
-function getKsaToday(): { dateStr: string; date: Date } {
-  const now = new Date();
-  const ksaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-  const year = ksaNow.getFullYear();
-  const month = String(ksaNow.getMonth() + 1).padStart(2, '0');
-  const day = String(ksaNow.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
-  return { dateStr, date: new Date(`${dateStr}T00:00:00Z`) };
-}
-
-function getKsaWeekDates(todayStr: string): string[] {
-  const d = new Date(todayStr + 'T12:00:00Z');
-  const day = d.getUTCDay();
-  const diff = (day - 6 + 7) % 7;
-  const sat = new Date(d);
-  sat.setUTCDate(sat.getUTCDate() - diff);
-  const out: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const x = new Date(sat);
-    x.setUTCDate(sat.getUTCDate() + i);
-    out.push(x.toISOString().slice(0, 10));
-  }
-  return out;
-}
-
-function getOverdueDates(todayStr: string, capDays: number): string[] {
-  const out: string[] = [];
-  const end = new Date(todayStr + 'T00:00:00Z');
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - capDays);
-  const cur = new Date(start);
-  while (cur < end) {
-    out.push(cur.toISOString().slice(0, 10));
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-  return out;
-}
-
 export async function GET(request: NextRequest) {
   const { scope, res } = await requireOperationalScope(request);
   if (res) return res;
@@ -60,7 +27,7 @@ export async function GET(request: NextRequest) {
   const userId = scope.userId;
   const empId = scope.empId;
 
-  const { dateStr } = getKsaToday();
+  const { dateStr } = getRiyadhTaskListToday();
   const isManagerOrAdmin = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
   /** Defaults match /tasks/monitor (this week) and manager view (all assignees). */
   const period = request.nextUrl.searchParams.get('period') ?? 'week';
@@ -74,12 +41,12 @@ export async function GET(request: NextRequest) {
   if (period === 'today') {
     dateStrs = [dateStr];
   } else if (period === 'week') {
-    dateStrs = getKsaWeekDates(dateStr);
+    dateStrs = getSaturdayWeekYmdKeysForAnchor(dateStr);
   } else if (period === 'overdue') {
-    dateStrs = getOverdueDates(dateStr, 60);
+    dateStrs = getOverdueYmdKeysBefore(dateStr, 60);
   } else {
-    const overdue = getOverdueDates(dateStr, 60);
-    const week = getKsaWeekDates(dateStr);
+    const overdue = getOverdueYmdKeysBefore(dateStr, 60);
+    const week = getSaturdayWeekYmdKeysForAnchor(dateStr);
     const set = new Set<string>([...overdue, dateStr, ...week]);
     dateStrs = Array.from(set).sort();
   }

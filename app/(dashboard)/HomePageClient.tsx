@@ -175,12 +175,44 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   const [complianceNextExpiry, setComplianceNextExpiry] = useState<{ name: string; daysRemaining: number } | null>(null);
 
   useEffect(() => {
-    fetch('/api/performance/summary')
+    let cancelled = false;
+    setMyTodayTasksLoading(true);
+    setMyTodayTasksError(null);
+
+    const perfP = fetch('/api/performance/summary')
       .then((r) => r.json())
       .then((d: PerformanceSummary) => {
+        if (cancelled) return;
         if (d?.daily != null) setPerformance(d);
       })
-      .catch(() => setPerformance(null));
+      .catch(() => {
+        if (!cancelled) setPerformance(null);
+      });
+
+    const tasksP = fetch('/api/tasks/my-today')
+      .then((r) => r.json().catch(() => null))
+      .then((json: { tasks?: MyTodayTask[]; error?: string } | null) => {
+        if (cancelled) return;
+        if (!json || !Array.isArray(json.tasks)) {
+          setMyTodayTasks([]);
+          if (json?.error) setMyTodayTasksError(json.error);
+          return;
+        }
+        setMyTodayTasks(json.tasks);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMyTodayTasks([]);
+        setMyTodayTasksError('Failed to load');
+      });
+
+    Promise.all([perfP, tasksP]).finally(() => {
+      if (!cancelled) setMyTodayTasksLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -210,33 +242,6 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         setLoadError('Failed to load');
       });
   }, [date]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setMyTodayTasksLoading(true);
-    setMyTodayTasksError(null);
-    fetch('/api/tasks/my-today')
-      .then((r) => r.json().catch(() => null))
-      .then((json: { tasks?: MyTodayTask[]; error?: string } | null) => {
-        if (cancelled) return;
-        if (!json || !Array.isArray(json.tasks)) {
-          setMyTodayTasks([]);
-          if (json?.error) setMyTodayTasksError(json.error);
-          return;
-        }
-        setMyTodayTasks(json.tasks);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setMyTodayTasks([]);
-        setMyTodayTasksError('Failed to load');
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setMyTodayTasksLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     const ws = weekStartFor(date);

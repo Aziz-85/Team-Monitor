@@ -21,7 +21,7 @@ export function PageHeader({ breadcrumb, title, subtitle, actions }: PageHeaderP
         {breadcrumb != null && (
           <div className="mb-1 text-sm text-muted">{breadcrumb}</div>
         )}
-        <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+        <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {subtitle != null && subtitle !== '' && (
           <p className="mt-1 text-sm text-muted">{subtitle}</p>
         )}

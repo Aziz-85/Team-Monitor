@@ -29,49 +29,47 @@ export async function GET(request: NextRequest) {
 
     const dateParam = request.nextUrl.searchParams.get('date') ?? getRiyadhDateKey();
     const date = new Date(dateParam + 'T00:00:00Z');
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('RIYADH TODAY:', getRiyadhDateKey());
-    }
 
-    const [roster, coverageValidation, suggestionResult] = await Promise.all([
+    const taskBoutiqueWhere =
+      scope.boutiqueIds.length > 1
+        ? { boutiqueId: { in: scope.boutiqueIds } }
+        : scope.boutiqueId
+          ? { boutiqueId: scope.boutiqueId }
+          : {};
+
+    const taskInclude = {
+      taskSchedules: true,
+      taskPlans: {
+        include: {
+          primary: { select: { empId: true, name: true } },
+          backup1: { select: { empId: true, name: true } },
+          backup2: { select: { empId: true, name: true } },
+        },
+      },
+    } as const;
+
+    const [roster, coverageValidation, suggestionResult, tasks] = await Promise.all([
       rosterForDate(date, scopeOptions),
       validateCoverage(date, scopeOptions),
       getCoverageSuggestion(date, scopeOptions),
+      prisma.task.findMany({
+        where: { active: true, ...taskBoutiqueWhere },
+        include: taskInclude,
+      }),
     ]);
-    const tasks = await prisma.task.findMany({
-      where: { active: true },
-      include: {
-        taskSchedules: true,
-        taskPlans: {
-          include: {
-            primary: { select: { empId: true, name: true } },
-            backup1: { select: { empId: true, name: true } },
-            backup2: { select: { empId: true, name: true } },
-          },
-        },
-      },
-    });
 
-    const todayTasks: Array<{
-      taskId: string;
-      taskName: string;
-      assignedTo: string | null;
-      reason: string;
-      reasonNotes: string[];
-    }> = [];
-
-    for (const task of tasks) {
-      if (!tasksRunnableOnDate(task, date)) continue;
-      const a = await assignTaskOnDate(task, date);
-      todayTasks.push({
+    const runnable = tasks.filter((task) => tasksRunnableOnDate(task, date));
+    const assignments = await Promise.all(runnable.map((task) => assignTaskOnDate(task, date)));
+    const todayTasks = runnable.map((task, i) => {
+      const a = assignments[i]!;
+      return {
         taskId: task.id,
         taskName: task.name,
         assignedTo: a.assignedName ?? a.assignedEmpId,
         reason: a.reason,
         reasonNotes: a.reasonNotes,
-      });
-    }
+      };
+    });
 
     return NextResponse.json({
       date: dateParam,

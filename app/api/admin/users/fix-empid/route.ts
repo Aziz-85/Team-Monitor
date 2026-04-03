@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
@@ -89,10 +90,8 @@ export async function POST(request: NextRequest) {
         select: { empId: true },
       });
       if (employeeExists) {
-        await (tx as typeof prisma).$executeRawUnsafe(
-          `UPDATE "Employee" SET "empId" = $1 WHERE "empId" = $2`,
-          newEmpId,
-          oldEmpId
+        await (tx as typeof prisma).$executeRaw(
+          Prisma.sql`UPDATE "Employee" SET "empId" = ${newEmpId} WHERE "empId" = ${oldEmpId}`
         );
         // User.empId is updated automatically via FK ON UPDATE CASCADE
       } else {

@@ -66,7 +66,8 @@ export function requiresApproval(role: Role): boolean {
  * Not every allowed route appears in the nav (hidden admin tools, deep links, legacy aliases).
  * Development checks: `lib/navConsistency.ts` warns if a nav item lists a role that `ROLE_ROUTES` denies.
  *
- * غيّر هنا لتظهر أو تُخفى الصفحات حسب الدور (مع الحفاظ على اتساق nav عند الإضافة).
+ * When adding routes: update both this matrix and `lib/navConfig.ts` so sidebar and deep links stay aligned.
+ * (AR) غيّر هنا لتظهر أو تُخفى الصفحات حسب الدور (مع الحفاظ على اتساق nav عند الإضافة).
  */
 export const ROLE_ROUTES: Record<Role, string[]> = {
   EMPLOYEE: [

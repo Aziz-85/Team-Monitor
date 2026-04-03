@@ -337,12 +337,20 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
           )}
         </div>
         {loadError && !loading && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div
+            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            role="alert"
+            aria-live="assertive"
+          >
             {loadError}
           </div>
         )}
         {actionError && (
-          <div className="mb-4 flex min-w-0 flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="mb-4 flex min-w-0 flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+            aria-live="polite"
+          >
             <span>{actionError}</span>
             <button
               type="button"
@@ -465,7 +473,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
                               onClick={() => setDate(row.date)}
                               className="rounded border border-border bg-surface px-2 py-0.5 text-foreground hover:bg-surface-subtle"
                             >
-                              Jump to date
+                              {t('sales.dailyLedger.jumpToDate')}
                             </button>
                           </td>
                         </tr>
@@ -648,12 +656,20 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
         title={t('sales.dailyLedger.pageTitle')}
         subtitle={t('sales.dailyLedger.pageSubtitle')}
         rightSlot={
-          <Link
-            href="/nav/analytics/sales"
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
-          >
-            {t('common.back')}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/sales/import"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+            >
+              {t('sales.dailyLedger.linkMatrixImport')}
+            </Link>
+            <Link
+              href="/nav/analytics/sales"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+            >
+              {t('common.back')}
+            </Link>
+          </div>
         }
       >
         <div className="mx-auto max-w-5xl">{mainInner}</div>

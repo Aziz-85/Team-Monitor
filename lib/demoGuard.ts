@@ -1,7 +1,11 @@
 /**
- * Demo mode (DEMO_VIEWER): read-only guard for API routes.
+ * Demo mode (DEMO_VIEWER): read-only guard for API route handlers.
  * Call at the start of any mutation handler (POST/PUT/PATCH/DELETE).
  * Allows GET/HEAD/OPTIONS; allows POST /api/auth/logout so demo user can sign out.
+ *
+ * Governance: Middleware also blocks DEMO_VIEWER mutations when a session cookie is present
+ * (see `middleware.ts`). Use this helper in handlers for defense-in-depth and for paths
+ * that bypass that layer.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

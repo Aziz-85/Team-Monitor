@@ -73,9 +73,9 @@ body {
   }
 }
 
-/* Focus rings for accessibility */
+/* Focus rings — brand accent + page background offset (aligns with lib/ui-styles + primitives) */
 *:focus-visible {
-  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
 }
 
 /* Data table: row hover */

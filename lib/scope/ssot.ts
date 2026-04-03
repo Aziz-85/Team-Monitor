@@ -12,6 +12,10 @@
  * When global is allowed:
  * - Only for routes that explicitly pass allowGlobal: true and have UI toggle for "View all boutiques".
  * - Executive compare/employees endpoints support ?global=true for ADMIN.
+ *
+ * Operational vs analytical: Default paths here enforce **operational** boutique context (session / ?b=).
+ * Cross-boutique **analytical** views are opt-in via `global=true` (and matching UI); do not infer
+ * global scope from cookies or hidden client state.
  */
 
 import type { NextRequest } from 'next/server';

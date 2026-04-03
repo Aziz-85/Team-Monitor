@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { cardPadding, surfacePanel } from '@/lib/ui-styles';
 
 export type CardProps = {
   children: ReactNode;
@@ -9,15 +10,7 @@ export type CardProps = {
 
 export function Card({ children, className = '' }: CardProps) {
   return (
-    <div
-      className={`rounded-xl shadow-sm p-4 md:p-5 ${className}`}
-      style={{
-        backgroundColor: 'var(--surface)',
-        borderWidth: '1px',
-        borderColor: 'var(--border)',
-        borderStyle: 'solid',
-      }}
-    >
+    <div className={`${surfacePanel} shadow-sm ${cardPadding} ${className}`.trim()}>
       {children}
     </div>
   );

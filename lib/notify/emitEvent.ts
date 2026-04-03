@@ -6,6 +6,7 @@
 import { createHash } from 'crypto';
 import { prisma } from '@/lib/db';
 import { sendExpoPush, type ExpoPushMessage } from '@/lib/push/expoPush';
+import { getRiyadhWallClockMinutesSinceMidnight } from '@/lib/time';
 
 export type NotifyEventType =
   | 'SCHEDULE_PUBLISHED'
@@ -56,11 +57,9 @@ function buildEventKey(
 
 function isInQuietHours(start: string | null, end: string | null): boolean {
   if (!start || !end) return false;
-  const now = new Date();
-  const ksa = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  const nowMins = ksa.getHours() * 60 + ksa.getMinutes();
+  const nowMins = getRiyadhWallClockMinutesSinceMidnight();
   const startMins = sh * 60 + sm;
   const endMins = eh * 60 + em;
   if (startMins > endMins) {

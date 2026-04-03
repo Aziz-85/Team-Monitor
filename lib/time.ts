@@ -292,3 +292,83 @@ export function getDaysRemainingInMonthIncluding(monthKey: string, dateStr: stri
   if (!Number.isFinite(day) || day < 1 || day > lastDay) return 0;
   return lastDay - day + 1;
 }
+
+/**
+ * Calendar year / month (1–12) / day in Asia/Riyadh. Used for month-length and schedule unlock rules.
+ */
+export function getRiyadhCalendarYmdParts(): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: RIYADH_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+  return { year: get('year'), month: get('month'), day: get('day') };
+}
+
+/** Days in a Gregorian month when `month` is 1–12 (January = 1). */
+export function getCalendarDaysInMonth(year: number, month1To12: number): number {
+  return new Date(year, month1To12, 0).getDate();
+}
+
+/**
+ * Schedule policy: next month becomes visible from the 22nd or the last 7 days of the current month (Riyadh).
+ */
+export function isRiyadhScheduleMonthUnlockWindow(): boolean {
+  const { year, month, day } = getRiyadhCalendarYmdParts();
+  const lastDay = getCalendarDaysInMonth(year, month);
+  const inLast7 = day >= lastDay - 6;
+  return day >= 22 || inLast7;
+}
+
+/** Friday YYYY-MM-DD from a Saturday week-start YYYY-MM-DD (UTC midnight anchor). */
+export function weekEndYmdFromSaturdayWeekStart(weekStartYmd: string): string {
+  const d = new Date(weekStartYmd + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+
+export function nextMonthKeyAfterRiyadhCalendarMonth(year: number, month1To12: number): string {
+  if (month1To12 === 12) return `${year + 1}-01`;
+  return `${year}-${String(month1To12 + 1).padStart(2, '0')}`;
+}
+
+export type ScheduleEmployeeWeekVisibility = { allowed: true } | { allowed: false; reason: string };
+
+/**
+ * Employee schedule grid: may see full current month; next month only during unlock window (see isRiyadhScheduleMonthUnlockWindow).
+ */
+export function getScheduleEmployeeWeekVisibility(weekStartYmd: string): ScheduleEmployeeWeekVisibility {
+  const weekEnd = weekEndYmdFromSaturdayWeekStart(weekStartYmd);
+  const { year, month } = getRiyadhCalendarYmdParts();
+  const currentMonthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+  const firstDayCurrent = `${currentMonthPrefix}-01`;
+  const nextMonthPrefix = nextMonthKeyAfterRiyadhCalendarMonth(year, month);
+
+  if (weekEnd < firstDayCurrent) {
+    return { allowed: false, reason: 'This week is before your allowed view range (current month).' };
+  }
+  const weekDates: string[] = [weekStartYmd];
+  for (let i = 1; i <= 6; i++) {
+    const d = new Date(weekStartYmd + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + i);
+    weekDates.push(d.toISOString().slice(0, 10));
+  }
+  const hasNextMonthDay = weekDates.some((dateStr) => dateStr.startsWith(`${nextMonthPrefix}-`));
+  if (hasNextMonthDay && !isRiyadhScheduleMonthUnlockWindow()) {
+    return {
+      allowed: false,
+      reason: 'Next month schedule is visible only from the 22nd or the last 7 days of the current month.',
+    };
+  }
+  return { allowed: true };
+}
+
+/**
+ * Minutes since midnight in Riyadh. `getRiyadhNow()` stores wall-clock components in UTC fields; use those here.
+ */
+export function getRiyadhWallClockMinutesSinceMidnight(): number {
+  const r = getRiyadhNow();
+  return r.getUTCHours() * 60 + r.getUTCMinutes();
+}

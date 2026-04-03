@@ -34,7 +34,7 @@ export function Select({
       )}
       <select
         id={id}
-        className={`h-10 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-0 disabled:opacity-50 ${className}`}
+        className={`h-10 w-full min-w-0 rounded-md border border-border bg-surface px-3 text-sm text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-0 disabled:opacity-50 ${className}`}
         {...props}
       >
         {options.map(({ value, label: optLabel }) => (

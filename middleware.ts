@@ -75,30 +75,44 @@ export async function middleware(request: NextRequest) {
 
   const session = request.cookies.get('dt_session')?.value;
 
-  if (pathname.startsWith('/api/auth')) {
-    return NextResponse.next();
+  // DEMO_VIEWER write-block + fail-closed role verification when a session cookie is present.
+  // Runs before /api/auth bypass so POST /api/auth/change-password cannot mutate as demo.
+  // No cookie: skip (login/cron/machine routes rely on handlers or other secrets).
+  if (
+    session &&
+    pathname.startsWith('/api/') &&
+    MUTATION_METHODS.includes(request.method?.toUpperCase() ?? 'GET') &&
+    pathname !== DEMO_LOGOUT_PATH
+  ) {
+    try {
+      const base = request.nextUrl.origin;
+      const res = await fetch(`${base}/api/internal/session-role`, {
+        headers: { Cookie: request.headers.get('cookie') ?? '' },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        return NextResponse.json(
+          { error: 'Unable to verify session for write. Try again.' },
+          { status: 503 }
+        );
+      }
+      const data = (await res.json()) as { role?: string | null };
+      if (data.role === 'DEMO_VIEWER') {
+        return NextResponse.json(
+          { error: 'Demo mode: read-only. This action is not allowed.' },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Unable to verify session for write. Try again.' },
+        { status: 503 }
+      );
+    }
   }
 
-  // DEMO_VIEWER global write-block: block all mutations except logout
-  if (pathname.startsWith('/api/') && MUTATION_METHODS.includes(request.method?.toUpperCase() ?? 'GET')) {
-    if (pathname !== DEMO_LOGOUT_PATH) {
-      try {
-        const base = request.nextUrl.origin;
-        const res = await fetch(`${base}/api/internal/session-role`, {
-          headers: { Cookie: request.headers.get('cookie') ?? '' },
-          cache: 'no-store',
-        });
-        const data = (await res.json()) as { role?: string };
-        if (data.role === 'DEMO_VIEWER') {
-          return NextResponse.json(
-            { error: 'Demo mode: read-only. This action is not allowed.' },
-            { status: 403 }
-          );
-        }
-      } catch {
-        // On error, allow through; route handler will enforce auth
-      }
-    }
+  if (pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
   }
 
   if (!FEATURES.EXECUTIVE) {

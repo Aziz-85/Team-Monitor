@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { Button } from '@/components/ui/Button';
+import { FeedbackBanner } from '@/components/ui/FeedbackBanner';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
 import { useT } from '@/lib/i18n/useT';
 
@@ -56,15 +57,21 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
   const [exportMonth, setExportMonth] = useState(() => getCurrentMonthRiyadh());
   const [exportIncludePrevious, setExportIncludePrevious] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [templateBanner, setTemplateBanner] = useState<{ variant: 'error' | 'success'; message: string } | null>(null);
+  const [exportBanner, setExportBanner] = useState<{ variant: 'error' | 'success'; message: string } | null>(null);
 
   const downloadTemplate = async () => {
     if (!/^\d{4}-\d{2}$/.test(templateMonth.trim())) return;
     setTemplateLoading(true);
+    setTemplateBanner(null);
     try {
       const res = await fetch(`/api/sales/import/template?month=${encodeURIComponent(templateMonth.trim())}`, { cache: 'no-store' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(j.error ?? t('sales.summary.failedToLoad'));
+        setTemplateBanner({
+          variant: 'error',
+          message: String((j as { error?: string }).error ?? t('sales.importTool.templateExportFailed')),
+        });
         return;
       }
       const blob = await res.blob();
@@ -74,6 +81,7 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
       a.download = `Matrix_Template_${templateMonth}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
+      setTemplateBanner({ variant: 'success', message: t('sales.importTool.templateDownloaded') });
     } finally {
       setTemplateLoading(false);
     }
@@ -134,6 +142,7 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
   const runExport = async () => {
     if (!/^\d{4}-\d{2}$/.test(exportMonth.trim())) return;
     setExportLoading(true);
+    setExportBanner(null);
     try {
       const params = new URLSearchParams({
         month: exportMonth.trim(),
@@ -142,7 +151,10 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
       const res = await fetch(`/api/sales/import/export?${params}`, { cache: 'no-store' });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(j.error ?? t('sales.summary.failedToLoad'));
+        setExportBanner({
+          variant: 'error',
+          message: String((j as { error?: string }).error ?? t('sales.importTool.templateExportFailed')),
+        });
         return;
       }
       const blob = await res.blob();
@@ -152,6 +164,7 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
       a.download = `Sales_Matrix_Export_${exportMonth}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
+      setExportBanner({ variant: 'success', message: t('sales.importTool.exportDownloaded') });
     } finally {
       setExportLoading(false);
     }
@@ -164,6 +177,14 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
           {t('sales.importTool.templateTitle')}
         </h3>
         <p className="mb-3 text-xs text-muted">{t('sales.importTool.templateHint')}</p>
+        {templateBanner != null && (
+          <FeedbackBanner
+            variant={templateBanner.variant}
+            message={templateBanner.message}
+            className="mb-3"
+            onDismiss={() => setTemplateBanner(null)}
+          />
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="me-1 text-xs text-muted">{t('sales.importTool.monthYm')}</label>
@@ -330,6 +351,14 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
           {t('sales.importTool.exportTitle')}
         </h3>
         <p className="mb-3 text-xs text-muted">{t('sales.importTool.exportHint')}</p>
+        {exportBanner != null && (
+          <FeedbackBanner
+            variant={exportBanner.variant}
+            message={exportBanner.message}
+            className="mb-3"
+            onDismiss={() => setExportBanner(null)}
+          />
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="me-1 text-xs text-muted">{t('sales.importTool.monthYm')}</label>
@@ -373,12 +402,20 @@ export function SalesImportClient({ embedded = false }: SalesImportClientProps) 
         title={t('sales.importTool.pageTitle')}
         subtitle={t('sales.importTool.pageSubtitle')}
         rightSlot={
-          <Link
-            href="/nav/analytics/sales"
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
-          >
-            {t('common.back')}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/sales/daily"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+            >
+              {t('sales.dailyLedger.pageTitle')}
+            </Link>
+            <Link
+              href="/nav/analytics/sales"
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
+            >
+              {t('common.back')}
+            </Link>
+          </div>
         }
       >
         {inner}

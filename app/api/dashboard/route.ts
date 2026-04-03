@@ -199,9 +199,11 @@ export async function GET(request: NextRequest) {
     const completionsToday = await prisma.taskCompletion.findMany({
       where: { userId: user.id, undoneAt: null, completedAt: { gte: new Date(todayStr + 'T00:00:00Z'), lte: new Date(todayStr + 'T23:59:59.999Z') } },
     });
-    for (const task of tasks) {
-      if (!tasksRunnableOnDate(task, now)) continue;
-      const a = await assignTaskOnDate(task, now);
+    const runnableToday = tasks.filter((task) => tasksRunnableOnDate(task, now));
+    const todayAssignments = await Promise.all(runnableToday.map((task) => assignTaskOnDate(task, now)));
+    for (let i = 0; i < runnableToday.length; i++) {
+      const task = runnableToday[i]!;
+      const a = todayAssignments[i]!;
       if (a.assignedEmpId !== empId) continue;
       todayTasks.total++;
       if (completionsToday.some((c) => c.taskId === task.id)) todayTasks.done++;
@@ -358,7 +360,10 @@ export async function GET(request: NextRequest) {
       : [];
 
   const allUsers = await prisma.user.findMany({
-    where: { disabled: false },
+    where: {
+      disabled: false,
+      ...(boutiqueId ? { boutiqueId } : {}),
+    },
     select: { id: true, empId: true },
   });
   const empIdToUserId = new Map(allUsers.map((u) => [u.empId, u.id]));
@@ -369,9 +374,11 @@ export async function GET(request: NextRequest) {
   for (const dateStr of weekDates) {
     const date = new Date(dateStr + 'T00:00:00Z');
     const isPast = dateStr < todayStr;
-    for (const task of tasks) {
-      if (!tasksRunnableOnDate(task, date)) continue;
-      const a = await assignTaskOnDate(task, date);
+    const runnable = tasks.filter((task) => tasksRunnableOnDate(task, date));
+    const dayAssignments = await Promise.all(runnable.map((task) => assignTaskOnDate(task, date)));
+    for (let i = 0; i < runnable.length; i++) {
+      const task = runnable[i]!;
+      const a = dayAssignments[i]!;
       totalWeekly++;
       const assignedUserId = a.assignedEmpId ? empIdToUserId.get(a.assignedEmpId) : null;
       const comp = completionsInWeek.find(

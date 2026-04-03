@@ -7,6 +7,7 @@
  */
 
 import React, { forwardRef, ReactNode } from 'react';
+import { tableWrapper } from '@/lib/ui-styles';
 
 export type DataTableVariant = 'admin' | 'luxury';
 
@@ -32,7 +33,7 @@ export function DataTable({
 }: DataTableProps) {
   const isAdmin = variant === 'admin';
   const wrapperClass = [
-    'rounded-lg border border-border bg-surface shadow-sm',
+    tableWrapper,
     stickyHeader ? 'data-table-sticky' : '',
     zebra ? 'data-table-zebra' : '',
     className,

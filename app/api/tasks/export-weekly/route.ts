@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
+import { getRiyadhNow, getWeekRangeForDate } from '@/lib/time';
 import type { Role } from '@prisma/client';
 
 type TaskRow = {
@@ -13,22 +14,6 @@ type TaskRow = {
   empId: string | null;
   taskId: string;
 };
-
-function getTodayKsa(): Date {
-  const now = new Date();
-  const ksaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-  ksaNow.setHours(0, 0, 0, 0);
-  return ksaNow;
-}
-
-function getWeekStartSaturday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=Sun..6=Sat (local)
-  const diff = (day - 6 + 7) % 7;
-  d.setDate(d.getDate() - diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
 function iterateDates(from: Date, to: Date): Date[] {
   const out: Date[] = [];
@@ -68,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
     weekStartDate = parsed;
   } else {
-    weekStartDate = getWeekStartSaturday(getTodayKsa());
+    weekStartDate = getWeekRangeForDate(getRiyadhNow()).startSat;
   }
 
   const weekEndDate = new Date(weekStartDate);

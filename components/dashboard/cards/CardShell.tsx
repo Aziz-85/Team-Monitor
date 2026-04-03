@@ -21,7 +21,7 @@ type CardShellProps = {
 };
 
 const VARIANT_STYLES: Record<CardShellVariant, string> = {
-  dashboard: 'rounded-lg border border-border bg-surface p-5 shadow-card',
+  dashboard: 'rounded-card border border-border bg-surface p-5 shadow-card',
   luxury: 'rounded-2xl border border-border bg-surface p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/80',
   home: 'rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md',
 };

@@ -2098,7 +2098,9 @@
     },
     "dailyLedger": {
       "pageTitle": "Daily Sales Ledger",
-      "pageSubtitle": "Manager totals, per-employee lines, lock when balanced, and optional yearly or coverage tools."
+      "pageSubtitle": "Manager totals, per-employee lines, lock when balanced, and optional yearly or coverage tools.",
+      "linkMatrixImport": "Matrix import",
+      "jumpToDate": "Jump to date"
     },
     "importTool": {
       "pageTitle": "Sales import",
@@ -2122,7 +2124,10 @@
       "unmappedEmployees": "Unmapped employees:",
       "insertedUpdated": "Inserted: {inserted} · Updated: {updated} · Skipped empty: {skipped}",
       "sampleCells": "Sample non-blank cells (up to 12)",
-      "loadingShort": "…"
+      "loadingShort": "…",
+      "templateDownloaded": "Template downloaded.",
+      "exportDownloaded": "Export downloaded.",
+      "templateExportFailed": "Could not complete download. Check month format and try again."
     },
     "summary": {
       "title": "Sales Summary",

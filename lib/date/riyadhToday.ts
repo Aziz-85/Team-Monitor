@@ -1,21 +1,15 @@
 /**
  * Today's date (YYYY-MM-DD) in Asia/Riyadh. RTL/LTR safe.
- * Use for date filtering and "today" keys to avoid UTC day shift.
+ * Delegates to lib/time (single source of truth).
  */
 
-const RIYADH = 'Asia/Riyadh';
+import { formatDateRiyadh, getRiyadhNow } from '@/lib/time';
 
 /**
  * Returns current date in Asia/Riyadh as YYYY-MM-DD.
  */
 export function getTodayRiyadh(): string {
-  const s = new Date().toLocaleDateString('en-CA', { timeZone: RIYADH });
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const fallback = new Date();
-  const y = fallback.getFullYear();
-  const m = String(fallback.getMonth() + 1).padStart(2, '0');
-  const d = String(fallback.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return formatDateRiyadh(getRiyadhNow());
 }
 
 /**

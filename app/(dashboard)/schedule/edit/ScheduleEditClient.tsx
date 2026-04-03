@@ -313,6 +313,8 @@ export function ScheduleEditClient({
   const [saving, setSaving] = useState(false);
   const [saveProgress, setSaveProgress] = useState({ done: 0, total: 0 });
   const [toast, setToast] = useState<string | null>(null);
+  /** Non-blocking errors from compact admin actions (e.g. comp day / force work) — avoids alert(). */
+  const [inlineErrorBanner, setInlineErrorBanner] = useState<string | null>(null);
   const [leaveConfirm, setLeaveConfirm] = useState<{ href: string } | null>(null);
   const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(new Set());
   const [highlightedCells, setHighlightedCells] = useState<Set<string> | null>(null);
@@ -1903,7 +1905,12 @@ export function ScheduleEditClient({
                                                   body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_WORK', reason: 'Schedule editor' }),
                                                 });
                                                 if (res.ok) fetchGrid();
-                                                else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                                else {
+                                                  const d = await res.json().catch(() => ({}));
+                                                  const msg = (d as { error?: string }).error ?? t('common.failed');
+                                                  setInlineErrorBanner(msg);
+                                                  setTimeout(() => setInlineErrorBanner(null), 6000);
+                                                }
                                               }}
                                             >
                                               {t('schedule.forceWork') ?? 'Force Work'}
@@ -1918,7 +1925,12 @@ export function ScheduleEditClient({
                                                   body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_OFF', reason: 'Schedule editor' }),
                                                 });
                                                 if (res.ok) fetchGrid();
-                                                else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                                else {
+                                                  const d = await res.json().catch(() => ({}));
+                                                  const msg = (d as { error?: string }).error ?? t('common.failed');
+                                                  setInlineErrorBanner(msg);
+                                                  setTimeout(() => setInlineErrorBanner(null), 6000);
+                                                }
                                               }}
                                             >
                                               {t('schedule.forceOff') ?? 'Force Off'}
@@ -1934,7 +1946,12 @@ export function ScheduleEditClient({
                                                     body: JSON.stringify({ employeeId: row.empId, date: cell.date, action: 'USE_COMP_DAY', note: 'Comp day' }),
                                                   });
                                                   if (res.ok) fetchGrid();
-                                                  else { const d = await res.json(); alert(d.error ?? 'Failed'); }
+                                                  else {
+                                                    const d = await res.json().catch(() => ({}));
+                                                    const msg = (d as { error?: string }).error ?? t('common.failed');
+                                                    setInlineErrorBanner(msg);
+                                                    setTimeout(() => setInlineErrorBanner(null), 6000);
+                                                  }
                                                 }}
                                               >
                                                 {t('schedule.useCompDay') ?? 'Use Comp Day'}
@@ -2840,6 +2857,16 @@ export function ScheduleEditClient({
             </div>
           </div>
         </>
+      )}
+
+      {inlineErrorBanner && (
+        <div
+          className="fixed start-1/2 top-20 z-50 max-w-md -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-center text-sm font-medium text-red-900 shadow-md"
+          role="alert"
+          aria-live="assertive"
+        >
+          {inlineErrorBanner}
+        </div>
       )}
 
       {toast && (

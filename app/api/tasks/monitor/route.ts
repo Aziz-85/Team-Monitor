@@ -8,6 +8,11 @@ import { employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { parseWeekPeriodKey, getWeekStartFromPeriodKey } from '@/lib/sync/taskKey';
+import {
+  getMonthYmdKeysForAnchorDay,
+  getRiyadhTaskListToday,
+  getSaturdayWeekYmdKeysForAnchor,
+} from '@/lib/tasks/taskListDates';
 import type { Role } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -55,40 +60,6 @@ export type SuspiciousBurstRow = {
   burstEnd: string;
   tasks: { title: string; completedAt: string }[];
 };
-
-function getKsaToday(): { dateStr: string } {
-  const now = new Date();
-  const ksaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-  const year = ksaNow.getFullYear();
-  const month = String(ksaNow.getMonth() + 1).padStart(2, '0');
-  const day = String(ksaNow.getDate()).padStart(2, '0');
-  return { dateStr: `${year}-${month}-${day}` };
-}
-
-function getKsaWeekDates(todayStr: string): string[] {
-  const d = new Date(todayStr + 'T12:00:00Z');
-  const day = d.getUTCDay();
-  const diff = (day - 6 + 7) % 7;
-  const sat = new Date(d);
-  sat.setUTCDate(sat.getUTCDate() - diff);
-  const out: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const x = new Date(sat);
-    x.setUTCDate(sat.getUTCDate() + i);
-    out.push(x.toISOString().slice(0, 10));
-  }
-  return out;
-}
-
-function getKsaMonthDates(todayStr: string): string[] {
-  const [y, m] = todayStr.split('-').map(Number);
-  const lastDay = new Date(y, m, 0).getDate();
-  const out: string[] = [];
-  for (let d = 1; d <= lastDay; d++) {
-    out.push(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-  }
-  return out;
-}
 
 function getCustomDates(startStr: string, endStr: string): string[] {
   const start = new Date(startStr + 'T00:00:00Z');
@@ -193,7 +164,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No operational boutique available' }, { status: 403 });
   }
 
-  const { dateStr } = getKsaToday();
+  const { dateStr } = getRiyadhTaskListToday();
   const params = request.nextUrl.searchParams;
   const dateRange = params.get('dateRange') ?? 'week';
   const customStart = params.get('start') ?? dateStr;
@@ -218,9 +189,9 @@ export async function GET(request: NextRequest) {
   if (dateRange === 'today') {
     dateStrs = [dateStr];
   } else if (dateRange === 'week') {
-    dateStrs = getKsaWeekDates(dateStr);
+    dateStrs = getSaturdayWeekYmdKeysForAnchor(dateStr);
   } else if (dateRange === 'month') {
-    dateStrs = getKsaMonthDates(dateStr);
+    dateStrs = getMonthYmdKeysForAnchorDay(dateStr);
   } else {
     dateStrs = getCustomDates(customStart, customEnd);
   }
