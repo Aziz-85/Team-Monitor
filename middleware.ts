@@ -192,6 +192,8 @@ export const config = {
     '/sync/:path*',
     '/executive',
     '/executive/:path*',
+    '/performance',
+    '/performance/:path*',
     '/area',
     '/area/:path*',
     '/sales',

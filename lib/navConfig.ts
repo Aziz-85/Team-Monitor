@@ -138,6 +138,7 @@ const GROUP_REPORTS: NavGroup = {
     item('/sales/daily', 'nav.reports.dailyLedger', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/reports/weekly', 'nav.reports.weeklyReport', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/executive/insights', 'nav.reports.insights', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
+    item('/performance', 'nav.reports.performanceHub', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
     item('/executive/compare', 'nav.reports.compareBranches', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
     item('/executive/employees', 'nav.reports.teamPerformance', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
   ],
