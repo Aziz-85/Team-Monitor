@@ -158,7 +158,7 @@ export function AdminBoutiqueDetailClient({ boutiqueId }: { boutiqueId: string }
               </>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/targets?boutiqueId=${boutiqueId}`} className="text-sm text-accent hover:underline">
+              <Link href={`/admin/targets?boutiqueId=${boutiqueId}`} className="text-sm text-accent hover:underline">
                 {t('admin.boutiques.targets')}
               </Link>
               <Link href={`/sales/daily?boutiqueId=${boutiqueId}`} className="text-sm text-accent hover:underline">
