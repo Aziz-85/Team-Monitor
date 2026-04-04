@@ -23,9 +23,20 @@ type ReturnItem = {
   lineNo: string | null;
   netAmount: number;
   originalTxnId: string | null;
+  editable?: boolean;
 };
 
 type EmployeeOption = { empId: string; name: string };
+
+type EditDraft = {
+  id: string;
+  type: 'RETURN' | 'EXCHANGE';
+  txnDate: string;
+  employeeId: string;
+  amount: string;
+  referenceNo: string;
+  originalTxnId: string;
+};
 
 export function SalesReturnsClient() {
   const { t } = useT();
@@ -45,6 +56,10 @@ export function SalesReturnsClient() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     const end = new Date();
@@ -88,6 +103,72 @@ export function SalesReturnsClient() {
       .then((list: EmployeeOption[]) => setEmployees(Array.isArray(list) ? list : []))
       .catch(() => setEmployees([]));
   }, [canAdd]);
+
+  const openEdit = (r: ReturnItem) => {
+    if (!canAdd || r.editable !== true) return;
+    setEditError(null);
+    const type = r.type === 'EXCHANGE' ? 'EXCHANGE' : 'RETURN';
+    setEditDraft({
+      id: r.id,
+      type,
+      txnDate: r.txnDate,
+      employeeId: r.employeeId,
+      amount: (Math.abs(r.netAmount) / 100).toFixed(2),
+      referenceNo: r.referenceNo ?? '',
+      originalTxnId: r.originalTxnId ?? '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditDraft(null);
+    setEditError(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editDraft) return;
+    const amount = parseFloat(editDraft.amount);
+    if (
+      !editDraft.txnDate ||
+      !editDraft.employeeId ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setEditError(t('sales.returns.pleaseFillDateEmployeeAmount'));
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/sales/returns/${encodeURIComponent(editDraft.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: editDraft.type,
+          txnDate: editDraft.txnDate,
+          employeeId: editDraft.employeeId,
+          amountSar: amount,
+          referenceNo: editDraft.referenceNo.trim() || undefined,
+          originalTxnId: editDraft.originalTxnId.trim() || undefined,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg =
+          j.error === 'Only manually entered rows can be edited here'
+            ? t('sales.returns.cannotEditImportedHint')
+            : typeof j.error === 'string'
+              ? j.error
+              : t('sales.returns.failedToUpdate');
+        setEditError(msg);
+        return;
+      }
+      cancelEdit();
+      load();
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,6 +294,111 @@ export function SalesReturnsClient() {
         </section>
       )}
 
+      {editDraft && canAdd && (
+        <section className="rounded-lg border border-accent/40 bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-medium text-foreground">{t('sales.returns.editReturnOrExchange')}</h2>
+          <form onSubmit={handleEditSubmit} className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.type')}</span>
+              <select
+                value={editDraft.type}
+                onChange={(e) =>
+                  setEditDraft((d) =>
+                    d ? { ...d, type: e.target.value as 'RETURN' | 'EXCHANGE' } : d
+                  )
+                }
+                className="rounded border border-border px-2 py-1.5 text-sm"
+              >
+                <option value="RETURN">{t('sales.returns.return')}</option>
+                <option value="EXCHANGE">{t('sales.returns.exchange')}</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.date')}</span>
+              <input
+                type="date"
+                value={editDraft.txnDate}
+                onChange={(e) =>
+                  setEditDraft((d) => (d ? { ...d, txnDate: e.target.value } : d))
+                }
+                className="rounded border border-border px-2 py-1.5 text-sm"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.employee')}</span>
+              <select
+                value={editDraft.employeeId}
+                onChange={(e) =>
+                  setEditDraft((d) => (d ? { ...d, employeeId: e.target.value } : d))
+                }
+                className="min-w-[140px] rounded border border-border px-2 py-1.5 text-sm"
+                required
+              >
+                <option value="">{t('sales.returns.selectPlaceholder')}</option>
+                {employees.map((emp) => (
+                  <option key={emp.empId} value={emp.empId}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.amountSar')}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editDraft.amount}
+                onChange={(e) =>
+                  setEditDraft((d) => (d ? { ...d, amount: e.target.value } : d))
+                }
+                className="w-24 rounded border border-border px-2 py-1.5 text-sm"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.referenceOptional')}</span>
+              <input
+                type="text"
+                value={editDraft.referenceNo}
+                onChange={(e) =>
+                  setEditDraft((d) => (d ? { ...d, referenceNo: e.target.value } : d))
+                }
+                className="w-32 rounded border border-border px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted">{t('sales.returns.originalTxnIdOptional')}</span>
+              <input
+                type="text"
+                value={editDraft.originalTxnId}
+                onChange={(e) =>
+                  setEditDraft((d) => (d ? { ...d, originalTxnId: e.target.value } : d))
+                }
+                className="w-36 rounded border border-border px-2 py-1.5 text-sm"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={editSaving}
+              className="rounded bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent/90 disabled:opacity-50"
+            >
+              {editSaving ? t('sales.returns.saving') : t('sales.returns.save')}
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              disabled={editSaving}
+              className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
+            >
+              {t('sales.returns.cancel')}
+            </button>
+          </form>
+          {editError && <p className="mt-2 text-sm text-red-600">{editError}</p>}
+        </section>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="date"
@@ -236,6 +422,9 @@ export function SalesReturnsClient() {
         </button>
       </div>
       {error && <p className="text-sm text-luxury-error">{error}</p>}
+      {canAdd && items.some((r) => r.editable === false) ? (
+        <p className="text-xs text-muted">{t('sales.returns.cannotEditImportedHint')}</p>
+      ) : null}
       <div className="rounded-lg border border-border bg-surface shadow-sm">
         {items.length === 0 && !loading ? (
           <EmptyState title={t('sales.returns.noReturnsInPeriod')} />
@@ -248,6 +437,9 @@ export function SalesReturnsClient() {
               <DataTableTh className="text-start">{t('sales.returns.referenceCol')}</DataTableTh>
               <DataTableTh className="text-end">{t('sales.returns.netSarCol')}</DataTableTh>
               <DataTableTh className="text-start">{t('sales.returns.originalTxnCol')}</DataTableTh>
+              {canAdd ? (
+                <DataTableTh className="text-end">{t('sales.returns.actionsCol')}</DataTableTh>
+              ) : null}
             </DataTableHead>
             <DataTableBody>
               {items.map((r) => (
@@ -258,6 +450,21 @@ export function SalesReturnsClient() {
                   <DataTableTd>{r.referenceNo ?? '—'}</DataTableTd>
                   <DataTableTd className="text-end">{formatSarFromHalala(r.netAmount)}</DataTableTd>
                   <DataTableTd>{r.originalTxnId ? t('sales.returns.linked') : '—'}</DataTableTd>
+                  {canAdd ? (
+                    <DataTableTd className="text-end">
+                      {r.editable === true ? (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(r)}
+                          className="text-sm font-medium text-accent hover:underline"
+                        >
+                          {t('sales.returns.edit')}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </DataTableTd>
+                  ) : null}
                 </tr>
               ))}
             </DataTableBody>

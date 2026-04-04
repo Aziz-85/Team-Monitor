@@ -1864,7 +1864,7 @@
       "section2Blurb": "Only booked sales (SalesEntry). No “today” headline unless today has a posted entry; otherwise the latest posted day is shown.",
       "section3Title": "3 — Analysis",
       "section4Title": "4 — Reporting",
-      "section4Blurb": "Formal reporting views (reporting allocation vs posted). Weekly required pace columns are operational.",
+      "section4Blurb": "Formal reporting views (reporting allocation vs posted). The daily table can switch to operational pace (carry-forward). Weekly required pace columns are operational.",
       "achievedMtd": "Achieved MTD",
       "remainingMonthlyTarget": "Remaining monthly target",
       "dailyRequiredStayOnTrack": "Daily required to stay on track",
@@ -1900,6 +1900,12 @@
       "weeklyBoutiqueReport": "Weekly boutique report",
       "weeklyEmployeeReport": "Weekly employee report",
       "dailyReportTable": "Daily report table",
+      "dailyTableModeReporting": "Reporting allocation",
+      "dailyTableModeOperational": "Operational pace",
+      "dailyTableOperationalNoteI18n": "Each row is computed in calendar order: effective target = base daily target (same month spread as reporting) plus shortfall carried from the previous day only. Surplus (achieved above effective) does not reduce the next day’s target; remaining can be negative on that day. Editing past posted amounts will change this series from that day forward.",
+      "colBaseDailyTarget": "Base daily target",
+      "colCarryIn": "Carry in",
+      "colEffectiveDailyTarget": "Effective daily target",
       "topSellersHeading": "Top sellers (posted)",
       "topSellersThisWeek": "Top sellers this week",
       "topSellersThisMonth": "Top sellers this month",
@@ -2282,7 +2288,15 @@
       "noReturnsInPeriod": "No returns/exchanges in this period.",
       "pleaseFillDateEmployeeAmount": "Please fill date, employee, and a positive amount.",
       "failedToLoad": "Failed to load",
-      "failedToAdd": "Failed to add"
+      "failedToAdd": "Failed to add",
+      "editReturnOrExchange": "Edit entry",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "failedToUpdate": "Failed to update",
+      "actionsCol": "Actions",
+      "cannotEditImportedHint": "Imported rows cannot be changed here."
     }
   },
   "leadershipImpact": {

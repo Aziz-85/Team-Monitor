@@ -1864,7 +1864,7 @@
       "section2Blurb": "مبيعات مُدخَلة فقط (SalesEntry). لا يُعرض «اليوم» كعنوان إلا إذا وُجد إدخال لليوم؛ وإلا يُعرض آخر يوم بمبيعات مسجّلة.",
       "section3Title": "٣ — التحليل",
       "section4Title": "٤ — التقارير",
-      "section4Blurb": "جداول تقارير رسمية (توزيع تقارير مقابل المُسجّل). أعمدة المطلوب الأسبوعي تشغيلية.",
+      "section4Blurb": "جداول تقارير رسمية (توزيع تقارير مقابل المُسجّل). جدول اليوم يدعم التبديل إلى الوتيرة التشغيلية (ترحيل النقص). أعمدة المطلوب الأسبوعي تشغيلية.",
       "achievedMtd": "المحقق حتى تاريخه",
       "remainingMonthlyTarget": "المتبقي من الهدف الشهري",
       "dailyRequiredStayOnTrack": "المطلوب يومياً للبقاء على المسار",
@@ -1900,6 +1900,12 @@
       "weeklyBoutiqueReport": "تقرير أسبوعي — البوتيك",
       "weeklyEmployeeReport": "تقرير أسبوعي — الموظفون",
       "dailyReportTable": "جدول التقرير اليومي",
+      "dailyTableModeReporting": "توزيع التقارير",
+      "dailyTableModeOperational": "الوتيرة التشغيلية",
+      "dailyTableOperationalNoteI18n": "يُحسب كل صف حسب ترتيب التقويم: الهدف الفعلي = الهدف اليومي الأساسي (نفس توزيع الشهر كالتقارير) زائد النقص المرحّل من اليوم السابق فقط. الفائض (محقق أعلى من الهدف الفعلي) لا يخفّض هدف اليوم التالي؛ قد يظهر المتبقي سالباً في ذلك اليوم. تعديل مبيعات أيام ماضية يغيّر السلسلة من ذلك اليوم فصاعداً.",
+      "colBaseDailyTarget": "الهدف اليومي الأساس",
+      "colCarryIn": "مرحل من اليوم السابق",
+      "colEffectiveDailyTarget": "الهدف اليومي الفعلي",
       "topSellersHeading": "أفضل البائعين (مُسجّل)",
       "topSellersThisWeek": "أفضل البائعين هذا الأسبوع",
       "topSellersThisMonth": "أفضل البائعين هذا الشهر",
@@ -2282,7 +2288,15 @@
       "noReturnsInPeriod": "لا مرتجعات/مبادلات في هذه الفترة.",
       "pleaseFillDateEmployeeAmount": "يرجى تعبئة التاريخ والموظف ومبلغ موجب.",
       "failedToLoad": "فشل التحميل",
-      "failedToAdd": "فشل الإضافة"
+      "failedToAdd": "فشل الإضافة",
+      "editReturnOrExchange": "تعديل السجل",
+      "edit": "تعديل",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "saving": "جاري الحفظ…",
+      "failedToUpdate": "فشل التحديث",
+      "actionsCol": "إجراءات",
+      "cannotEditImportedHint": "السجلات المستوردة لا تُعدّل من هنا."
     }
   },
   "leadershipImpact": {

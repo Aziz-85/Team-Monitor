@@ -99,9 +99,19 @@ function interpolateMessage(template: string, vars: Record<string, string | numb
 type MonthDailyJson = {
   error?: string;
   labelNote?: string;
+  labelNoteOperational?: string;
   rows?: Array<{
     dateKey: string;
     reportingDailyAllocationSar: number;
+    achievedSar: number;
+    remainingSar: number;
+    achievementPct: number;
+  }>;
+  rowsOperational?: Array<{
+    dateKey: string;
+    baseDailyTargetSar: number;
+    carryInSar: number;
+    effectiveDailyTargetSar: number;
     achievedSar: number;
     remainingSar: number;
     achievementPct: number;
@@ -143,6 +153,7 @@ export function TeamMonitorKpiPanel({
   const [weekReport, setWeekReport] = useState<WeekReportJson | null>(null);
   const [dailyReport, setDailyReport] = useState<MonthDailyJson | null>(null);
   const [reportsError, setReportsError] = useState<string | null>(null);
+  const [dailyTableMode, setDailyTableMode] = useState<'reporting' | 'operational'>('reporting');
 
   const monthKey = performance.monthKey ?? '';
   const trajectory = useMemo(() => performance.dailyTrajectory ?? [], [performance.dailyTrajectory]);
@@ -182,6 +193,10 @@ export function TeamMonitorKpiPanel({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- t stable per locale; refetch only when month changes
+  }, [monthKey]);
+
+  useEffect(() => {
+    setDailyTableMode('reporting');
   }, [monthKey]);
 
   const achievedMtd = performance.monthly.sales;
@@ -506,30 +521,89 @@ export function TeamMonitorKpiPanel({
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
             {t('home.teamMonitor.dailyReportTable')}
           </h3>
-          {dailyReport.labelNote ? <p className="mb-2 text-xs text-muted">{dailyReport.labelNote}</p> : null}
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setDailyTableMode('reporting')}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                dailyTableMode === 'reporting'
+                  ? 'border-accent bg-accent/15 text-foreground'
+                  : 'border-border bg-surface text-muted hover:bg-surface-subtle'
+              }`}
+            >
+              {t('home.teamMonitor.dailyTableModeReporting')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDailyTableMode('operational')}
+              disabled={!dailyReport.rowsOperational?.length}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                dailyTableMode === 'operational'
+                  ? 'border-accent bg-accent/15 text-foreground'
+                  : 'border-border bg-surface text-muted hover:bg-surface-subtle'
+              }`}
+            >
+              {t('home.teamMonitor.dailyTableModeOperational')}
+            </button>
+          </div>
+          {dailyTableMode === 'reporting' && dailyReport.labelNote ? (
+            <p className="mb-2 text-xs text-muted">{dailyReport.labelNote}</p>
+          ) : null}
+          {dailyTableMode === 'operational' ? (
+            <p className="mb-2 text-xs text-muted">{t('home.teamMonitor.dailyTableOperationalNoteI18n')}</p>
+          ) : null}
           <div className="max-h-72 overflow-auto rounded-xl border border-border">
-            <table className="w-full min-w-[520px] border-collapse text-start text-sm">
-              <thead className="sticky top-0 bg-surface-subtle">
-                <tr className="border-b border-border">
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colDailyTargetReporting')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dailyReport.rows.map((r) => (
-                  <tr key={r.dateKey} className="border-b border-border">
-                    <td className="p-2 font-mono text-xs">{r.dateKey}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(r.reportingDailyAllocationSar)}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
-                    <td className="p-2 tabular-nums">{r.achievementPct}%</td>
+            {dailyTableMode === 'reporting' ? (
+              <table className="w-full min-w-[520px] border-collapse text-start text-sm">
+                <thead className="sticky top-0 bg-surface-subtle">
+                  <tr className="border-b border-border">
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colDailyTargetReporting')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {dailyReport.rows!.map((r) => (
+                    <tr key={r.dateKey} className="border-b border-border">
+                      <td className="p-2 font-mono text-xs">{r.dateKey}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.reportingDailyAllocationSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
+                      <td className="p-2 tabular-nums">{r.achievementPct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full min-w-[880px] border-collapse text-start text-sm">
+                <thead className="sticky top-0 bg-surface-subtle">
+                  <tr className="border-b border-border">
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colBaseDailyTarget')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colCarryIn')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colEffectiveDailyTarget')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
+                    <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(dailyReport.rowsOperational ?? []).map((r) => (
+                    <tr key={r.dateKey} className="border-b border-border">
+                      <td className="p-2 font-mono text-xs">{r.dateKey}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.baseDailyTargetSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.carryInSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.effectiveDailyTargetSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
+                      <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
+                      <td className="p-2 tabular-nums">{r.achievementPct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

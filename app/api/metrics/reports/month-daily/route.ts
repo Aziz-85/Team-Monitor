@@ -13,6 +13,7 @@ import {
 } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
+import { buildOperationalPaceDailyRows } from '@/lib/reports/operationalPaceDailyTable';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import type { Role } from '@prisma/client';
 
@@ -74,13 +75,23 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const rowsOperational = buildOperationalPaceDailyRows({
+    monthKey,
+    monthTargetSar,
+    daysInMonth,
+    achievedByDateKey: byKey,
+  });
+
   return NextResponse.json({
     kind: 'reporting_daily_month',
     labelNote:
       'Daily target values are reporting allocation (month spread across calendar days), not operational required pace.',
+    labelNoteOperational:
+      'Operational pace: base daily target is the same calendar spread as reporting; prior-day shortfall carries forward to the next day only. Remaining can be negative when the day beats its effective target (surplus).',
     monthKey,
     boutiqueId,
     monthTargetSar,
     rows,
+    rowsOperational,
   });
 }

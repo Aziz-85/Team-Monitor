@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
       boutiqueId: true,
       employeeId: true,
       type: true,
+      source: true,
+      importBatchId: true,
       referenceNo: true,
       lineNo: true,
       netAmount: true,
@@ -74,6 +76,8 @@ export async function GET(request: NextRequest) {
     lineNo: r.lineNo,
     netAmount: r.netAmount,
     originalTxnId: r.originalTxnId,
+    /** Same permission as POST; false when row came from file import. */
+    editable: r.source === 'MANUAL' && r.importBatchId == null,
   }));
 
   return NextResponse.json({

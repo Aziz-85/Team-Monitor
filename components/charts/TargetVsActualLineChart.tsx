@@ -4,7 +4,8 @@
  * Canonical target-vs-actual line chart — use for all target/actual line charts.
  * Used by PerformanceLineChart (Home), ExecutiveLineChart (Executive), SalesSummaryClient.
  * Theme prop controls colors and sizing; 0 stays at bottom; tooltips and labels preserved.
- * Optional `reportingChrome` enables Team Monitor reporting visuals only (no data changes).
+ * Optional `reportingChrome`: calendar-based X (day-of-month vs month length), round SAR Y-axis,
+ * and linear segments (no curve overshoot) for cumulative posted vs reporting target.
  */
 
 import { useState, useCallback, useEffect, useRef, useId, useMemo } from 'react';
@@ -100,6 +101,27 @@ function formatCompactAxisSar(sar: number): string {
   return `${sign}${n} SAR`;
 }
 
+/** Round step for “nice” Y-axis ticks (integer SAR, same domain as SalesEntry / targets). */
+function niceStepForAxis(range: number): number {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const exp = Math.floor(Math.log10(range));
+  const pow = 10 ** exp;
+  const f = range / pow;
+  let nf: number;
+  if (f < 1.5) nf = 1;
+  else if (f < 3) nf = 2;
+  else if (f < 7) nf = 5;
+  else nf = 10;
+  return nf * pow;
+}
+
+/** Ceiling axis max so 5 ticks (0 … max) land on round SAR increments. */
+function reportingAxisMaxSar(rawMax: number): number {
+  if (!Number.isFinite(rawMax) || rawMax <= 0) return 1;
+  const step = niceStepForAxis(rawMax / 4);
+  return Math.max(step, Math.ceil(rawMax / step) * step);
+}
+
 function formatSignedSar(sar: number): string {
   const sign = sar >= 0 ? '+' : '-';
   const core = formatSarInt(Math.abs(sar)).replace(/\s*SAR\s*$/i, '').trim();
@@ -119,32 +141,6 @@ function riyadhTodayDateKey(): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
-}
-
-/** Catmull–Rom uniform → cubic Bézier (visual smoothing only). */
-function catmullRomSvgPath(xs: number[], ys: number[]): string {
-  const n = xs.length;
-  if (n === 0) return '';
-  if (n === 1) return `M ${xs[0]} ${ys[0]}`;
-  const px = (i: number) => xs[Math.max(0, Math.min(n - 1, i))];
-  const py = (i: number) => ys[Math.max(0, Math.min(n - 1, i))];
-  let d = `M ${xs[0]} ${ys[0]}`;
-  for (let i = 0; i < n - 1; i++) {
-    const p0x = px(i - 1);
-    const p0y = py(i - 1);
-    const p1x = px(i);
-    const p1y = py(i);
-    const p2x = px(i + 1);
-    const p2y = py(i + 1);
-    const p3x = px(i + 2);
-    const p3y = py(i + 2);
-    const c1x = p1x + (p2x - p0x) / 6;
-    const c1y = p1y + (p2y - p0y) / 6;
-    const c2x = p2x - (p3x - p1x) / 6;
-    const c2y = p2y - (p3y - p1y) / 6;
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2x} ${p2y}`;
-  }
-  return d;
 }
 
 type Crossover = { svgX: number; svgY: number; dayNum: number; endIndex: number };
@@ -221,17 +217,10 @@ export function TargetVsActualLineChart({
 
   const values = data.map((d) => d.value);
   const targetValues = targetLine ?? [];
-  const maxVal = Math.max(...values, ...targetValues, 1);
+  const rawMax = Math.max(...values, ...targetValues, 1);
+  const chartYMax = reporting ? reportingAxisMaxSar(rawMax) : rawMax;
   const h = height - padding.top - padding.bottom;
-  const xScale = useCallback(
-    (i: number) =>
-      padding.left + (i / Math.max(1, data.length - 1)) * (w - padding.left - padding.right),
-    [padding.left, padding.right, data.length, w]
-  );
-  const yScale = useCallback(
-    (v: number) => padding.top + h - (v / maxVal) * h,
-    [padding.top, h, maxVal]
-  );
+  const innerW = w - padding.left - padding.right;
 
   const dayNumAt = useCallback(
     (i: number) => {
@@ -242,15 +231,41 @@ export function TargetVsActualLineChart({
     [reportingChrome?.dateKeys]
   );
 
+  const xScale = useCallback(
+    (i: number) => {
+      if (reporting && reportingChrome && reportingChrome.dateKeys.length > 0) {
+        const dm = Math.max(2, reportingChrome.daysInMonth);
+        const dom = dayNumAt(i);
+        if (data.length === 1) {
+          return padding.left + innerW / 2;
+        }
+        return padding.left + ((dom - 1) / Math.max(1, dm - 1)) * innerW;
+      }
+      return padding.left + (i / Math.max(1, data.length - 1)) * innerW;
+    },
+    [
+      reporting,
+      reportingChrome,
+      data.length,
+      dayNumAt,
+      padding.left,
+      innerW,
+    ]
+  );
+
+  const yScale = useCallback(
+    (v: number) => padding.top + h - (v / chartYMax) * h,
+    [padding.top, h, chartYMax]
+  );
+
   const crossover = useMemo((): Crossover | null => {
     if (!reporting || !targetLine || targetLine.length !== data.length) return null;
     const actual = data.map((d) => d.value);
     const hInner = height - padding.top - padding.bottom;
-    const xS = (i: number) =>
-      padding.left + (i / Math.max(1, data.length - 1)) * (w - padding.left - padding.right);
-    const yS = (v: number) => padding.top + hInner - (v / maxVal) * hInner;
+    const xS = (i: number) => xScale(i);
+    const yS = (v: number) => padding.top + hInner - (v / chartYMax) * hInner;
     return findCrossoverFromBelow(actual, targetLine, xS, yS, dayNumAt);
-  }, [reporting, targetLine, data, w, height, padding.top, padding.bottom, padding.left, padding.right, maxVal, dayNumAt]);
+  }, [reporting, targetLine, data, xScale, chartYMax, height, padding.top, padding.bottom, dayNumAt]);
 
   const lastRecordedIdx = useMemo(() => {
     if (!reportingChrome?.postedLastRecordedDateKey) return -1;
@@ -266,7 +281,7 @@ export function TargetVsActualLineChart({
     if (reportingChrome.postedLastRecordedDateKey === tk) return null;
     if (tk.slice(0, 7) !== reportingChrome.monthKey) return null;
     const dom = dayOfMonthFromDateKey(tk);
-    const dm = Math.max(1, reportingChrome.daysInMonth);
+    const dm = Math.max(2, reportingChrome.daysInMonth);
     const inner = w - padding.left - padding.right;
     const x = padding.left + ((dom - 1) / Math.max(1, dm - 1)) * inner;
     return Number.isFinite(x) ? x : null;
@@ -324,11 +339,7 @@ export function TargetVsActualLineChart({
     );
   }
 
-  const xs = data.map((_, i) => xScale(i));
-  const ysActual = data.map((d) => yScale(d.value));
-  const salesPath = reporting
-    ? catmullRomSvgPath(xs, ysActual)
-    : data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.value)}`).join(' ');
+  const salesPath = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.value)}`).join(' ');
   const targetPath =
     targetLine && targetLine.length === data.length
       ? targetLine.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(v)}`).join(' ')
@@ -398,7 +409,7 @@ export function TargetVsActualLineChart({
         </defs>
         {Array.from({ length: 5 }).map((_, i) => {
           const y = padding.top + (h * (4 - i)) / 4;
-          const v = Math.round((maxVal * i) / 4);
+          const v = Math.round((chartYMax * i) / 4);
           return (
             <g key={i}>
               <line
