@@ -19,11 +19,6 @@ export default async function NavTeamLeavesPage() {
     <DrilldownLayout
       title={t('team.leaves.title')}
       subtitle={t('team.leaves.hint')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.team.title'), href: '/nav/team' },
-        { label: t('team.leaves.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
     />
   );

@@ -22,10 +22,6 @@ export default async function NavTeamPage() {
     <DrilldownLayout
       title={t('sections.team.title')}
       subtitle={t('sections.team.subtitle')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.team.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(c.titleKey), hint: t(c.hintKey) }))}
     />
   );

@@ -2,14 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useT } from '@/lib/i18n/useT';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
-
-type BreadcrumbItem = {
-  label: string;
-  href?: string;
-};
 
 type NavRouteCardItem = {
   href: string;
@@ -20,54 +13,19 @@ type NavRouteCardItem = {
 export function DrilldownLayout({
   title,
   subtitle,
-  breadcrumbs,
   cards,
   belowCards,
 }: {
   title: string;
   subtitle: string;
-  breadcrumbs: BreadcrumbItem[];
   cards: NavRouteCardItem[];
   /** Optional region below the route grid (e.g. embedded tool on hub pages). */
   belowCards?: ReactNode;
 }) {
-  const router = useRouter();
-  const { t, isRtl } = useT();
-
-  const handleBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    const parentHref = [...breadcrumbs].reverse().find((c) => c.href)?.href;
-    router.push(parentHref ?? '/');
-  };
-
   return (
     <PageContainer className="mx-auto max-w-6xl space-y-8">
-      <SectionBlock
-        title={title}
-        subtitle={subtitle}
-        rightSlot={
-          <button
-            type="button"
-            onClick={handleBack}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
-          >
-            {isRtl ? `${t('common.back')} →` : `← ${t('common.back')}`}
-          </button>
-        }
-      >
-        <nav aria-label={t('nav.breadcrumb.ariaLabel')} className="text-xs text-muted">
-          <ol className="flex flex-wrap items-center gap-2">
-            {breadcrumbs.map((crumb, idx) => (
-              <li key={`${crumb.label}-${idx}`} className="flex items-center gap-2">
-                {crumb.href ? <Link href={crumb.href} className="hover:text-foreground">{crumb.label}</Link> : <span className="text-foreground/80">{crumb.label}</span>}
-                {idx < breadcrumbs.length - 1 ? <span>/</span> : null}
-              </li>
-            ))}
-          </ol>
-        </nav>
+      <SectionBlock title={title} subtitle={subtitle} contentClassName="empty:hidden">
+        {null}
       </SectionBlock>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">

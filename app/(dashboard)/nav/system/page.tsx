@@ -19,10 +19,6 @@ export default async function NavSystemPage() {
     <DrilldownLayout
       title={t('sections.system.title')}
       subtitle={t('sections.system.subtitle')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.system.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(c.titleKey), hint: t(c.hintKey) }))}
     />
   );

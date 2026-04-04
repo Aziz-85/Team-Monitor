@@ -26,11 +26,6 @@ export default async function NavAnalyticsReportsPage() {
     <DrilldownLayout
       title={t('analytics.reports.title')}
       subtitle={t('analytics.reports.hint')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.analytics.title'), href: '/nav/analytics' },
-        { label: t('analytics.reports.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
     />
   );

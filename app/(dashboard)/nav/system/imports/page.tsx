@@ -25,11 +25,6 @@ export default async function NavSystemImportsPage() {
     <DrilldownLayout
       title={t('system.imports.title')}
       subtitle={t('system.imports.hint')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.system.title'), href: '/nav/system' },
-        { label: t('system.imports.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
     />
   );

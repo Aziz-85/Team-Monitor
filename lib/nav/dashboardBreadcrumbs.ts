@@ -105,6 +105,70 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
 
 PATH_TITLE_KEYS.sort((a, b) => b.prefix.length - a.prefix.length);
 
+const NAV_SECTION_KEY: Record<string, string> = {
+  analytics: 'nav.drilldown.sections.analytics.title',
+  system: 'nav.drilldown.sections.system.title',
+  team: 'nav.drilldown.sections.team.title',
+  operations: 'nav.drilldown.sections.operations.title',
+};
+
+/** `/nav/{section}` hub or `/nav/{section}/{leaf}` — labels match drilldown hubs (i18n under nav.drilldown.*). */
+const NAV_LEAF_TITLE_KEY: Record<string, string> = {
+  '/nav/analytics/sales': 'nav.drilldown.analytics.sales.title',
+  '/nav/analytics/reports': 'nav.drilldown.analytics.reports.title',
+  '/nav/system/admin': 'nav.drilldown.system.admin.title',
+  '/nav/system/imports': 'nav.drilldown.system.imports.title',
+  '/nav/team/schedule': 'nav.drilldown.team.schedule.title',
+  '/nav/team/leaves': 'nav.drilldown.team.leaves.title',
+  '/nav/team/employees': 'nav.drilldown.team.employees.title',
+  '/nav/operations/tasks': 'nav.drilldown.operations.tasks.title',
+  '/nav/operations/inventory': 'nav.drilldown.operations.inventory.title',
+};
+
+function parseNavDrilldown(pathname: string): { section: string; leafSegment?: string } | null {
+  if (!pathname.startsWith('/nav')) return null;
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts[0] !== 'nav' || parts.length < 2) return null;
+  const section = parts[1];
+  if (!NAV_SECTION_KEY[section]) return null;
+  if (parts.length === 2) return { section };
+  if (parts.length === 3) return { section, leafSegment: parts[2] };
+  return null;
+}
+
+function buildNavDrilldownTrail(path: string): DashboardBreadcrumbResult | null {
+  const parsed = parseNavDrilldown(path);
+  if (!parsed) return null;
+
+  const crumbs: DashboardCrumb[] = [HOME];
+  const sectionKey = NAV_SECTION_KEY[parsed.section];
+  const sectionHref = `/nav/${parsed.section}`;
+
+  if (!parsed.leafSegment) {
+    crumbs.push({ labelKey: sectionKey });
+  } else {
+    const leafKey = NAV_LEAF_TITLE_KEY[path] ?? 'nav.breadcrumb.fallbackTitle';
+    crumbs.push({ labelKey: sectionKey, href: sectionHref });
+    crumbs.push({ labelKey: leafKey });
+  }
+
+  const deduped: DashboardCrumb[] = [];
+  for (const c of crumbs) {
+    const last = deduped[deduped.length - 1];
+    if (last && last.labelKey === c.labelKey) continue;
+    deduped.push(c);
+  }
+
+  const secondLastWithHref = [...deduped].reverse().find((c) => c.href != null && c.href !== path);
+  const backHref = secondLastWithHref?.href ?? (deduped.length > 1 ? deduped[deduped.length - 2]?.href ?? '/' : '/');
+
+  return {
+    crumbs: deduped,
+    backHref: deduped.length > 1 ? backHref : null,
+    showBack: deduped.length > 1,
+  };
+}
+
 function resolveTitleKey(pathname: string): string {
   let p = pathname.split('?')[0] || '/';
   if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
@@ -195,15 +259,14 @@ export type DashboardBreadcrumbResult = {
   showBack: boolean;
 };
 
-/**
- * @returns null — hide global breadcrumb bar (e.g. drilldown hubs already include their own).
- */
 export function getDashboardBreadcrumbTrail(pathname: string): DashboardBreadcrumbResult | null {
   const path = (pathname.split('?')[0] || '/').replace(/\/+$/, '') || '/';
-  if (path.startsWith('/nav')) return null;
   if (path === '/') {
     return { crumbs: [HOME], backHref: null, showBack: false };
   }
+
+  const navTrail = buildNavDrilldownTrail(path);
+  if (navTrail) return navTrail;
 
   const titleKey = resolveTitleKey(path);
   const section = getSection(path);

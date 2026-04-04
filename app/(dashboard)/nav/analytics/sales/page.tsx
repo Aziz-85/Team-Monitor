@@ -28,11 +28,6 @@ export default async function NavAnalyticsSalesPage() {
     <DrilldownLayout
       title={t('analytics.sales.title')}
       subtitle={t('analytics.sales.hint')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.analytics.title'), href: '/nav/analytics' },
-        { label: t('analytics.sales.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
       belowCards={allowed.has('/sales/daily') ? <AnalyticsSalesLedgerBelow /> : undefined}
     />

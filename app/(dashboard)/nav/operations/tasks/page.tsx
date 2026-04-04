@@ -18,11 +18,6 @@ export default async function NavOperationsTasksPage() {
     <DrilldownLayout
       title={t('operations.tasks.title')}
       subtitle={t('operations.tasks.hint')}
-      breadcrumbs={[
-        { label: t('breadcrumbs.home'), href: '/' },
-        { label: t('sections.operations.title'), href: '/nav/operations' },
-        { label: t('operations.tasks.title') },
-      ]}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
     />
   );
