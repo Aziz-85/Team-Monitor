@@ -152,6 +152,13 @@
       "scheduleAudit": "Audit",
       "overview": "Overview"
     },
+    "breadcrumb": {
+      "ariaLabel": "Breadcrumb",
+      "fallbackTitle": "Page",
+      "executiveNetwork": "Branch network",
+      "inventoryZonesWeekly": "Weekly zone inventory",
+      "plannerExport": "Planner export"
+    },
     "drilldown": {
       "breadcrumbs": {
         "home": "Home"

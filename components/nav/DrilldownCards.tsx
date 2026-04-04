@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useT } from '@/lib/i18n/useT';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
 
 type BreadcrumbItem = {
@@ -31,6 +32,17 @@ export function DrilldownLayout({
   belowCards?: ReactNode;
 }) {
   const router = useRouter();
+  const { t, isRtl } = useT();
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    const parentHref = [...breadcrumbs].reverse().find((c) => c.href)?.href;
+    router.push(parentHref ?? '/');
+  };
+
   return (
     <PageContainer className="mx-auto max-w-6xl space-y-8">
       <SectionBlock
@@ -39,14 +51,14 @@ export function DrilldownLayout({
         rightSlot={
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground/80 hover:bg-surface-subtle"
           >
-            Back
+            {isRtl ? `${t('common.back')} →` : `← ${t('common.back')}`}
           </button>
         }
       >
-        <nav aria-label="Breadcrumb" className="text-xs text-muted">
+        <nav aria-label={t('nav.breadcrumb.ariaLabel')} className="text-xs text-muted">
           <ol className="flex flex-wrap items-center gap-2">
             {breadcrumbs.map((crumb, idx) => (
               <li key={`${crumb.label}-${idx}`} className="flex items-center gap-2">

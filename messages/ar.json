@@ -152,6 +152,13 @@
       "scheduleAudit": "التدقيق",
       "overview": "نظرة سريعة"
     },
+    "breadcrumb": {
+      "ariaLabel": "مسار التنقل",
+      "fallbackTitle": "صفحة",
+      "executiveNetwork": "شبكة الفروع",
+      "inventoryZonesWeekly": "جرد المناطق الأسبوعي",
+      "plannerExport": "تصدير المخطط"
+    },
     "drilldown": {
       "breadcrumbs": {
         "home": "الرئيسية"

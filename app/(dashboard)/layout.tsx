@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
 import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
 import { RouteGuard } from '@/components/RouteGuard';
+import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
 import { getEffectiveAccess } from '@/lib/rbac/effectiveAccess';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
@@ -66,6 +67,7 @@ export default async function DashboardLayout({
           position={user.employee?.position ?? undefined}
         />
         <main className="flex-1 min-w-0">
+          <DashboardBreadcrumbBar />
           <RouteGuard role={navRole}>{children}</RouteGuard>
         </main>
       </div>
