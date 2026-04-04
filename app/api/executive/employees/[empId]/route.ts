@@ -14,7 +14,7 @@ import {
   groupSalesSumByMonthForUserInBoutiquesYear,
 } from '@/lib/sales/readSalesAggregate';
 import { resolveExecutiveBoutiqueIds } from '@/lib/executive/scope';
-import type { Role } from '@prisma/client';
+import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 function variance(arr: number[]): number {
   if (arr.length === 0) return 0;
@@ -29,13 +29,18 @@ export async function GET(
 ) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const gate = await requireExecutiveApiViewer(request, user);
+  if (!gate.ok) return gate.res;
 
   const globalParam = request.nextUrl.searchParams.get('global');
-  const { boutiqueIds } = await resolveExecutiveBoutiqueIds(user.id, role, globalParam, 'EXECUTIVE_EMPLOYEES', request, user);
+  const { boutiqueIds } = await resolveExecutiveBoutiqueIds(
+    user.id,
+    gate.effectiveRole,
+    globalParam,
+    'EXECUTIVE_EMPLOYEES',
+    request,
+    user
+  );
   if (boutiqueIds.length === 0) {
     return NextResponse.json({ error: 'No boutiques in scope' }, { status: 403 });
   }

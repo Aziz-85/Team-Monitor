@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth';
+import { gateExecutivePage } from '@/lib/executive/execAccess';
 import { ExecutiveEmployeeDetailClient } from './ExecutiveEmployeeDetailClient';
 
 export default async function ExecutiveEmployeeDetailPage({
@@ -7,9 +7,8 @@ export default async function ExecutiveEmployeeDetailPage({
 }: {
   params: Promise<{ empId: string }>;
 }) {
-  const user = await getSessionUser();
-  if (!user) redirect('/login');
-  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'AREA_MANAGER') redirect('/dashboard');
+  const gate = await gateExecutivePage();
+  if (!gate.ok) redirect(gate.redirect === 'login' ? '/login' : '/dashboard');
 
   const { empId } = await params;
   return (

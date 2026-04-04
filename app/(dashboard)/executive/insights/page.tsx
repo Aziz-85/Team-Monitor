@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth';
+import { gateExecutivePage } from '@/lib/executive/execAccess';
 import { ExecutiveInsightsClient } from './ExecutiveInsightsClient';
 
 export default async function ExecutiveInsightsPage() {
-  const user = await getSessionUser();
-  if (!user) redirect('/login');
-  if (user.role !== 'MANAGER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && user.role !== 'AREA_MANAGER') redirect('/dashboard');
+  const gate = await gateExecutivePage();
+  if (!gate.ok) redirect(gate.redirect === 'login' ? '/login' : '/dashboard');
 
   return (
     <div className="min-h-screen bg-[#F8F4E8]">

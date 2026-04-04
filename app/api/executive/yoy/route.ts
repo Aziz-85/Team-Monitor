@@ -8,27 +8,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { loadYoYFromExcel } from '@/lib/yoy/loadYoYFromExcel';
-import type { Role } from '@prisma/client';
+import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'AREA_MANAGER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const scope = await getOperationalScope(request);
-  if (!scope?.boutiqueId) {
-    return NextResponse.json({ error: 'No operational boutique available' }, { status: 403 });
-  }
+  const gate = await requireExecutiveApiViewer(request, user);
+  if (!gate.ok) return gate.res;
 
   const boutique = await prisma.boutique.findUnique({
-    where: { id: scope.boutiqueId },
+    where: { id: gate.scope.boutiqueId },
     select: { code: true },
   });
   if (!boutique?.code) {

@@ -10,20 +10,14 @@ import { getRiyadhNow, toRiyadhDateString } from '@/lib/time';
 import { getLastNWeeksRanges } from '@/lib/executive/metrics';
 import { fetchWeekMetrics } from '@/lib/executive/aggregation';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
-import { resolveOperationalBoutiqueOnly } from '@/lib/scope/ssot';
-import type { Role } from '@prisma/client';
+import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'AREA_MANAGER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const scopeResult = await resolveOperationalBoutiqueOnly(request, user);
-  if (!scopeResult.ok) return scopeResult.res;
-  const boutiqueIds = scopeResult.scope.boutiqueIds;
+  const gate = await requireExecutiveApiViewer(request, user);
+  if (!gate.ok) return gate.res;
+  const boutiqueIds = gate.scope.boutiqueIds;
 
   const nParam = request.nextUrl.searchParams.get('n');
   const n = Math.min(12, Math.max(1, parseInt(nParam ?? '4', 10) || 4));

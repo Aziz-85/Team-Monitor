@@ -27,23 +27,15 @@ import { getMonthRange, normalizeMonthKey, getCurrentMonthKeyRiyadh } from '@/li
 import { calculateBoutiqueScore } from '@/lib/executive/score';
 import { calculateRiskScore } from '@/lib/executive/risk';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
-import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { HISTORICAL_LEDGER_RECONCILIATION_POLICY } from '@/lib/sales/reconciliationPolicy';
-import type { Role } from '@prisma/client';
+import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const role = user.role as Role;
-  if (role !== 'MANAGER' && role !== 'ADMIN' && role !== 'SUPER_ADMIN' && role !== 'AREA_MANAGER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const scope = await getOperationalScope(request);
-  if (!scope?.boutiqueId) {
-    return NextResponse.json({ error: 'No operational boutique available' }, { status: 403 });
-  }
-  const operationalBoutiqueId = scope.boutiqueId;
+  const gate = await requireExecutiveApiViewer(request, user);
+  if (!gate.ok) return gate.res;
+  const operationalBoutiqueId = gate.scope.boutiqueId;
   const boutiqueFilter = { boutiqueId: operationalBoutiqueId };
 
   const zoneIdsResult = await prisma.inventoryZone.findMany({

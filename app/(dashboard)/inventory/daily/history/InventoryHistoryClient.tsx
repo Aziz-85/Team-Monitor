@@ -6,11 +6,27 @@ import { OpsCard } from '@/components/ui/OpsCard';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
 import { getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
+import { parseMonthKey } from '@/lib/time';
 
 type Stats = {
   byEmployee: Array<{ empId: string; name: string; completed: number }>;
   totalCompleted: number;
 };
+
+function monthKeyForApi(raw: string): string | null {
+  const p = parseMonthKey(raw.trim());
+  if (!p) return null;
+  return `${p.y}-${String(p.m).padStart(2, '0')}`;
+}
+
+function isStatsPayload(data: unknown): data is Stats {
+  return (
+    !!data &&
+    typeof data === 'object' &&
+    Array.isArray((data as Stats).byEmployee) &&
+    typeof (data as Stats).totalCompleted === 'number'
+  );
+}
 
 export function InventoryHistoryClient() {
   const { t } = useT();
@@ -19,19 +35,30 @@ export function InventoryHistoryClient() {
   const [rebalancing, setRebalancing] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/inventory/daily/stats?month=${month}`, { cache: 'no-store' })
-      .then((r) => r.json())
+    const key = monthKeyForApi(month);
+    if (!key) {
+      setStats(null);
+      return;
+    }
+    fetch(`/api/inventory/daily/stats?month=${encodeURIComponent(key)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const data: unknown = await r.json();
+        if (!r.ok || !isStatsPayload(data)) return null;
+        return data;
+      })
       .then(setStats)
       .catch(() => setStats(null));
   }, [month]);
 
   const handleRebalance = async () => {
+    const key = monthKeyForApi(month);
+    if (!key) return;
     setRebalancing(true);
     try {
       const res = await fetch('/api/inventory/daily/rebalance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month }),
+        body: JSON.stringify({ month: key }),
       });
       if (res.ok) setStats(null);
     } finally {
@@ -51,7 +78,10 @@ export function InventoryHistoryClient() {
             <input
               type="month"
               value={month}
-              onChange={(e) => setMonth(e.target.value)}
+              onChange={(e) => {
+                const key = monthKeyForApi(e.target.value);
+                if (key) setMonth(key);
+              }}
               className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
             />
             <button
@@ -63,7 +93,7 @@ export function InventoryHistoryClient() {
               {rebalancing ? '…' : t('inventory.rebalance')}
             </button>
           </div>
-          {stats && (
+          {stats && Array.isArray(stats.byEmployee) && (
             <>
               <p className="mb-3 text-sm font-semibold text-foreground">
                 {t('inventory.totalCompleted')}: {stats.totalCompleted}
@@ -76,7 +106,7 @@ export function InventoryHistoryClient() {
                   </tr>
                 </LuxuryTableHead>
                 <LuxuryTableBody>
-                  {stats.byEmployee.map((row) => (
+                  {(stats.byEmployee ?? []).map((row) => (
                     <tr key={row.empId}>
                       <LuxuryTd>{row.name}</LuxuryTd>
                       <LuxuryTd>{row.completed}</LuxuryTd>
