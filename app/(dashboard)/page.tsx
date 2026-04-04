@@ -10,5 +10,5 @@ export default async function HomePage() {
 
   const myZone = await getMyActiveZoneAssignmentForCurrentQuarter(user.id);
 
-  return <HomePageClient myZone={myZone} />;
+  return <HomePageClient myZone={myZone} boutiqueName={user.boutique?.name ?? ''} />;
 }

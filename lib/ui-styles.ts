@@ -51,6 +51,19 @@ export const tableHeaderCell = 'px-3 py-2.5 text-xs md:text-sm font-semibold tex
 export const tableCell = 'px-3 py-2.5 text-sm';
 export const tableCellMuted = 'text-muted';
 
+/**
+ * DataTable + aligned raw tables — single source for header/body rhythm (enterprise scan).
+ * Compose: th = dataTableTh + text-start | text; td text + dataTableCellNumeric for money/%/counts.
+ */
+export const dataTableTheadTr =
+  'sticky top-0 z-10 border-b border-border bg-surface-subtle text-start align-middle';
+export const dataTableTh =
+  'whitespace-nowrap border-b border-border px-3 py-2.5 text-xs font-semibold text-muted-foreground align-middle md:text-sm';
+export const dataTableTd =
+  'border-b border-border px-3 py-2.5 text-sm align-middle transition-colors';
+export const dataTableCellNumeric = 'text-end tabular-nums font-medium';
+export const dataTableCellAction = 'text-end align-middle';
+
 /** Schedule Excel blocks */
 export const excelMorningHeader = 'bg-sky-50 text-sky-800 border-slate-200';
 export const excelMorningBody = 'bg-sky-50/40 text-sky-800';

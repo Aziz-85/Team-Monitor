@@ -7,7 +7,7 @@
  */
 
 import React, { forwardRef, ReactNode } from 'react';
-import { tableWrapper } from '@/lib/ui-styles';
+import { dataTableTd, dataTableTh, dataTableTheadTr, tableWrapper } from '@/lib/ui-styles';
 
 export type DataTableVariant = 'admin' | 'luxury';
 
@@ -51,10 +51,8 @@ export function DataTable({
   );
   if (isAdmin) {
     return (
-      <div className={`max-w-full overflow-hidden ${wrapperClass}`}>
-        <div className="overflow-x-auto overflow-y-visible" style={{ overflowX: 'hidden' }}>
-          {tableEl}
-        </div>
+      <div className={`max-w-full ${wrapperClass}`}>
+        <div className="overflow-x-auto">{tableEl}</div>
       </div>
     );
   }
@@ -70,9 +68,7 @@ export function DataTable({
 export function DataTableHead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="sticky top-0 z-10 border-b border-border bg-surface-subtle text-start text-foreground">
-        {children}
-      </tr>
+      <tr className={dataTableTheadTr}>{children}</tr>
     </thead>
   );
 }
@@ -84,7 +80,7 @@ export const DataTableTh = forwardRef<
   return (
     <th
       ref={ref}
-      className={`border-b border-border px-3 py-2.5 text-xs font-semibold text-foreground md:text-sm ${className}`}
+      className={`${dataTableTh} ${className}`}
       {...props}
     >
       {truncate ? (
@@ -111,7 +107,7 @@ export function DataTableTd({
 }: React.TdHTMLAttributes<HTMLTableCellElement> & { truncate?: boolean }) {
   const t = title ?? (typeof children === 'string' ? children : undefined);
   return (
-    <td className={`border-b border-border px-3 py-2.5 text-sm transition-colors ${className}`} {...props}>
+    <td className={`${dataTableTd} ${className}`} {...props}>
       {truncate ? (
         <span className="block min-w-0 truncate" title={t}>
           {children}

@@ -205,11 +205,11 @@ export function AdminBoutiquesClient() {
         <AdminDataTable>
           <AdminTableHead>
             <AdminTh>{t('common.name')}</AdminTh>
-            <AdminTh>Code</AdminTh>
+            <AdminTh className="whitespace-nowrap">Code</AdminTh>
             <AdminTh>{t('admin.boutiques.region')}</AdminTh>
             <AdminTh>{t('adminEmp.active')}</AdminTh>
-            <AdminTh>{t('admin.boutiques.membersCount')}</AdminTh>
-            <AdminTh>{t('common.edit')}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{t('admin.boutiques.membersCount')}</AdminTh>
+            <AdminTh className="text-end">{t('common.edit')}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
             {list.map((b) => (
@@ -219,12 +219,12 @@ export function AdminBoutiquesClient() {
                     {b.name}
                   </Link>
                 </AdminTd>
-                <AdminTd>{b.code}</AdminTd>
+                <AdminTd className="whitespace-nowrap tabular-nums">{b.code}</AdminTd>
                 <AdminTd>{b.region ? `${b.region.name}` : '—'}</AdminTd>
                 <AdminTd>{b.isActive ? t('adminEmp.active') : t('adminEmp.inactive')}</AdminTd>
-                <AdminTd>{b.membersCount}</AdminTd>
-                <AdminTd>
-                  <div className="flex flex-wrap gap-1">
+                <AdminTd className="text-end tabular-nums">{b.membersCount}</AdminTd>
+                <AdminTd className="text-end align-middle">
+                  <div className="flex flex-wrap justify-end gap-1">
                     <button
                       type="button"
                       onClick={() => { setEditing(b); setModal('edit'); }}

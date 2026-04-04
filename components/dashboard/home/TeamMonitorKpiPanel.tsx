@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
+import { dataTableCellNumeric, dataTableTd, dataTableTh, dataTableTheadTr } from '@/lib/ui-styles';
 import { ChartCard } from '@/components/ui/ChartCard';
 import { PerformanceLineChart } from '@/components/dashboard/PerformanceLineChart';
 import { LuxuryTopSellerCard } from '@/components/dashboard/LuxuryTopSellerCard';
@@ -460,21 +461,31 @@ export function TeamMonitorKpiPanel({
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[640px] border-collapse text-start text-sm">
               <thead>
-                <tr className="border-b border-border bg-surface-subtle">
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedWeek')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsReporting')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsPace')}</th>
+                <tr className={dataTableTheadTr}>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colAchievedWeek')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPctVsReporting')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPctVsPace')}</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr className="border-b border-border">
-                  <td className="p-2 font-semibold tabular-nums">{formatSarInt(weekReport.boutique.weekAchievedSar)}</td>
-                  <td className="p-2 tabular-nums">{formatSarInt(weekReport.boutique.reportingWeeklyAllocationSar)}</td>
-                  <td className="p-2 tabular-nums">{formatSarInt(weekReport.boutique.paceWeeklyRequiredSar)}</td>
-                  <td className="p-2 tabular-nums">{weekReport.boutique.reportingWeeklyAchievementPct}%</td>
-                  <td className="p-2 tabular-nums">{weekReport.boutique.paceWeeklyAchievementPct}%</td>
+              <tbody className="data-table-tbody">
+                <tr className="border-b border-border odd:bg-muted/30">
+                  <td className={`${dataTableTd} ${dataTableCellNumeric} font-semibold`}>
+                    {formatSarInt(weekReport.boutique.weekAchievedSar)}
+                  </td>
+                  <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                    {formatSarInt(weekReport.boutique.reportingWeeklyAllocationSar)}
+                  </td>
+                  <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                    {formatSarInt(weekReport.boutique.paceWeeklyRequiredSar)}
+                  </td>
+                  <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                    {weekReport.boutique.reportingWeeklyAchievementPct}%
+                  </td>
+                  <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                    {weekReport.boutique.paceWeeklyAchievementPct}%
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -490,24 +501,30 @@ export function TeamMonitorKpiPanel({
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[720px] border-collapse text-start text-sm">
               <thead>
-                <tr className="border-b border-border bg-surface-subtle">
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colEmployee')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedWeek')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsReporting')}</th>
-                  <th className="p-2 font-medium">{t('home.teamMonitor.colPctVsPace')}</th>
+                <tr className={dataTableTheadTr}>
+                  <th className={`${dataTableTh} text-start`}>{t('home.teamMonitor.colEmployee')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colAchievedWeek')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colWeeklyTargetReporting')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colWeeklyRequiredPace')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPctVsReporting')}</th>
+                  <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPctVsPace')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="data-table-tbody">
                 {weekReport.employees.map((e) => (
-                  <tr key={e.empId} className="border-b border-border">
-                    <td className="p-2">{e.name}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(e.weekAchievedSar)}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(e.reportingWeeklyAllocationSar)}</td>
-                    <td className="p-2 tabular-nums">{formatSarInt(e.paceWeeklyRequiredSar)}</td>
-                    <td className="p-2 tabular-nums">{e.reportingWeeklyAchievementPct}%</td>
-                    <td className="p-2 tabular-nums">{e.paceWeeklyAchievementPct}%</td>
+                  <tr key={e.empId} className="border-b border-border odd:bg-muted/30">
+                    <td className={`${dataTableTd} max-w-[220px] truncate text-start font-medium`} title={e.name}>
+                      {e.name}
+                    </td>
+                    <td className={`${dataTableTd} ${dataTableCellNumeric}`}>{formatSarInt(e.weekAchievedSar)}</td>
+                    <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                      {formatSarInt(e.reportingWeeklyAllocationSar)}
+                    </td>
+                    <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                      {formatSarInt(e.paceWeeklyRequiredSar)}
+                    </td>
+                    <td className={`${dataTableTd} ${dataTableCellNumeric}`}>{e.reportingWeeklyAchievementPct}%</td>
+                    <td className={`${dataTableTd} ${dataTableCellNumeric}`}>{e.paceWeeklyAchievementPct}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -527,7 +544,7 @@ export function TeamMonitorKpiPanel({
               onClick={() => setDailyTableMode('reporting')}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 dailyTableMode === 'reporting'
-                  ? 'border-accent bg-accent/15 text-foreground'
+                  ? 'border-accent bg-accent/15 text-foreground ring-2 ring-accent/30'
                   : 'border-border bg-surface text-muted hover:bg-surface-subtle'
               }`}
             >
@@ -539,71 +556,127 @@ export function TeamMonitorKpiPanel({
               disabled={!dailyReport.rowsOperational?.length}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 dailyTableMode === 'operational'
-                  ? 'border-accent bg-accent/15 text-foreground'
+                  ? 'border-accent bg-accent/15 text-foreground ring-2 ring-accent/30'
                   : 'border-border bg-surface text-muted hover:bg-surface-subtle'
               }`}
             >
               {t('home.teamMonitor.dailyTableModeOperational')}
             </button>
           </div>
+          <div className="mt-4">
           {dailyTableMode === 'reporting' && dailyReport.labelNote ? (
-            <p className="mb-2 text-xs text-muted">{dailyReport.labelNote}</p>
+            <p className="mb-4 text-xs leading-relaxed text-muted-foreground">{dailyReport.labelNote}</p>
           ) : null}
           {dailyTableMode === 'operational' ? (
-            <p className="mb-2 text-xs text-muted">{t('home.teamMonitor.dailyTableOperationalNoteI18n')}</p>
+            <p className="mb-6 text-xs leading-relaxed text-muted-foreground">
+              {t('home.teamMonitor.dailyTableOperationalNoteI18n')}
+            </p>
           ) : null}
-          <div className="max-h-72 overflow-auto rounded-xl border border-border">
-            {dailyTableMode === 'reporting' ? (
-              <table className="w-full min-w-[520px] border-collapse text-start text-sm">
-                <thead className="sticky top-0 bg-surface-subtle">
-                  <tr className="border-b border-border">
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colDailyTargetReporting')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dailyReport.rows!.map((r) => (
-                    <tr key={r.dateKey} className="border-b border-border">
-                      <td className="p-2 font-mono text-xs">{r.dateKey}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.reportingDailyAllocationSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
-                      <td className="p-2 tabular-nums">{r.achievementPct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full min-w-[880px] border-collapse text-start text-sm">
-                <thead className="sticky top-0 bg-surface-subtle">
-                  <tr className="border-b border-border">
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colDate')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colBaseDailyTarget')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colCarryIn')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colEffectiveDailyTarget')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colAchievedDay')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colRemaining')}</th>
-                    <th className="p-2 font-medium">{t('home.teamMonitor.colPct')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(dailyReport.rowsOperational ?? []).map((r) => (
-                    <tr key={r.dateKey} className="border-b border-border">
-                      <td className="p-2 font-mono text-xs">{r.dateKey}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.baseDailyTargetSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.carryInSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.effectiveDailyTargetSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.achievedSar)}</td>
-                      <td className="p-2 tabular-nums">{formatSarInt(r.remainingSar)}</td>
-                      <td className="p-2 tabular-nums">{r.achievementPct}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          <div className="rounded-xl border border-border">
+            <div className="overflow-x-auto">
+              <div className="max-h-72 overflow-y-auto">
+                {dailyTableMode === 'reporting' ? (
+                  <table className="w-full min-w-[520px] border-collapse text-start text-sm">
+                    <thead className="sticky top-0 z-[1] border-b border-border bg-surface-subtle">
+                      <tr className="align-middle">
+                        <th className={`${dataTableTh} text-start`}>{t('home.teamMonitor.colDate')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colDailyTargetReporting')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colAchievedDay')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colRemaining')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPct')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="data-table-tbody">
+                      {dailyReport.rows!.map((r) => (
+                        <tr key={r.dateKey} className="border-b border-border odd:bg-muted/30">
+                          <td className={`${dataTableTd} whitespace-nowrap font-mono text-xs tabular-nums`}>
+                            {r.dateKey}
+                          </td>
+                          <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                            {formatSarInt(r.reportingDailyAllocationSar)}
+                          </td>
+                          <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                            {formatSarInt(r.achievedSar)}
+                          </td>
+                          <td className={`${dataTableTd} ${dataTableCellNumeric}`}>
+                            {formatSarInt(r.remainingSar)}
+                          </td>
+                          <td className={`${dataTableTd} ${dataTableCellNumeric}`}>{r.achievementPct}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full min-w-[1000px] table-fixed border-collapse text-start text-sm">
+                    <colgroup>
+                      <col className="w-[130px]" />
+                      <col className="w-[150px]" />
+                      <col className="w-[140px]" />
+                      <col className="w-[170px]" />
+                      <col className="w-[160px]" />
+                      <col className="w-[160px]" />
+                      <col className="w-[90px]" />
+                    </colgroup>
+                    <thead className="sticky top-0 z-[1] bg-surface-subtle">
+                      <tr className="border-b border-border align-middle">
+                        <th className={`${dataTableTh} text-start`}>{t('home.teamMonitor.colDate')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colBaseDailyTarget')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colCarryIn')}</th>
+                        <th className={`${dataTableTh} bg-muted/25 text-end text-foreground`}>
+                          {t('home.teamMonitor.colEffectiveDailyTarget')}
+                        </th>
+                        <th className={`${dataTableTh} border-l border-border/60 ps-4 text-end`}>
+                          {t('home.teamMonitor.colAchievedOpShort')}
+                        </th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colRemainingOpShort')}</th>
+                        <th className={`${dataTableTh} text-end`}>{t('home.teamMonitor.colPct')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dailyReport.rowsOperational ?? []).map((r) => {
+                        const surplus = r.remainingSar < 0;
+                        const largeShortfall =
+                          r.remainingSar > 0 && r.effectiveDailyTargetSar > 0 && r.achievementPct < 40;
+                        const remainingCls = surplus
+                          ? 'text-emerald-600 dark:text-emerald-500'
+                          : largeShortfall
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-foreground';
+                        return (
+                          <tr
+                            key={r.dateKey}
+                            className="border-b border-border odd:bg-muted/30 hover:bg-muted/50"
+                          >
+                            <td className="whitespace-nowrap px-3 py-2.5 align-middle font-mono text-xs tabular-nums text-foreground">
+                              {r.dateKey}
+                            </td>
+                            <td className="px-3 py-2.5 align-middle text-end font-medium tabular-nums text-foreground">
+                              {formatSarInt(r.baseDailyTargetSar)}
+                            </td>
+                            <td className="px-3 py-2.5 align-middle text-end font-medium tabular-nums text-foreground">
+                              {formatSarInt(r.carryInSar)}
+                            </td>
+                            <td className="bg-muted/20 px-3 py-2.5 align-middle text-end text-sm font-semibold tabular-nums text-foreground">
+                              {formatSarInt(r.effectiveDailyTargetSar)}
+                            </td>
+                            <td className="border-l border-border/60 px-3 py-2.5 ps-4 align-middle text-end font-medium tabular-nums text-foreground">
+                              {formatSarInt(r.achievedSar)}
+                            </td>
+                            <td className={`px-3 py-2.5 align-middle text-end font-medium tabular-nums ${remainingCls}`}>
+                              {formatSarInt(r.remainingSar)}
+                            </td>
+                            <td className="px-3 py-2.5 align-middle text-end font-medium tabular-nums text-foreground">
+                              {r.achievementPct}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       )}

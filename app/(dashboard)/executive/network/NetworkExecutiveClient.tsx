@@ -482,11 +482,20 @@ export function NetworkExecutiveClient() {
         ]}
       >
         {BOUTIQUES.map((r) => (
-          <tr key={r.boutique} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
-            <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">Boutique {r.boutique}</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.netSales.toLocaleString()} SAR</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.achPct}%</td>
-            <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{r.gap >= 0 ? '+' : ''}{r.gap.toLocaleString()} SAR</td>
+          <tr key={r.boutique} className="border-b border-border odd:bg-muted/30 last:border-b-0">
+            <td className="max-w-0 px-3 py-2.5 align-middle truncate font-medium text-foreground">
+              Boutique {r.boutique}
+            </td>
+            <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+              {r.netSales.toLocaleString()} SAR
+            </td>
+            <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+              {r.achPct}%
+            </td>
+            <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+              {r.gap >= 0 ? '+' : ''}
+              {r.gap.toLocaleString()} SAR
+            </td>
           </tr>
         ))}
       </ExecSimpleTable>
@@ -1028,13 +1037,19 @@ export function NetworkExecutiveClient() {
               ]}
             >
               {staff.map((s) => (
-                <tr key={s.employee} className="border-b border-border last:border-b-0 hover:bg-surface-subtle">
-                  <td className="max-w-0 py-3 px-3 truncate font-medium text-foreground">{s.employee}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.netSales.toLocaleString()} SAR</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.txnCount.toLocaleString()}</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end tabular-nums text-foreground">{s.avgTicket} SAR</td>
-                  <td className="max-w-0 py-3 px-3 truncate text-end">
-                    <span className="tabular-nums text-foreground">{s.contributionPct.toFixed(1)}%</span>
+                <tr key={s.employee} className="border-b border-border odd:bg-muted/30 last:border-b-0">
+                  <td className="max-w-0 px-3 py-2.5 align-middle truncate font-medium text-foreground">{s.employee}</td>
+                  <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+                    {s.netSales.toLocaleString()} SAR
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+                    {s.txnCount.toLocaleString()}
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end font-medium tabular-nums text-foreground">
+                    {s.avgTicket} SAR
+                  </td>
+                  <td className="max-w-0 px-3 py-2.5 align-middle truncate text-end">
+                    <span className="font-medium tabular-nums text-foreground">{s.contributionPct.toFixed(1)}%</span>
                     {s.status !== 'ok' && <span className="ms-1 inline-block"><ExecBadge status={s.status} /></span>}
                   </td>
                 </tr>

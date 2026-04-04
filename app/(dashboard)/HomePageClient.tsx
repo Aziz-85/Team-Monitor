@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
@@ -35,6 +35,7 @@ import {
   paceSignal,
 } from '@/lib/presentation/executiveIntelligence';
 import { useQuickActions } from '@/lib/nav/useQuickActions';
+import { Button } from '@/components/ui/Button';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -145,9 +146,10 @@ type PerformanceSummary = {
 
 type HomePageClientProps = {
   myZone?: { zone: string } | null;
+  boutiqueName?: string;
 };
 
-export function HomePageClient({ myZone }: HomePageClientProps) {
+export function HomePageClient({ myZone, boutiqueName = '' }: HomePageClientProps) {
   const { t } = useT();
   const { actions: quickActions, track: trackQuickAction } = useQuickActions(5);
   const [data, setData] = useState<HomeData | null>(null);
@@ -173,6 +175,14 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
     status: 'expired' | 'urgent' | 'warning';
   }>>([]);
   const [complianceNextExpiry, setComplianceNextExpiry] = useState<{ name: string; daysRemaining: number } | null>(null);
+  const [copyDailySummaryFeedback, setCopyDailySummaryFeedback] = useState<'idle' | 'copied' | 'error'>('idle');
+  const copyDailySummaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyDailySummaryTimerRef.current) clearTimeout(copyDailySummaryTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -439,6 +449,36 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
   }
   const todayTasks = data.todayTasks ?? [];
 
+  const handleCopyDailySummary = async () => {
+    if (!performance) return;
+    const branchLine = boutiqueName.trim();
+    const dateLine = getRiyadhDateKey();
+    const text = `${branchLine}
+${dateLine}
+
+Today Sales: ${formatSarInt(performance.daily.sales)}
+Daily Target: ${formatSarInt(performance.daily.target)}
+Achievement: ${performance.daily.percent}%`;
+    if (copyDailySummaryTimerRef.current) {
+      clearTimeout(copyDailySummaryTimerRef.current);
+      copyDailySummaryTimerRef.current = null;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyDailySummaryFeedback('copied');
+      copyDailySummaryTimerRef.current = setTimeout(() => {
+        setCopyDailySummaryFeedback('idle');
+        copyDailySummaryTimerRef.current = null;
+      }, 2000);
+    } catch {
+      setCopyDailySummaryFeedback('error');
+      copyDailySummaryTimerRef.current = setTimeout(() => {
+        setCopyDailySummaryFeedback('idle');
+        copyDailySummaryTimerRef.current = null;
+      }, 2500);
+    }
+  };
+
   const applySuggestion = async () => {
     if (!coverageSuggestion || applyingSuggestion) return;
     setApplyingSuggestion(true);
@@ -619,7 +659,28 @@ export function HomePageClient({ myZone }: HomePageClientProps) {
         )}
       </SectionBlock>
 
-      <SectionBlock title={t('home.executiveOperationalTitle')} subtitle={t('home.executiveOperationalSubtitle')}>
+      <SectionBlock
+        title={t('home.executiveOperationalTitle')}
+        subtitle={t('home.executiveOperationalSubtitle')}
+        rightSlot={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!performance}
+              className="h-8 px-3 text-xs"
+              onClick={handleCopyDailySummary}
+            >
+              Copy Daily Summary
+            </Button>
+            {copyDailySummaryFeedback === 'copied' ? (
+              <span className="text-xs text-muted-foreground">Copied</span>
+            ) : copyDailySummaryFeedback === 'error' ? (
+              <span className="text-xs text-destructive">Failed to copy</span>
+            ) : null}
+          </div>
+        }
+      >
         <div className="space-y-6">
           {performance && (
             <TeamMonitorKpiPanel

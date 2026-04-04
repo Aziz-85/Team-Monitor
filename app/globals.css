@@ -78,7 +78,12 @@ body {
   @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
 }
 
-/* Data table: row hover */
+/* Data table: row hover + cell alignment */
+.data-table-tbody td,
+.data-table-tbody th {
+  vertical-align: middle;
+}
+
 .data-table-tbody tr:hover {
   background-color: rgb(245 244 243 / 0.7);
 }

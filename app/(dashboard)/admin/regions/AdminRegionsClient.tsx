@@ -84,19 +84,19 @@ export function AdminRegionsClient() {
         <AdminDataTable>
           <AdminTableHead>
             <AdminTh>{t('common.name')}</AdminTh>
-            <AdminTh>Code</AdminTh>
+            <AdminTh className="whitespace-nowrap">Code</AdminTh>
             <AdminTh>{t('admin.regions.organization')}</AdminTh>
-            <AdminTh>{t('admin.boutiques.membersCount')}</AdminTh>
-            <AdminTh>{t('common.edit')}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{t('admin.boutiques.membersCount')}</AdminTh>
+            <AdminTh className="text-end">{t('common.edit')}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
             {list.map((r) => (
               <tr key={r.id}>
                 <AdminTd>{r.name}</AdminTd>
-                <AdminTd>{r.code}</AdminTd>
+                <AdminTd className="whitespace-nowrap tabular-nums">{r.code}</AdminTd>
                 <AdminTd>{r.organization?.name ?? '—'}</AdminTd>
-                <AdminTd>{r.boutiquesCount}</AdminTd>
-                <AdminTd>
+                <AdminTd className="text-end tabular-nums">{r.boutiquesCount}</AdminTd>
+                <AdminTd className="text-end align-middle">
                   <button
                     type="button"
                     onClick={() => { setEditing(r); setModal('edit'); }}

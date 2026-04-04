@@ -39,10 +39,10 @@ export function ProductivityTable({ title, subtitle, rows, labels, loading }: Pr
         <AdminDataTable>
           <AdminTableHead>
             <AdminTh className="min-w-0">{labels.employee}</AdminTh>
-            <AdminTh className="tabular-nums">{labels.totalMtd}</AdminTh>
-            <AdminTh className="tabular-nums">{labels.activeDays}</AdminTh>
-            <AdminTh className="tabular-nums">{labels.avgDaily}</AdminTh>
-            <AdminTh className="tabular-nums">{labels.contribution}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{labels.totalMtd}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{labels.activeDays}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{labels.avgDaily}</AdminTh>
+            <AdminTh className="text-end tabular-nums">{labels.contribution}</AdminTh>
           </AdminTableHead>
           <AdminTableBody>
             {rows.map((r) => (
@@ -50,10 +50,10 @@ export function ProductivityTable({ title, subtitle, rows, labels, loading }: Pr
                 <AdminTd className="min-w-0 truncate font-medium" title={r.name}>
                   {r.name}
                 </AdminTd>
-                <AdminTd className="tabular-nums">{formatSarInt(r.totalSalesMTD)}</AdminTd>
-                <AdminTd className="tabular-nums">{r.activeDays}</AdminTd>
-                <AdminTd className="tabular-nums">{formatSarInt(r.avgDailySales)}</AdminTd>
-                <AdminTd className="tabular-nums">{r.contributionPct}%</AdminTd>
+                <AdminTd className="text-end tabular-nums">{formatSarInt(r.totalSalesMTD)}</AdminTd>
+                <AdminTd className="text-end tabular-nums">{r.activeDays}</AdminTd>
+                <AdminTd className="text-end tabular-nums">{formatSarInt(r.avgDailySales)}</AdminTd>
+                <AdminTd className="text-end tabular-nums">{r.contributionPct}%</AdminTd>
               </tr>
             ))}
           </AdminTableBody>
