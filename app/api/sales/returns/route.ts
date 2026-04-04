@@ -4,6 +4,7 @@
  * Response: { items, from, to, canAdd } (canAdd = true if user can POST manual return/exchange).
  *
  * POST /api/sales/returns — Add manual RETURN or EXCHANGE. Body: type, txnDate, employeeId, amountSar, referenceNo?, originalTxnId?.
+ * Both types store netAmount = -amount (gross positive) so net sales and this page reflect the entered SAR.
  * RBAC: MANAGER, ASSISTANT_MANAGER (active boutique), ADMIN, SUPER_ADMIN.
  */
 
@@ -191,15 +192,9 @@ export async function POST(request: NextRequest) {
   const referenceNo = (body.referenceNo ?? '').trim() || null;
   const originalTxnId = (body.originalTxnId ?? '').trim() || null;
 
-  let grossAmount: number;
-  let netAmount: number;
-  if (type === 'RETURN') {
-    grossAmount = halalas;
-    netAmount = -halalas;
-  } else {
-    grossAmount = halalas;
-    netAmount = 0;
-  }
+  /** Same signed net impact for RETURN and EXCHANGE: amount reduces net sales (halalas). */
+  const grossAmount = halalas;
+  const netAmount = -halalas;
 
   const coverage = await coverageForTxn({
     boutiqueId,

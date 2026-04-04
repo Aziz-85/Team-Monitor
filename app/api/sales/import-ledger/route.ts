@@ -221,8 +221,7 @@ export async function POST(request: NextRequest) {
     const type = inferType(row, amountSar);
     const grossAmount = type === 'SALE' ? halalas : Math.abs(halalas);
     let netAmount = halalas;
-    if (type === 'RETURN') netAmount = -Math.abs(halalas);
-    else if (type === 'EXCHANGE') netAmount = 0; // or diff; spec says "EXCHANGE diff or 0"
+    if (type === 'RETURN' || type === 'EXCHANGE') netAmount = -Math.abs(halalas);
 
     const coverage = await coverageForTxn({
       boutiqueId,
