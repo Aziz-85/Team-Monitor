@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import Link from 'next/link';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
@@ -17,6 +17,13 @@ function addDays(dateStr: string, delta: number): string {
   const d = new Date(dateStr + 'T12:00:00.000Z');
   d.setUTCDate(d.getUTCDate() + delta);
   return toLocalDateString(d);
+}
+
+function newClientRowId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `row-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 type Line = { id: string; employeeId: string; amountSar: number; source: string };
@@ -39,16 +46,151 @@ type DailyData = {
   summaries: Summary[];
 };
 
+type EmployeeOption = { empId: string; name: string };
+
+type DraftLine = {
+  clientRowId: string;
+  serverLineId: string | null;
+  employeeId: string;
+  amountStr: string;
+  dirty: boolean;
+  saveState: 'idle' | 'saving' | 'saved' | 'error';
+};
+
+type RowFieldError = { employee?: string; amount?: string };
+
+function parseAmountInt(raw: string): { ok: true; value: number } | { ok: false } {
+  const t = raw.trim();
+  if (t === '') return { ok: false };
+  if (!/^\d+$/.test(t)) return { ok: false };
+  const value = parseInt(t, 10);
+  if (!Number.isInteger(value) || value < 0) return { ok: false };
+  return { ok: true, value };
+}
+
+function isRowEmpty(d: DraftLine): boolean {
+  return d.employeeId.trim() === '' && d.amountStr.trim() === '';
+}
+
+function isRowComplete(d: DraftLine): boolean {
+  if (d.employeeId.trim() === '') return false;
+  const p = parseAmountInt(d.amountStr);
+  return p.ok;
+}
+
+function linesToDrafts(lines: Line[], locked: boolean): DraftLine[] {
+  const drafts: DraftLine[] = lines.map((l) => ({
+    clientRowId: l.id,
+    serverLineId: l.id,
+    employeeId: l.employeeId,
+    amountStr: String(l.amountSar),
+    dirty: false,
+    saveState: 'idle',
+  }));
+  if (!locked) {
+    drafts.push({
+      clientRowId: newClientRowId(),
+      serverLineId: null,
+      employeeId: '',
+      amountStr: '',
+      dirty: false,
+      saveState: 'idle',
+    });
+  }
+  return drafts;
+}
+
+function initDraftsFromSummaries(summaries: Summary[]): Record<string, DraftLine[]> {
+  const out: Record<string, DraftLine[]> = {};
+  for (const s of summaries) {
+    out[s.boutiqueId] = linesToDrafts(s.lines, s.status === 'LOCKED');
+  }
+  return out;
+}
+
+/** After editing, append one blank row when the last row is fully filled (Excel-style). */
+function maintainTrailingBlank(rows: DraftLine[], locked: boolean): DraftLine[] {
+  if (locked) return rows;
+  const out = [...rows];
+  if (out.length === 0) {
+    out.push({
+      clientRowId: newClientRowId(),
+      serverLineId: null,
+      employeeId: '',
+      amountStr: '',
+      dirty: false,
+      saveState: 'idle',
+    });
+    return out;
+  }
+  const last = out[out.length - 1];
+  if (isRowComplete(last)) {
+    out.push({
+      clientRowId: newClientRowId(),
+      serverLineId: null,
+      employeeId: '',
+      amountStr: '',
+      dirty: false,
+      saveState: 'idle',
+    });
+  }
+  return out;
+}
+
+function validateDraftRow(
+  d: DraftLine,
+  rows: DraftLine[],
+  selfIndex: number
+): RowFieldError {
+  const err: RowFieldError = {};
+  if (isRowEmpty(d)) return err;
+  if (!d.employeeId.trim()) err.employee = 'Required';
+  const am = parseAmountInt(d.amountStr);
+  if (!am.ok) err.amount = 'Integer ≥ 0 required';
+  if (d.employeeId.trim()) {
+    const dup = rows.findIndex(
+      (r, i) => i !== selfIndex && r.employeeId.trim() === d.employeeId.trim()
+    );
+    if (dup >= 0) err.employee = 'Duplicate employee for this day';
+  }
+  return err;
+}
+
+type LinesPostOk = {
+  ok: true;
+  linesTotal: number;
+  summaryTotal: number;
+  diff: number;
+  canLock: boolean;
+  status: string;
+};
+
+function upsertLocalLine(lines: Line[], employeeId: string, amountSar: number, serverLineId: string | null): Line[] {
+  const idx = lines.findIndex((l) => l.employeeId === employeeId);
+  if (idx >= 0) {
+    const copy = [...lines];
+    copy[idx] = { ...copy[idx], amountSar };
+    return copy;
+  }
+  const id = serverLineId ?? `local:${employeeId}`;
+  return [...lines, { id, employeeId, amountSar, source: 'MANUAL' }];
+}
+
 export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
+  const [draftsByBoutique, setDraftsByBoutique] = useState<Record<string, DraftLine[]>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingSummary, setSavingSummary] = useState<string | null>(null);
-  const [savingLine, setSavingLine] = useState<string | null>(null);
   const [locking, setLocking] = useState<string | null>(null);
+  const [batchSavingBoutique, setBatchSavingBoutique] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [employeesLoadFailed, setEmployeesLoadFailed] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   const [yearlyFile, setYearlyFile] = useState<File | null>(null);
   const [yearlyMonth, setYearlyMonth] = useState('');
   const [yearlyDryRun, setYearlyDryRun] = useState(true);
@@ -117,51 +259,92 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     error?: string;
   } | null>(null);
 
+  const firstTableInputRef = useRef<HTMLInputElement | null>(null);
+  const batchSaveLockedRef = useRef(false);
+
+  const loadDaily = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const r = await fetch(`/api/sales/daily?date=${encodeURIComponent(date)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (d.error) {
+        setData(null);
+        setDraftsByBoutique({});
+        setLoadError(d.error ?? 'Failed to load');
+      } else {
+        setData(d as DailyData);
+        setDraftsByBoutique(initDraftsFromSummaries((d as DailyData).summaries ?? []));
+        setLoadError(null);
+      }
+    } catch {
+      setData(null);
+      setDraftsByBoutique({});
+      setLoadError('Request failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [date]);
+
+  useEffect(() => {
+    void loadDaily();
+  }, [loadDaily]);
+
+  const coverageMonthFromDate = date.slice(0, 7);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEmployeesLoadFailed(false);
+    fetch(`/api/sales/coverage?month=${encodeURIComponent(coverageMonthFromDate)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const j = await r.json();
+        if (cancelled) return;
+        if (!r.ok) {
+          setEmployees([]);
+          setEmployeesLoadFailed(true);
+          return;
+        }
+        const list = Array.isArray(j.byEmployee) ? j.byEmployee : [];
+        setEmployees(
+          list.map((e: { employeeId: string; name: string }) => ({
+            empId: e.employeeId,
+            name: e.name,
+          }))
+        );
+        setEmployeesLoadFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEmployees([]);
+          setEmployeesLoadFailed(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [coverageMonthFromDate]);
+
   useEffect(() => {
     if (coverageMonth === '') setCoverageMonth(getCurrentMonthRiyadh());
   }, [coverageMonth]);
 
   useEffect(() => {
-    setLoading(true);
-    setLoadError(null);
-    fetch(`/api/sales/daily?date=${date}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) {
-          setData(null);
-          setLoadError(d.error ?? 'Failed to load');
-        } else {
-          setData(d);
-          setLoadError(null);
-        }
-      })
-      .catch(() => {
-        setData(null);
-        setLoadError('Request failed');
-      })
-      .finally(() => setLoading(false));
-  }, [date]);
+    if (loading || !data || data.summaries.length === 0) return;
+    const t = window.setTimeout(() => {
+      firstTableInputRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [loading, data, date]);
 
-  const refetch = () => {
-    setLoading(true);
-    setLoadError(null);
-    fetch(`/api/sales/daily?date=${date}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) {
-          setData(null);
-          setLoadError(d.error ?? 'Failed to load');
-        } else {
-          setData(d);
-          setLoadError(null);
-        }
-      })
-      .catch(() => {
-        setData(null);
-        setLoadError('Request failed');
-      })
-      .finally(() => setLoading(false));
-  };
+  const nameByEmpId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of employees) m.set(e.empId, e.name);
+    return m;
+  }, [employees]);
+
+  const refetchFull = useCallback(async () => {
+    await loadDaily();
+  }, [loadDaily]);
 
   const setManagerTotal = async (boutiqueId: string, totalSar: number) => {
     setSavingSummary(boutiqueId);
@@ -173,8 +356,26 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
         body: JSON.stringify({ boutiqueId, date, totalSar }),
       });
       const j = await res.json().catch(() => ({}));
-      if (res.ok) {
-        refetch();
+      if (res.ok && j.summary) {
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            summaries: prev.summaries.map((s) =>
+              s.boutiqueId === boutiqueId
+                ? {
+                    ...s,
+                    id: j.summary.id ?? s.id,
+                    totalSar: j.summary.totalSar,
+                    status: j.summary.status,
+                    linesTotal: j.summary.linesTotal,
+                    diff: j.summary.diff,
+                    canLock: j.summary.status === 'DRAFT' && j.summary.diff === 0,
+                  }
+                : s
+            ),
+          };
+        });
       } else {
         setActionError((j as { error?: string }).error ?? 'Failed to save manager total');
       }
@@ -183,23 +384,120 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     }
   };
 
-  const upsertLine = async (boutiqueId: string, employeeId: string, amountSar: number) => {
-    setSavingLine(`${boutiqueId}-${employeeId}`);
-    setActionError(null);
-    try {
-      const res = await fetch('/api/sales/daily/lines', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boutiqueId, date, employeeId, amountSar }),
+  const applyLineSuccessToState = useCallback(
+    (boutiqueId: string, employeeId: string, amountSar: number, lineId: string | null, j: LinesPostOk) => {
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          summaries: prev.summaries.map((s) => {
+            if (s.boutiqueId !== boutiqueId) return s;
+            const nextLines = upsertLocalLine(s.lines, employeeId, amountSar, lineId);
+            return {
+              ...s,
+              lines: nextLines,
+              linesTotal: j.linesTotal,
+              diff: j.diff,
+              canLock: j.canLock,
+              status: j.status,
+            };
+          }),
+        };
       });
-      const j = await res.json().catch(() => ({}));
-      if (res.ok) {
-        refetch();
-      } else {
-        setActionError((j as { error?: string }).error ?? 'Failed to save line');
+    },
+    []
+  );
+
+  const saveAllLines = async (boutiqueId: string, rows: DraftLine[]) => {
+    if (batchSavingBoutique || batchSaveLockedRef.current) return;
+    batchSaveLockedRef.current = true;
+    setBatchSavingBoutique(boutiqueId);
+    setActionError(null);
+
+    try {
+    const dirtyRows = rows
+      .map((r, i) => ({ r, i }))
+      .filter(({ r }) => r.dirty && !isRowEmpty(r));
+
+    if (dirtyRows.length === 0) {
+      return;
+    }
+
+    let firstErr: string | null = null;
+    for (const { r, i } of dirtyRows) {
+      const fieldErr = validateDraftRow(r, rows, i);
+      if (fieldErr.employee || fieldErr.amount) {
+        firstErr = 'Fix row errors before saving';
+        setDraftsByBoutique((prev) => ({
+          ...prev,
+          [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+            row.clientRowId === r.clientRowId ? { ...row, saveState: 'error' as const } : row
+          ),
+        }));
+        continue;
       }
+      const amt = parseAmountInt(r.amountStr);
+      if (!amt.ok) continue;
+      setDraftsByBoutique((prev) => ({
+        ...prev,
+        [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+          row.clientRowId === r.clientRowId ? { ...row, saveState: 'saving' as const } : row
+        ),
+      }));
+      try {
+        const res = await fetch('/api/sales/daily/lines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            boutiqueId,
+            date,
+            employeeId: r.employeeId.trim(),
+            amountSar: amt.value,
+          }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (res.ok && (j as LinesPostOk).ok) {
+          const ok = j as LinesPostOk;
+          applyLineSuccessToState(boutiqueId, r.employeeId.trim(), amt.value, r.serverLineId, ok);
+          setDraftsByBoutique((prev) => ({
+            ...prev,
+            [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+              row.clientRowId === r.clientRowId
+                ? { ...row, dirty: false, saveState: 'saved' as const }
+                : row
+            ),
+          }));
+        } else {
+          firstErr = (j as { error?: string }).error ?? 'Failed to save line';
+          setDraftsByBoutique((prev) => ({
+            ...prev,
+            [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+              row.clientRowId === r.clientRowId ? { ...row, saveState: 'error' as const } : row
+            ),
+          }));
+        }
+      } catch {
+        firstErr = 'Request failed';
+        setDraftsByBoutique((prev) => ({
+          ...prev,
+          [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+            row.clientRowId === r.clientRowId ? { ...row, saveState: 'error' as const } : row
+          ),
+        }));
+      }
+    }
+
+    if (firstErr) setActionError(firstErr);
+
+    setDraftsByBoutique((prev) => ({
+      ...prev,
+      [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
+        row.saveState === 'saved' ? { ...row, saveState: 'idle' as const } : row
+      ),
+    }));
     } finally {
-      setSavingLine(null);
+      batchSaveLockedRef.current = false;
+      setBatchSavingBoutique(null);
     }
   };
 
@@ -214,7 +512,33 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
       });
       const j = await res.json().catch(() => ({}));
       if (res.ok) {
-        refetch();
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            summaries: prev.summaries.map((s) =>
+              s.boutiqueId === boutiqueId
+                ? { ...s, status: 'LOCKED', canLock: false }
+                : s
+            ),
+          };
+        });
+        setDraftsByBoutique((prev) => {
+          const rows = prev[boutiqueId];
+          if (!rows) return prev;
+          const asLines: Line[] = rows
+            .filter((d) => d.employeeId.trim() !== '')
+            .map((d) => {
+              const amt = parseAmountInt(d.amountStr);
+              return {
+                id: d.serverLineId ?? `local:${d.employeeId.trim()}`,
+                employeeId: d.employeeId.trim(),
+                amountSar: amt.ok ? amt.value : 0,
+                source: 'MANUAL',
+              };
+            });
+          return { ...prev, [boutiqueId]: linesToDrafts(asLines, true) };
+        });
       } else {
         setActionError((j as { error?: string }).error ?? 'Failed to lock');
       }
@@ -254,7 +578,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
         perDateSummary: j.perDateSummary,
         errors: j.errors,
       });
-      if (!yearlyDryRun) refetch();
+      if (!yearlyDryRun) void refetchFull();
     } catch {
       setYearlyResult({ dryRun: yearlyDryRun, error: 'Request failed' });
     } finally {
@@ -305,293 +629,118 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     d === 0 ? 'text-green-700' : d >= 1 ? 'text-amber-700' : 'text-red-700';
   const diffText = (d: number) => (d === 0 ? '0' : d >= 1 ? `+${d}` : d);
 
+  const updateDraftRow = (boutiqueId: string, clientRowId: string, patch: Partial<DraftLine>) => {
+    setDraftsByBoutique((prev) => {
+      const rows = [...(prev[boutiqueId] ?? [])];
+      const idx = rows.findIndex((x) => x.clientRowId === clientRowId);
+      if (idx < 0) return prev;
+      rows[idx] = { ...rows[idx], ...patch, dirty: true };
+      const locked =
+        data?.summaries.find((s) => s.boutiqueId === boutiqueId)?.status === 'LOCKED';
+      const next = maintainTrailingBlank(rows, !!locked);
+      return { ...prev, [boutiqueId]: next };
+    });
+  };
+
   const mainInner = (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setDate(addDays(date, -1))}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
-            >
-              ← Prev
-            </button>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
-            />
-            <button
-              type="button"
-              onClick={() => setDate(addDays(date, 1))}
-              className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
-            >
-              Next →
-            </button>
-          </div>
-          {data?.scope?.label && (
-            <span className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground">
-              Scope: {data.scope.label}
-            </span>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDate(addDays(date, -1))}
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
+          >
+            ← Prev
+          </button>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+          />
+          <button
+            type="button"
+            onClick={() => setDate(addDays(date, 1))}
+            className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle"
+          >
+            Next →
+          </button>
         </div>
-        {loadError && !loading && (
-          <div
-            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-            role="alert"
-            aria-live="assertive"
-          >
-            {loadError}
-          </div>
+        {data?.scope?.label && (
+          <span className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground">
+            Scope: {data.scope.label}
+          </span>
         )}
-        {actionError && (
-          <div
-            className="mb-4 flex min-w-0 flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"
-            role="alert"
-            aria-live="polite"
+      </div>
+
+      {loadError && !loading && (
+        <div
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="alert"
+          aria-live="assertive"
+        >
+          {loadError}
+        </div>
+      )}
+
+      {actionError && (
+        <div
+          className="mb-4 flex min-w-0 flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+          aria-live="polite"
+        >
+          <span>{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="shrink-0 rounded border border-amber-300 bg-surface px-2 py-1 text-xs text-amber-800 hover:bg-amber-100"
           >
-            <span>{actionError}</span>
-            <button
-              type="button"
-              onClick={() => setActionError(null)}
-              className="shrink-0 rounded border border-amber-300 bg-surface px-2 py-1 text-xs text-amber-800 hover:bg-amber-100"
-            >
-              Dismiss
-            </button>
-          </div>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <OpsCard className="mb-6">
+        <h3 className="mb-1 border-b border-border pb-2 text-sm font-medium text-foreground">
+          {t('sales.dailyLedger.dailyEntrySection')}
+        </h3>
+        <p className="mb-4 text-xs text-muted">{t('sales.dailyLedger.dailyEntryHint')}</p>
+        {employeesLoadFailed && (
+          <p className="mb-3 text-xs text-amber-800">{t('sales.dailyLedger.employeeListFallback')}</p>
         )}
-        <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
-            Yearly Excel Import (Import_2026)
-          </h3>
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <input
-              ref={yearlyFileInputRef}
-              type="file"
-              accept=".xlsx,.xlsm"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                setYearlyFile(f ?? null);
-                setYearlyResult(null);
-                e.target.value = '';
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => yearlyFileInputRef.current?.click()}
-              className="w-full min-w-0 rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle sm:w-auto"
-            >
-              {yearlyFile ? yearlyFile.name : 'Choose file'}
-            </button>
-            <div className="min-w-0">
-              <label className="me-1 text-xs text-muted">Month (optional)</label>
-              <input
-                type="text"
-                placeholder="YYYY-MM"
-                value={yearlyMonth}
-                onChange={(e) => setYearlyMonth(e.target.value)}
-                className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
-              />
-            </div>
-            <label className="flex items-center gap-1.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={yearlyDryRun}
-                onChange={(e) => setYearlyDryRun(e.target.checked)}
-              />
-              Dry run
-            </label>
-            <button
-              type="button"
-              disabled={!yearlyFile || yearlyLoading}
-              onClick={runYearlyImport}
-              className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
-            >
-              {yearlyLoading ? '…' : yearlyDryRun ? 'Preview (Dry Run)' : 'Import Now'}
-            </button>
-          </div>
-          {!yearlyDryRun && (
-            <p className="mt-2 text-xs text-amber-700">
-              Import will write to database. Keep Dry Run ON to preview.
-            </p>
-          )}
-          <p className="mt-1 text-xs text-muted">
-            If manager total is 0, import will auto-set it to lines total.
-          </p>
-          {yearlyResult && (
-            <>
-              <pre className="mt-3 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
-                {yearlyResult.error
-                  ? (yearlyResult.errors?.length
-                      ? `${yearlyResult.error}\n\n${JSON.stringify(yearlyResult.errors, null, 2)}`
-                      : yearlyResult.error)
-                  : JSON.stringify(
-                      {
-                        daysAffected: yearlyResult.daysAffected,
-                        unmappedEmpIds: yearlyResult.unmappedEmpIds,
-                        skippedEmpty: yearlyResult.skippedEmpty,
-                        skippedDash: yearlyResult.skippedDash,
-                        inserted: yearlyResult.inserted,
-                        updated: yearlyResult.updated,
-                        rowsQueued: yearlyResult.rowsQueued,
-                        perDateSummary: yearlyResult.perDateSummary,
-                      },
-                      null,
-                      2
-                    )}
-              </pre>
-              {!yearlyResult.error && yearlyResult.perDateSummary && yearlyResult.perDateSummary.length > 0 && (
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-0 border-collapse text-xs text-foreground">
-                    <thead>
-                      <tr className="border-b border-border text-start font-medium text-muted">
-                        <th className="py-1.5 pr-2">Date</th>
-                        <th className="py-1.5 pr-2 text-end">Inserted</th>
-                        <th className="py-1.5 pr-2 text-end">Updated</th>
-                        <th className="py-1.5 pr-2 text-end">Skipped</th>
-                        <th className="py-1.5 pr-2 text-end">Lines total</th>
-                        <th className="py-1.5 pr-2 text-end">Manager total</th>
-                        <th className="py-1.5 pr-2 text-end">Diff</th>
-                        <th className="py-1.5 w-0" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {yearlyResult.perDateSummary.map((row) => (
-                        <tr key={row.date} className="border-b border-border">
-                          <td className="py-1.5 pr-2 font-mono">{row.date}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.insertedLinesCount}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.updatedLinesCount}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.skippedEmptyCount}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.linesTotalSar.toLocaleString('en-SA')}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.managerTotalSar.toLocaleString('en-SA')}</td>
-                          <td className="py-1.5 pr-2 text-end font-mono">{row.diffSar.toLocaleString('en-SA')}</td>
-                          <td className="py-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setDate(row.date)}
-                              className="rounded border border-border bg-surface px-2 py-0.5 text-foreground hover:bg-surface-subtle"
-                            >
-                              {t('sales.dailyLedger.jumpToDate')}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </OpsCard>
-        <OpsCard className="mb-6">
-          <h3 className="mb-2 border-b border-border pb-2 text-sm font-medium text-foreground">
-            Coverage (Smart Missing)
-          </h3>
-          <p className="mb-2 text-xs text-muted">
-            Expected days = scheduled (not off, not leave). Missing only flagged when consecutive missing &gt; maxSalesGapDays.
-          </p>
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-0">
-              <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
-              <input
-                type="text"
-                placeholder="YYYY-MM"
-                value={coverageMonth}
-                onChange={(e) => setCoverageMonth(e.target.value)}
-                className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
-              />
-            </div>
-            <button
-              type="button"
-              disabled={!coverageMonth.trim() || coverageLoading}
-              onClick={loadCoverage}
-              className="w-full rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50 sm:w-auto"
-            >
-              {coverageLoading ? '…' : 'Load Coverage'}
-            </button>
-          </div>
-          {coverageResult && (
-            <div className="mt-3 space-y-2">
-              {coverageResult.error ? (
-                <p className="text-sm text-red-600">{coverageResult.error}</p>
-              ) : (
-                <>
-                  <p className="text-sm font-medium text-foreground">
-                    Completeness: {coverageResult.completenessPct ?? 0}% ({coverageResult.recordedCountTotal ?? 0} / {coverageResult.expectedDaysCountTotal ?? 0} expected days)
-                  </p>
-                  <p className="text-xs text-muted">Max gap days (grace): {coverageResult.maxSalesGapDays ?? 7}</p>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-0 table-auto border-collapse text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-start text-muted">
-                          <th className="py-1.5 pr-2">Employee</th>
-                          <th className="py-1.5 pr-2 text-end">Expected</th>
-                          <th className="py-1.5 pr-2 text-end">Recorded</th>
-                          <th className="py-1.5 pr-2 text-end">Missing</th>
-                          <th className="py-1.5 pr-2 text-end">Flagged gaps</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(coverageResult.byEmployee ?? []).map((e) => (
-                          <tr key={e.employeeId} className="border-b border-border">
-                            <td className="py-1.5 pr-2 font-medium">{e.name}</td>
-                            <td className="py-1.5 pr-2 text-end">{e.expectedDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-end">{e.recordedDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-end">{e.missingDaysCount ?? 0}</td>
-                            <td className="py-1.5 pr-2 text-end">{e.flaggedGapsCount ?? 0}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <details className="text-xs text-muted">
-                    <summary>Gap ranges and missing days (per employee)</summary>
-                    <pre className="mt-1 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2">
-                      {JSON.stringify(
-                        coverageResult.byEmployee?.map((e) => ({
-                          name: e.name,
-                          missingDays: e.missingDays,
-                          flaggedGaps: e.flaggedGaps,
-                        })),
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </details>
-                </>
-              )}
-            </div>
-          )}
-        </OpsCard>
         {loading && <p className="text-muted">Loading…</p>}
         {!loading && data?.summaries?.length === 0 && (
           <p className="text-muted">No summaries for this date. Set manager total per boutique below.</p>
         )}
         {!loading &&
-          data?.summaries?.map((s) => (
-            <OpsCard key={s.id ?? s.boutiqueId} className="mb-6">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+          data?.summaries?.map((s, sIdx) => {
+            const rows = draftsByBoutique[s.boutiqueId] ?? linesToDrafts(s.lines, s.status === 'LOCKED');
+            const locked = s.status === 'LOCKED';
+            const dirtyCount = rows.filter((r) => r.dirty && !isRowEmpty(r)).length;
+            return (
+              <div key={s.boutiqueId} className={sIdx > 0 ? 'mt-8 border-t border-border pt-8' : ''}>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
                   <h2 className="font-medium text-foreground">
                     {s.boutique.name} ({s.boutique.code})
                   </h2>
                   <span
                     className={
-                      s.status === 'LOCKED' ? 'rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-800' : 'rounded bg-surface-subtle px-2 py-0.5 text-sm text-foreground'
+                      s.status === 'LOCKED'
+                        ? 'rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-800'
+                        : 'rounded bg-surface-subtle px-2 py-0.5 text-sm text-foreground'
                     }
                   >
                     {s.status}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div>
                     <label className="text-xs text-muted">Manager total (SAR)</label>
                     <ManagerTotalInput
                       summary={s}
                       saving={savingSummary === s.boutiqueId}
-                      onSave={(v) => setManagerTotal(s.boutiqueId, v)}
+                      onSave={(v) => void setManagerTotal(s.boutiqueId, v)}
                     />
                   </div>
                   <div>
@@ -602,47 +751,274 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
                     <p className="text-xs text-muted">Diff</p>
                     <p className={`font-mono ${diffClass(s.diff)}`}>{diffText(s.diff)}</p>
                   </div>
-                  <div className="flex items-end">
+                  <div className="flex flex-wrap items-end gap-2">
                     <button
                       type="button"
-                      disabled={!s.canLock || locking === s.boutiqueId}
-                      onClick={() => lock(s.boutiqueId)}
+                      disabled={locked || dirtyCount === 0 || batchSavingBoutique === s.boutiqueId}
+                      onClick={() => void saveAllLines(s.boutiqueId, rows)}
                       className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                    >
+                      {batchSavingBoutique === s.boutiqueId
+                        ? t('sales.dailyLedger.saving')
+                        : t('sales.dailyLedger.saveAll')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!s.canLock || locking === s.boutiqueId || dirtyCount > 0}
+                      onClick={() => void lock(s.boutiqueId)}
+                      className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
+                      title={dirtyCount > 0 ? t('sales.dailyLedger.saveBeforeLock') : undefined}
                     >
                       {locking === s.boutiqueId ? 'Locking…' : 'Lock'}
                     </button>
                   </div>
                 </div>
-                {s.diff !== 0 && (
-                  <p className="text-sm text-amber-700">{t('targets.cannotLockUntilDiffZero') ?? 'Cannot lock until lines total equals manager total (diff = 0).'}</p>
+                {dirtyCount > 0 && !locked && (
+                  <p className="mb-2 text-xs text-amber-800">{`${dirtyCount} unsaved row(s)`}</p>
                 )}
-                <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
-                  <table className="w-full min-w-0 table-auto border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-start text-muted">
-                        <th className="py-2 pr-2">Employee ID</th>
-                        <th className="py-2 pr-2">Amount (SAR)</th>
-                        <th className="w-0" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {s.lines.map((line) => (
-                        <LineRow
-                          key={line.id}
-                          boutiqueId={s.boutiqueId}
-                          line={line}
-                          saving={savingLine === `${s.boutiqueId}-${line.employeeId}`}
-                          onSave={upsertLine}
-                          disabled={s.status === 'LOCKED'}
-                        />
-                      ))}
-                      <NewLineRow boutiqueId={s.boutiqueId} date={date} onSave={upsertLine} saving={!!savingLine} />
-                    </tbody>
-                  </table>
-                </div>
+                {s.diff !== 0 && (
+                  <p className="mb-2 text-sm text-amber-700">
+                    {t('targets.cannotLockUntilDiffZero') ?? 'Cannot lock until lines total equals manager total (diff = 0).'}
+                  </p>
+                )}
+                <LedgerTable
+                  boutiqueId={s.boutiqueId}
+                  rows={rows}
+                  employees={employees}
+                  nameByEmpId={nameByEmpId}
+                  locked={locked}
+                  batchSaving={batchSavingBoutique === s.boutiqueId}
+                  firstInputRef={sIdx === 0 ? firstTableInputRef : undefined}
+                  onUpdateRow={(clientRowId, patch) => updateDraftRow(s.boutiqueId, clientRowId, patch)}
+                  onEnterFromAmount={(rowIndex) => {
+                    const nextEmp = document.querySelector<HTMLInputElement>(
+                      `[data-ledger-emp="${s.boutiqueId}-${rowIndex + 1}"]`
+                    );
+                    nextEmp?.focus();
+                  }}
+                />
               </div>
-            </OpsCard>
-          ))}
+            );
+          })}
+      </OpsCard>
+
+      <OpsCard className="mb-6">
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen((o) => !o)}
+          className="mb-2 flex w-full items-center justify-between gap-2 border-b border-border pb-2 text-start text-sm font-medium text-foreground"
+          aria-expanded={advancedOpen}
+        >
+          <span>{t('sales.dailyLedger.advancedSection')}</span>
+          <span className="text-muted">{advancedOpen ? '▾' : '▸'}</span>
+        </button>
+        {advancedOpen && (
+          <div className="space-y-8 pt-2">
+            <div>
+              <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                {t('sales.dailyLedger.yearlyImportHeading')}
+              </h4>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <input
+                  ref={yearlyFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xlsm"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    setYearlyFile(f ?? null);
+                    setYearlyResult(null);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => yearlyFileInputRef.current?.click()}
+                  className="w-full min-w-0 rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle sm:w-auto"
+                >
+                  {yearlyFile ? yearlyFile.name : 'Choose file'}
+                </button>
+                <div className="min-w-0">
+                  <label className="me-1 text-xs text-muted">Month (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="YYYY-MM"
+                    value={yearlyMonth}
+                    onChange={(e) => setYearlyMonth(e.target.value)}
+                    className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
+                  />
+                </div>
+                <label className="flex items-center gap-1.5 text-sm text-foreground">
+                  <input type="checkbox" checked={yearlyDryRun} onChange={(e) => setYearlyDryRun(e.target.checked)} />
+                  Dry run
+                </label>
+                <button
+                  type="button"
+                  disabled={!yearlyFile || yearlyLoading}
+                  onClick={() => void runYearlyImport()}
+                  className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
+                >
+                  {yearlyLoading ? '…' : yearlyDryRun ? 'Preview (Dry Run)' : 'Import Now'}
+                </button>
+              </div>
+              {!yearlyDryRun && (
+                <p className="mt-2 text-xs text-amber-700">
+                  Import will write to database. Keep Dry Run ON to preview.
+                </p>
+              )}
+              <p className="mt-1 text-xs text-muted">
+                If manager total is 0, import will auto-set it to lines total.
+              </p>
+              {yearlyResult && (
+                <>
+                  <pre className="mt-3 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2 text-xs text-foreground">
+                    {yearlyResult.error
+                      ? yearlyResult.errors?.length
+                        ? `${yearlyResult.error}\n\n${JSON.stringify(yearlyResult.errors, null, 2)}`
+                        : yearlyResult.error
+                      : JSON.stringify(
+                          {
+                            daysAffected: yearlyResult.daysAffected,
+                            unmappedEmpIds: yearlyResult.unmappedEmpIds,
+                            skippedEmpty: yearlyResult.skippedEmpty,
+                            skippedDash: yearlyResult.skippedDash,
+                            inserted: yearlyResult.inserted,
+                            updated: yearlyResult.updated,
+                            rowsQueued: yearlyResult.rowsQueued,
+                            perDateSummary: yearlyResult.perDateSummary,
+                          },
+                          null,
+                          2
+                        )}
+                  </pre>
+                  {!yearlyResult.error && yearlyResult.perDateSummary && yearlyResult.perDateSummary.length > 0 && (
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="w-full min-w-0 border-collapse text-xs text-foreground">
+                        <thead>
+                          <tr className="border-b border-border text-start font-medium text-muted">
+                            <th className="py-1.5 pe-2">Date</th>
+                            <th className="py-1.5 pe-2 text-end">Inserted</th>
+                            <th className="py-1.5 pe-2 text-end">Updated</th>
+                            <th className="py-1.5 pe-2 text-end">Skipped</th>
+                            <th className="py-1.5 pe-2 text-end">Lines total</th>
+                            <th className="py-1.5 pe-2 text-end">Manager total</th>
+                            <th className="py-1.5 pe-2 text-end">Diff</th>
+                            <th className="w-0 py-1.5" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {yearlyResult.perDateSummary.map((row) => (
+                            <tr key={row.date} className="border-b border-border">
+                              <td className="py-1.5 pe-2 font-mono">{row.date}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.insertedLinesCount}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.updatedLinesCount}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.skippedEmptyCount}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.linesTotalSar.toLocaleString('en-SA')}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.managerTotalSar.toLocaleString('en-SA')}</td>
+                              <td className="py-1.5 pe-2 text-end font-mono">{row.diffSar.toLocaleString('en-SA')}</td>
+                              <td className="py-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setDate(row.date)}
+                                  className="rounded border border-border bg-surface px-2 py-0.5 text-foreground hover:bg-surface-subtle"
+                                >
+                                  {t('sales.dailyLedger.jumpToDate')}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div>
+              <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                {t('sales.dailyLedger.coverageHeading')}
+              </h4>
+              <p className="mb-2 text-xs text-muted">
+                Expected days = scheduled (not off, not leave). Missing only flagged when consecutive missing &gt;
+                maxSalesGapDays.
+              </p>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="min-w-0">
+                  <label className="me-1 text-xs text-muted">Month (YYYY-MM)</label>
+                  <input
+                    type="text"
+                    placeholder="YYYY-MM"
+                    value={coverageMonth}
+                    onChange={(e) => setCoverageMonth(e.target.value)}
+                    className="w-full min-w-0 rounded border border-border bg-surface px-2 py-1 text-sm text-foreground sm:w-28"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!coverageMonth.trim() || coverageLoading}
+                  onClick={() => void loadCoverage()}
+                  className="w-full rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50 sm:w-auto"
+                >
+                  {coverageLoading ? '…' : 'Load Coverage'}
+                </button>
+              </div>
+              {coverageResult && (
+                <div className="mt-3 space-y-2">
+                  {coverageResult.error ? (
+                    <p className="text-sm text-red-600">{coverageResult.error}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-foreground">
+                        Completeness: {coverageResult.completenessPct ?? 0}% ({coverageResult.recordedCountTotal ?? 0} /{' '}
+                        {coverageResult.expectedDaysCountTotal ?? 0} expected days)
+                      </p>
+                      <p className="text-xs text-muted">Max gap days (grace): {coverageResult.maxSalesGapDays ?? 7}</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-0 table-auto border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-start text-muted">
+                              <th className="py-1.5 pe-2">Employee</th>
+                              <th className="py-1.5 pe-2 text-end">Expected</th>
+                              <th className="py-1.5 pe-2 text-end">Recorded</th>
+                              <th className="py-1.5 pe-2 text-end">Missing</th>
+                              <th className="py-1.5 pe-2 text-end">Flagged gaps</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(coverageResult.byEmployee ?? []).map((e) => (
+                              <tr key={e.employeeId} className="border-b border-border">
+                                <td className="py-1.5 pe-2 font-medium">{e.name}</td>
+                                <td className="py-1.5 pe-2 text-end">{e.expectedDaysCount ?? 0}</td>
+                                <td className="py-1.5 pe-2 text-end">{e.recordedDaysCount ?? 0}</td>
+                                <td className="py-1.5 pe-2 text-end">{e.missingDaysCount ?? 0}</td>
+                                <td className="py-1.5 pe-2 text-end">{e.flaggedGapsCount ?? 0}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <details className="text-xs text-muted">
+                        <summary>Gap ranges and missing days (per employee)</summary>
+                        <pre className="mt-1 max-h-48 overflow-auto rounded border border-border bg-surface-subtle p-2">
+                          {JSON.stringify(
+                            coverageResult.byEmployee?.map((e) => ({
+                              name: e.name,
+                              missingDays: e.missingDays,
+                              flaggedGaps: e.flaggedGaps,
+                            })),
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </details>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </OpsCard>
     </>
   );
 
@@ -716,105 +1092,235 @@ function ManagerTotalInput({
   );
 }
 
-function LineRow({
+function LedgerTable({
   boutiqueId,
-  line,
-  saving,
-  onSave,
-  disabled,
+  rows,
+  employees,
+  nameByEmpId,
+  locked,
+  batchSaving,
+  firstInputRef,
+  onUpdateRow,
+  onEnterFromAmount,
 }: {
   boutiqueId: string;
-  line: Line;
-  saving: boolean;
-  onSave: (b: string, e: string, a: number) => void;
-  disabled: boolean;
+  rows: DraftLine[];
+  employees: EmployeeOption[];
+  nameByEmpId: Map<string, string>;
+  locked: boolean;
+  batchSaving: boolean;
+  firstInputRef?: MutableRefObject<HTMLInputElement | null>;
+  onUpdateRow: (clientRowId: string, patch: Partial<DraftLine>) => void;
+  onEnterFromAmount: (rowIndex: number) => void;
 }) {
-  const [amount, setAmount] = useState(String(line.amountSar));
-  useEffect(() => setAmount(String(line.amountSar)), [line.amountSar]);
-  const num = parseInt(amount, 10);
-  const valid = Number.isInteger(num) && num >= 0;
   return (
-    <tr className="border-b border-border">
-      <td className="py-1 pr-2 font-mono text-foreground">{line.employeeId}</td>
-      <td className="py-1 pr-2">
-        <input
-          type="number"
-          min={0}
-          step={1}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          disabled={disabled}
-          className="w-24 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
-        />
-      </td>
-      <td className="py-1">
-        {!disabled && (
-          <button
-            type="button"
-            disabled={saving || !valid}
-            onClick={() => valid && onSave(boutiqueId, line.employeeId, num)}
-            className="text-sm text-accent hover:underline"
-          >
-            {saving ? '…' : 'Save'}
-          </button>
-        )}
-      </td>
-    </tr>
+    <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
+      <table className="w-full min-w-0 table-fixed border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border text-start text-muted">
+            <th className="w-[40%] py-2 pe-2">Employee</th>
+            <th className="w-[22%] py-2 pe-2">Amount (SAR)</th>
+            <th className="w-[18%] py-2 pe-2">Status</th>
+            <th className="w-[20%] py-2 pe-2">Save</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => {
+            const fieldErr = validateDraftRow(row, rows, idx);
+            const empInvalid = !!fieldErr.employee && (!isRowEmpty(row) || row.dirty);
+            const amtInvalid = !!fieldErr.amount && (!isRowEmpty(row) || row.dirty);
+            const displayName = row.employeeId.trim()
+              ? nameByEmpId.get(row.employeeId.trim()) ?? row.employeeId.trim()
+              : '';
+            let statusLabel = '—';
+            let statusClass = 'text-muted';
+            if (!isRowEmpty(row)) {
+              if (empInvalid || amtInvalid) {
+                statusLabel = 'Error';
+                statusClass = 'text-red-700';
+              } else {
+                statusLabel = 'Valid';
+                statusClass = 'text-green-700';
+              }
+            }
+            return (
+              <tr key={row.clientRowId} className="border-b border-border align-top">
+                <td className="py-2 pe-2">
+                  {!locked ? (
+                    <EmployeeCombo
+                      value={row.employeeId}
+                      displayNameFallback={displayName}
+                      options={employees}
+                      disabled={batchSaving}
+                      inputRef={idx === 0 ? firstInputRef : undefined}
+                      dataAttr={`${boutiqueId}-${idx}`}
+                      invalid={empInvalid}
+                      onChange={(empId) => onUpdateRow(row.clientRowId, { employeeId: empId })}
+                    />
+                  ) : (
+                    <div>
+                      <div className="font-medium text-foreground">{displayName || '—'}</div>
+                      {row.employeeId.trim() ? (
+                        <div className="text-xs text-muted">{row.employeeId.trim()}</div>
+                      ) : null}
+                    </div>
+                  )}
+                  {empInvalid && fieldErr.employee ? (
+                    <p className="mt-1 text-xs text-red-600">{fieldErr.employee}</p>
+                  ) : null}
+                </td>
+                <td className="py-2 pe-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    disabled={locked || batchSaving}
+                    value={row.amountStr}
+                    onChange={(e) => onUpdateRow(row.clientRowId, { amountStr: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        onEnterFromAmount(idx);
+                      }
+                    }}
+                    className={`w-full min-w-[5rem] rounded border bg-surface px-2 py-1 font-mono text-foreground ${
+                      amtInvalid ? 'border-red-500' : 'border-border'
+                    }`}
+                  />
+                  {amtInvalid && fieldErr.amount ? (
+                    <p className="mt-1 text-xs text-red-600">{fieldErr.amount}</p>
+                  ) : null}
+                </td>
+                <td className={`py-2 pe-2 text-xs ${statusClass}`}>{statusLabel}</td>
+                <td className="py-2 pe-2 text-xs text-muted">
+                  {row.dirty && !isRowEmpty(row) ? (
+                    <span className="text-amber-700">Pending</span>
+                  ) : row.saveState === 'saving' ? (
+                    <span>…</span>
+                  ) : row.saveState === 'error' ? (
+                    <span className="text-red-600">Error</span>
+                  ) : (
+                    <span>—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
-function NewLineRow({
-  boutiqueId,
-  onSave,
-  saving,
+function EmployeeCombo({
+  value,
+  displayNameFallback,
+  options,
+  disabled,
+  inputRef,
+  dataAttr,
+  invalid,
+  onChange,
 }: {
-  boutiqueId: string;
-  date?: string;
-  onSave: (b: string, e: string, a: number) => void;
-  saving: boolean;
+  value: string;
+  displayNameFallback: string;
+  options: EmployeeOption[];
+  disabled: boolean;
+  inputRef?: MutableRefObject<HTMLInputElement | null>;
+  dataAttr: string;
+  invalid: boolean;
+  onChange: (empId: string) => void;
 }) {
-  const [empId, setEmpId] = useState('');
-  const [amount, setAmount] = useState('');
-  const num = parseInt(amount, 10);
-  const valid = empId.trim() && Number.isInteger(num) && num >= 0;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selected = options.find((o) => o.empId === value);
+  const display = selected?.name ?? (value ? displayNameFallback : '');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) =>
+        o.name.toLowerCase().includes(q) ||
+        o.empId.toLowerCase().includes(q)
+    );
+  }, [options, query]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
   return (
-    <tr className="border-b border-border bg-surface-subtle/50">
-      <td className="py-1 pr-2">
-        <input
-          type="text"
-          placeholder="Emp ID"
-          value={empId}
-          onChange={(e) => setEmpId(e.target.value)}
-          className="w-28 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
-        />
-      </td>
-      <td className="py-1 pr-2">
-        <input
-          type="number"
-          min={0}
-          step={1}
-          placeholder="0"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-24 rounded border border-border bg-surface px-2 py-1 font-mono text-foreground"
-        />
-      </td>
-      <td className="py-1">
-        <button
-          type="button"
-          disabled={saving || !valid}
-          onClick={() => {
-            if (valid) {
-              onSave(boutiqueId, empId.trim(), num);
-              setEmpId('');
-              setAmount('');
-            }
-          }}
-          className="text-sm text-accent hover:underline"
+    <div ref={containerRef} className="relative min-w-0">
+      <input
+        ref={(el) => {
+          if (inputRef) inputRef.current = el;
+        }}
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        data-ledger-emp={dataAttr}
+        disabled={disabled}
+        value={open ? query : display}
+        placeholder="Search name…"
+        onFocus={() => {
+          setOpen(true);
+          setQuery(display ? `${display}` : '');
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          if (value) onChange('');
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            setOpen(false);
+            setQuery('');
+          }
+        }}
+        className={`w-full min-w-0 rounded border bg-surface px-2 py-1 text-sm text-foreground ${
+          invalid ? 'border-red-500' : 'border-border'
+        }`}
+      />
+      {value && !open ? (
+        <div className="mt-0.5 text-xs text-muted">{value}</div>
+      ) : null}
+      {open && !disabled && (
+        <ul
+          role="listbox"
+          className="absolute z-50 mt-1 max-h-48 w-full min-w-[12rem] overflow-auto rounded border border-border bg-surface py-1 shadow-md"
         >
-          Add
-        </button>
-      </td>
-    </tr>
+          {filtered.length === 0 ? (
+            <li className="px-2 py-1.5 text-xs text-muted">No match</li>
+          ) : (
+            filtered.map((o) => (
+              <li key={o.empId}>
+                <button
+                  type="button"
+                  className="flex w-full flex-col items-start px-2 py-1.5 text-start text-sm text-foreground hover:bg-surface-subtle"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChange(o.empId);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                >
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-xs text-muted">{o.empId}</span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
   );
 }

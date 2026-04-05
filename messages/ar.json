@@ -148,6 +148,7 @@
     },
     "sidebar": {
       "primary": "الأساسي",
+      "entryDailySales": "إدخال المبيعات اليومية",
       "team": "الفريق",
       "operations": "العمليات",
       "analytics": "التحليلات",
@@ -231,7 +232,7 @@
         "sales": {
           "title": "المبيعات",
           "hint": "عرض أداء المبيعات والجودة.",
-          "ledgerSectionTitle": "دفتر المبيعات اليومي",
+          "ledgerSectionTitle": "إدخال المبيعات اليومية",
           "ledgerSectionHint": "إجماليات الفرع اليومية وأسطر الموظفين والقفل والتغطية — نفس أداة صفحة الدفتر الكاملة."
         },
         "reports": {
@@ -639,7 +640,7 @@
     "salesImport": "استيراد المبيعات",
     "salesImportMatrix": "استيراد شهري (مصفوفة)",
     "salesImportIssues": "مشكلات الاستيراد",
-    "salesDaily": "سجل المبيعات اليومية",
+    "salesDaily": "إدخال المبيعات اليومية",
     "salesMonthlyMatrix": "مصفوفة شهرية",
     "sales": {
       "leadershipImpact": "تأثير القيادة"
@@ -657,7 +658,7 @@
       "salesAnalytics": "تحليلات المبيعات",
       "targets": "الأهداف",
       "targetsManagement": "إدارة الأهداف",
-      "dailyLedger": "سجل المبيعات اليومية",
+      "dailyLedger": "إدخال المبيعات اليومية",
       "insights": "رؤى",
       "performanceHub": "مركز الأداء",
       "compareBranches": "مقارنة الفروع",
@@ -2168,7 +2169,16 @@
       "pageTitle": "دفتر المبيعات اليومي",
       "pageSubtitle": "إجماليات المدير، أسطر الموظفين، القفل عند التوازن، وأدوات اختيارية للسنوية أو التغطية.",
       "linkMatrixImport": "استيراد المصفوفة",
-      "jumpToDate": "الانتقال إلى التاريخ"
+      "jumpToDate": "الانتقال إلى التاريخ",
+      "dailyEntrySection": "الإدخال اليومي",
+      "dailyEntryHint": "لوحة المفاتيح: Tab للتنقل بين الحقول، Enter في المبلغ ينتقل للصف التالي. احفظ كل الصفوف المعلّقة دفعة واحدة.",
+      "employeeListFallback": "تعذّر تحميل قائمة موظفي الفرع. قد تُعرض الأسماء كمعرّفات حتى تُحمَّل القائمة.",
+      "saving": "جاري الحفظ…",
+      "saveAll": "حفظ الكل",
+      "saveBeforeLock": "احفظ الصفوف المعلّقة أولاً",
+      "advancedSection": "أدوات متقدمة",
+      "yearlyImportHeading": "استيراد Excel السنوي (Import_2026)",
+      "coverageHeading": "التغطية (النواقص الذكية)"
     },
     "importTool": {
       "pageTitle": "استيراد المبيعات",

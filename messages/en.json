@@ -148,6 +148,7 @@
     },
     "sidebar": {
       "primary": "Primary",
+      "entryDailySales": "Entry Daily Sales",
       "team": "Team",
       "operations": "Operations",
       "analytics": "Analytics",
@@ -231,7 +232,7 @@
         "sales": {
           "title": "Sales",
           "hint": "Sales performance and quality views.",
-          "ledgerSectionTitle": "Daily Sales Ledger",
+          "ledgerSectionTitle": "Entry Daily Sales",
           "ledgerSectionHint": "Day-level boutique totals, employee lines, lock, and coverage — same tool as the full ledger page."
         },
         "reports": {
@@ -639,7 +640,7 @@
     "salesImport": "Import Sales",
     "salesImportMatrix": "Monthly Import (Matrix)",
     "salesImportIssues": "Import Issues",
-    "salesDaily": "Daily Sales Ledger",
+    "salesDaily": "Entry Daily Sales",
     "salesMonthlyMatrix": "Monthly Matrix",
     "sales": {
       "leadershipImpact": "Leadership Impact"
@@ -657,7 +658,7 @@
       "salesAnalytics": "Sales Analytics",
       "targets": "Targets",
       "targetsManagement": "Target Management",
-      "dailyLedger": "Daily sales ledger",
+      "dailyLedger": "Entry Daily Sales",
       "insights": "Insights",
       "performanceHub": "Performance Hub",
       "compareBranches": "Compare branches",
@@ -2168,7 +2169,16 @@
       "pageTitle": "Daily Sales Ledger",
       "pageSubtitle": "Manager totals, per-employee lines, lock when balanced, and optional yearly or coverage tools.",
       "linkMatrixImport": "Matrix import",
-      "jumpToDate": "Jump to date"
+      "jumpToDate": "Jump to date",
+      "dailyEntrySection": "Daily entry",
+      "dailyEntryHint": "Keyboard: Tab between fields, Enter on amount moves to the next row. Save all pending rows at once.",
+      "employeeListFallback": "Could not load the boutique roster. Names may show as IDs until the list loads.",
+      "saving": "Saving…",
+      "saveAll": "Save all",
+      "saveBeforeLock": "Save pending rows first",
+      "advancedSection": "Advanced tools",
+      "yearlyImportHeading": "Yearly Excel import (Import_2026)",
+      "coverageHeading": "Coverage (smart missing)"
     },
     "importTool": {
       "pageTitle": "Sales import",

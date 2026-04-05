@@ -7,9 +7,13 @@ import { useT } from '@/lib/i18n/useT';
 import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBoutiqueSelector';
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
+import { canAccessRoute } from '@/lib/permissions';
 
 /** Same roles as `/admin/targets` in GROUP_REPORTS. */
 const ADMIN_TARGETS_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
+
+/** Same roles as `/sales/daily` in navConfig GROUP_SALES. */
+const ENTRY_DAILY_SALES_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 
 export function Sidebar({
   role,
@@ -29,10 +33,14 @@ export function Sidebar({
   void canEditSchedule;
   void canApproveWeek;
   const quickAccessItems = useMemo(() => {
-    const items = [
+    const items: Array<{ key: string; label: string; href: string }> = [];
+    if (canAccessRoute(role, '/')) {
+      items.push({ key: 'HOME', label: t('nav.home'), href: '/' });
+    }
+    items.push(
       { key: 'DASHBOARD', label: t('nav.dashboard'), href: '/dashboard' },
-      { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' },
-    ];
+      { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' }
+    );
     if (ADMIN_TARGETS_SIDEBAR_ROLES.includes(role)) {
       items.push({
         key: 'ADMIN_TARGETS',
@@ -131,6 +139,36 @@ export function Sidebar({
               );
             })}
           </ul>
+
+          {ENTRY_DAILY_SALES_SIDEBAR_ROLES.includes(role) ? (
+            <>
+              <div className="mt-2" />
+              <ul className="space-y-1.5">
+                <li className="min-w-0">
+                  <Link
+                    href="/sales/daily"
+                    className={`group relative flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isItemActive('/sales/daily')
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-foreground/85 hover:bg-muted/40'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
+                        isItemActive('/sales/daily')
+                          ? 'bg-accent'
+                          : 'bg-muted-foreground/50 group-hover:bg-muted-foreground/70'
+                      }`}
+                    />
+                    <span className="min-w-0 truncate">{t('nav.sidebar.entryDailySales')}</span>
+                    {isItemActive('/sales/daily') ? (
+                      <span className={`absolute inset-y-1 ${isRtl ? 'right-0.5' : 'left-0.5'} w-0.5 rounded-full bg-accent/70`} />
+                    ) : null}
+                  </Link>
+                </li>
+              </ul>
+            </>
+          ) : null}
         </nav>
 
         <div className="shrink-0 px-3 pb-4">
