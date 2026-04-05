@@ -1279,8 +1279,8 @@ function LedgerTable({
   onEnterFromAmount: (rowIndex: number) => void;
 }) {
   return (
-    <div className="w-full min-w-0">
-      <table className="w-full min-w-0 table-auto border-collapse text-sm">
+    <div className="w-full min-w-0 overflow-x-auto sm:overflow-x-visible [-webkit-overflow-scrolling:touch]">
+      <table className="w-full min-w-[32rem] sm:min-w-0 table-auto border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-start text-muted">
             <th className="w-[40%] py-2 pe-2">Employee</th>

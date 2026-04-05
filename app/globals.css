@@ -49,9 +49,9 @@ body {
   }
 }
 
-/* Ensure content is not covered by mobile bottom nav */
+/* Mobile: safe-area only (unified nav = drawer, no fixed bottom bar) */
 .pb-nav {
-  padding-bottom: 4.5rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {
@@ -60,10 +60,9 @@ body {
   }
 }
 
-/* Optional: consistent page content padding + mobile nav clearance */
 .page-content {
   padding: 1rem;
-  padding-bottom: 4.5rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 768px) {

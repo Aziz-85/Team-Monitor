@@ -1,6 +1,7 @@
 /**
- * Sidebar navigation: professional hierarchy with strict governance.
- * Single source of truth for nav items; RBAC and schedule permissions applied in getNavGroupsForUser / getNavLinksForUser.
+ * Navigation: (1) **App shell** — `APP_SHELL_*` constants drive desktop sidebar + mobile drawer via `lib/nav/sidebarShellNav.ts`.
+ * (2) **Hub drill-down** — `NAV_GROUPS` drives /nav/* hub pages. Do not duplicate shell links in mobile-only menus.
+ * RBAC for hub items: getNavGroupsForUser / getNavLinksForUser.
  *
  * GOVERNANCE:
  * - Every nav item MUST have a type (NavType)
@@ -52,6 +53,40 @@ function item(
 ): NavItem {
   return { href, key, roles, type, ...(hiddenFromNav && { hiddenFromNav }) };
 }
+
+// --- App shell (desktop sidebar + mobile drawer): single canonical definition ---
+
+/** Roles that see “Entry Daily Sales” in the shell (matches sales/daily page guard intent). */
+export const APP_SHELL_ENTRY_DAILY_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
+
+export type AppShellQuickItem = {
+  key: string;
+  href: string;
+  labelKey: string;
+  /** Omit link unless `canAccessRoute(role, href)` (e.g. Home). */
+  requiresRouteAccess?: boolean;
+};
+
+export const APP_SHELL_QUICK_ACCESS: AppShellQuickItem[] = [
+  { key: 'HOME', href: '/', labelKey: 'nav.home', requiresRouteAccess: true },
+  { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard' },
+  { key: 'SCHEDULE', href: '/schedule/view', labelKey: 'nav.sidebar.schedule' },
+];
+
+export type AppShellHubItem = { key: string; href: string; labelKey: string };
+
+export const APP_SHELL_HUB_SECTIONS: AppShellHubItem[] = [
+  { key: 'TEAM', href: '/nav/team', labelKey: 'nav.sidebar.team' },
+  { key: 'OPERATIONS', href: '/nav/operations', labelKey: 'nav.sidebar.operations' },
+  { key: 'ANALYTICS', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics' },
+  { key: 'SYSTEM', href: '/nav/system', labelKey: 'nav.sidebar.system' },
+];
+
+export const APP_SHELL_ENTRY_DAILY = {
+  key: 'ENTRY_DAILY',
+  href: '/sales/daily',
+  labelKey: 'nav.sidebar.entryDailySales',
+} as const;
 
 /** 1. DASHBOARD — Home, Dashboard, Employee Home */
 const GROUP_DASHBOARD: NavGroup = {
@@ -374,14 +409,14 @@ export function getNavGroupsForUser(
   }).filter((g) => g.items.length > 0);
 }
 
-/** Flat list of all visible nav items (for mobile drawer / backward compat). */
+/** Flat list of all visible hub nav items (hub pages, tooling, audits — not the app shell drawer). */
 export function getNavLinksForUser(
   user: Pick<User, 'role' | 'canEditSchedule'> & { canApproveWeek?: boolean }
 ): NavItem[] {
   return getNavGroupsForUser(user).flatMap((g) => g.items);
 }
 
-/** Flat list by role only (no schedule permission filter). Used by MobileBottomNav. */
+/** Flat list by role only (no schedule permission filter). Used for audits / tooling; primary shell uses sidebarShellNav + hub pages. */
 export function getNavLinksForRole(role: Role): NavItem[] {
   const withExecutive = FEATURES.EXECUTIVE;
   return NAV_GROUPS.flatMap((g) => {
