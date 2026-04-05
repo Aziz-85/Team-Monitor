@@ -66,7 +66,6 @@ export type SalesAnalyticsPayload = {
   branches: { top: SalesAnalyticsRankRow[]; low: SalesAnalyticsRankRow[] };
   employees: { top: SalesAnalyticsRankRow[]; low: SalesAnalyticsRankRow[] };
   dailyTrajectory: SalesAnalyticsTrajectoryPoint[];
-  branchBars: SalesAnalyticsBarItem[];
   employeeBars: SalesAnalyticsBarItem[];
   insights: string[];
 };

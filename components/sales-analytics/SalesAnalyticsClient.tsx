@@ -375,7 +375,11 @@ export function SalesAnalyticsClient() {
           <SectionBlock title={t('salesAnalytics.chartsTitle')}>
             <VisualComparisonSection comparisons={data.comparisons} kpis={data.kpis} t={t} />
             <div className="grid gap-6 lg:grid-cols-2">
-              <ChartCard title={t('salesAnalytics.chartTrajectory')} subtitle={t('salesAnalytics.chartTrajectoryHint')}>
+              <ChartCard
+                title={t('salesAnalytics.chartTrajectory')}
+                subtitle={t('salesAnalytics.chartTrajectoryHint')}
+                className="lg:col-span-2"
+              >
                 {chartData.length > 0 ? (
                   <PerformanceLineChart
                     data={chartData}
@@ -387,9 +391,6 @@ export function SalesAnalyticsClient() {
                 ) : (
                   <p className="text-sm text-muted">{t('salesAnalytics.chartEmpty')}</p>
                 )}
-              </ChartCard>
-              <ChartCard title={t('salesAnalytics.chartBranches')}>
-                <AnalyticsMiniBars items={data.branchBars} emptyLabel={t('salesAnalytics.chartEmpty')} />
               </ChartCard>
               <ChartCard title={t('salesAnalytics.chartEmployees')} className="lg:col-span-2">
                 <AnalyticsMiniBars items={data.employeeBars} emptyLabel={t('salesAnalytics.chartEmpty')} />

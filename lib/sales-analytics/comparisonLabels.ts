@@ -29,6 +29,18 @@ export function comparisonRowLabelKeys(id: SalesAnalyticsComparison['id']): { cu
   return m[id];
 }
 
+/** Short subtitle under the main KPI inside the gauge (per comparison type). */
+export function comparisonGaugeSubtitleKey(id: SalesAnalyticsComparison['id']): string {
+  const m: Record<SalesAnalyticsComparison['id'], string> = {
+    todayVsYesterday: 'salesAnalytics.visualGaugeSubYesterday',
+    todayVsLastWeek: 'salesAnalytics.visualGaugeSubLastWeek',
+    mtdVsLastMonthMtd: 'salesAnalytics.visualGaugeSubLastMonth',
+    mtdActualVsTarget: 'salesAnalytics.visualGaugeSubAchievement',
+    mtdActualVsPace: 'salesAnalytics.visualGaugeSubPace',
+  };
+  return m[id];
+}
+
 export function formatComparisonAmounts(c: SalesAnalyticsComparison): {
   currentFmt: string;
   refFmt: string;

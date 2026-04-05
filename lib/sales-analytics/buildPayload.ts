@@ -285,14 +285,6 @@ export async function buildSalesAnalyticsPayload(
   }));
   const branches = rankTopLow(branchRowsForRank);
 
-  const branchBars: SalesAnalyticsBarItem[] = [...branchAgg]
-    .sort((a, b) => b.sales - a.sales)
-    .map((b) => ({
-      label: b.name,
-      value: b.sales,
-      max: Math.max(b.sales, b.target, 1),
-    }));
-
   const empGroups = await prisma.salesEntry.groupBy({
     by: ['userId'],
     where: {
@@ -402,7 +394,6 @@ export async function buildSalesAnalyticsPayload(
     branches,
     employees,
     dailyTrajectory,
-    branchBars,
     employeeBars,
     insights,
   };
