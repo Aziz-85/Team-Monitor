@@ -7,7 +7,6 @@ import { useT } from '@/lib/i18n/useT';
 import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBoutiqueSelector';
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
-import { canUseSalesTestModule } from '@/lib/test-sales/access';
 
 /** Same roles as `/admin/targets` in GROUP_REPORTS. */
 const ADMIN_TARGETS_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
@@ -132,51 +131,6 @@ export function Sidebar({
               );
             })}
           </ul>
-
-          {canUseSalesTestModule(role) ? (
-            <div className="mt-5 border-t border-dashed border-amber-200/80 pt-4 dark:border-amber-900/50">
-              <div className="mb-2 rounded-lg border border-amber-200/70 bg-amber-50/80 px-2.5 py-2 dark:border-amber-900/40 dark:bg-amber-950/25">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-950/90 dark:text-amber-100/90">
-                  {t('testSales.navSection')}
-                </p>
-                <p className="mt-0.5 text-[10px] leading-snug text-amber-900/75 dark:text-amber-200/70">
-                  {t('testSales.navExperimental')}
-                </p>
-              </div>
-              <ul className="space-y-1">
-                {[
-                  { href: '/test/sales-dashboard', key: 'TEST_SALES_DASH', label: t('testSales.navDashboard') },
-                  { href: '/test/sales-input', key: 'TEST_SALES_IN', label: t('testSales.navInput') },
-                ].map((item) => {
-                  const active = isItemActive(item.href);
-                  return (
-                    <li key={item.key} className="min-w-0">
-                      <Link
-                        href={item.href}
-                        className={`group relative flex min-w-0 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                          active
-                            ? 'bg-amber-100/90 text-amber-950 dark:bg-amber-950/50 dark:text-amber-50'
-                            : 'text-foreground/80 hover:bg-amber-50/80 dark:hover:bg-amber-950/30'
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
-                            active ? 'bg-amber-600 dark:bg-amber-400' : 'bg-amber-700/35 group-hover:bg-amber-700/55'
-                          }`}
-                        />
-                        <span className="min-w-0 truncate">{item.label}</span>
-                        {active ? (
-                          <span
-                            className={`absolute inset-y-1 ${isRtl ? 'right-0.5' : 'left-0.5'} w-0.5 rounded-full bg-amber-500/80`}
-                          />
-                        ) : null}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
         </nav>
 
         <div className="shrink-0 px-3 pb-4">

@@ -2,7 +2,7 @@
 
 import { formatSarInt } from '@/lib/utils/money';
 
-export function SalesTestMiniBars({
+export function AnalyticsMiniBars({
   items,
   emptyLabel,
 }: {

@@ -6,6 +6,7 @@ import { AnalyticsSalesLedgerBelow } from './AnalyticsSalesLedgerBelow';
 const ROUTES = [
   { href: '/sales/my', key: 'sales.my' },
   { href: '/sales/summary', key: 'sales.summary' },
+  { href: '/sales/analytics', key: 'sales.analytics' },
   { href: '/sales/daily', key: 'sales.daily' },
   { href: '/sales/returns', key: 'sales.returns' },
   { href: '/sales/leadership-impact', key: 'sales.leadership' },

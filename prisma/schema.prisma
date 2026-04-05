@@ -175,7 +175,6 @@ model Boutique {
   boutiqueMonthlyTargets BoutiqueMonthlyTarget[]
   employeeMonthlyTargets  EmployeeMonthlyTarget[]
   complianceItems       ComplianceItem[]
-  salesTestEntries      SalesTestEntry[]
 
   @@index([regionId])
   @@index([isActive])
@@ -315,7 +314,6 @@ model User {
   employeeTransferAudits     EmployeeTransferAudit[] @relation("EmployeeTransferAuditActor")
   targetChangeAudits         TargetChangeAudit[]     @relation("TargetChangeAuditActor")
   plannerTaskCompletions     PlannerTaskCompletion[]
-  salesTestEntries           SalesTestEntry[]
 
   @@index([boutiqueId])
 }
@@ -1687,68 +1685,4 @@ model DeployRecord {
   @@unique([appVersion, gitHash, environment])
   @@index([createdAt])
   @@index([environment])
-}
-
-// Experimental sales sandbox; not linked to production SalesEntry.
-model SalesTestEntry {
-  id                      String   @id @default(cuid())
-  userId                  String
-  dateKey                 String
-  boutiqueId              String?
-  boutiqueLabel           String?
-
-  todaySalesSar           Int      @default(0)
-  dailyTargetSar          Int      @default(0)
-  mtdSalesSar             Int      @default(0)
-  mtdTargetSar            Int      @default(0)
-
-  visitors                Int?
-  transactions            Int?
-  stockAvailabilityPct    Int?
-  campaignActive          Boolean  @default(false)
-  campaignNotes           String?
-
-  yesterdaySalesSar         Int?
-  sameDayLastWeekSalesSar   Int?
-  lastMonthMtdSalesSar      Int?
-
-  timePatternNote           String?
-  promotionImpactNote       String?
-
-  monthTrendJson            String?
-
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  boutique Boutique?  @relation(fields: [boutiqueId], references: [id], onDelete: SetNull)
-  employees SalesTestEmployeeLine[]
-  branches  SalesTestBranchLine[]
-
-  @@unique([userId, dateKey])
-  @@index([userId, dateKey])
-}
-
-model SalesTestEmployeeLine {
-  id        String @id @default(cuid())
-  entryId   String
-  sortOrder Int    @default(0)
-  name      String
-  salesSar  Int    @default(0)
-  targetSar Int    @default(0)
-  entry     SalesTestEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@index([entryId])
-}
-
-model SalesTestBranchLine {
-  id          String @id @default(cuid())
-  entryId     String
-  sortOrder   Int    @default(0)
-  branchLabel String
-  salesSar    Int    @default(0)
-  targetSar   Int    @default(0)
-  entry       SalesTestEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@index([entryId])
 }

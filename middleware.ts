@@ -211,8 +211,6 @@ export const config = {
     '/company/:path*',
     '/targets',
     '/targets/:path*',
-    '/test',
-    '/test/:path*',
     '/app/:path*',
     '/(dashboard)/:path*',
     '/api/:path*',
