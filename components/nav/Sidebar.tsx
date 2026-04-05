@@ -9,9 +9,6 @@ import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBo
 import type { Role, EmployeePosition } from '@prisma/client';
 import { canAccessRoute } from '@/lib/permissions';
 
-/** Same roles as `/admin/targets` in GROUP_REPORTS. */
-const ADMIN_TARGETS_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
-
 /** Same roles as `/sales/daily` in navConfig GROUP_SALES. */
 const ENTRY_DAILY_SALES_SIDEBAR_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 
@@ -41,13 +38,6 @@ export function Sidebar({
       { key: 'DASHBOARD', label: t('nav.dashboard'), href: '/dashboard' },
       { key: 'SCHEDULE', label: t('nav.sidebar.schedule'), href: '/schedule/view' }
     );
-    if (ADMIN_TARGETS_SIDEBAR_ROLES.includes(role)) {
-      items.push({
-        key: 'ADMIN_TARGETS',
-        label: t('nav.sidebar.adminTargets'),
-        href: '/admin/targets',
-      });
-    }
     return items;
   }, [t, role]);
   const topSections = useMemo(

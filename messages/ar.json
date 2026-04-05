@@ -2178,7 +2178,9 @@
       "saveBeforeLock": "احفظ الصفوف المعلّقة أولاً",
       "advancedSection": "أدوات متقدمة",
       "yearlyImportHeading": "استيراد Excel السنوي (Import_2026)",
-      "coverageHeading": "التغطية (النواقص الذكية)"
+      "coverageHeading": "التغطية (النواقص الذكية)",
+      "chooseEmployee": "اختر موظفًا…",
+      "noEmployeesLoaded": "لا يوجد موظفون في القائمة"
     },
     "importTool": {
       "pageTitle": "استيراد المبيعات",

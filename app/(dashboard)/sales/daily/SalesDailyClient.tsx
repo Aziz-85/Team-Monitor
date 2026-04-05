@@ -259,7 +259,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     error?: string;
   } | null>(null);
 
-  const firstTableInputRef = useRef<HTMLInputElement | null>(null);
+  const firstTableInputRef = useRef<HTMLSelectElement | null>(null);
   const batchSaveLockedRef = useRef(false);
 
   const loadDaily = useCallback(async () => {
@@ -788,10 +788,12 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
                   nameByEmpId={nameByEmpId}
                   locked={locked}
                   batchSaving={batchSavingBoutique === s.boutiqueId}
-                  firstInputRef={sIdx === 0 ? firstTableInputRef : undefined}
+                  firstSelectRef={sIdx === 0 ? firstTableInputRef : undefined}
+                  employeePlaceholder={t('sales.dailyLedger.chooseEmployee')}
+                  employeeEmpty={t('sales.dailyLedger.noEmployeesLoaded')}
                   onUpdateRow={(clientRowId, patch) => updateDraftRow(s.boutiqueId, clientRowId, patch)}
                   onEnterFromAmount={(rowIndex) => {
-                    const nextEmp = document.querySelector<HTMLInputElement>(
+                    const nextEmp = document.querySelector<HTMLSelectElement>(
                       `[data-ledger-emp="${s.boutiqueId}-${rowIndex + 1}"]`
                     );
                     nextEmp?.focus();
@@ -1099,7 +1101,9 @@ function LedgerTable({
   nameByEmpId,
   locked,
   batchSaving,
-  firstInputRef,
+  firstSelectRef,
+  employeePlaceholder,
+  employeeEmpty,
   onUpdateRow,
   onEnterFromAmount,
 }: {
@@ -1109,13 +1113,15 @@ function LedgerTable({
   nameByEmpId: Map<string, string>;
   locked: boolean;
   batchSaving: boolean;
-  firstInputRef?: MutableRefObject<HTMLInputElement | null>;
+  firstSelectRef?: MutableRefObject<HTMLSelectElement | null>;
+  employeePlaceholder: string;
+  employeeEmpty: string;
   onUpdateRow: (clientRowId: string, patch: Partial<DraftLine>) => void;
   onEnterFromAmount: (rowIndex: number) => void;
 }) {
   return (
-    <div className="overflow-x-auto overflow-y-visible" style={{ maxWidth: '100%' }}>
-      <table className="w-full min-w-0 table-fixed border-collapse text-sm">
+    <div className="w-full min-w-0">
+      <table className="w-full min-w-0 table-auto border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-start text-muted">
             <th className="w-[40%] py-2 pe-2">Employee</th>
@@ -1147,14 +1153,16 @@ function LedgerTable({
               <tr key={row.clientRowId} className="border-b border-border align-top">
                 <td className="py-2 pe-2">
                   {!locked ? (
-                    <EmployeeCombo
+                    <EmployeeSelect
                       value={row.employeeId}
                       displayNameFallback={displayName}
                       options={employees}
                       disabled={batchSaving}
-                      inputRef={idx === 0 ? firstInputRef : undefined}
+                      selectRef={idx === 0 ? firstSelectRef : undefined}
                       dataAttr={`${boutiqueId}-${idx}`}
                       invalid={empInvalid}
+                      placeholder={employeePlaceholder}
+                      emptyLabel={employeeEmpty}
                       onChange={(empId) => onUpdateRow(row.clientRowId, { employeeId: empId })}
                     />
                   ) : (
@@ -1213,114 +1221,67 @@ function LedgerTable({
   );
 }
 
-function EmployeeCombo({
+function EmployeeSelect({
   value,
   displayNameFallback,
   options,
   disabled,
-  inputRef,
+  selectRef,
   dataAttr,
   invalid,
+  placeholder,
+  emptyLabel,
   onChange,
 }: {
   value: string;
   displayNameFallback: string;
   options: EmployeeOption[];
   disabled: boolean;
-  inputRef?: MutableRefObject<HTMLInputElement | null>;
+  selectRef?: MutableRefObject<HTMLSelectElement | null>;
   dataAttr: string;
   invalid: boolean;
+  placeholder: string;
+  emptyLabel: string;
   onChange: (empId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selected = options.find((o) => o.empId === value);
-  const display = selected?.name ?? (value ? displayNameFallback : '');
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter(
-      (o) =>
-        o.name.toLowerCase().includes(q) ||
-        o.empId.toLowerCase().includes(q)
-    );
-  }, [options, query]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+  const sorted = useMemo(
+    () => [...options].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+    [options]
+  );
+  const idSet = useMemo(() => new Set(sorted.map((o) => o.empId)), [sorted]);
+  const v = value.trim();
+  const unknownSelected = v !== '' && !idSet.has(v);
+  const noChoices = sorted.length === 0 && !unknownSelected;
+  const selectDisabled = disabled || noChoices;
 
   return (
-    <div ref={containerRef} className="relative min-w-0">
-      <input
+    <div className="min-w-0">
+      <select
         ref={(el) => {
-          if (inputRef) inputRef.current = el;
+          if (selectRef) selectRef.current = el;
         }}
-        type="text"
-        role="combobox"
-        aria-expanded={open}
-        aria-autocomplete="list"
         data-ledger-emp={dataAttr}
-        disabled={disabled}
-        value={open ? query : display}
-        placeholder="Search name…"
-        onFocus={() => {
-          setOpen(true);
-          setQuery(display ? `${display}` : '');
-        }}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          if (value) onChange('');
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            setOpen(false);
-            setQuery('');
-          }
-        }}
-        className={`w-full min-w-0 rounded border bg-surface px-2 py-1 text-sm text-foreground ${
+        disabled={selectDisabled}
+        value={unknownSelected ? v : v === '' ? '' : idSet.has(v) ? v : ''}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={invalid}
+        className={`w-full min-w-0 rounded border bg-surface px-2 py-1.5 text-sm text-foreground ${
           invalid ? 'border-red-500' : 'border-border'
-        }`}
-      />
-      {value && !open ? (
-        <div className="mt-0.5 text-xs text-muted">{value}</div>
-      ) : null}
-      {open && !disabled && (
-        <ul
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-48 w-full min-w-[12rem] overflow-auto rounded border border-border bg-surface py-1 shadow-md"
-        >
-          {filtered.length === 0 ? (
-            <li className="px-2 py-1.5 text-xs text-muted">No match</li>
-          ) : (
-            filtered.map((o) => (
-              <li key={o.empId}>
-                <button
-                  type="button"
-                  className="flex w-full flex-col items-start px-2 py-1.5 text-start text-sm text-foreground hover:bg-surface-subtle"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onChange(o.empId);
-                    setQuery('');
-                    setOpen(false);
-                  }}
-                >
-                  <span className="font-medium">{o.name}</span>
-                  <span className="text-xs text-muted">{o.empId}</span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-      )}
+        } ${selectDisabled ? 'opacity-80' : ''}`}
+      >
+        <option value="">{noChoices ? emptyLabel : placeholder}</option>
+        {sorted.map((o) => (
+          <option key={o.empId} value={o.empId}>
+            {o.name}
+          </option>
+        ))}
+        {unknownSelected ? (
+          <option value={v}>
+            {displayNameFallback || v}
+          </option>
+        ) : null}
+      </select>
+      {v ? <div className="mt-0.5 text-xs text-muted tabular-nums">{v}</div> : null}
     </div>
   );
 }
