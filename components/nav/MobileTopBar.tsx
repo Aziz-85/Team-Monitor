@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { isNavHrefActive } from '@/lib/nav/navHrefMatch';
 import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
 import { getNavLinksForUser } from '@/lib/permissions';
@@ -25,6 +26,9 @@ export function MobileTopBar({
   canApproveWeek: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const searchSuffix = search ? `?${search}` : '';
   const { t, locale, isRtl } = useT();
   const { setLocale } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -108,9 +112,9 @@ export function MobileTopBar({
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             <ul className="space-y-1">
               {allLinks.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+                const isActive = isNavHrefActive(pathname, searchSuffix, item.href);
                 return (
-                  <li key={item.href}>
+                  <li key={item.key}>
                     <Link
                       href={item.href}
                       onClick={() => setDrawerOpen(false)}

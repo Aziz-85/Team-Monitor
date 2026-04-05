@@ -96,6 +96,12 @@
     "scheduleEditorDay": "Schedule (day editor)",
     "scheduleAudit": "Schedule Audit",
     "approvals": "Approvals",
+    "approvalsAll": "Approvals — all",
+    "approvalsForSchedule": "Approvals for schedule",
+    "approvalsForTeam": "Approvals for team changes",
+    "approvalsForInventory": "Approvals for inventory",
+    "approvalsForSales": "Approvals for sales edits",
+    "approvalsForLeaves": "Approvals for leaves",
     "tasks": "Tasks",
     "export": "Export",
     "leaves": "Leaves",
@@ -195,8 +201,8 @@
           "hint": "Handle leave requests and compliance context."
         },
         "approvals": {
-          "title": "Approvals",
-          "hint": "Review and approve pending actions."
+          "title": "Approvals hub",
+          "hint": "All approval queues by type."
         },
         "compliance": {
           "title": "Compliance",
@@ -282,8 +288,8 @@
             "hint": "Inspect detailed edit logs."
           },
           "approvals": {
-            "title": "Approvals",
-            "hint": "Approve pending governance actions."
+            "title": "Approvals for schedule",
+            "hint": "Pending schedule and week changes awaiting your decision."
           }
         },
         "employees": {
@@ -2653,28 +2659,6 @@
     "reqPaceHint": "Remaining month ÷ days left (incl. selected date)",
     "linearRunRate": "Linear run-rate projection",
     "compareTitle": "Key comparisons",
-    "visualCompareTitle": "Visual comparisons",
-    "visualCompareHint": "Same metrics as key comparisons, shown as executive gauges.",
-    "visualLabelDelta": "Δ vs reference",
-    "visualLabelAch": "Achievement",
-    "visualLabelPace": "Vs expected pace",
-    "visualGaugeSubYesterday": "vs yesterday",
-    "visualGaugeSubLastWeek": "vs same weekday",
-    "visualGaugeSubLastMonth": "vs same phase last month",
-    "visualGaugeSubAchievement": "achievement",
-    "visualGaugeSubPace": "vs expected pace",
-    "visualFootnoteNoRef": "No reference value for this period.",
-    "visualFootnoteNeutral": "Both values are zero; no comparison.",
-    "visualFootnoteNoBaseline": "Reference is zero; growth from zero.",
-    "visualFootnoteAboveRef": "Above reference",
-    "visualFootnoteBelowRef": "Below reference",
-    "visualFootnoteAtRef": "At reference",
-    "visualFootnoteTargetMet": "At or above monthly target pace",
-    "visualFootnoteNearTarget": "Approaching monthly target",
-    "visualFootnoteBehindTarget": "Behind monthly target",
-    "visualFootnoteAheadPace": "Ahead of linear pace",
-    "visualFootnoteAtPace": "Near expected linear pace",
-    "visualFootnoteBehindPace": "Behind expected linear pace",
     "rowToday": "Today",
     "rowYesterday": "Yesterday",
     "rowSameDayLastWeek": "Same weekday last week",

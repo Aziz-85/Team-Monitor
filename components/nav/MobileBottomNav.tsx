@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { isNavHrefActive } from '@/lib/nav/navHrefMatch';
 import { useT } from '@/lib/i18n/useT';
 import { getNavLinksForUser } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
@@ -17,6 +18,9 @@ export function MobileBottomNav({
   canApproveWeek: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const searchSuffix = search ? `?${search}` : '';
   const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -29,9 +33,11 @@ export function MobileBottomNav({
       <nav className="fixed bottom-0 start-0 end-0 z-40 flex items-center justify-around border-t border-border bg-surface py-2 md:hidden">
         {mainLinks.slice(0, 4).map((l) => (
           <Link
-            key={l.href}
+            key={l.key}
             href={l.href}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 min-h-[44px] justify-center text-sm ${pathname === l.href ? 'font-semibold text-accent' : 'text-muted'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 min-h-[44px] justify-center text-sm ${
+              isNavHrefActive(pathname, searchSuffix, l.href) ? 'font-semibold text-accent' : 'text-muted'
+            }`}
           >
             {t(l.key)}
           </Link>
@@ -61,7 +67,7 @@ export function MobileBottomNav({
         <div className="p-4">
           {moreLinks.map((l) => (
             <Link
-              key={l.href}
+              key={l.key}
               href={l.href}
               onClick={() => setMoreOpen(false)}
               className="block py-3 text-base text-foreground hover:text-muted"

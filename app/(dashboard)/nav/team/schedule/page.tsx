@@ -8,7 +8,7 @@ const ROUTES = [
   { href: '/schedule/editor', key: 'schedule.dayEditor' },
   { href: '/schedule/audit', key: 'schedule.audit' },
   { href: '/schedule/audit-edits', key: 'schedule.auditEdits' },
-  { href: '/approvals', key: 'schedule.approvals' },
+  { href: '/approvals?module=SCHEDULE', key: 'schedule.approvals' },
 ];
 
 export default async function NavTeamSchedulePage() {

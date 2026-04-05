@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { AnalyticsMiniBars } from '@/components/sales-analytics/AnalyticsMiniBars';
-import { VisualComparisonSection } from '@/components/sales-analytics/VisualComparisonSection';
 import type { SalesAnalyticsPayload } from '@/lib/sales-analytics/types';
 import { comparisonRowLabelKeys, comparisonTitleKey, formatComparisonAmounts } from '@/lib/sales-analytics/comparisonLabels';
 import { dataTableCellNumeric, dataTableTd, dataTableTh, dataTableTheadTr } from '@/lib/ui-styles';
@@ -373,7 +372,6 @@ export function SalesAnalyticsClient() {
           </div>
 
           <SectionBlock title={t('salesAnalytics.chartsTitle')}>
-            <VisualComparisonSection comparisons={data.comparisons} kpis={data.kpis} t={t} />
             <div className="grid gap-6 lg:grid-cols-2">
               <ChartCard
                 title={t('salesAnalytics.chartTrajectory')}

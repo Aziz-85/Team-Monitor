@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import type { Role } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
@@ -36,6 +37,17 @@ const MODULE_KEYS: Record<string, string> = {
   SALES: 'targets.moduleSales',
 };
 
+/** Page <h1> i18n key for approvals list (matches nav labels). */
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  '': 'nav.approvalsAll',
+  SCHEDULE: 'nav.approvalsForSchedule',
+  TEAM: 'nav.approvalsForTeam',
+  INVENTORY: 'nav.approvalsForInventory',
+  SALES: 'nav.approvalsForSales',
+};
+
+const ALLOWED_MODULES = new Set(['', 'SCHEDULE', 'TEAM', 'INVENTORY', 'SALES']);
+
 function payloadSummary(payload: Record<string, unknown>, actionType: string): string {
   const parts: string[] = [];
   if (payload.empId) parts.push(`Emp: ${payload.empId}`);
@@ -57,14 +69,28 @@ type ApprovalsClientProps = {
 
 export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
   const { t } = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<ApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const urlModule = searchParams.get('module') ?? '';
+  const moduleFromUrl = ALLOWED_MODULES.has(urlModule) ? urlModule : '';
+  const effectiveModule = initialModule || moduleFromUrl;
+
   const [filters, setFilters] = useState({
-    module: initialModule,
+    module: effectiveModule,
     weekStart: '',
     effectiveDate: '',
   });
+
+  useEffect(() => {
+    const next = initialModule || moduleFromUrl;
+    setFilters((f) => (f.module === next ? f : { ...f, module: next }));
+  }, [initialModule, moduleFromUrl]);
+
+  const pageTitleKey = PAGE_TITLE_KEYS[filters.module] ?? PAGE_TITLE_KEYS[''];
 
   const buildUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -86,6 +112,18 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  const replaceModuleInUrl = useCallback(
+    (module: string) => {
+      if (initialModule) return;
+      const params = new URLSearchParams(searchParams.toString());
+      if (module) params.set('module', module);
+      else params.delete('module');
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [initialModule, pathname, router, searchParams]
+  );
 
   const handleApprove = useCallback(
     async (id: string, comment?: string) => {
@@ -138,9 +176,7 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-xl font-semibold text-foreground">
-          {t('governance.approvalsTitle')}
-        </h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">{t(pageTitleKey)}</h1>
 
         <div className="mb-4 rounded-xl border border-border bg-surface p-4 shadow-sm">
           <p className="mb-3 text-sm font-semibold text-foreground">{t('governance.filters')}</p>
@@ -149,7 +185,11 @@ export function ApprovalsClient({ initialModule = '' }: ApprovalsClientProps) {
               <span className="text-muted">{t('governance.filterModule')}</span>
               <select
                 value={filters.module}
-                onChange={(e) => setFilters((f) => ({ ...f, module: e.target.value }))}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setFilters((f) => ({ ...f, module: v }));
+                  replaceModuleInUrl(v);
+                }}
                 className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">All</option>

@@ -74,12 +74,16 @@ const GROUP_TEAM: NavGroup = {
     item('/schedule/editor', 'nav.scheduleEditorDay', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit', 'nav.scheduleAudit', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit-edits', 'schedule.auditEditsTitle', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
-    item('/approvals', 'nav.approvals', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/approvals', 'nav.approvalsAll', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/approvals?module=SCHEDULE', 'nav.approvalsForSchedule', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/approvals?module=TEAM', 'nav.approvalsForTeam', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/approvals?module=INVENTORY', 'nav.approvalsForInventory', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/approvals?module=SALES', 'nav.approvalsForSales', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/admin/employees', 'nav.admin.employees', ['ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/area/employees', 'nav.area.employees', ['AREA_MANAGER', 'SUPER_ADMIN'], 'CORE'),
     item('/area/targets', 'nav.area.targets', ['AREA_MANAGER', 'SUPER_ADMIN'], 'CORE'),
     item('/leaves/requests', 'nav.myLeaves', ['EMPLOYEE', 'ASSISTANT_MANAGER'], 'CORE'),
-    item('/leaves', 'nav.leaves', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/leaves', 'nav.approvalsForLeaves', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/boutique/leaves', 'nav.boutiqueLeaves', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/admin/control-panel/delegation', 'nav.admin.delegation', ['ADMIN', 'SUPER_ADMIN', 'MANAGER'], 'CORE'),
     item('/compliance', 'nav.compliance', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
@@ -345,7 +349,8 @@ function itemVisible(
 ): boolean {
   if (!it.roles.includes(user.role)) return false;
   if (it.href === '/schedule/edit' || it.href === '/schedule/editor') return canEditScheduleRbac(user);
-  if (it.href === '/approvals') return user.canApproveWeek ?? canApproveWeekRbac(user);
+  if (it.href === '/approvals' || it.href.startsWith('/approvals?'))
+    return user.canApproveWeek ?? canApproveWeekRbac(user);
   return true;
 }
 

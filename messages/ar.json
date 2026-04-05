@@ -96,6 +96,12 @@
     "scheduleEditorDay": "الجدول (محرر يومي)",
     "scheduleAudit": "سجل الجدول",
     "approvals": "الاعتمادات",
+    "approvalsAll": "الاعتمادات — الكل",
+    "approvalsForSchedule": "اعتمادات الجدول",
+    "approvalsForTeam": "اعتمادات تغيير الفريق",
+    "approvalsForInventory": "اعتمادات الجرد",
+    "approvalsForSales": "اعتمادات تعديل المبيعات",
+    "approvalsForLeaves": "اعتمادات الإجازات",
     "tasks": "المهام",
     "export": "تصدير",
     "leaves": "الإجازات",
@@ -195,8 +201,8 @@
           "hint": "إدارة طلبات الإجازة وسياق الالتزام."
         },
         "approvals": {
-          "title": "الاعتمادات",
-          "hint": "مراجعة واعتماد الإجراءات المعلقة."
+          "title": "مركز الاعتمادات",
+          "hint": "جميع طلبات الاعتماد حسب النوع."
         },
         "compliance": {
           "title": "الالتزام",
@@ -282,8 +288,8 @@
             "hint": "فحص تفاصيل التعديلات."
           },
           "approvals": {
-            "title": "الاعتمادات",
-            "hint": "اعتماد الإجراءات المعلقة."
+            "title": "اعتمادات الجدول",
+            "hint": "تغييرات الجدول والأسبوع بانتظار قرارك."
           }
         },
         "employees": {
@@ -2653,28 +2659,6 @@
     "reqPaceHint": "المتبقي من الشهر ÷ الأيام المتبقية (بما فيها التاريخ المختار)",
     "linearRunRate": "إسقاط بمتوسط الإيقاع الخطي",
     "compareTitle": "مقارنات رئيسية",
-    "visualCompareTitle": "المقارنات البصرية",
-    "visualCompareHint": "نفس مؤشرات المقارنة الرئيسية، معروضة كمقاييس بصرية تنفيذية.",
-    "visualLabelDelta": "Δ مقابل المرجع",
-    "visualLabelAch": "نسبة الإنجاز",
-    "visualLabelPace": "مقابل الإيقاع المتوقع",
-    "visualGaugeSubYesterday": "مقابل أمس",
-    "visualGaugeSubLastWeek": "مقابل نفس يوم الأسبوع",
-    "visualGaugeSubLastMonth": "مقابل نفس المرحلة من الشهر السابق",
-    "visualGaugeSubAchievement": "نسبة الإنجاز",
-    "visualGaugeSubPace": "مقابل الإيقاع المتوقع",
-    "visualFootnoteNoRef": "لا قيمة مرجعية لهذه الفترة.",
-    "visualFootnoteNeutral": "كلا القيمتين صفر؛ لا مقارنة.",
-    "visualFootnoteNoBaseline": "المرجع صفر؛ نمو من الصفر.",
-    "visualFootnoteAboveRef": "أعلى من المرجع",
-    "visualFootnoteBelowRef": "أقل من المرجع",
-    "visualFootnoteAtRef": "عند المرجع",
-    "visualFootnoteTargetMet": "عند أو أعلى من وتيرة الهدف الشهري",
-    "visualFootnoteNearTarget": "قريب من الهدف الشهري",
-    "visualFootnoteBehindTarget": "أقل من الهدف الشهري",
-    "visualFootnoteAheadPace": "أمام الإيقاع الخطي",
-    "visualFootnoteAtPace": "قريب من الإيقاع الخطي المتوقع",
-    "visualFootnoteBehindPace": "خلف الإيقاع الخطي المتوقع",
     "rowToday": "اليوم",
     "rowYesterday": "أمس",
     "rowSameDayLastWeek": "نفس يوم الأسبوع الماضي",

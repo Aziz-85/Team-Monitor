@@ -356,11 +356,12 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
 export { getNavLinksForUser, getNavLinksForRole } from '@/lib/navConfig';
 
 export function canAccessRoute(role: Role, pathname: string): boolean {
+  const pathOnly = pathname.split('?')[0]?.split('#')[0] ?? pathname;
   const allowed = ROLE_ROUTES[role];
   if (!allowed) return false;
   const effective = FEATURES.EXECUTIVE ? allowed : allowed.filter((r) => !r.startsWith('/executive'));
-  if (effective.includes(pathname)) return true;
-  return effective.some((route) => pathname === route || pathname.startsWith(route + '/'));
+  if (effective.includes(pathOnly)) return true;
+  return effective.some((route) => pathOnly === route || pathOnly.startsWith(route + '/'));
 }
 
 /** True if role is read-only demo (no edits, no admin, no export). */
