@@ -10,6 +10,7 @@ import { OperationalBoutiqueSelector } from '@/components/scope/OperationalBouti
 import { SuperAdminBoutiqueContextPicker } from '@/components/scope/SuperAdminBoutiqueContextPicker';
 import type { Role, EmployeePosition } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import { canUseSalesTestModule } from '@/lib/test-sales/access';
 
 export function MobileTopBar({
   role,
@@ -126,6 +127,47 @@ export function MobileTopBar({
                 );
               })}
             </ul>
+
+            {canUseSalesTestModule(role) ? (
+              <div className="mt-5 border-t border-dashed border-amber-200/80 pt-4 dark:border-amber-900/50">
+                <div className="mb-2 rounded-lg border border-amber-200/70 bg-amber-50/80 px-2.5 py-2 dark:border-amber-900/40 dark:bg-amber-950/25">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-950/90 dark:text-amber-100/90">
+                    {t('testSales.navSection')}
+                  </p>
+                  <p className="mt-0.5 text-[10px] leading-snug text-amber-900/75 dark:text-amber-200/70">
+                    {t('testSales.navExperimental')}
+                  </p>
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    { href: '/test/sales-dashboard', key: 'm-test-dash' },
+                    { href: '/test/sales-input', key: 'm-test-in' },
+                  ].map((l) => {
+                    const isActive =
+                      pathname === l.href || (l.href !== '/' && pathname.startsWith(l.href + '/'));
+                    const label =
+                      l.key === 'm-test-dash' ? t('testSales.navDashboard') : t('testSales.navInput');
+                    return (
+                      <li key={l.key}>
+                        <Link
+                          href={l.href}
+                          onClick={() => setDrawerOpen(false)}
+                          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                            isActive
+                              ? `bg-amber-100/90 font-medium text-amber-950 dark:bg-amber-950/40 dark:text-amber-50 ${
+                                  isRtl ? 'border-r-4 border-r-amber-500' : 'border-l-4 border-l-amber-500'
+                                }`
+                              : 'text-foreground hover:bg-amber-50/70 dark:hover:bg-amber-950/25'
+                          }`}
+                        >
+                          {label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
           </nav>
 
           {/* Drawer Footer */}

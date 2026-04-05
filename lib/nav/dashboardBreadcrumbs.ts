@@ -57,6 +57,8 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/company/governance', titleKey: 'nav.company.governance' },
   { prefix: '/company', titleKey: 'nav.company.overview' },
   { prefix: '/compliance', titleKey: 'nav.drilldown.routes.leaves.compliance.title' },
+  { prefix: '/test/sales-input', titleKey: 'testSales.breadcrumbInput' },
+  { prefix: '/test/sales-dashboard', titleKey: 'testSales.breadcrumbDashboard' },
   { prefix: '/dashboard', titleKey: 'nav.dashboard' },
   { prefix: '/employee', titleKey: 'nav.employeeHome' },
   { prefix: '/executive/compare', titleKey: 'nav.drilldown.routes.reports.compare.title' },

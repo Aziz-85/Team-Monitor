@@ -224,6 +224,8 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/compliance',
     '/about',
     '/change-password',
+    '/test/sales-dashboard',
+    '/test/sales-input',
   ],
   AREA_MANAGER: [
     '/nav',
@@ -344,6 +346,8 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/compliance',
     '/about',
     '/change-password',
+    '/test/sales-dashboard',
+    '/test/sales-input',
   ],
 };
 
