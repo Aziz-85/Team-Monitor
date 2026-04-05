@@ -18,7 +18,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { AnalyticsMiniBars } from '@/components/sales-analytics/AnalyticsMiniBars';
+import { VisualComparisonSection } from '@/components/sales-analytics/VisualComparisonSection';
 import type { SalesAnalyticsPayload } from '@/lib/sales-analytics/types';
+import { comparisonRowLabelKeys, comparisonTitleKey, formatComparisonAmounts } from '@/lib/sales-analytics/comparisonLabels';
 import { dataTableCellNumeric, dataTableTd, dataTableTh, dataTableTheadTr } from '@/lib/ui-styles';
 
 type BoutiqueOption = { id: string; code: string; name: string };
@@ -244,17 +246,6 @@ export function SalesAnalyticsClient() {
     return (data?.dailyTrajectory ?? []).map((d) => d.targetCumulative);
   }, [data?.dailyTrajectory]);
 
-  const compareTitle = (id: SalesAnalyticsPayload['comparisons'][0]['id']) => {
-    const keys: Record<typeof id, string> = {
-      todayVsYesterday: 'salesAnalytics.cmpTodayVsYesterday',
-      todayVsLastWeek: 'salesAnalytics.cmpTodayVsWeek',
-      mtdVsLastMonthMtd: 'salesAnalytics.cmpMtdVsLastMonth',
-      mtdActualVsTarget: 'salesAnalytics.cmpMtdVsTarget',
-      mtdActualVsPace: 'salesAnalytics.cmpMtdVsPace',
-    };
-    return t(keys[id]);
-  };
-
   if (!scopeReady) {
     return (
       <PageContainer className="mx-auto max-w-7xl">
@@ -353,20 +344,24 @@ export function SalesAnalyticsClient() {
 
           <SectionBlock title={t('salesAnalytics.compareTitle')}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {data.comparisons.map((c) => (
-                <ComparisonCard
-                  key={c.id}
-                  title={compareTitle(c.id)}
-                  currentLabel={t('salesAnalytics.current')}
-                  refLabel={t('salesAnalytics.reference')}
-                  currentFmt={formatSarInt(c.current)}
-                  refFmt={c.reference == null ? '—' : formatSarInt(c.reference)}
-                  deltaFmt={c.delta == null ? '—' : formatSarInt(c.delta)}
-                  deltaPctFmt={c.deltaPct == null ? '—' : `${c.deltaPct > 0 ? '+' : ''}${c.deltaPct}%`}
-                  signal={c.signal}
-                  t={t}
-                />
-              ))}
+              {data.comparisons.map((c) => {
+                const row = comparisonRowLabelKeys(c.id);
+                const amounts = formatComparisonAmounts(c);
+                return (
+                  <ComparisonCard
+                    key={c.id}
+                    title={t(comparisonTitleKey(c.id))}
+                    currentLabel={t(row.currentKey)}
+                    refLabel={t(row.refKey)}
+                    currentFmt={amounts.currentFmt}
+                    refFmt={amounts.refFmt}
+                    deltaFmt={amounts.deltaFmt}
+                    deltaPctFmt={amounts.deltaPctFmt}
+                    signal={c.signal}
+                    t={t}
+                  />
+                );
+              })}
             </div>
           </SectionBlock>
 
@@ -378,6 +373,7 @@ export function SalesAnalyticsClient() {
           </div>
 
           <SectionBlock title={t('salesAnalytics.chartsTitle')}>
+            <VisualComparisonSection comparisons={data.comparisons} kpis={data.kpis} t={t} />
             <div className="grid gap-6 lg:grid-cols-2">
               <ChartCard title={t('salesAnalytics.chartTrajectory')} subtitle={t('salesAnalytics.chartTrajectoryHint')}>
                 {chartData.length > 0 ? (
