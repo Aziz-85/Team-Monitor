@@ -176,37 +176,58 @@ function upsertLocalLine(lines: Line[], employeeId: string, amountSar: number, s
   return [...lines, { id, employeeId, amountSar, source: 'MANUAL' }];
 }
 
+function formatSarLine(n: number): string {
+  return `${n.toLocaleString('en-SA')} SAR`;
+}
+
+type ScopeBoutiqueDailyMetrics = {
+  boutiqueId: string;
+  dailyRequiredSar: number;
+  todayAchievedSar: number;
+  todayPct: number | null;
+  dailyProgressPending: boolean;
+};
+
 function formatDailySummaryForCopy(
-  dateStr: string,
-  scopeLabel: string | undefined,
   summaries: Summary[],
-  nameByEmpId: Map<string, string>
+  dateStr: string,
+  scopeDaily: ScopeBoutiqueDailyMetrics | null,
+  labels: { todaySales: string; dailyTarget: string; achievement: string; unavailable: string }
 ): string {
-  const out: string[] = [];
-  out.push('Daily Sales Summary');
-  out.push(`Date: ${dateStr}`);
-  if (scopeLabel?.trim()) out.push(`Scope: ${scopeLabel.trim()}`);
-  out.push('');
-  summaries.forEach((s, idx) => {
-    if (idx > 0) out.push('');
-    out.push(`Boutique: ${s.boutique.name} (${s.boutique.code})`);
-    out.push(`Status: ${s.status}`);
-    out.push(`Manager total (SAR): ${s.totalSar.toLocaleString('en-SA')}`);
-    out.push(`Lines total (SAR): ${s.linesTotal.toLocaleString('en-SA')}`);
-    out.push(`Diff: ${s.diff}`);
-    out.push('');
-    out.push('Per employee:');
-    const sorted = [...s.lines].sort((a, b) => a.employeeId.localeCompare(b.employeeId, undefined, { sensitivity: 'base' }));
-    if (sorted.length === 0) {
-      out.push('  (none)');
-    } else {
-      for (const line of sorted) {
-        const nm = nameByEmpId.get(line.employeeId) ?? line.employeeId;
-        out.push(`  • ${nm} (${line.employeeId}): ${line.amountSar.toLocaleString('en-SA')} SAR`);
+  const blocks: string[] = [];
+  for (const s of summaries) {
+    const useScopeMetrics = scopeDaily != null && scopeDaily.boutiqueId === s.boutiqueId;
+    const todaySalesSar = useScopeMetrics ? scopeDaily.todayAchievedSar : s.linesTotal;
+    const dailyTargetSar: number | null = useScopeMetrics ? scopeDaily.dailyRequiredSar : null;
+    let achievementPct: number | null = null;
+    if (useScopeMetrics) {
+      if (scopeDaily.dailyProgressPending) {
+        achievementPct = 0;
+      } else if (scopeDaily.todayPct !== null && scopeDaily.todayPct !== undefined) {
+        achievementPct = scopeDaily.todayPct;
+      } else {
+        achievementPct = 0;
       }
     }
-  });
-  return out.join('\n');
+
+    const lines: string[] = [];
+    lines.push(s.boutique.name);
+    lines.push(dateStr);
+    lines.push('');
+    lines.push(`${labels.todaySales} ${formatSarLine(todaySalesSar)}`);
+    if (dailyTargetSar !== null) {
+      lines.push(`${labels.dailyTarget} ${formatSarLine(dailyTargetSar)}`);
+    } else {
+      lines.push(`${labels.dailyTarget} ${labels.unavailable}`);
+    }
+    if (achievementPct !== null) {
+      lines.push(`${labels.achievement} ${achievementPct}%`);
+    } else {
+      lines.push(`${labels.achievement} ${labels.unavailable}`);
+    }
+    blocks.push(lines.join('\n'));
+  }
+  return blocks.join('\n\n');
 }
 
 export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = {}) {
@@ -224,6 +245,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
   const [employeesLoadFailed, setEmployeesLoadFailed] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'ok' | 'err'>('idle');
+  const [scopeBoutiqueDaily, setScopeBoutiqueDaily] = useState<ScopeBoutiqueDailyMetrics | null>(null);
 
   const [yearlyFile, setYearlyFile] = useState<File | null>(null);
   const [yearlyMonth, setYearlyMonth] = useState('');
@@ -359,6 +381,39 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
   }, [coverageMonthFromDate]);
 
   useEffect(() => {
+    let cancelled = false;
+    const month = date.slice(0, 7);
+    fetch(
+      `/api/target/boutique/daily?month=${encodeURIComponent(month)}&date=${encodeURIComponent(date)}`,
+      { cache: 'no-store' }
+    )
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!r.ok || !j.boutiqueId) {
+          setScopeBoutiqueDaily(null);
+          return;
+        }
+        const pctRaw = j.todayPct;
+        const todayPct =
+          typeof pctRaw === 'number' && Number.isFinite(pctRaw) ? Math.trunc(pctRaw) : null;
+        setScopeBoutiqueDaily({
+          boutiqueId: j.boutiqueId as string,
+          dailyRequiredSar: Math.trunc(Number(j.dailyRequiredSar) || 0),
+          todayAchievedSar: Math.trunc(Number(j.todayAchievedSar) || 0),
+          todayPct,
+          dailyProgressPending: !!j.dailyProgressPending,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setScopeBoutiqueDaily(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  useEffect(() => {
     if (coverageMonth === '') setCoverageMonth(getCurrentMonthRiyadh());
   }, [coverageMonth]);
 
@@ -379,8 +434,13 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
   const dailySummaryCopyText = useMemo(() => {
     if (!data?.summaries?.length) return '';
     const dateStr = data.date || date;
-    return formatDailySummaryForCopy(dateStr, data.scope?.label, data.summaries, nameByEmpId);
-  }, [data, date, nameByEmpId]);
+    return formatDailySummaryForCopy(data.summaries, dateStr, scopeBoutiqueDaily, {
+      todaySales: t('sales.dailyLedger.copyLabelTodaySales'),
+      dailyTarget: t('sales.dailyLedger.copyLabelDailyTarget'),
+      achievement: t('sales.dailyLedger.copyLabelAchievement'),
+      unavailable: t('sales.dailyLedger.copyValueUnavailable'),
+    });
+  }, [data, date, scopeBoutiqueDaily, t]);
 
   const hasUnsavedLedgerRows = useMemo(
     () =>
@@ -897,7 +957,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
                 : t('sales.dailyLedger.copySummaryEmpty')
           }
           dir="ltr"
-          rows={14}
+          rows={10}
           className="w-full resize-y rounded border border-border bg-surface-subtle px-3 py-2 font-mono text-xs text-foreground"
           aria-label={t('sales.dailyLedger.copyDailySummary')}
         />

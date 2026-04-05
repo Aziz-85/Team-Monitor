@@ -2182,12 +2182,16 @@
       "chooseEmployee": "اختر موظفًا…",
       "noEmployeesLoaded": "لا يوجد موظفون في القائمة",
       "copyDailySummary": "نسخ الملخص اليومي",
-      "copyDailySummaryHint": "نص بسيط من البيانات المحفوظة. احفظ الصفوف المعلّقة أولاً إذا أردت تضمين التعديلات.",
+      "copyDailySummaryHint": "مقتطع للمشاركة: اسم البوتيك، التاريخ، مبيعات اليوم (SalesEntry عند توفرها)، الهدف اليومي، نسبة الإنجاز. فروع أخرى تعرض إجمالي الأسطر من الدفتر.",
       "copyToClipboard": "نسخ",
       "copied": "تم النسخ",
       "copyFailed": "تعذر النسخ",
       "copySummaryEmpty": "اختر تاريخاً فيه بيانات لإنشاء الملخص.",
-      "copySummaryUnsavedNote": "توجد تعديلات على الصفوف غير محفوظة — هذا المربع يعكس البيانات المحفوظة فقط."
+      "copySummaryUnsavedNote": "توجد تعديلات على الصفوف غير محفوظة — هذا المربع يعكس البيانات المحفوظة فقط.",
+      "copyLabelTodaySales": "مبيعات اليوم:",
+      "copyLabelDailyTarget": "الهدف اليومي:",
+      "copyLabelAchievement": "الإنجاز:",
+      "copyValueUnavailable": "—"
     },
     "importTool": {
       "pageTitle": "استيراد المبيعات",

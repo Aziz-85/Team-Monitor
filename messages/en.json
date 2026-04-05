@@ -2182,12 +2182,16 @@
       "chooseEmployee": "Select employee…",
       "noEmployeesLoaded": "No employees loaded",
       "copyDailySummary": "Copy Daily Summary",
-      "copyDailySummaryHint": "Plain text from saved data. Save pending rows first if you need edits included.",
+      "copyDailySummaryHint": "Snippet for chat: boutique name, date, today sales (SalesEntry when available), daily pace target, achievement %. Other boutiques use ledger lines total; target — if unavailable.",
       "copyToClipboard": "Copy",
       "copied": "Copied",
       "copyFailed": "Could not copy",
       "copySummaryEmpty": "Load a date with data to generate a summary.",
-      "copySummaryUnsavedNote": "You have unsaved row changes — this box reflects saved data only."
+      "copySummaryUnsavedNote": "You have unsaved row changes — this box reflects saved data only.",
+      "copyLabelTodaySales": "Today Sales:",
+      "copyLabelDailyTarget": "Daily Target:",
+      "copyLabelAchievement": "Achievement:",
+      "copyValueUnavailable": "—"
     },
     "importTool": {
       "pageTitle": "Sales import",
