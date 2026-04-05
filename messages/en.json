@@ -2180,7 +2180,14 @@
       "yearlyImportHeading": "Yearly Excel import (Import_2026)",
       "coverageHeading": "Coverage (smart missing)",
       "chooseEmployee": "Select employee…",
-      "noEmployeesLoaded": "No employees loaded"
+      "noEmployeesLoaded": "No employees loaded",
+      "copyDailySummary": "Copy Daily Summary",
+      "copyDailySummaryHint": "Plain text from saved data. Save pending rows first if you need edits included.",
+      "copyToClipboard": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy",
+      "copySummaryEmpty": "Load a date with data to generate a summary.",
+      "copySummaryUnsavedNote": "You have unsaved row changes — this box reflects saved data only."
     },
     "importTool": {
       "pageTitle": "Sales import",

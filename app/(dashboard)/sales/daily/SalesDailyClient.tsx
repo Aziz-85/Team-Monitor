@@ -176,6 +176,39 @@ function upsertLocalLine(lines: Line[], employeeId: string, amountSar: number, s
   return [...lines, { id, employeeId, amountSar, source: 'MANUAL' }];
 }
 
+function formatDailySummaryForCopy(
+  dateStr: string,
+  scopeLabel: string | undefined,
+  summaries: Summary[],
+  nameByEmpId: Map<string, string>
+): string {
+  const out: string[] = [];
+  out.push('Daily Sales Summary');
+  out.push(`Date: ${dateStr}`);
+  if (scopeLabel?.trim()) out.push(`Scope: ${scopeLabel.trim()}`);
+  out.push('');
+  summaries.forEach((s, idx) => {
+    if (idx > 0) out.push('');
+    out.push(`Boutique: ${s.boutique.name} (${s.boutique.code})`);
+    out.push(`Status: ${s.status}`);
+    out.push(`Manager total (SAR): ${s.totalSar.toLocaleString('en-SA')}`);
+    out.push(`Lines total (SAR): ${s.linesTotal.toLocaleString('en-SA')}`);
+    out.push(`Diff: ${s.diff}`);
+    out.push('');
+    out.push('Per employee:');
+    const sorted = [...s.lines].sort((a, b) => a.employeeId.localeCompare(b.employeeId, undefined, { sensitivity: 'base' }));
+    if (sorted.length === 0) {
+      out.push('  (none)');
+    } else {
+      for (const line of sorted) {
+        const nm = nameByEmpId.get(line.employeeId) ?? line.employeeId;
+        out.push(`  • ${nm} (${line.employeeId}): ${line.amountSar.toLocaleString('en-SA')} SAR`);
+      }
+    }
+  });
+  return out.join('\n');
+}
+
 export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
@@ -190,6 +223,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeesLoadFailed, setEmployeesLoadFailed] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<'idle' | 'ok' | 'err'>('idle');
 
   const [yearlyFile, setYearlyFile] = useState<File | null>(null);
   const [yearlyMonth, setYearlyMonth] = useState('');
@@ -341,6 +375,32 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     for (const e of employees) m.set(e.empId, e.name);
     return m;
   }, [employees]);
+
+  const dailySummaryCopyText = useMemo(() => {
+    if (!data?.summaries?.length) return '';
+    const dateStr = data.date || date;
+    return formatDailySummaryForCopy(dateStr, data.scope?.label, data.summaries, nameByEmpId);
+  }, [data, date, nameByEmpId]);
+
+  const hasUnsavedLedgerRows = useMemo(
+    () =>
+      Object.values(draftsByBoutique).some((rows) =>
+        rows.some((r) => r.dirty && !isRowEmpty(r))
+      ),
+    [draftsByBoutique]
+  );
+
+  const handleCopyDailySummary = async () => {
+    if (!dailySummaryCopyText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(dailySummaryCopyText);
+      setCopyFeedback('ok');
+      window.setTimeout(() => setCopyFeedback('idle'), 2000);
+    } catch {
+      setCopyFeedback('err');
+      window.setTimeout(() => setCopyFeedback('idle'), 2500);
+    }
+  };
 
   const refetchFull = useCallback(async () => {
     await loadDaily();
@@ -802,6 +862,45 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
               </div>
             );
           })}
+      </OpsCard>
+
+      <OpsCard className="mb-6">
+        <h3 className="mb-1 border-b border-border pb-2 text-sm font-medium text-foreground">
+          {t('sales.dailyLedger.copyDailySummary')}
+        </h3>
+        <p className="mb-3 text-xs text-muted">{t('sales.dailyLedger.copyDailySummaryHint')}</p>
+        {hasUnsavedLedgerRows ? (
+          <p className="mb-2 text-xs text-amber-800">{t('sales.dailyLedger.copySummaryUnsavedNote')}</p>
+        ) : null}
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={loading || !dailySummaryCopyText.trim()}
+            onClick={() => void handleCopyDailySummary()}
+            className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          >
+            {t('sales.dailyLedger.copyToClipboard')}
+          </button>
+          {copyFeedback === 'ok' ? (
+            <span className="text-xs text-green-700">{t('sales.dailyLedger.copied')}</span>
+          ) : copyFeedback === 'err' ? (
+            <span className="text-xs text-red-600">{t('sales.dailyLedger.copyFailed')}</span>
+          ) : null}
+        </div>
+        <textarea
+          readOnly
+          value={
+            dailySummaryCopyText.trim()
+              ? dailySummaryCopyText
+              : loading
+                ? '…'
+                : t('sales.dailyLedger.copySummaryEmpty')
+          }
+          dir="ltr"
+          rows={14}
+          className="w-full resize-y rounded border border-border bg-surface-subtle px-3 py-2 font-mono text-xs text-foreground"
+          aria-label={t('sales.dailyLedger.copyDailySummary')}
+        />
       </OpsCard>
 
       <OpsCard className="mb-6">
