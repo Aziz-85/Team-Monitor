@@ -27,7 +27,13 @@ function parseSection(value: string | null): SectionId {
   return 'import';
 }
 
-export function SalesImportTabsClient({ canResolve }: { canResolve: boolean }) {
+export function SalesImportTabsClient({
+  canResolve,
+  canAdminUnlockLedger = false,
+}: {
+  canResolve: boolean;
+  canAdminUnlockLedger?: boolean;
+}) {
   const { t } = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -78,7 +84,7 @@ export function SalesImportTabsClient({ canResolve }: { canResolve: boolean }) {
           {section === 'import' && <ImportSalesPanel />}
           {section === 'matrix' && <MonthlyImportMatrixPanel />}
           {section === 'issues' && <ImportIssuesPanel canResolve={canResolve} />}
-          {section === 'ledger' && <DailySalesLedgerPanel />}
+          {section === 'ledger' && <DailySalesLedgerPanel canAdminUnlockLedger={canAdminUnlockLedger} />}
           {section === 'monthly' && <MonthlyMatrixPanel />}
         </div>
       </SectionBlock>

@@ -230,7 +230,14 @@ function formatDailySummaryForCopy(
   return blocks.join('\n\n');
 }
 
-export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = {}) {
+export function SalesDailyClient({
+  embedded = false,
+  canAdminUnlockLedger = false,
+}: {
+  embedded?: boolean;
+  /** ADMIN / SUPER_ADMIN: show Unlock when the day is ledger-locked. */
+  canAdminUnlockLedger?: boolean;
+} = {}) {
   const { t } = useT();
   const [date, setDate] = useState(() => toLocalDateString(new Date()));
   const [data, setData] = useState<DailyData | null>(null);
@@ -240,6 +247,7 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
   const [loading, setLoading] = useState(true);
   const [savingSummary, setSavingSummary] = useState<string | null>(null);
   const [locking, setLocking] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState<string | null>(null);
   const [batchSavingBoutique, setBatchSavingBoutique] = useState<string | null>(null);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeesLoadFailed, setEmployeesLoadFailed] = useState(false);
@@ -667,6 +675,61 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
     }
   };
 
+  const unlock = async (boutiqueId: string) => {
+    setUnlocking(boutiqueId);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/sales/daily/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boutiqueId, date }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const canLock = typeof (j as { canLock?: boolean }).canLock === 'boolean' ? (j as { canLock: boolean }).canLock : false;
+        const linesTotal = typeof (j as { linesTotal?: number }).linesTotal === 'number' ? (j as { linesTotal: number }).linesTotal : undefined;
+        const diff = typeof (j as { diff?: number }).diff === 'number' ? (j as { diff: number }).diff : undefined;
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            summaries: prev.summaries.map((s) =>
+              s.boutiqueId === boutiqueId
+                ? {
+                    ...s,
+                    status: 'DRAFT',
+                    canLock,
+                    linesTotal: linesTotal ?? s.linesTotal,
+                    diff: diff ?? s.diff,
+                  }
+                : s
+            ),
+          };
+        });
+        setDraftsByBoutique((prev) => {
+          const rows = prev[boutiqueId];
+          if (!rows) return prev;
+          const asLines: Line[] = rows
+            .filter((d) => d.employeeId.trim() !== '')
+            .map((d) => {
+              const amt = parseAmountInt(d.amountStr);
+              return {
+                id: d.serverLineId ?? `local:${d.employeeId.trim()}`,
+                employeeId: d.employeeId.trim(),
+                amountSar: amt.ok ? amt.value : 0,
+                source: 'MANUAL',
+              };
+            });
+          return { ...prev, [boutiqueId]: linesToDrafts(asLines, false) };
+        });
+      } else {
+        setActionError((j as { error?: string }).error ?? 'Failed to unlock');
+      }
+    } finally {
+      setUnlocking(null);
+    }
+  };
+
   const runYearlyImport = async () => {
     if (!yearlyFile) return;
     setYearlyLoading(true);
@@ -889,8 +952,19 @@ export function SalesDailyClient({ embedded = false }: { embedded?: boolean } = 
                       className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
                       title={dirtyCount > 0 ? t('sales.dailyLedger.saveBeforeLock') : undefined}
                     >
-                      {locking === s.boutiqueId ? 'Locking…' : 'Lock'}
+                      {locking === s.boutiqueId ? t('sales.dailyLedger.locking') : t('sales.dailyLedger.lock')}
                     </button>
+                    {canAdminUnlockLedger && locked ? (
+                      <button
+                        type="button"
+                        disabled={unlocking === s.boutiqueId || locking === s.boutiqueId}
+                        onClick={() => void unlock(s.boutiqueId)}
+                        className="rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                        title={t('sales.dailyLedger.unlockAdminHint')}
+                      >
+                        {unlocking === s.boutiqueId ? t('sales.dailyLedger.unlocking') : t('sales.dailyLedger.unlockAdmin')}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
                 {dirtyCount > 0 && !locked && (

@@ -1,6 +1,7 @@
 import { DrilldownLayout } from '@/components/nav/DrilldownCards';
 import { getServerTranslations } from '@/lib/i18n/serverTranslate';
 import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
+import { getSessionUser } from '@/lib/auth';
 import { AnalyticsSalesLedgerBelow } from './AnalyticsSalesLedgerBelow';
 
 const ROUTES = [
@@ -23,6 +24,8 @@ const ROUTES = [
 export default async function NavAnalyticsSalesPage() {
   const t = await getServerTranslations('nav.drilldown');
   const { groups } = await getDrilldownUser();
+  const user = await getSessionUser();
+  const canAdminUnlockLedger = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const allowed = hrefSetFromGroups(groups);
   const cards = ROUTES.filter((c) => allowed.has(c.href));
   return (
@@ -30,7 +33,11 @@ export default async function NavAnalyticsSalesPage() {
       title={t('analytics.sales.title')}
       subtitle={t('analytics.sales.hint')}
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
-      belowCards={allowed.has('/sales/daily') ? <AnalyticsSalesLedgerBelow /> : undefined}
+      belowCards={
+        allowed.has('/sales/daily') ? (
+          <AnalyticsSalesLedgerBelow canAdminUnlockLedger={canAdminUnlockLedger} />
+        ) : undefined
+      }
     />
   );
 }

@@ -10,5 +10,7 @@ export default async function SalesDailyPage() {
   if (!user) redirect('/login');
   if (!ALLOWED.includes(user.role as Role)) redirect('/');
 
-  return <SalesDailyClient />;
+  const canAdminUnlockLedger = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+
+  return <SalesDailyClient canAdminUnlockLedger={canAdminUnlockLedger} />;
 }

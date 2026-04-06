@@ -11,6 +11,7 @@ export default async function AdminImportSalesPage() {
   if (!ALLOWED_ROLES.includes(user.role as (typeof ALLOWED_ROLES)[number])) redirect('/');
 
   const canResolve = user.role === 'MANAGER' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'AREA_MANAGER';
+  const canAdminUnlockLedger = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
 
-  return <SalesImportTabsClient canResolve={canResolve} />;
+  return <SalesImportTabsClient canResolve={canResolve} canAdminUnlockLedger={canAdminUnlockLedger} />;
 }
