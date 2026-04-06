@@ -9,6 +9,7 @@ export type SalesLedgerAction =
   | 'SUMMARY_CREATE'
   | 'SUMMARY_UPDATE'
   | 'LINE_UPSERT'
+  | 'LINE_DELETE'
   | 'LOCK'
   | 'UNLOCK'
   | 'IMPORT_APPLY'

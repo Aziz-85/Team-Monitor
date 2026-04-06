@@ -19,6 +19,11 @@ function addDays(dateStr: string, delta: number): string {
   return toLocalDateString(d);
 }
 
+/** YYYY-MM-DD for the boutique calendar (Asia/Riyadh), same as ledger API day keys. */
+function riyadhCalendarToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+}
+
 function newClientRowId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -239,7 +244,7 @@ export function SalesDailyClient({
   canAdminUnlockLedger?: boolean;
 } = {}) {
   const { t } = useT();
-  const [date, setDate] = useState(() => toLocalDateString(new Date()));
+  const [date, setDate] = useState(riyadhCalendarToday);
   const [data, setData] = useState<DailyData | null>(null);
   const [draftsByBoutique, setDraftsByBoutique] = useState<Record<string, DraftLine[]>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -248,6 +253,7 @@ export function SalesDailyClient({
   const [savingSummary, setSavingSummary] = useState<string | null>(null);
   const [locking, setLocking] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState<string | null>(null);
+  const [deletingClientRowId, setDeletingClientRowId] = useState<string | null>(null);
   const [batchSavingBoutique, setBatchSavingBoutique] = useState<string | null>(null);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [employeesLoadFailed, setEmployeesLoadFailed] = useState(false);
@@ -326,8 +332,18 @@ export function SalesDailyClient({
   const firstTableInputRef = useRef<HTMLSelectElement | null>(null);
   const batchSaveLockedRef = useRef(false);
 
-  const loadDaily = useCallback(async () => {
-    setLoading(true);
+  /** Confirmation only when entering sales for a calendar day before today (Asia/Riyadh), not for today or future days. */
+  const salesCalendarToday = riyadhCalendarToday();
+  const dateIsBeforeToday = date < salesCalendarToday;
+  const [pastDateAck, setPastDateAck] = useState(false);
+  const persistBlocked = dateIsBeforeToday && !pastDateAck;
+
+  useEffect(() => {
+    setPastDateAck(false);
+  }, [date]);
+
+  const loadDaily = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setLoadError(null);
     try {
       const r = await fetch(`/api/sales/daily?date=${encodeURIComponent(date)}`, { cache: 'no-store' });
@@ -346,7 +362,7 @@ export function SalesDailyClient({
       setDraftsByBoutique({});
       setLoadError('Request failed');
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [date]);
 
@@ -475,6 +491,10 @@ export function SalesDailyClient({
   }, [loadDaily]);
 
   const setManagerTotal = async (boutiqueId: string, totalSar: number) => {
+    if (persistBlocked) {
+      setActionError(t('sales.dailyLedger.confirmDateFirst'));
+      return;
+    }
     setSavingSummary(boutiqueId);
     setActionError(null);
     try {
@@ -537,6 +557,10 @@ export function SalesDailyClient({
   );
 
   const saveAllLines = async (boutiqueId: string, rows: DraftLine[]) => {
+    if (persistBlocked) {
+      setActionError(t('sales.dailyLedger.confirmDateFirst'));
+      return;
+    }
     if (batchSavingBoutique || batchSaveLockedRef.current) return;
     batchSaveLockedRef.current = true;
     setBatchSavingBoutique(boutiqueId);
@@ -630,6 +654,10 @@ export function SalesDailyClient({
   };
 
   const lock = async (boutiqueId: string) => {
+    if (persistBlocked) {
+      setActionError(t('sales.dailyLedger.confirmDateFirst'));
+      return;
+    }
     setLocking(boutiqueId);
     setActionError(null);
     try {
@@ -825,10 +853,64 @@ export function SalesDailyClient({
     });
   };
 
+  const zeroDraftAmount = (boutiqueId: string, clientRowId: string) => {
+    if (persistBlocked) {
+      setActionError(t('sales.dailyLedger.confirmDateFirst'));
+      return;
+    }
+    updateDraftRow(boutiqueId, clientRowId, { amountStr: '0' });
+  };
+
+  const removeLedgerLine = async (boutiqueId: string, row: DraftLine, summaryLocked: boolean) => {
+    if (summaryLocked) return;
+    if (persistBlocked) {
+      setActionError(t('sales.dailyLedger.confirmDateFirst'));
+      return;
+    }
+    const emp = row.employeeId.trim();
+    if (!row.serverLineId) {
+      if (isRowEmpty(row)) return;
+      setDraftsByBoutique((prev) => {
+        const rows = [...(prev[boutiqueId] ?? [])];
+        const idx = rows.findIndex((x) => x.clientRowId === row.clientRowId);
+        if (idx < 0) return prev;
+        rows[idx] = {
+          ...rows[idx],
+          employeeId: '',
+          amountStr: '',
+          dirty: false,
+          saveState: 'idle',
+          serverLineId: null,
+        };
+        const lockedNow = data?.summaries.find((s) => s.boutiqueId === boutiqueId)?.status === 'LOCKED';
+        return { ...prev, [boutiqueId]: maintainTrailingBlank(rows, !!lockedNow) };
+      });
+      return;
+    }
+    if (!emp) return;
+    setDeletingClientRowId(row.clientRowId);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/sales/daily/lines', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boutiqueId, date, employeeId: emp }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await loadDaily({ silent: true });
+      } else {
+        setActionError((j as { error?: string }).error ?? 'Failed to remove line');
+      }
+    } finally {
+      setDeletingClientRowId(null);
+    }
+  };
+
   const mainInner = (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setDate(addDays(date, -1))}
@@ -841,6 +923,7 @@ export function SalesDailyClient({
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+            aria-label={t('sales.dailyLedger.salesDate')}
           />
           <button
             type="button"
@@ -849,6 +932,13 @@ export function SalesDailyClient({
           >
             Next →
           </button>
+          <button
+            type="button"
+            onClick={() => setDate(riyadhCalendarToday())}
+            className="rounded border border-accent/40 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/15"
+          >
+            {t('sales.dailyLedger.jumpToToday')} ({salesCalendarToday})
+          </button>
         </div>
         {data?.scope?.label && (
           <span className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground">
@@ -856,6 +946,26 @@ export function SalesDailyClient({
           </span>
         )}
       </div>
+
+      {dateIsBeforeToday && (
+        <div
+          className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="font-medium">{t('sales.dailyLedger.pastDateBanner')}</p>
+          <p className="mt-0.5 text-base font-bold tabular-nums text-amber-950">{date}</p>
+          <p className="mt-1 text-xs text-amber-900/90">{t('sales.dailyLedger.pastDateHint')}</p>
+          <label className="mt-3 flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              checked={pastDateAck}
+              onChange={(e) => setPastDateAck(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-amber-400"
+            />
+            <span>{t('sales.dailyLedger.pastDateConfirmCheckbox')}</span>
+          </label>
+        </div>
+      )}
 
       {loadError && !loading && (
         <div
@@ -923,6 +1033,7 @@ export function SalesDailyClient({
                     <ManagerTotalInput
                       summary={s}
                       saving={savingSummary === s.boutiqueId}
+                      persistDisabled={persistBlocked}
                       onSave={(v) => void setManagerTotal(s.boutiqueId, v)}
                     />
                   </div>
@@ -937,7 +1048,12 @@ export function SalesDailyClient({
                   <div className="flex flex-wrap items-end gap-2">
                     <button
                       type="button"
-                      disabled={locked || dirtyCount === 0 || batchSavingBoutique === s.boutiqueId}
+                      disabled={
+                        locked ||
+                        dirtyCount === 0 ||
+                        batchSavingBoutique === s.boutiqueId ||
+                        persistBlocked
+                      }
                       onClick={() => void saveAllLines(s.boutiqueId, rows)}
                       className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
                     >
@@ -947,7 +1063,12 @@ export function SalesDailyClient({
                     </button>
                     <button
                       type="button"
-                      disabled={!s.canLock || locking === s.boutiqueId || dirtyCount > 0}
+                      disabled={
+                        !s.canLock ||
+                        locking === s.boutiqueId ||
+                        dirtyCount > 0 ||
+                        persistBlocked
+                      }
                       onClick={() => void lock(s.boutiqueId)}
                       className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle disabled:opacity-50"
                       title={dirtyCount > 0 ? t('sales.dailyLedger.saveBeforeLock') : undefined}
@@ -982,10 +1103,17 @@ export function SalesDailyClient({
                   nameByEmpId={nameByEmpId}
                   locked={locked}
                   batchSaving={batchSavingBoutique === s.boutiqueId}
+                  persistBlocked={persistBlocked}
+                  deletingClientRowId={deletingClientRowId}
                   firstSelectRef={sIdx === 0 ? firstTableInputRef : undefined}
                   employeePlaceholder={t('sales.dailyLedger.chooseEmployee')}
                   employeeEmpty={t('sales.dailyLedger.noEmployeesLoaded')}
+                  actionsColumnLabel={t('sales.dailyLedger.actionsColumn')}
+                  removeLineLabel={t('sales.dailyLedger.removeLine')}
+                  zeroAmountLabel={t('sales.dailyLedger.zeroAmount')}
                   onUpdateRow={(clientRowId, patch) => updateDraftRow(s.boutiqueId, clientRowId, patch)}
+                  onRemoveRow={(row) => void removeLedgerLine(s.boutiqueId, row, locked)}
+                  onZeroAmount={(clientRowId) => zeroDraftAmount(s.boutiqueId, clientRowId)}
                   onEnterFromAmount={(rowIndex) => {
                     const nextEmp = document.querySelector<HTMLSelectElement>(
                       `[data-ledger-emp="${s.boutiqueId}-${rowIndex + 1}"]`
@@ -1292,10 +1420,12 @@ export function SalesDailyClient({
 function ManagerTotalInput({
   summary,
   saving,
+  persistDisabled,
   onSave,
 }: {
   summary: Summary;
   saving: boolean;
+  persistDisabled?: boolean;
   onSave: (v: number) => void;
 }) {
   const [val, setVal] = useState(String(summary.totalSar));
@@ -1316,7 +1446,7 @@ function ManagerTotalInput({
       {summary.status === 'DRAFT' && (
         <button
           type="button"
-          disabled={saving || !valid}
+          disabled={saving || !valid || persistDisabled}
           onClick={() => valid && onSave(num)}
           className="rounded bg-surface-subtle px-2 py-1 text-sm text-foreground disabled:opacity-50"
         >
@@ -1334,10 +1464,17 @@ function LedgerTable({
   nameByEmpId,
   locked,
   batchSaving,
+  persistBlocked,
+  deletingClientRowId,
   firstSelectRef,
   employeePlaceholder,
   employeeEmpty,
+  actionsColumnLabel,
+  removeLineLabel,
+  zeroAmountLabel,
   onUpdateRow,
+  onRemoveRow,
+  onZeroAmount,
   onEnterFromAmount,
 }: {
   boutiqueId: string;
@@ -1346,21 +1483,29 @@ function LedgerTable({
   nameByEmpId: Map<string, string>;
   locked: boolean;
   batchSaving: boolean;
+  persistBlocked: boolean;
+  deletingClientRowId: string | null;
   firstSelectRef?: MutableRefObject<HTMLSelectElement | null>;
   employeePlaceholder: string;
   employeeEmpty: string;
+  actionsColumnLabel: string;
+  removeLineLabel: string;
+  zeroAmountLabel: string;
   onUpdateRow: (clientRowId: string, patch: Partial<DraftLine>) => void;
+  onRemoveRow: (row: DraftLine) => void;
+  onZeroAmount: (clientRowId: string) => void;
   onEnterFromAmount: (rowIndex: number) => void;
 }) {
   return (
     <div className="w-full min-w-0 overflow-x-auto sm:overflow-x-visible [-webkit-overflow-scrolling:touch]">
-      <table className="w-full min-w-[32rem] sm:min-w-0 table-auto border-collapse text-sm">
+      <table className="w-full min-w-[36rem] sm:min-w-0 table-auto border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-start text-muted">
-            <th className="w-[40%] py-2 pe-2">Employee</th>
-            <th className="w-[22%] py-2 pe-2">Amount (SAR)</th>
-            <th className="w-[18%] py-2 pe-2">Status</th>
-            <th className="w-[20%] py-2 pe-2">Save</th>
+            <th className="w-[34%] py-2 pe-2">Employee</th>
+            <th className="w-[18%] py-2 pe-2">Amount (SAR)</th>
+            <th className="w-[14%] py-2 pe-2">Status</th>
+            <th className="w-[14%] py-2 pe-2">Save</th>
+            <th className="w-[20%] py-2 pe-2">{actionsColumnLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -1443,6 +1588,38 @@ function LedgerTable({
                     <span className="text-red-600">Error</span>
                   ) : (
                     <span>—</span>
+                  )}
+                </td>
+                <td className="py-2 pe-2">
+                  {!locked && !batchSaving ? (
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        disabled={
+                          persistBlocked ||
+                          deletingClientRowId === row.clientRowId ||
+                          isRowEmpty(row)
+                        }
+                        onClick={() => onZeroAmount(row.clientRowId)}
+                        className="rounded border border-border bg-surface px-2 py-0.5 text-xs text-foreground hover:bg-surface-subtle disabled:opacity-40"
+                      >
+                        {zeroAmountLabel}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={
+                          persistBlocked ||
+                          deletingClientRowId === row.clientRowId ||
+                          isRowEmpty(row)
+                        }
+                        onClick={() => onRemoveRow(row)}
+                        className="rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-800 hover:bg-red-100 disabled:opacity-40"
+                      >
+                        {deletingClientRowId === row.clientRowId ? '…' : removeLineLabel}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted">—</span>
                   )}
                 </td>
               </tr>

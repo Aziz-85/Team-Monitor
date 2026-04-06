@@ -1,7 +1,7 @@
 /**
- * POST /api/sales/daily/lines
- * Body: { boutiqueId, date, employeeId, amountSar }
- * RBAC: ADMIN, MANAGER. Upserts line + audit. Post-lock edit forces unlock.
+ * POST /api/sales/daily/lines — upsert line
+ * DELETE /api/sales/daily/lines — body { boutiqueId, date, employeeId } removes that line
+ * RBAC: ADMIN, MANAGER, AREA_MANAGER. Post-lock edit/delete forces unlock.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -141,5 +141,89 @@ export async function POST(request: NextRequest) {
     diff: recon?.diff ?? 0,
     canLock: recon?.canLock ?? false,
     status: recon?.status ?? summary.status,
+  });
+}
+
+export async function DELETE(request: NextRequest) {
+  let user: Awaited<ReturnType<typeof getSessionUser>>;
+  try {
+    user = await requireRole([...ALLOWED_ROLES]);
+  } catch (e) {
+    const err = e as { code?: string };
+    if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const boutiqueId = typeof body.boutiqueId === 'string' ? body.boutiqueId.trim() : '';
+  const dateParam = typeof body.date === 'string' ? body.date : '';
+  const employeeId = typeof body.employeeId === 'string' ? body.employeeId.trim() : '';
+
+  if (!boutiqueId || !employeeId) {
+    return NextResponse.json({ error: 'boutiqueId and employeeId required' }, { status: 400 });
+  }
+
+  const date = parseDateRiyadh(dateParam);
+  const trustedId = await getTrustedOperationalBoutiqueId(user, request);
+  assertOperationalBoutiqueId(trustedId ?? undefined);
+  if (!trustedId || boutiqueId !== trustedId) {
+    return NextResponse.json({ error: 'Boutique not in your operational scope' }, { status: 403 });
+  }
+  const canManage = await canManageSalesInBoutique(user.id, user.role as Role, boutiqueId, trustedId);
+  if (!canManage) {
+    return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
+  }
+
+  const summary = await prisma.boutiqueSalesSummary.findUnique({
+    where: { boutiqueId_date: { boutiqueId, date } },
+    include: { lines: true },
+  });
+
+  if (!summary) {
+    return NextResponse.json({ error: 'No summary for this boutique and date' }, { status: 404 });
+  }
+
+  const existingLine = summary.lines.find((l) => l.employeeId === employeeId);
+  if (!existingLine) {
+    return NextResponse.json({ error: 'Line not found' }, { status: 404 });
+  }
+
+  const wasLocked = summary.status === 'LOCKED';
+
+  if (wasLocked) {
+    await prisma.boutiqueSalesSummary.update({
+      where: { id: summary.id },
+      data: { status: 'DRAFT', lockedById: null, lockedAt: null },
+    });
+    await recordSalesLedgerAudit({
+      boutiqueId,
+      date,
+      actorId: user.id,
+      action: 'POST_LOCK_EDIT',
+      reason: 'Line delete after lock; auto-unlock',
+      metadata: { summaryId: summary.id, employeeId },
+    });
+  }
+
+  await prisma.boutiqueSalesLine.delete({ where: { id: existingLine.id } });
+
+  await recordSalesLedgerAudit({
+    boutiqueId,
+    date,
+    actorId: user.id,
+    action: 'LINE_DELETE',
+    metadata: { employeeId, wasLocked },
+  });
+
+  await syncSummaryToSalesEntry(summary.id, user.id);
+
+  const recon = await reconcileSummary(summary.id);
+  return NextResponse.json({
+    ok: true,
+    linesTotal: recon?.linesTotal ?? 0,
+    summaryTotal: recon?.summaryTotal ?? summary.totalSar,
+    diff: recon?.diff ?? 0,
+    canLock: recon?.canLock ?? false,
+    status: recon?.status ?? 'DRAFT',
   });
 }
