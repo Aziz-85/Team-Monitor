@@ -68,8 +68,8 @@ export type AppShellQuickItem = {
 };
 
 export const APP_SHELL_QUICK_ACCESS: AppShellQuickItem[] = [
-  { key: 'HOME', href: '/', labelKey: 'nav.home', requiresRouteAccess: true },
-  { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard' },
+  { key: 'HOME', href: '/dashboard', labelKey: 'nav.home', requiresRouteAccess: true },
+  { key: 'DASHBOARD', href: '/', labelKey: 'nav.dashboard', requiresRouteAccess: true },
   { key: 'SCHEDULE', href: '/schedule/view', labelKey: 'nav.sidebar.schedule' },
 ];
 
@@ -88,13 +88,13 @@ export const APP_SHELL_ENTRY_DAILY = {
   labelKey: 'nav.sidebar.entryDailySales',
 } as const;
 
-/** 1. DASHBOARD — Home, Dashboard, Employee Home */
+/** 1. DASHBOARD — “Home” /dashboard (all roles), executive “Dashboard” / (managers+), Employee home */
 const GROUP_DASHBOARD: NavGroup = {
   key: 'DASHBOARD',
   labelKey: 'nav.group.DASHBOARD',
   items: [
-    item('/', 'nav.home', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
-    item('/dashboard', 'nav.dashboard', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEMO_VIEWER'], 'CORE'),
+    item('/', 'nav.dashboard', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/dashboard', 'nav.home', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEMO_VIEWER'], 'CORE'),
     item('/employee', 'nav.employeeHome', ['EMPLOYEE', 'ASSISTANT_MANAGER'], 'CORE'),
   ],
 };

@@ -1763,7 +1763,7 @@
     "quickActionsSubtitle": "Your most-used actions, updated automatically.",
     "quickActionsGo": "Open",
     "quickActions": {
-      "dashboard": { "title": "Dashboard", "hint": "Open your performance dashboard." },
+      "dashboard": { "title": "Home", "hint": "Open your home — overview and shortcuts for your role." },
       "schedule": { "title": "Schedule", "hint": "View schedule for today and this week." },
       "tasks": { "title": "Tasks", "hint": "Review and close today’s tasks." },
       "salesSummary": { "title": "Sales Summary", "hint": "Check boutique sales performance and pace." },

@@ -524,7 +524,7 @@ Achievement: ${performance.daily.percent}%`;
   return (
     <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
       <SectionBlock
-        title={t('nav.home')}
+        title={t('nav.dashboard')}
         subtitle={t('home.executiveHeaderSubtitle')}
         rightSlot={
           <div className="flex flex-wrap items-center gap-2">

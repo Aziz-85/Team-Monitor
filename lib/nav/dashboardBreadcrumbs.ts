@@ -5,7 +5,8 @@
 
 export type DashboardCrumb = { labelKey: string; href?: string };
 
-const HOME: DashboardCrumb = { labelKey: 'nav.drilldown.breadcrumbs.home', href: '/' };
+/** Root crumb: universal landing (/dashboard), labeled “Home”. */
+const HOME: DashboardCrumb = { labelKey: 'nav.home', href: '/dashboard' };
 
 /** Longest-prefix wins: full static paths → title translation key */
 const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
@@ -57,7 +58,8 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/company/governance', titleKey: 'nav.company.governance' },
   { prefix: '/company', titleKey: 'nav.company.overview' },
   { prefix: '/compliance', titleKey: 'nav.drilldown.routes.leaves.compliance.title' },
-  { prefix: '/dashboard', titleKey: 'nav.dashboard' },
+  { prefix: '/dashboard', titleKey: 'nav.home' },
+  { prefix: '/', titleKey: 'nav.dashboard' },
   { prefix: '/employee', titleKey: 'nav.employeeHome' },
   { prefix: '/executive/compare', titleKey: 'nav.drilldown.routes.reports.compare.title' },
   { prefix: '/executive/employees', titleKey: 'nav.drilldown.routes.reports.employees.title' },
@@ -161,7 +163,9 @@ function buildNavDrilldownTrail(path: string): DashboardBreadcrumbResult | null 
   }
 
   const secondLastWithHref = [...deduped].reverse().find((c) => c.href != null && c.href !== path);
-  const backHref = secondLastWithHref?.href ?? (deduped.length > 1 ? deduped[deduped.length - 2]?.href ?? '/' : '/');
+  const backHref =
+    secondLastWithHref?.href ??
+    (deduped.length > 1 ? deduped[deduped.length - 2]?.href ?? '/dashboard' : '/dashboard');
 
   return {
     crumbs: deduped,
@@ -263,7 +267,11 @@ export type DashboardBreadcrumbResult = {
 export function getDashboardBreadcrumbTrail(pathname: string): DashboardBreadcrumbResult | null {
   const path = (pathname.split('?')[0] || '/').replace(/\/+$/, '') || '/';
   if (path === '/') {
-    return { crumbs: [HOME], backHref: null, showBack: false };
+    return { crumbs: [{ labelKey: 'nav.dashboard' }], backHref: null, showBack: false };
+  }
+
+  if (path === '/dashboard') {
+    return { crumbs: [{ labelKey: 'nav.home' }], backHref: null, showBack: false };
   }
 
   const navTrail = buildNavDrilldownTrail(path);
@@ -293,7 +301,9 @@ export function getDashboardBreadcrumbTrail(pathname: string): DashboardBreadcru
   crumbs.push(...deduped);
 
   const secondLastWithHref = [...crumbs].reverse().find((c) => c.href != null && c.href !== path);
-  const backHref = secondLastWithHref?.href ?? (crumbs.length > 1 ? crumbs[crumbs.length - 2]?.href ?? '/' : '/');
+  const backHref =
+    secondLastWithHref?.href ??
+    (crumbs.length > 1 ? crumbs[crumbs.length - 2]?.href ?? '/dashboard' : '/dashboard');
 
   return {
     crumbs,
