@@ -9,7 +9,7 @@ import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
 import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
-import { getEffectiveAccess } from '@/lib/rbac/effectiveAccess';
+import { getEffectiveAccessForBoutique } from '@/lib/rbac/effectiveAccess';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 
 export default async function DashboardLayout({
@@ -28,10 +28,11 @@ export default async function DashboardLayout({
   const scope = await getOperationalScope();
   const boutiqueId = scope?.boutiqueId ?? user.boutiqueId ?? '';
   const access = boutiqueId
-    ? await getEffectiveAccess(
-        { id: user.id, role: user.role as import('@prisma/client').Role, canEditSchedule: user.canEditSchedule },
-        boutiqueId
-      )
+    ? await getEffectiveAccessForBoutique(boutiqueId, {
+        id: user.id,
+        role: user.role as import('@prisma/client').Role,
+        canEditSchedule: user.canEditSchedule,
+      })
     : null;
   const navRole = (user.role as string) === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (user.role as string) === 'DEMO_VIEWER' ? 'DEMO_VIEWER' : (access?.effectiveRole ?? user.role);
   const canEditSchedule = (user.role as string) === 'SUPER_ADMIN' ? true : (user.role as string) === 'DEMO_VIEWER' ? false : (access?.effectiveFlags.canEditSchedule ?? false);

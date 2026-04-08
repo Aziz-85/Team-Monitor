@@ -364,6 +364,19 @@ export function canAccessRoute(role: Role, pathname: string): boolean {
   return effective.some((route) => pathOnly === route || pathOnly.startsWith(route + '/'));
 }
 
+/**
+ * First destination after login (and safe fallback when user opens `/` without access).
+ * Must stay aligned with `ROLE_ROUTES` — do not default everyone to `/` (management-only for some roles).
+ */
+export function getPostLoginPath(role: Role): string {
+  if (role === 'EMPLOYEE') return '/employee';
+  if (canAccessRoute(role, '/')) return '/';
+  if (canAccessRoute(role, '/dashboard')) return '/dashboard';
+  if (canAccessRoute(role, '/employee')) return '/employee';
+  if (canAccessRoute(role, '/nav')) return '/nav';
+  return '/dashboard';
+}
+
 /** True if role is read-only demo (no edits, no admin, no export). */
 export function isDemoViewer(role: Role): boolean {
   return role === 'DEMO_VIEWER';

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
+import { getPostLoginPath, type Role } from '@/lib/permissions';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,11 +47,7 @@ export default function LoginPage() {
         router.push('/change-password');
         return;
       }
-      if (data.role === 'EMPLOYEE') {
-        router.push('/employee');
-      } else {
-        router.push('/');
-      }
+      router.push(getPostLoginPath(data.role as Role));
     } catch {
       setError(t('auth.connectionError'));
     } finally {

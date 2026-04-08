@@ -151,7 +151,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Not Found' }, { status: 404 });
     }
     if (pathname.startsWith('/executive')) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 

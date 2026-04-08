@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
-import { canAccessRoute } from '@/lib/permissions';
+import { canAccessRoute, getPostLoginPath } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
 export function RouteGuard({ role, children }: { role: Role; children: React.ReactNode }) {
@@ -15,7 +15,7 @@ export function RouteGuard({ role, children }: { role: Role; children: React.Rea
     return <>{children}</>;
   }
 
-  const backHref = role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER' ? '/employee' : role === 'DEMO_VIEWER' ? '/dashboard' : '/';
+  const backHref = getPostLoginPath(role);
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4">
       <p className="text-center text-muted">{t('common.accessDenied')}</p>

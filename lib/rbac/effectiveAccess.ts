@@ -4,7 +4,9 @@
  * Asia/Riyadh: "now" for grant validity uses server time (DB stores UTC; comparison is correct).
  */
 
+import { cache } from 'react';
 import { prisma } from '@/lib/db';
+import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { canEditSchedule, canApproveWeek } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
@@ -138,6 +140,33 @@ export async function getEffectiveAccess(
     baselineRole,
     activeGrantIds,
   };
+}
+
+/** Per-request dedupe: layout + page may both need effective access for the same boutique. */
+export const getEffectiveAccessForBoutique = cache(async (boutiqueId: string, user: UserLike) => {
+  return getEffectiveAccess(user, boutiqueId);
+});
+
+/**
+ * Same `navRole` rule as the dashboard layout (baseline + ROLE_BOOST). Used for `/` redirect vs RouteGuard.
+ */
+export async function resolveNavRoleForSession(user: {
+  id: string;
+  role: Role;
+  canEditSchedule?: boolean | null;
+  boutiqueId: string | null;
+}): Promise<Role> {
+  const r = user.role;
+  if (r === 'SUPER_ADMIN' || r === 'DEMO_VIEWER') return r;
+  const scope = await getOperationalScope();
+  const boutiqueId = scope?.boutiqueId ?? user.boutiqueId ?? '';
+  if (!boutiqueId) return r;
+  const access = await getEffectiveAccessForBoutique(boutiqueId, {
+    id: user.id,
+    role: r,
+    canEditSchedule: user.canEditSchedule ?? undefined,
+  });
+  return access.effectiveRole;
 }
 
 /**
