@@ -1,6 +1,6 @@
 /**
  * GET /api/target/boutique/daily?month=YYYY-MM&date=YYYY-MM-DD
- * Boutique-level daily target: month target, achieved, remaining, daily required, today achieved & %.
+ * Boutique-level daily target: month target, achieved, MTD through selected date, remaining, daily required, today achieved & %.
  * SAR_INT only. Manager/Admin only; uses operational boutique.
  */
 
@@ -54,12 +54,18 @@ export async function GET(request: NextRequest) {
 
   const riyadhToday = toRiyadhDateString(getRiyadhNow());
 
-  const [boutiqueTarget, monthAchievedSar, todayAchievedSar, entryCountForDate] = await Promise.all([
+  const [boutiqueTarget, monthAchievedSar, mtdThroughDateSar, todayAchievedSar, entryCountForDate] =
+    await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
       where: { boutiqueId: bid, month: normMonth },
       select: { amount: true },
     }),
     aggregateSalesEntrySum(salesEntryWhereForBoutiqueMonth(bid, normMonth)),
+    aggregateSalesEntrySum({
+      boutiqueId: bid,
+      month: normMonth,
+      dateKey: { lte: dateStr },
+    }),
     aggregateSalesEntrySum({
       boutiqueId: bid,
       dateKey: dateStr,
@@ -85,6 +91,8 @@ export async function GET(request: NextRequest) {
     date: dateStr,
     monthTargetSar,
     monthAchievedSar,
+    /** MTD through selected `date` (inclusive), same month — for summaries / copy vs full `monthAchievedSar`. */
+    mtdThroughDateSar,
     remainingSar,
     daysRemaining,
     dailyRequiredSar,

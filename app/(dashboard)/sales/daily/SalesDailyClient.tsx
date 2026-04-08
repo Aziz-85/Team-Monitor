@@ -196,18 +196,57 @@ type ScopeBoutiqueDailyMetrics = {
   todayAchievedSar: number;
   todayPct: number | null;
   dailyProgressPending: boolean;
+  monthTargetSar: number;
+  /** MTD through selected ledger date (inclusive), same month — aligns copy with chosen day. */
+  mtdThroughDateSar: number;
+};
+
+type DailySummaryCopyLabels = {
+  todaySales: string;
+  dailyTarget: string;
+  achievement: string;
+  unavailable: string;
+  dailySales: string;
+  targetAchievedLine: string;
+  aboveTargetTemplate: string;
 };
 
 function formatDailySummaryForCopy(
   summaries: Summary[],
   dateStr: string,
   scopeDaily: ScopeBoutiqueDailyMetrics | null,
-  labels: { todaySales: string; dailyTarget: string; achievement: string; unavailable: string }
+  labels: DailySummaryCopyLabels
 ): string {
   const blocks: string[] = [];
   for (const s of summaries) {
     const useScopeMetrics = scopeDaily != null && scopeDaily.boutiqueId === s.boutiqueId;
     const todaySalesSar = useScopeMetrics ? scopeDaily.todayAchievedSar : s.linesTotal;
+
+    const monthlyTargetAchieved =
+      useScopeMetrics &&
+      scopeDaily.monthTargetSar > 0 &&
+      scopeDaily.mtdThroughDateSar >= scopeDaily.monthTargetSar;
+
+    if (monthlyTargetAchieved) {
+      const mtd = Math.trunc(scopeDaily.mtdThroughDateSar);
+      const monthT = Math.trunc(scopeDaily.monthTargetSar);
+      const y = Math.round((mtd * 100) / monthT);
+      const z = Math.max(0, mtd - monthT);
+      const zFmt = z.toLocaleString('en-SA');
+      const lines: string[] = [
+        s.boutique.name,
+        dateStr,
+        '',
+        `${labels.dailySales} ${formatSarLine(todaySalesSar)}`,
+        `${labels.achievement} ${y}%`,
+        '',
+        labels.targetAchievedLine,
+        labels.aboveTargetTemplate.replace('{amount}', zFmt),
+      ];
+      blocks.push(lines.join('\n'));
+      continue;
+    }
+
     const dailyTargetSar: number | null = useScopeMetrics ? scopeDaily.dailyRequiredSar : null;
     let achievementPct: number | null = null;
     if (useScopeMetrics) {
@@ -461,6 +500,8 @@ function SalesDailyClientImpl({
           todayAchievedSar: Math.trunc(Number(j.todayAchievedSar) || 0),
           todayPct,
           dailyProgressPending: !!j.dailyProgressPending,
+          monthTargetSar: Math.trunc(Number(j.monthTargetSar) || 0),
+          mtdThroughDateSar: Math.trunc(Number(j.mtdThroughDateSar) || 0),
         });
       })
       .catch(() => {
@@ -497,6 +538,9 @@ function SalesDailyClientImpl({
       dailyTarget: t('sales.dailyLedger.copyLabelDailyTarget'),
       achievement: t('sales.dailyLedger.copyLabelAchievement'),
       unavailable: t('sales.dailyLedger.copyValueUnavailable'),
+      dailySales: t('sales.dailyLedger.copyLabelDailySales'),
+      targetAchievedLine: t('sales.dailyLedger.copyTargetAchievedLine'),
+      aboveTargetTemplate: t('sales.dailyLedger.copyAboveTargetTemplate'),
     });
   }, [ledgerDateReady, data, date, scopeBoutiqueDaily, t]);
 
