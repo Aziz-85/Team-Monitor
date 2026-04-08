@@ -188,6 +188,7 @@ describe('metrics-crosspage: API same-month MTD equality (employee branch)', () 
         todayStr: '2026-02-15',
         todayInSelectedMonth: true,
         dailyAchievementPending: false,
+        monthlyTargetMet: false,
         weekRangeLabel: '2026-02-14 – 2026-02-20',
         daysInMonth: 28,
         leaveDaysInMonth: null,

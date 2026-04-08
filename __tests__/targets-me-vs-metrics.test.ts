@@ -31,6 +31,7 @@ const minimalMetrics = {
   todayStr: '2026-02-15',
   todayInSelectedMonth: true,
   dailyAchievementPending: false,
+  monthlyTargetMet: false,
   weekRangeLabel: '',
   leaveDaysInMonth: null as number | null,
   presenceFactor: null as number | null,

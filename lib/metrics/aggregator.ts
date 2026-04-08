@@ -99,6 +99,8 @@ export type TargetMetricsResult = {
   todayInSelectedMonth: boolean;
   /** True when viewing current calendar month in Riyadh and the user has no SalesEntry rows for today. */
   dailyAchievementPending: boolean;
+  /** True when monthTarget > 0 and MTD has closed the monthly gap (no remaining month target). */
+  monthlyTargetMet: boolean;
   weekRangeLabel: string;
   daysInMonth: number;
   leaveDaysInMonth: number | null;
@@ -179,6 +181,7 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
   const weekTarget = targetSnap.paceWeeklyRequiredSar;
 
   const remaining = monthTarget - mtdSales;
+  const monthlyTargetMet = monthTarget > 0 && targetSnap.remainingMonthTargetSar === 0;
   const dailyAchievementPending = todayInSelectedMonth && todayEntryCount === 0;
   const dailyPerf = dailyAchievementPending
     ? { target: dailyTarget, sales: 0, remaining: dailyTarget, percent: 0 }
@@ -217,6 +220,7 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     todayStr,
     todayInSelectedMonth,
     dailyAchievementPending,
+    monthlyTargetMet,
     weekRangeLabel,
     daysInMonth,
     leaveDaysInMonth: firstTarget?.leaveDaysInMonth ?? null,

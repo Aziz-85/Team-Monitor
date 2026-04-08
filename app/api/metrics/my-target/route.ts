@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
     todayStr: metrics.todayStr,
     todayInSelectedMonth: metrics.todayInSelectedMonth,
     dailyAchievementPending: metrics.dailyAchievementPending,
+    monthlyTargetMet: metrics.monthlyTargetMet,
     weekRangeLabel: metrics.weekRangeLabel,
     leaveDaysInMonth: metrics.leaveDaysInMonth,
     presenceFactor: metrics.presenceFactor,

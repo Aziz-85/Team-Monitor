@@ -88,6 +88,7 @@ type TargetsData = {
   todayStr: string;
   todayInSelectedMonth?: boolean;
   dailyAchievementPending?: boolean;
+  monthlyTargetMet?: boolean;
   weekRangeLabel?: string;
   leaveDaysInMonth?: number | null;
   presenceFactor?: number | null;
@@ -317,6 +318,7 @@ export function MyTargetClient() {
     todayStr: '',
     todayInSelectedMonth: false,
     dailyAchievementPending: false,
+    monthlyTargetMet: false,
     weekRangeLabel: '',
   };
 
@@ -373,19 +375,42 @@ export function MyTargetClient() {
             )}
             <table className="w-full text-sm">
               <tbody>
-                <tr><td className="p-1 text-muted">{t('targets.dailyRequiredPace')}</td><td className="p-1 text-end font-medium">{formatSar(d.paceDailyRequiredSar ?? d.dailyTarget)}</td></tr>
+                <tr>
+                  <td className="p-1 text-muted">{t('targets.dailyRequiredPace')}</td>
+                  <td className="p-1 text-end font-medium">
+                    {d.monthlyTargetMet ? t('home.dailyPaceNotApplicableMet') : formatSar(d.paceDailyRequiredSar ?? d.dailyTarget)}
+                  </td>
+                </tr>
                 <tr><td className="p-1 text-muted">{t('targets.reportingDailyShort')}</td><td className="p-1 text-end font-medium">{formatSar(d.reportingDailyAllocationSar ?? 0)}</td></tr>
                 <tr><td className="p-1 text-muted">{t('targets.sales')}</td><td className="p-1 text-end font-medium">{formatSar(d.todaySales)}</td></tr>
                 <tr>
                   <td className="p-1 text-muted">%</td>
                   <td className="p-1 text-end font-medium">
-                    {d.dailyAchievementPending ? '—' : formatPct(d.pctDaily)}
+                    {d.dailyAchievementPending
+                      ? '—'
+                      : d.monthlyTargetMet
+                        ? t('home.dailyPaceStatusMet')
+                        : formatPct(d.pctDaily)}
                   </td>
                 </tr>
               </tbody>
             </table>
             {d.dailyAchievementPending ? (
               <p className="mt-2 text-xs text-muted">{t('targets.dailyAchievementPending')}</p>
+            ) : d.monthlyTargetMet ? (
+              <>
+                <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  {t('home.dailyPaceMetBecauseMonthlyMet')}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {t('home.mtdAchievedVsMonthlyTarget')
+                    .replace('{mtd}', formatSar(d.mtdSales))
+                    .replace('{target}', formatSar(d.monthTarget))}
+                </p>
+                <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
+                  <div className="h-full w-full rounded-full bg-emerald-600" />
+                </div>
+              </>
             ) : (
               <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
                 <div className={`h-full rounded-full transition-all ${d.pctDaily > 100 ? getPerformanceBgClass(d.pctDaily) : 'bg-accent'}`} style={{ width: `${progress(d.pctDaily)}%` }} />
@@ -420,6 +445,9 @@ export function MyTargetClient() {
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-surface-subtle">
               <div className={`h-full rounded-full transition-all ${d.pctMonth > 100 ? getPerformanceBgClass(d.pctMonth) : 'bg-emerald-600'}`} style={{ width: `${progress(d.pctMonth)}%` }} />
             </div>
+            {d.monthlyTargetMet && (
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">{t('home.monthlyTargetAchievedBadge')}</p>
+            )}
           </OpsCard>
         </div>
 

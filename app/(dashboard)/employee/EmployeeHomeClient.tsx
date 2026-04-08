@@ -33,6 +33,7 @@ export function EmployeeHomeClient() {
     reportingDailyAllocationSar?: number;
     remainingMonthTargetSar?: number;
     dailyAchievementPending?: boolean;
+    monthlyTargetMet?: boolean;
   } | null>(null);
 
   const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
@@ -95,6 +96,7 @@ export function EmployeeHomeClient() {
             reportingDailyAllocationSar?: number;
             remainingMonthTargetSar?: number;
             dailyAchievementPending?: boolean;
+            monthlyTargetMet?: boolean;
           }) => {
             if (d && typeof d.todayTarget === 'number') {
               setTargetsData({
@@ -108,6 +110,7 @@ export function EmployeeHomeClient() {
                 reportingDailyAllocationSar: d.reportingDailyAllocationSar,
                 remainingMonthTargetSar: d.remainingMonthTargetSar,
                 dailyAchievementPending: d.dailyAchievementPending === true,
+                monthlyTargetMet: d.monthlyTargetMet === true,
               });
             }
           }
@@ -133,6 +136,7 @@ export function EmployeeHomeClient() {
           reportingDailyAllocationSar?: number;
           remainingMonthTargetSar?: number;
           dailyAchievementPending?: boolean;
+          monthlyTargetMet?: boolean;
         }) => {
         if (d && typeof d.todayTarget === 'number') {
           setTargetsData({
@@ -146,6 +150,7 @@ export function EmployeeHomeClient() {
             reportingDailyAllocationSar: d.reportingDailyAllocationSar,
             remainingMonthTargetSar: d.remainingMonthTargetSar,
             dailyAchievementPending: d.dailyAchievementPending === true,
+            monthlyTargetMet: d.monthlyTargetMet === true,
           });
         }
       }
@@ -194,12 +199,32 @@ export function EmployeeHomeClient() {
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
               <p className="text-sm text-muted">
-                {t('targets.dailyRequiredPace')}: {formatSarInt(targetsData.todayTarget)} · {t('targets.reportingDailyShort')}:{' '}
-                {formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} · {t('home.sales')}:{' '}
-                {formatSarInt(targetsData.todaySales)}
+                {t('targets.dailyRequiredPace')}:{' '}
+                {targetsData.monthlyTargetMet
+                  ? t('home.dailyPaceNotApplicableMet')
+                  : formatSarInt(targetsData.todayTarget)}{' '}
+                · {t('targets.reportingDailyShort')}: {formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} ·{' '}
+                {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
               </p>
               {targetsData.dailyAchievementPending ? (
                 <p className="mt-2 text-sm text-muted">{t('targets.dailyAchievementPending')}</p>
+              ) : targetsData.monthlyTargetMet ? (
+                <>
+                  <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    {t('home.dailyPaceMetBecauseMonthlyMet')}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {t('home.mtdAchievedVsMonthlyTarget')
+                      .replace('{mtd}', formatSarInt(targetsData.mtdSales))
+                      .replace('{target}', formatSarInt(targetsData.monthlyTarget))}
+                  </p>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
+                    <div className="h-full w-full rounded-full bg-emerald-600" />
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    {t('home.dailyPaceStatusMet')}
+                  </p>
+                </>
               ) : (
                 <>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
@@ -227,6 +252,11 @@ export function EmployeeHomeClient() {
                 />
               </div>
               <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.mtdPct)}%</p>
+              {targetsData.monthlyTargetMet && (
+                <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  {t('home.monthlyTargetAchievedBadge')}
+                </p>
+              )}
             </OpsCard>
             </div>
           </div>

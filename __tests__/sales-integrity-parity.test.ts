@@ -118,6 +118,7 @@ describe('parityEngine: employee MTD vs getTargetMetrics', () => {
         todayStr: '2026-02-15',
         todayInSelectedMonth: true,
         dailyAchievementPending: false,
+        monthlyTargetMet: false,
         weekRangeLabel: '',
         daysInMonth: 28,
         leaveDaysInMonth: null,
