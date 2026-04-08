@@ -1,12 +1,17 @@
 /**
- * GET /api/leaves/requests — list leave requests (LeaveRequest) for operational boutique only.
- * Query: status (optional), self=true (own only). Boutique from operational scope only.
+ * GET /api/leaves/requests — list LeaveRequest rows.
+ * Query: status (optional), self=true (own rows only).
+ * - Team list (no self): operational boutique only.
+ * - My requests (self=true): all boutiques the user may access (memberships + session boutique fallback),
+ *   not only the current “working on” boutique — so leaves filed under another branch still appear.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
+import { getUserAllowedBoutiqueIds } from '@/lib/scope/resolveScope';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +27,18 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') ?? undefined;
   const forSelf = searchParams.get('self') === 'true';
 
-  const where: { boutiqueId: string; status?: string; userId?: string } = {
-    boutiqueId,
-  };
+  const where: Prisma.LeaveRequestWhereInput = {};
+  if (forSelf) {
+    where.userId = user.id;
+    let allowed = await getUserAllowedBoutiqueIds(user.id);
+    if (allowed.length === 0 && user.boutiqueId) {
+      allowed = [user.boutiqueId];
+    }
+    where.boutiqueId = allowed.length > 0 ? { in: allowed } : boutiqueId;
+  } else {
+    where.boutiqueId = boutiqueId;
+  }
   if (status) where.status = status;
-  if (forSelf) where.userId = user.id;
 
   const list = await prisma.leaveRequest.findMany({
     where,

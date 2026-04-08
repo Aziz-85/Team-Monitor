@@ -30,13 +30,26 @@ export function LeaveRequestsClient() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ boutiqueId: '', startDate: '', endDate: '', type: 'ANNUAL' as string, notes: '', submitNow: true });
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [evaluationById, setEvaluationById] = useState<Record<string, { canManagerApprove: boolean; requiresAdmin: boolean; reasons: string[] }>>({});
 
   const fetchList = useCallback(() => {
+    setLoadError(null);
     fetch('/api/leaves/requests?self=true')
-      .then((r) => r.json())
-      .then((data) => setList(Array.isArray(data) ? data : []))
-      .catch(() => setList([]));
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const msg = typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : null;
+          setLoadError(msg ?? 'error');
+          setList([]);
+          return;
+        }
+        setList(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        setLoadError('error');
+        setList([]);
+      });
   }, []);
 
   const fetchBoutiques = useCallback(() => {
@@ -99,6 +112,11 @@ export function LeaveRequestsClient() {
             {t('leaves.submitRequest')}
           </button>
         </div>
+        {loadError ? (
+          <p className="mb-3 text-sm text-red-600" role="alert">
+            {loadError === 'error' ? t('leaves.loadFailed') : loadError}
+          </p>
+        ) : null}
         <AdminDataTable>
           <AdminTableHead>
             <AdminTh>{t('admin.boutiques.boutique')}</AdminTh>

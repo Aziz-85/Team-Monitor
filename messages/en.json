@@ -2524,7 +2524,8 @@
     "duration": "Duration",
     "days": "days",
     "notes": "Notes",
-    "overlapWarning": "This leave overlaps with another for this employee."
+    "overlapWarning": "This leave overlaps with another for this employee.",
+    "loadFailed": "Could not load your leave requests. Try again or contact support."
   },
   "planner": {
     "export": "Planner Export",
