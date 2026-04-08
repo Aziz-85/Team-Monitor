@@ -20,7 +20,8 @@
     "db:list-employees-by-boutique": "node scripts/list-employees-by-boutique.js",
     "backfill:taskkeys": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/backfill-taskkeys.ts",
     "audit:retention": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/auth-audit-retention.ts",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "test:smoke": "jest __tests__/leaves-self-requests.test.ts __tests__/post-login-path.test.ts __tests__/targets-me-vs-metrics.test.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
