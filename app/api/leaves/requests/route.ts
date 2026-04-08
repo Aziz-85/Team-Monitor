@@ -1,9 +1,9 @@
 /**
- * GET /api/leaves/requests — list LeaveRequest rows.
+ * GET /api/leaves/requests — list LeaveRequest rows and (for self) legacy Leave (schedule) rows.
  * Query: status (optional), self=true (own rows only).
- * - Team list (no self): operational boutique only.
- * - My requests (self=true): all boutiques the user may access (memberships + session boutique fallback),
- *   not only the current “working on” boutique — so leaves filed under another branch still appear.
+ * - Team list (no self): operational boutique only; each row has recordSource REQUEST.
+ * - My requests (self=true): memberships + session boutique for LeaveRequest; same boutiques for
+ *   legacy Leave by empId — merged list sorted by startDate desc.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -27,14 +27,18 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') ?? undefined;
   const forSelf = searchParams.get('self') === 'true';
 
+  let allowedBoutiqueIds: string[] = [];
+  if (forSelf) {
+    allowedBoutiqueIds = await getUserAllowedBoutiqueIds(user.id);
+    if (allowedBoutiqueIds.length === 0 && user.boutiqueId) {
+      allowedBoutiqueIds = [user.boutiqueId];
+    }
+  }
+
   const where: Prisma.LeaveRequestWhereInput = {};
   if (forSelf) {
     where.userId = user.id;
-    let allowed = await getUserAllowedBoutiqueIds(user.id);
-    if (allowed.length === 0 && user.boutiqueId) {
-      allowed = [user.boutiqueId];
-    }
-    where.boutiqueId = allowed.length > 0 ? { in: allowed } : boutiqueId;
+    where.boutiqueId = allowedBoutiqueIds.length > 0 ? { in: allowedBoutiqueIds } : boutiqueId;
   } else {
     where.boutiqueId = boutiqueId;
   }
@@ -52,5 +56,57 @@ export async function GET(request: NextRequest) {
     orderBy: [{ createdAt: 'desc' }],
   });
 
-  return NextResponse.json(list);
+  const requestsJson = list.map((row) => ({ ...row, recordSource: 'REQUEST' as const }));
+
+  if (!forSelf) {
+    return NextResponse.json(requestsJson);
+  }
+
+  const legacyWhere: Prisma.LeaveWhereInput = {
+    empId: user.empId,
+    employee: {
+      boutiqueId: allowedBoutiqueIds.length > 0 ? { in: allowedBoutiqueIds } : boutiqueId,
+    },
+  };
+
+  const legacyLeaves = await prisma.leave.findMany({
+    where: legacyWhere,
+    include: {
+      employee: {
+        select: {
+          name: true,
+          boutiqueId: true,
+          boutique: { select: { id: true, code: true, name: true } },
+        },
+      },
+    },
+    orderBy: [{ startDate: 'desc' }],
+  });
+
+  const scheduleJson = legacyLeaves.map((l) => ({
+    id: `schedule:${l.id}`,
+    recordSource: 'SCHEDULE' as const,
+    boutiqueId: l.employee.boutiqueId,
+    userId: user.id,
+    startDate: l.startDate,
+    endDate: l.endDate,
+    type: l.type,
+    status: l.status,
+    notes: l.notes,
+    createdAt: l.createdAt,
+    user: { empId: l.empId, employee: { name: l.employee.name } },
+    boutique: l.employee.boutique,
+    createdByUser: null,
+    approvedByUser: null,
+    escalatedByUser: null,
+  }));
+
+  const combined = [...requestsJson, ...scheduleJson];
+  combined.sort((a, b) => {
+    const ta = new Date(a.startDate).getTime();
+    const tb = new Date(b.startDate).getTime();
+    return tb - ta;
+  });
+
+  return NextResponse.json(combined);
 }

@@ -17,6 +17,7 @@ type LeaveRequestRow = {
   createdAt: string;
   user: { empId: string; employee?: { name: string } | null };
   boutique: { id: string; code: string; name: string };
+  recordSource?: 'REQUEST' | 'SCHEDULE';
 };
 
 type Boutique = { id: string; code: string; name: string };
@@ -137,12 +138,15 @@ export function LeaveRequestsClient() {
                   <AdminTd>{toDate(r.endDate)}</AdminTd>
                   <AdminTd>{r.status}</AdminTd>
                   <AdminTd>
-                    {r.status === 'DRAFT' && (
+                    {r.recordSource === 'SCHEDULE' ? (
+                      <span className="text-xs text-muted">{t('leaves.scheduleRecord')}</span>
+                    ) : null}
+                    {r.recordSource !== 'SCHEDULE' && r.status === 'DRAFT' && (
                       <>
                         <button type="button" onClick={() => handleSubmitToManager(r.id)} className="rounded border border-accent bg-accent/10 px-2 py-1 text-xs text-accent">Submit</button>
                       </>
                     )}
-                    {r.status === 'SUBMITTED' && (
+                    {r.recordSource !== 'SCHEDULE' && r.status === 'SUBMITTED' && (
                       <button type="button" onClick={() => fetchEvaluation(r.id)} className="rounded border border-border px-2 py-1 text-xs text-foreground">Why escalation?</button>
                     )}
                     {eval_ && eval_.reasons.length > 0 && (
