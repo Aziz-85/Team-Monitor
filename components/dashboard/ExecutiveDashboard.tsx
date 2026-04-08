@@ -136,26 +136,30 @@ export function ExecutiveDashboard() {
   const { rbac, snapshot, salesBreakdown, scheduleOverview, taskIntegrity, teamTable } = data;
 
   const role = (rbac?.role ?? '') as string;
-  const titleKey =
-    role === 'EMPLOYEE'
-      ? 'my'
-      : role === 'ASSISTANT_MANAGER'
-        ? 'branch'
-        : role === 'MANAGER'
-          ? 'manager'
-          : role === 'ADMIN' || role === 'SUPER_ADMIN'
-            ? 'admin'
-            : role === 'DEMO_VIEWER'
-              ? 'demo'
-              : role === 'AREA_MANAGER'
-                ? 'area'
-                : 'default';
+  const pageTitle =
+    role === 'ASSISTANT_MANAGER'
+      ? t('nav.home')
+      : t(
+          `dashboard.title.${
+            role === 'EMPLOYEE'
+              ? 'my'
+              : role === 'MANAGER'
+                ? 'manager'
+                : role === 'ADMIN' || role === 'SUPER_ADMIN'
+                  ? 'admin'
+                  : role === 'DEMO_VIEWER'
+                    ? 'demo'
+                    : role === 'AREA_MANAGER'
+                      ? 'area'
+                      : 'default'
+          }`
+        );
   const isEmployee = role === 'EMPLOYEE';
   const showBranchSections = !isEmployee;
 
   return (
     <div className="mx-auto max-w-7xl p-4 md:p-6 pb-nav">
-      <PageHeader title={t(`dashboard.title.${titleKey}`)} subtitle={t('dashboard.asOfToday')} />
+      <PageHeader title={pageTitle} subtitle={t('dashboard.asOfToday')} />
 
       {/* Section 1 — Top 4 cards */}
       <section className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
