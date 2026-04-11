@@ -2213,7 +2213,7 @@
       "copyLabelDailyTarget": "الهدف اليومي:",
       "copyLabelAchievement": "الإنجاز:",
       "copyTargetAchievedLine": "🎯 تم تحقيق الهدف",
-      "copyAboveTargetTemplate": "+{amount} ريال فوق الهدف",
+      "copyAboveTargetTemplate": "+{percent}% فوق الهدف",
       "copyValueUnavailable": "—"
     },
     "importTool": {

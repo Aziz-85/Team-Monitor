@@ -231,17 +231,16 @@ function formatDailySummaryForCopy(
       const mtd = Math.trunc(scopeDaily.mtdThroughDateSar);
       const monthT = Math.trunc(scopeDaily.monthTargetSar);
       const y = Math.round((mtd * 100) / monthT);
-      const z = Math.max(0, mtd - monthT);
-      const zFmt = z.toLocaleString('en-SA');
+      const p = Math.round(((mtd - monthT) / monthT) * 100);
       const lines: string[] = [
         s.boutique.name,
         dateStr,
         '',
         `${labels.dailySales} ${formatSarLine(todaySalesSar)}`,
+        labels.targetAchievedLine,
         `${labels.achievement} ${y}%`,
         '',
-        labels.targetAchievedLine,
-        labels.aboveTargetTemplate.replace('{amount}', zFmt),
+        labels.aboveTargetTemplate.replace('{percent}', String(p)),
       ];
       blocks.push(lines.join('\n'));
       continue;

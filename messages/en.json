@@ -2213,7 +2213,7 @@
       "copyLabelDailyTarget": "Daily Target:",
       "copyLabelAchievement": "Achievement:",
       "copyTargetAchievedLine": "🎯 Target Achieved",
-      "copyAboveTargetTemplate": "+{amount} SAR above target",
+      "copyAboveTargetTemplate": "+{percent}% above target",
       "copyValueUnavailable": "—"
     },
     "importTool": {
