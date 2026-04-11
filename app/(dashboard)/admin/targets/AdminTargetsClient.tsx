@@ -75,14 +75,23 @@ type ImportResult = {
   warnings?: Array<{ rowNumber: number; date?: string; message?: string; totalAfter?: number; sumEmployees?: number; delta?: number }>;
   ignoredColumns?: string[];
   importSummary?: {
-    rowsRead: number;
+    totalRowsRead: number;
+    validRowsProcessed: number;
     rowsGenerated: number;
     newCount: number;
     updatedCount: number;
-    skippedUnchangedCount: number;
+    identicalCount: number;
+    lockedCount: number;
+    errorCount: number;
+    skippedEmptyRows: number;
+    skippedSummaryRows: number;
+    skippedNoNumericRows: number;
+    skippedMonthFilteredRows: number;
     invalidDateRows: number;
     invalidSalesValues: number;
     totalSales: number;
+    totalMismatchRowCount: number;
+    dailyBreakdown: Array<{ dateKey: string; totalSar: number }>;
   } | null;
   employeeSummary?: {
     ranked: Array<{
@@ -625,6 +634,9 @@ export function AdminTargetsClient() {
                 <span className="text-xs text-muted">{t('targets.importMsrMonthHint')}</span>
               </div>
             )}
+            {(importMode === 'msr' || importMode === 'msr-template') && (
+              <p className="mt-2 max-w-3xl text-xs text-muted">{t('targets.importMsrV2ColumnsHint')}</p>
+            )}
           </div>
           <input
             ref={fileInputRef}
@@ -675,15 +687,43 @@ export function AdminTargetsClient() {
 
         {importResult != null && (
           <div className="mb-4 rounded border border-border bg-surface-subtle px-3 py-2 text-sm text-foreground">
-            <p>
-              {t('targets.imported')}: {importResult.importedCount} · {t('targets.updated')}: {importResult.updatedCount} ·{' '}
-              {t('targets.skipped')}: {importResult.skippedCount}
-              {(importResult.unchangedCount ?? 0) > 0 &&
-                ` · ${t('targets.importUnchanged')}: ${importResult.unchangedCount}`}
-              {(importResult.skippedRowCount ?? importResult.skippedRowsCount ?? 0) > 0 && ` · ${t('targets.skippedRows')}: ${importResult.skippedRowCount ?? importResult.skippedRowsCount}`}
-              {(importResult.warnings?.length ?? 0) > 0 && ` · ${t('targets.warnings')}: ${importResult.warnings!.length}`}
-              {(importResult.ignoredColumns?.length ?? 0) > 0 && ` · ${t('targets.ignoredColumns')}: ${importResult.ignoredColumns!.length}`}
-            </p>
+            {importResult.importSummary != null && importResult.msrLayoutKind === 'template_columns' ? (
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">
+                  {t('targets.importV2ProcessedIntro')}{' '}
+                  {importResult.importSummary.validRowsProcessed}{' '}
+                  {t('targets.importV2ProcessedOutro')}
+                </p>
+                <p className="text-muted">
+                  {t('targets.importV2New')}: {importResult.importedCount} · {t('targets.importV2Updated')}:{' '}
+                  {importResult.updatedCount} · {t('targets.importV2Identical')}:{' '}
+                  {importResult.importSummary.identicalCount} · {t('targets.importV2Locked')}:{' '}
+                  {importResult.importSummary.lockedCount} · {t('targets.importV2Errors')}:{' '}
+                  {importResult.importSummary.errorCount}
+                </p>
+                <p className="font-semibold text-foreground">
+                  {t('targets.importV2TotalSalesLine')}: {formatNum(importResult.importSummary.totalSales)}{' '}
+                  {t('targets.sar')}
+                </p>
+                {(importResult.importSummary.totalMismatchRowCount ?? 0) > 0 && (
+                  <p className="rounded border border-amber-400 bg-amber-50 px-2 py-1 text-amber-900">
+                    {t('targets.importV2TotalMismatch')}: {importResult.importSummary.totalMismatchRowCount}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p>
+                {t('targets.imported')}: {importResult.importedCount} · {t('targets.updated')}: {importResult.updatedCount}{' '}
+                · {t('targets.skipped')}: {importResult.skippedCount}
+                {(importResult.unchangedCount ?? 0) > 0 &&
+                  ` · ${t('targets.importUnchanged')}: ${importResult.unchangedCount}`}
+                {(importResult.skippedRowCount ?? importResult.skippedRowsCount ?? 0) > 0 &&
+                  ` · ${t('targets.skippedRows')}: ${importResult.skippedRowCount ?? importResult.skippedRowsCount}`}
+                {(importResult.warnings?.length ?? 0) > 0 && ` · ${t('targets.warnings')}: ${importResult.warnings!.length}`}
+                {(importResult.ignoredColumns?.length ?? 0) > 0 &&
+                  ` · ${t('targets.ignoredColumns')}: ${importResult.ignoredColumns!.length}`}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => setShowImportDetails(!showImportDetails)}
@@ -692,18 +732,31 @@ export function AdminTargetsClient() {
               {showImportDetails ? t('common.close') : t('targets.showDetails')}
             </button>
             {showImportDetails && (
-              <div className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface p-2 text-xs">
-                {importResult.importSummary != null && (
+              <div className="mt-2 max-h-96 overflow-y-auto rounded border border-border bg-surface p-2 text-xs">
+                {importResult.importSummary != null && importResult.msrLayoutKind === 'template_columns' && (
                   <div className="mb-2 border-b border-border pb-2">
                     <p className="font-medium text-foreground">{t('targets.importParseSummary')}</p>
                     <p className="text-muted">
-                      {t('targets.importSummaryRowsRead')}: {importResult.importSummary.rowsRead} ·{' '}
-                      {t('targets.importSummaryGenerated')}: {importResult.importSummary.rowsGenerated} ·{' '}
-                      {t('targets.importSummaryInvalidDates')}: {importResult.importSummary.invalidDateRows} ·{' '}
-                      {t('targets.importSummaryInvalidSales')}: {importResult.importSummary.invalidSalesValues} ·{' '}
-                      {t('targets.importSummaryTotalApplied')}:{' '}
-                      {formatNum(importResult.importSummary.totalSales)}
+                      {t('targets.importSummaryRowsRead')}: {importResult.importSummary.totalRowsRead} ·{' '}
+                      {t('targets.importSummaryGenerated')}: {importResult.importSummary.rowsGenerated}.{' '}
+                      {t('targets.importNoiseTitle')}: {t('targets.importNoiseEmpty')}{' '}
+                      {importResult.importSummary.skippedEmptyRows}, {t('targets.importNoiseSummary')}{' '}
+                      {importResult.importSummary.skippedSummaryRows}, {t('targets.importNoiseNoSales')}{' '}
+                      {importResult.importSummary.skippedNoNumericRows}, {t('targets.importNoiseMonth')}{' '}
+                      {importResult.importSummary.skippedMonthFilteredRows}. {t('targets.importSummaryInvalidDates')}:{' '}
+                      {importResult.importSummary.invalidDateRows}. {t('targets.importSummaryInvalidSales')}:{' '}
+                      {importResult.importSummary.invalidSalesValues}.
                     </p>
+                    {(importResult.importSummary.dailyBreakdown?.length ?? 0) > 0 && (
+                      <div className="mt-2">
+                        <p className="font-medium text-foreground">{t('targets.importV2DailyTitle')}</p>
+                        {importResult.importSummary.dailyBreakdown!.map((d) => (
+                          <div key={d.dateKey} className="py-0.5 text-muted">
+                            {d.dateKey} → {formatNum(d.totalSar)} {t('targets.sar')}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {(importResult.employeeSummary?.ranked?.length ?? 0) > 0 && (

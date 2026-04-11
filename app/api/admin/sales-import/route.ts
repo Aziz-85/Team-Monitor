@@ -10,8 +10,10 @@ import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
 import {
+  MSR_V2_CANONICAL_EMPLOYEES,
   detectMsrDataSheetLayout,
-  parseMsrTemplateDataSheetFromAoa,
+  parseMsrTemplateV2FromAoa,
+  resolveMsrV2ColumnMap,
   resolveTemplateHeaderToUniqueUser,
   type MsrTemplateMatchCandidate,
 } from '@/lib/sales/msrTemplateParse';
@@ -99,14 +101,23 @@ type SkippedItem = { rowNumber: number; empId?: string; columnHeader?: string; r
 type WarningItem = { rowNumber: number; date?: string; message?: string; totalAfter?: number; sumEmployees?: number; delta?: number };
 
 type ImportSummaryPayload = {
-  rowsRead: number;
+  totalRowsRead: number;
+  validRowsProcessed: number;
   rowsGenerated: number;
   newCount: number;
   updatedCount: number;
-  skippedUnchangedCount: number;
+  identicalCount: number;
+  lockedCount: number;
+  errorCount: number;
+  skippedEmptyRows: number;
+  skippedSummaryRows: number;
+  skippedNoNumericRows: number;
+  skippedMonthFilteredRows: number;
   invalidDateRows: number;
   invalidSalesValues: number;
   totalSales: number;
+  totalMismatchRowCount: number;
+  dailyBreakdown: Array<{ dateKey: string; totalSar: number }>;
 };
 
 type EmployeeSummaryPayload = {
@@ -188,8 +199,7 @@ export async function POST(request: NextRequest) {
   if (msrOrTemplateExplicit && !msrLayout) {
     return NextResponse.json(
       {
-        error:
-          "Could not detect MSR layout. The Data sheet needs a Date column and either employee columns after Date (names) or a Total Sale After column with empId columns after it.",
+        error: `Could not detect MSR layout. For the V2 template the Data sheet header must include Date and all of: ${MSR_V2_CANONICAL_EMPLOYEES.join(', ')}. Legacy layout: Date, Total Sale After, then empId columns.`,
       },
       { status: 400 }
     );
@@ -492,6 +502,16 @@ export async function POST(request: NextRequest) {
     }
   } else if (useMsrTemplate) {
     const header = headerRow;
+    const v2map = resolveMsrV2ColumnMap(header);
+    if (!v2map) {
+      return NextResponse.json(
+        {
+          error: `MSR V2 requires a header row with Date, these exact employee columns (labels may vary slightly): ${MSR_V2_CANONICAL_EMPLOYEES.join(', ')}. Optional: Total Sale After for validation.`,
+        },
+        { status: 400 }
+      );
+    }
+
     const usersForMatch = await prisma.user.findMany({
       where: { disabled: false },
       select: {
@@ -514,25 +534,43 @@ export async function POST(request: NextRequest) {
     }
     const validEmpIds = new Set(matchCandidates.map((c) => c.empId));
 
-    const parsed = parseMsrTemplateDataSheetFromAoa(rows, {
-      headerRowIndex: headerIndex,
-      monthFilter: monthParam,
-      maxDataRows: MAX_ROWS_MSR,
-    });
-
-    const columnToUser = new Map<
-      number,
-      { userId: string; employeeName: string }
-    >();
-    for (const col of parsed.employeeColumnIndices) {
-      const label = String(header[col] ?? '').trim();
-      if (!label) continue;
+    const columnToUser = new Map<number, { userId: string; employeeName: string }>();
+    const unmapped: string[] = [];
+    for (const name of MSR_V2_CANONICAL_EMPLOYEES) {
+      const col = v2map.employeeColByCanonical.get(name)!;
+      const label = String(header[col] ?? '').trim() || name;
       const resolved = resolveTemplateHeaderToUniqueUser(label, matchCandidates, validEmpIds);
       if (resolved) {
         columnToUser.set(col, { userId: resolved.userId, employeeName: resolved.name });
       } else {
-        ignoredColumnsSet.add(label);
+        unmapped.push(label);
       }
+    }
+    if (unmapped.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Could not match these MSR columns to a single employee user: ${unmapped.join(', ')}. Fix names or empIds in the sheet or employee master data.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const parsed = parseMsrTemplateV2FromAoa(rows, {
+      headerRowIndex: headerIndex,
+      columnMap: v2map,
+      monthFilter: monthParam,
+      maxDataRows: MAX_ROWS_MSR,
+    });
+
+    for (const tm of parsed.totalMismatchWarnings) {
+      warnings.push({
+        rowNumber: tm.rowNumber,
+        date: tm.dateKey,
+        message: `Total mismatch: sum employees ${tm.sumEmployees} vs Total Sale After ${tm.sheetTotal} (delta ${tm.delta})`,
+        totalAfter: tm.sheetTotal,
+        sumEmployees: tm.sumEmployees,
+        delta: tm.delta,
+      });
     }
 
     const templateUserIds = Array.from(
@@ -543,9 +581,17 @@ export async function POST(request: NextRequest) {
     const defaultBoutiqueTpl = await getDefaultBoutiqueId();
 
     const perDay = new Map<string, { dateKey: string; userId: string; employee: string; sales: number }>();
+    const dailyTotals = new Map<string, number>();
     let totalSalesApplied = 0;
+    let lockedCount = 0;
+    let errorCount = 0;
 
+    const importSeen = new Set<string>();
     for (const cell of parsed.rows) {
+      const key = `${cell.dateKey}\t${cell.columnIndex}`;
+      if (importSeen.has(key)) continue;
+      importSeen.add(key);
+
       const mapped = columnToUser.get(cell.columnIndex);
       if (!mapped) continue;
       const boutiqueId = userIdToBoutiqueTpl.get(mapped.userId) ?? defaultBoutiqueTpl;
@@ -560,6 +606,7 @@ export async function POST(request: NextRequest) {
           date: cell.date,
         });
         if (res.status === 'rejected_locked') {
+          lockedCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
@@ -568,6 +615,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
         if (res.status === 'rejected_precedence') {
+          errorCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
@@ -576,6 +624,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
         if (res.status === 'rejected_invalid') {
+          errorCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
@@ -589,6 +638,7 @@ export async function POST(request: NextRequest) {
 
         if (res.status === 'created' || res.status === 'updated') {
           totalSalesApplied += cell.sales;
+          dailyTotals.set(cell.dateKey, (dailyTotals.get(cell.dateKey) ?? 0) + cell.sales);
           const dk = `${mapped.userId}|${cell.dateKey}`;
           const prev = perDay.get(dk);
           const nextSales = (prev?.sales ?? 0) + cell.sales;
@@ -600,11 +650,24 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch {
-        skipped.push({ rowNumber: cell.sourceRowNumber, columnHeader: cell.employeeHeader, reason: 'Upsert failed' });
+        errorCount += 1;
+        skipped.push({
+          rowNumber: cell.sourceRowNumber,
+          columnHeader: cell.employeeHeader,
+          reason: 'Upsert failed',
+        });
       }
     }
 
-    skippedRowsCount = parsed.invalidDateRows;
+    skippedRowsCount =
+      parsed.stats.skippedInvalidDateRows +
+      parsed.stats.skippedSummaryRows +
+      parsed.stats.skippedEmptyRows +
+      parsed.stats.skippedNoNumericEmployeeRows;
+
+    const dailyBreakdown = Array.from(dailyTotals.entries())
+      .map(([dateKey, totalSar]) => ({ dateKey, totalSar }))
+      .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
     const perEmployeePerDay = Array.from(perDay.values()).sort((a, b) => {
       if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
@@ -631,14 +694,23 @@ export async function POST(request: NextRequest) {
 
     employeeSummary = { ranked, perEmployeePerDay };
     importSummary = {
-      rowsRead: parsed.rowsRead,
-      rowsGenerated: parsed.rowsGenerated,
+      totalRowsRead: parsed.stats.totalRowsScanned,
+      validRowsProcessed: parsed.stats.validRowsProcessed,
+      rowsGenerated: parsed.stats.rowsGenerated,
       newCount: importedCount,
       updatedCount,
-      skippedUnchangedCount: unchangedCount,
-      invalidDateRows: parsed.invalidDateRows,
-      invalidSalesValues: parsed.invalidSalesValues,
+      identicalCount: unchangedCount,
+      lockedCount,
+      errorCount,
+      skippedEmptyRows: parsed.stats.skippedEmptyRows,
+      skippedSummaryRows: parsed.stats.skippedSummaryRows,
+      skippedNoNumericRows: parsed.stats.skippedNoNumericEmployeeRows,
+      skippedMonthFilteredRows: parsed.stats.skippedMonthFilteredRows,
+      invalidDateRows: parsed.stats.skippedInvalidDateRows,
+      invalidSalesValues: parsed.stats.invalidSalesValuesInValidRows,
       totalSales: totalSalesApplied,
+      totalMismatchRowCount: parsed.totalMismatchWarnings.length,
+      dailyBreakdown,
     };
   }
 

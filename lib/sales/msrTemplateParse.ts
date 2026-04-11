@@ -1,6 +1,8 @@
 /**
  * MSR "Data" sheet — employees as columns (not rows).
  * Uses raw cell values only (no pivot); ignores metric/total columns (AVT, AVP, UPT, totals, etc.).
+ *
+ * **MSR V2**: fixed employee column set (canonical names); row filtering; Total Sale After validation.
  */
 
 import * as XLSX from 'xlsx';
@@ -9,6 +11,51 @@ import { extractEmpIdFromHeader, normalizeForMatch } from '@/lib/sales/parseMatr
 
 const MAX_HEADER_SCAN = 15;
 
+/** Controlled columns for MSR Import V2 (exact template). Order is not significant; headers matched loosely. */
+export const MSR_V2_CANONICAL_EMPLOYEES = [
+  'Abdulaziz',
+  'Hussain',
+  'Muslim',
+  'AlAnoud',
+  'Abdulhadi',
+] as const;
+
+export type MsrV2CanonicalEmployee = (typeof MSR_V2_CANONICAL_EMPLOYEES)[number];
+
+export type MsrV2ColumnMap = {
+  dateCol: number;
+  /** Canonical display name → column index */
+  employeeColByCanonical: Map<MsrV2CanonicalEmployee, number>;
+  /** -1 if column absent */
+  totalSaleAfterCol: number;
+};
+
+export type MsrV2TotalMismatch = {
+  rowNumber: number;
+  dateKey: string;
+  sumEmployees: number;
+  sheetTotal: number;
+  delta: number;
+};
+
+export type MsrV2ParseStats = {
+  totalRowsScanned: number;
+  validRowsProcessed: number;
+  skippedEmptyRows: number;
+  skippedSummaryRows: number;
+  skippedNoNumericEmployeeRows: number;
+  skippedMonthFilteredRows: number;
+  skippedInvalidDateRows: number;
+  invalidSalesValuesInValidRows: number;
+  rowsGenerated: number;
+};
+
+export type MsrV2SheetParse = {
+  rows: MsrTemplateRow[];
+  stats: MsrV2ParseStats;
+  totalMismatchWarnings: MsrV2TotalMismatch[];
+};
+
 export type MsrTemplateRow = {
   dateKey: string;
   date: Date;
@@ -16,21 +63,6 @@ export type MsrTemplateRow = {
   sales: number;
   sourceRowNumber: number;
   columnIndex: number;
-};
-
-export type MsrTemplateParseStats = {
-  rowsRead: number;
-  rowsGenerated: number;
-  invalidDateRows: number;
-  emptyOrNonNumericSkipped: number;
-  invalidSalesValues: number;
-};
-
-export type MsrTemplateSheetParse = MsrTemplateParseStats & {
-  rows: MsrTemplateRow[];
-  headerRowIndex: number;
-  dateCol: number;
-  employeeColumnIndices: number[];
 };
 
 export type MsrSheetLayout =
@@ -48,10 +80,6 @@ function unwrapCell(raw: unknown): unknown {
     if ('w' in o) return o.w;
   }
   return raw;
-}
-
-function normHeader(s: string): string {
-  return normalizeForMatch(s);
 }
 
 /** True if this header should not be treated as an employee name column. */
@@ -87,13 +115,6 @@ export function isIgnoredMsrMetricColumn(headerRaw: string): boolean {
   return false;
 }
 
-function isEmptyOrNumericHeader(headerRaw: string): boolean {
-  const h = String(headerRaw ?? '').trim();
-  if (!h) return true;
-  if (/^\d+$/.test(normHeader(h).replace(/\s/g, ''))) return true;
-  return false;
-}
-
 export function findDateColumnIndex(header: string[]): number {
   for (let i = 0; i < header.length; i++) {
     const t = String(header[i] ?? '')
@@ -114,60 +135,73 @@ function findTotalSaleAfterColumnIndex(header: string[]): number {
   return header.findIndex((h) => String(h ?? '').trim().toLowerCase().includes('total sale after'));
 }
 
+export function headerMatchesMsrV2Canonical(
+  headerCell: string,
+  canonical: MsrV2CanonicalEmployee
+): boolean {
+  const raw = String(headerCell ?? '').trim();
+  if (!raw) return false;
+  const h = normalizeForMatch(raw);
+  const c = normalizeForMatch(canonical);
+  const hCompact = h.replace(/\s+/g, '');
+  const cCompact = c.replace(/\s+/g, '');
+  if (h === c || hCompact === cCompact) return true;
+  const hFirst = h.split(/\s+/)[0] ?? '';
+  const cFirst = c.split(/\s+/)[0] ?? '';
+  return Boolean(hFirst && cFirst && hFirst === cFirst);
+}
+
+/** Resolves fixed V2 employee columns + Date + Total Sale After (optional). All five must map to distinct columns. */
+export function resolveMsrV2ColumnMap(header: string[]): MsrV2ColumnMap | null {
+  const dateCol = findDateColumnIndex(header);
+  if (dateCol < 0) return null;
+  const employeeColByCanonical = new Map<MsrV2CanonicalEmployee, number>();
+  for (const name of MSR_V2_CANONICAL_EMPLOYEES) {
+    let found = -1;
+    for (let c = 0; c < header.length; c++) {
+      if (c === dateCol) continue;
+      if (headerMatchesMsrV2Canonical(header[c] ?? '', name)) {
+        found = c;
+        break;
+      }
+    }
+    if (found < 0) return null;
+    employeeColByCanonical.set(name, found);
+  }
+  const indices = Array.from(employeeColByCanonical.values());
+  if (new Set(indices).size !== indices.length) return null;
+  return {
+    dateCol,
+    employeeColByCanonical,
+    totalSaleAfterCol: findTotalSaleAfterColumnIndex(header),
+  };
+}
+
 /**
- * Layout rules:
- * - **Legacy**: row has "Total Sale After" and no name-like employee columns *between* Date and that column
- *   (employee empIds are read only from columns after Total Sale After).
- * - **Template**: name-like columns between Date and Total Sale After, OR sheet has no Total Sale After and
- *   has name-like columns after Date (employees as headers, metrics like AVT/UPT ignored).
+ * Layout:
+ * - **template_columns**: MSR V2 header row (Date + five fixed employees).
+ * - **legacy_msr**: Date + Total Sale After (empId columns after total).
  */
 export function detectMsrDataSheetLayout(rows: unknown[][]): MsrSheetLayout {
   const max = Math.min(rows.length, MAX_HEADER_SCAN);
   for (let r = 0; r < max; r++) {
     const cells = (rows[r] ?? []).map((c) => String(unwrapCell(c) ?? '').trim());
     if (cells.length === 0) continue;
-    const dateCol = findDateColumnIndex(cells);
-    if (dateCol < 0) continue;
-
-    const totalAfterCol = findTotalSaleAfterColumnIndex(cells);
-
-    const collectNameLike = (from: number, toExclusive: number): number[] => {
-      const out: number[] = [];
-      for (let c = from; c < toExclusive; c++) {
-        const h = cells[c] ?? '';
-        if (isIgnoredMsrMetricColumn(h)) continue;
-        if (isEmptyOrNumericHeader(h)) continue;
-        out.push(c);
-      }
-      return out;
-    };
-
-    if (totalAfterCol >= 0) {
-      const betweenDateAndTotal = collectNameLike(dateCol + 1, totalAfterCol);
-      if (betweenDateAndTotal.length > 0) {
-        return { kind: 'template_columns', headerIndex: r, header: cells };
-      }
-      return { kind: 'legacy_msr', headerIndex: r, header: cells };
-    }
-
-    const afterDate = collectNameLike(dateCol + 1, cells.length);
-    if (afterDate.length > 0) {
+    if (resolveMsrV2ColumnMap(cells)) {
       return { kind: 'template_columns', headerIndex: r, header: cells };
     }
   }
-  return null;
-}
-
-/** Employee columns for template layout: every column after Date whose header is not ignored. */
-export function resolveTemplateEmployeeColumnIndices(header: string[], dateCol: number): number[] {
-  const cols: number[] = [];
-  for (let c = dateCol + 1; c < header.length; c++) {
-    const h = header[c] ?? '';
-    if (isIgnoredMsrMetricColumn(h)) continue;
-    if (isEmptyOrNumericHeader(h)) continue;
-    cols.push(c);
+  for (let r = 0; r < max; r++) {
+    const cells = (rows[r] ?? []).map((c) => String(unwrapCell(c) ?? '').trim());
+    if (cells.length === 0) continue;
+    const dateCol = findDateColumnIndex(cells);
+    if (dateCol < 0) continue;
+    const totalAfterCol = findTotalSaleAfterColumnIndex(cells);
+    if (totalAfterCol >= 0) {
+      return { kind: 'legacy_msr', headerIndex: r, header: cells };
+    }
   }
-  return cols;
+  return null;
 }
 
 function parseSalesCell(raw: unknown):
@@ -197,39 +231,102 @@ function parseSalesCell(raw: unknown):
   return { kind: 'invalid' };
 }
 
-export function parseMsrTemplateDataSheetFromAoa(
-  aoa: unknown[][],
-  opts: { headerRowIndex: number; monthFilter?: string | null; maxDataRows?: number }
-): MsrTemplateSheetParse {
-  const maxDataRows = opts.maxDataRows ?? 5000;
-  const header = (aoa[opts.headerRowIndex] ?? []).map((c) => String(unwrapCell(c) ?? '').trim());
-  const dateCol = findDateColumnIndex(header);
-  if (dateCol < 0) {
-    return {
-      rows: [],
-      headerRowIndex: opts.headerRowIndex,
-      dateCol: -1,
-      employeeColumnIndices: [],
-      rowsRead: 0,
-      rowsGenerated: 0,
-      invalidDateRows: 0,
-      emptyOrNonNumericSkipped: 0,
-      invalidSalesValues: 0,
-    };
+export const MSR_V2_TOTAL_TOLERANCE_SAR = 1;
+
+function isRowEffectivelyEmpty(rowArr: unknown[], maxColInclusive: number): boolean {
+  const lim = Math.max(0, maxColInclusive);
+  for (let c = 0; c <= lim; c++) {
+    const v = unwrapCell(rowArr[c]);
+    if (v != null && String(v).trim() !== '') return false;
   }
-  const employeeColumnIndices = resolveTemplateEmployeeColumnIndices(header, dateCol);
+  return true;
+}
+
+function isSummaryLikeDateValue(raw: unknown): boolean {
+  if (raw == null) return false;
+  if (typeof raw === 'string') {
+    const s = raw.trim().toLowerCase();
+    if (!s) return false;
+    return (
+      /\btotal\b/.test(s) ||
+      /\bsubtotal\b/.test(s) ||
+      /\bgrand\b/.test(s) ||
+      /\bsummary\b/.test(s) ||
+      /المجموع/.test(s)
+    );
+  }
+  return false;
+}
+
+function parseTotalSaleAfterCell(raw: unknown): number | null {
+  const v = unwrapCell(raw);
+  if (v == null || v === '') return null;
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    const r = Math.round(v);
+    return Math.abs(v - r) < 1e-9 ? r : null;
+  }
+  if (typeof v === 'string') {
+    const s = v.trim().replace(/,/g, '');
+    if (s === '' || s === '-' || s === '—') return null;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return null;
+    const rounded = Math.round(n);
+    return Math.abs(n - rounded) < 1e-9 ? rounded : null;
+  }
+  return null;
+}
+
+/** MSR Import V2: fixed five employees, row filtering, optional Total Sale After reconciliation. */
+export function parseMsrTemplateV2FromAoa(
+  aoa: unknown[][],
+  opts: {
+    headerRowIndex: number;
+    columnMap: MsrV2ColumnMap;
+    monthFilter?: string | null;
+    maxDataRows?: number;
+  }
+): MsrV2SheetParse {
+  const maxDataRows = opts.maxDataRows ?? 5000;
+  const { columnMap } = opts;
+  const empIndices = Array.from(columnMap.employeeColByCanonical.values());
+  const maxIdx = Math.max(
+    columnMap.dateCol,
+    ...empIndices,
+    columnMap.totalSaleAfterCol >= 0 ? columnMap.totalSaleAfterCol : 0
+  );
+
   const rows: MsrTemplateRow[] = [];
-  let rowsRead = 0;
-  let invalidDateRows = 0;
-  let emptyOrNonNumericSkipped = 0;
-  let invalidSalesValues = 0;
+  const totalMismatchWarnings: MsrV2TotalMismatch[] = [];
+  const stats: MsrV2ParseStats = {
+    totalRowsScanned: 0,
+    validRowsProcessed: 0,
+    skippedEmptyRows: 0,
+    skippedSummaryRows: 0,
+    skippedNoNumericEmployeeRows: 0,
+    skippedMonthFilteredRows: 0,
+    skippedInvalidDateRows: 0,
+    invalidSalesValuesInValidRows: 0,
+    rowsGenerated: 0,
+  };
+
   const dataStart = opts.headerRowIndex + 1;
   const limit = Math.min(aoa.length, dataStart + maxDataRows);
 
   for (let r = dataStart; r < limit; r++) {
     const rowArr = aoa[r] ?? [];
-    const dateRaw = rowArr[dateCol];
-    rowsRead += 1;
+    stats.totalRowsScanned += 1;
+
+    if (isRowEffectivelyEmpty(rowArr, maxIdx)) {
+      stats.skippedEmptyRows += 1;
+      continue;
+    }
+
+    const dateRaw = rowArr[columnMap.dateCol];
+    if (isSummaryLikeDateValue(dateRaw)) {
+      stats.skippedSummaryRows += 1;
+      continue;
+    }
+
     let dateKey: string;
     let date: Date;
     try {
@@ -237,48 +334,70 @@ export function parseMsrTemplateDataSheetFromAoa(
       date = ymdToUTCNoon(ymd);
       dateKey = dateKeyUTC(date);
     } catch {
-      invalidDateRows += 1;
+      stats.skippedInvalidDateRows += 1;
       continue;
     }
+
     if (opts.monthFilter && /^\d{4}-\d{2}$/.test(opts.monthFilter)) {
       if (!dateKey.startsWith(`${opts.monthFilter}-`)) {
+        stats.skippedMonthFilteredRows += 1;
         continue;
       }
     }
 
-    for (const c of employeeColumnIndices) {
-      const headerLabel = String(header[c] ?? '').trim();
-      const parsed = parseSalesCell(rowArr[c]);
-      if (parsed.kind === 'skip') {
-        emptyOrNonNumericSkipped += 1;
-        continue;
+    const amounts: { canonical: MsrV2CanonicalEmployee; col: number; value: number }[] = [];
+    let hadInvalidSalesCell = false;
+    for (const name of MSR_V2_CANONICAL_EMPLOYEES) {
+      const col = columnMap.employeeColByCanonical.get(name)!;
+      const parsed = parseSalesCell(rowArr[col]);
+      if (parsed.kind === 'ok') {
+        amounts.push({ canonical: name, col, value: parsed.value });
+      } else if (parsed.kind === 'invalid') {
+        hadInvalidSalesCell = true;
       }
-      if (parsed.kind === 'invalid') {
-        invalidSalesValues += 1;
-        continue;
+    }
+
+    if (amounts.length === 0) {
+      stats.skippedNoNumericEmployeeRows += 1;
+      continue;
+    }
+
+    stats.validRowsProcessed += 1;
+    if (hadInvalidSalesCell) {
+      stats.invalidSalesValuesInValidRows += 1;
+    }
+
+    const sumEmployees = amounts.reduce((acc, x) => acc + x.value, 0);
+    if (columnMap.totalSaleAfterCol >= 0) {
+      const sheetTotal = parseTotalSaleAfterCell(rowArr[columnMap.totalSaleAfterCol]);
+      if (
+        sheetTotal != null &&
+        Math.abs(sumEmployees - sheetTotal) > MSR_V2_TOTAL_TOLERANCE_SAR
+      ) {
+        totalMismatchWarnings.push({
+          rowNumber: r + 1,
+          dateKey,
+          sumEmployees,
+          sheetTotal,
+          delta: sumEmployees - sheetTotal,
+        });
       }
+    }
+
+    for (const a of amounts) {
       rows.push({
         dateKey,
         date,
-        employeeHeader: headerLabel,
-        sales: parsed.value,
+        employeeHeader: a.canonical,
+        sales: a.value,
         sourceRowNumber: r + 1,
-        columnIndex: c,
+        columnIndex: a.col,
       });
+      stats.rowsGenerated += 1;
     }
   }
 
-  return {
-    rows,
-    headerRowIndex: opts.headerRowIndex,
-    dateCol,
-    employeeColumnIndices,
-    rowsRead,
-    rowsGenerated: rows.length,
-    invalidDateRows,
-    emptyOrNonNumericSkipped,
-    invalidSalesValues,
-  };
+  return { rows, stats, totalMismatchWarnings };
 }
 
 export function readMsrDataSheetAoaFromBuffer(buf: Buffer): unknown[][] {
