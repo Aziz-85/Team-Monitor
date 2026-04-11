@@ -2,22 +2,18 @@
  * Admin Excel → **SalesEntry** (canonical). BoutiqueSalesLine / batches are not used here.
  */
 
+import { createHash } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { logSalesTargetAudit } from '@/lib/sales-target-audit';
 import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
+import { buildMsrTemplateImportPlan } from '@/lib/sales/adminMsrTemplateSalesImport';
+import { salesEntryImportStableKey } from '@/lib/sales/salesEntryImportStableKey';
 import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
-import {
-  MSR_V2_CANONICAL_EMPLOYEES,
-  detectMsrDataSheetLayout,
-  parseMsrTemplateV2FromAoa,
-  resolveMsrV2ColumnMap,
-  resolveTemplateHeaderToUniqueUser,
-  type MsrTemplateMatchCandidate,
-} from '@/lib/sales/msrTemplateParse';
-import { isOperationalEmployee } from '@/lib/userClassification';
+import { MSR_V2_CANONICAL_EMPLOYEES, detectMsrDataSheetLayout } from '@/lib/sales/msrTemplateParse';
 import * as XLSX from 'xlsx';
 
 function unwrapCell(raw: unknown): unknown {
@@ -156,8 +152,18 @@ export async function POST(request: NextRequest) {
   }
   const importMode = ((formData.get('importMode') as string)?.toLowerCase() || 'auto').trim();
   const monthParam = (formData.get('month') as string)?.trim() || '';
+  const dryRun =
+    formData.get('dryRun') === '1' ||
+    formData.get('dryRun') === 'true' ||
+    String(formData.get('dryRun') ?? '').toLowerCase() === 'yes';
+  const confirmed =
+    formData.get('confirmed') === '1' ||
+    formData.get('confirmed') === 'true' ||
+    String(formData.get('confirmed') ?? '').toLowerCase() === 'yes';
+  const clientSha = String(formData.get('fileSha256') ?? '').trim();
 
   const buf = Buffer.from(await file.arrayBuffer());
+  const fileSha256 = createHash('sha256').update(buf).digest('hex');
   let workbook: XLSX.WorkBook;
   try {
     workbook = XLSX.read(buf, {
@@ -251,7 +257,33 @@ export async function POST(request: NextRequest) {
       skipped: [],
       warnings: [],
       ignoredColumns: [],
+      fileSha256,
+      dryRun: dryRun || undefined,
     });
+  }
+
+  if (!dryRun) {
+    if (!confirmed) {
+      return NextResponse.json(
+        {
+          error:
+            'Confirmation required: POST with dryRun=1 first, then repeat with confirmed=1 and the same file bytes.',
+          code: 'CONFIRMATION_REQUIRED',
+          fileSha256,
+        },
+        { status: 409 }
+      );
+    }
+    if (clientSha && clientSha !== fileSha256) {
+      return NextResponse.json(
+        {
+          error: 'fileSha256 mismatch. Use the hash from the dry-run response with the identical file.',
+          expected: fileSha256,
+          got: clientSha,
+        },
+        { status: 400 }
+      );
+    }
   }
 
   const skipped: SkippedItem[] = [];
@@ -263,6 +295,7 @@ export async function POST(request: NextRequest) {
   let unchangedCount = 0;
   let importSummary: ImportSummaryPayload | undefined;
   let employeeSummary: EmployeeSummaryPayload | undefined;
+  let importBatchId: string | undefined;
 
   if (!useMsrMode) {
     const dateCol = headerRow.findIndex((h) => h.toLowerCase() === 'date');
@@ -273,6 +306,17 @@ export async function POST(request: NextRequest) {
         { error: 'Simple import requires columns: date, email, amount' },
         { status: 400 }
       );
+    }
+    if (dryRun) {
+      return NextResponse.json({
+        dryRun: true,
+        fileSha256,
+        importMode: 'simple',
+        message: 'Simple import columns validated. Re-submit with confirmed=1 and the same file to write.',
+        skipped: [],
+        warnings: [],
+        ignoredColumns: [],
+      });
     }
     const emailToUser = await prisma.user.findMany({
       where: { disabled: false, employee: { email: { not: null } } },
@@ -420,6 +464,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (dryRun) {
+      return NextResponse.json({
+        dryRun: true,
+        fileSha256,
+        importMode: 'msr',
+        message: 'MSR (legacy) layout validated. Re-submit with confirmed=1 and the same file to write.',
+        skipped: [],
+        warnings: [],
+        ignoredColumns: [],
+      });
+    }
+
     for (let i = dataStart; i <= rowLimit; i++) {
       const row = rows[i] as unknown[];
       const dateRaw = row[dateCol];
@@ -501,67 +557,36 @@ export async function POST(request: NextRequest) {
       }
     }
   } else if (useMsrTemplate) {
-    const header = headerRow;
-    const v2map = resolveMsrV2ColumnMap(header);
-    if (!v2map) {
-      return NextResponse.json(
-        {
-          error: `MSR V2 requires a header row with Date, these exact employee columns (labels may vary slightly): ${MSR_V2_CANONICAL_EMPLOYEES.join(', ')}. Optional: Total Sale After for validation.`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const usersForMatch = await prisma.user.findMany({
-      where: { disabled: false },
-      select: {
-        id: true,
-        empId: true,
-        boutiqueId: true,
-        employee: { select: { empId: true, name: true, isSystemOnly: true } },
-      },
-    });
-    const matchCandidates: MsrTemplateMatchCandidate[] = [];
-    for (const u of usersForMatch) {
-      const e = u.employee;
-      if (!e || !isOperationalEmployee(e)) continue;
-      matchCandidates.push({
-        userId: u.id,
-        empId: u.empId,
-        boutiqueId: u.boutiqueId,
-        name: e.name,
+    let templatePlan;
+    try {
+      templatePlan = await buildMsrTemplateImportPlan({
+        rows,
+        headerRow,
+        headerIndex,
+        monthParam,
+        maxDataRows: MAX_ROWS_MSR,
+        getUserIdToBoutiqueId,
+        getDefaultBoutiqueId,
       });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'MSR template import plan failed';
+      return NextResponse.json({ error: msg, fileSha256 }, { status: 400 });
     }
-    const validEmpIds = new Set(matchCandidates.map((c) => c.empId));
 
-    const columnToUser = new Map<number, { userId: string; employeeName: string }>();
-    const unmapped: string[] = [];
-    for (const name of MSR_V2_CANONICAL_EMPLOYEES) {
-      const col = v2map.employeeColByCanonical.get(name)!;
-      const label = String(header[col] ?? '').trim() || name;
-      const resolved = resolveTemplateHeaderToUniqueUser(label, matchCandidates, validEmpIds);
-      if (resolved) {
-        columnToUser.set(col, { userId: resolved.userId, employeeName: resolved.name });
-      } else {
-        unmapped.push(label);
-      }
-    }
-    if (unmapped.length > 0) {
+    if (templatePlan.duplicateStableKeys.length > 0) {
       return NextResponse.json(
         {
-          error: `Could not match these MSR columns to a single employee user: ${unmapped.join(', ')}. Fix names or empIds in the sheet or employee master data.`,
+          error:
+            'Duplicate stable keys in this file (same boutique, date, and employee). Remove duplicates before importing.',
+          code: 'DUPLICATE_STABLE_KEYS',
+          duplicateStableKeys: templatePlan.duplicateStableKeys,
+          fileSha256,
         },
         { status: 400 }
       );
     }
 
-    const parsed = parseMsrTemplateV2FromAoa(rows, {
-      headerRowIndex: headerIndex,
-      columnMap: v2map,
-      monthFilter: monthParam,
-      maxDataRows: MAX_ROWS_MSR,
-    });
-
+    const parsed = templatePlan.parsed;
     for (const tm of parsed.totalMismatchWarnings) {
       warnings.push({
         rowNumber: tm.rowNumber,
@@ -573,9 +598,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const templateUserIds = Array.from(
-      new Set(Array.from(columnToUser.values(), (v) => v.userId))
+    if (dryRun) {
+      return NextResponse.json({
+        dryRun: true,
+        fileSha256,
+        importMode: 'msr-template',
+        preview: {
+          wouldCreate: templatePlan.wouldCreate,
+          wouldUpdate: templatePlan.wouldUpdate,
+          wouldNoChange: templatePlan.wouldNoChange,
+          fileTotals: templatePlan.fileTotals,
+          plannedRowSample: templatePlan.plannedRows.slice(0, 40),
+        },
+        duplicateStableKeys: [],
+        warnings,
+        skipped: [],
+        ignoredColumns: [],
+        msrLayoutKind: 'template_columns',
+      });
+    }
+
+    const columnToUserMap = new Map(
+      templatePlan.columnToUser.map((c) => [
+        c.columnIndex,
+        { userId: c.userId, employeeName: c.employeeName },
+      ])
     );
+    const templateUserIds = Array.from(new Set(templatePlan.columnToUser.map((c) => c.userId)));
     const userIdToBoutiqueTpl =
       templateUserIds.length > 0 ? await getUserIdToBoutiqueId(templateUserIds) : new Map<string, string>();
     const defaultBoutiqueTpl = await getDefaultBoutiqueId();
@@ -586,55 +635,148 @@ export async function POST(request: NextRequest) {
     let lockedCount = 0;
     let errorCount = 0;
 
-    const importSeen = new Set<string>();
-    for (const cell of parsed.rows) {
-      const key = `${cell.dateKey}\t${cell.columnIndex}`;
-      if (importSeen.has(key)) continue;
-      importSeen.add(key);
+    await prisma.$transaction(async (tx) => {
+      const batch = await tx.salesEntryImportBatch.create({
+        data: {
+          source: 'EXCEL_IMPORT_MSR_V2',
+          fileName: file.name,
+          fileSha256,
+          uploadedById: user.id,
+          monthKey: monthParam,
+          importMode: 'msr-template',
+          summaryJson: {
+            dryRunPreview: {
+              wouldCreate: templatePlan.wouldCreate,
+              wouldUpdate: templatePlan.wouldUpdate,
+              wouldNoChange: templatePlan.wouldNoChange,
+              fileTotals: templatePlan.fileTotals,
+            },
+          } as Prisma.InputJsonValue,
+        },
+      });
+      importBatchId = batch.id;
 
-      const mapped = columnToUser.get(cell.columnIndex);
-      if (!mapped) continue;
-      const boutiqueId = userIdToBoutiqueTpl.get(mapped.userId) ?? defaultBoutiqueTpl;
-      try {
-        const res = await upsertCanonicalSalesEntry({
-          kind: 'direct',
-          boutiqueId,
-          userId: mapped.userId,
-          amount: cell.sales,
-          source: SALES_ENTRY_SOURCE.EXCEL_IMPORT,
-          actorUserId: user.id,
-          date: cell.date,
+      const importSeen = new Set<string>();
+      for (const cell of parsed.rows) {
+        const dedupeKey = `${cell.dateKey}\t${cell.columnIndex}`;
+        if (importSeen.has(dedupeKey)) continue;
+        importSeen.add(dedupeKey);
+
+        const mapped = columnToUserMap.get(cell.columnIndex);
+        if (!mapped) continue;
+
+        const boutiqueId = userIdToBoutiqueTpl.get(mapped.userId) ?? defaultBoutiqueTpl;
+        const stableKey = salesEntryImportStableKey(boutiqueId, cell.dateKey, mapped.userId);
+
+        const existingAudit = await tx.salesEntry.findUnique({
+          where: {
+            boutiqueId_dateKey_userId: { boutiqueId, dateKey: cell.dateKey, userId: mapped.userId },
+          },
+          select: { id: true, amount: true, source: true },
         });
-        if (res.status === 'rejected_locked') {
+        const amountBefore = existingAudit?.amount ?? null;
+        const sourceBefore = existingAudit?.source ?? null;
+
+        let res: Awaited<ReturnType<typeof upsertCanonicalSalesEntry>>;
+        try {
+          res = await upsertCanonicalSalesEntry({
+            kind: 'direct',
+            boutiqueId,
+            userId: mapped.userId,
+            amount: cell.sales,
+            source: SALES_ENTRY_SOURCE.EXCEL_IMPORT,
+            actorUserId: user.id,
+            date: cell.date,
+            tx,
+            entryImportBatchId: batch.id,
+          });
+        } catch {
+          errorCount += 1;
+          skipped.push({
+            rowNumber: cell.sourceRowNumber,
+            columnHeader: cell.employeeHeader,
+            reason: 'Upsert failed',
+          });
+          await tx.salesEntryImportBatchLine.create({
+            data: {
+              batchId: batch.id,
+              salesEntryId: null,
+              action: 'REJECTED_ERROR',
+              boutiqueId,
+              dateKey: cell.dateKey,
+              userId: mapped.userId,
+              stableKey,
+              incomingAmount: cell.sales,
+              amountBefore,
+              amountAfter: null,
+              sourceBefore,
+              rowLabel: `row ${cell.sourceRowNumber} ${cell.employeeHeader}`,
+            },
+          });
+          continue;
+        }
+
+        let action: string;
+        let salesEntryId: string | null = null;
+        let amountAfter: number | null = null;
+
+        if (res.status === 'created') {
+          action = 'CREATED';
+          salesEntryId = res.salesEntryId;
+          amountAfter = cell.sales;
+          importedCount += 1;
+        } else if (res.status === 'updated') {
+          action = 'UPDATED';
+          salesEntryId = res.salesEntryId;
+          amountAfter = cell.sales;
+          updatedCount += 1;
+        } else if (res.status === 'no_change') {
+          action = 'NO_CHANGE';
+          salesEntryId = res.salesEntryId;
+          amountAfter = existingAudit?.amount ?? cell.sales;
+          unchangedCount += 1;
+        } else if (res.status === 'rejected_locked') {
+          action = 'REJECTED_LOCK';
           lockedCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
             reason: 'Day locked in daily sales ledger',
           });
-          continue;
-        }
-        if (res.status === 'rejected_precedence') {
+        } else if (res.status === 'rejected_precedence') {
+          action = 'REJECTED_PRECEDENCE';
           errorCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
             reason: `Source precedence: existing "${res.existingSource ?? ''}" outranks EXCEL_IMPORT`,
           });
-          continue;
-        }
-        if (res.status === 'rejected_invalid') {
+        } else {
+          action = 'REJECTED_INVALID';
           errorCount += 1;
           skipped.push({
             rowNumber: cell.sourceRowNumber,
             columnHeader: cell.employeeHeader,
             reason: res.reason,
           });
-          continue;
         }
-        if (res.status === 'created') importedCount += 1;
-        else if (res.status === 'updated') updatedCount += 1;
-        else if (res.status === 'no_change') unchangedCount += 1;
+
+        await tx.salesEntryImportBatchLine.create({
+          data: {
+            batchId: batch.id,
+            salesEntryId,
+            action,
+            boutiqueId,
+            dateKey: cell.dateKey,
+            userId: mapped.userId,
+            stableKey,
+            incomingAmount: cell.sales,
+            amountBefore,
+            amountAfter,
+            sourceBefore,
+            rowLabel: `row ${cell.sourceRowNumber} ${cell.employeeHeader}`,
+          },
+        });
 
         if (res.status === 'created' || res.status === 'updated') {
           totalSalesApplied += cell.sales;
@@ -649,15 +791,8 @@ export async function POST(request: NextRequest) {
             sales: nextSales,
           });
         }
-      } catch {
-        errorCount += 1;
-        skipped.push({
-          rowNumber: cell.sourceRowNumber,
-          columnHeader: cell.employeeHeader,
-          reason: 'Upsert failed',
-        });
       }
-    }
+    });
 
     skippedRowsCount =
       parsed.stats.skippedInvalidDateRows +
@@ -724,6 +859,9 @@ export async function POST(request: NextRequest) {
     skippedCount: skipped.length,
     warningsCount: warnings.length,
     mode: useMsrTemplate ? 'msr_template' : useMsrLegacy ? 'msr' : useMsrMode ? 'msr' : 'simple',
+    importBatchId: importBatchId ?? null,
+    fileSha256,
+    dryRun: dryRun || undefined,
   });
 
   return NextResponse.json({
@@ -739,5 +877,8 @@ export async function POST(request: NextRequest) {
     importSummary: importSummary ?? null,
     employeeSummary: employeeSummary ?? null,
     msrLayoutKind: useMsrMode ? (useMsrTemplate ? 'template_columns' : 'legacy_msr') : null,
+    importBatchId: importBatchId ?? null,
+    fileSha256,
+    dryRun: dryRun || undefined,
   });
 }

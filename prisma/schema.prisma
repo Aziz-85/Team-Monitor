@@ -297,6 +297,7 @@ model User {
   salesSummariesEntered    BoutiqueSalesSummary[]   @relation("SalesSummaryEnteredBy")
   salesSummariesLocked     BoutiqueSalesSummary[]   @relation("SalesSummaryLockedBy")
   salesImportBatches       SalesImportBatch[]
+  salesEntryImportBatchesUploaded SalesEntryImportBatch[]
   salesLedgerBatchesImported SalesLedgerBatch[]
   leaveRequestsAsRequester LeaveRequest[]           @relation("LeaveRequestRequester")
   leaveRequestsCreated    LeaveRequest[]           @relation("LeaveRequestCreatedBy")
@@ -1395,8 +1396,11 @@ model SalesEntry {
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  user        User     @relation("SalesEntryUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy   User     @relation("SalesEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  // Last admin SalesEntry import batch that wrote this row (rollback + audit).
+  entryImportBatchId String?
+  user               User                    @relation("SalesEntryUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy          User                    @relation("SalesEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  entryImportBatch   SalesEntryImportBatch? @relation(fields: [entryImportBatchId], references: [id], onDelete: SetNull)
 
   @@unique([boutiqueId, dateKey, userId])
   @@index([boutiqueId])
@@ -1406,6 +1410,50 @@ model SalesEntry {
   @@index([userId])
   @@index([userId, dateKey])
   @@index([source])
+  @@index([entryImportBatchId])
+}
+
+/// Admin Excel → SalesEntry import audit (canonical). Distinct from SalesImportBatch (daily ledger).
+model SalesEntryImportBatch {
+  id             String   @id @default(cuid())
+  source         String   // e.g. EXCEL_IMPORT_MSR_V2
+  fileName       String
+  fileSha256     String
+  uploadedAt     DateTime @default(now())
+  uploadedById   String
+  monthKey       String?
+  importMode     String
+  status         String   @default("APPLIED") // APPLIED | ROLLED_BACK
+  summaryJson    Json?
+  uploadedBy     User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  lines          SalesEntryImportBatchLine[]
+  salesEntries   SalesEntry[]
+
+  @@index([uploadedAt])
+  @@index([status])
+  @@index([fileSha256])
+}
+
+model SalesEntryImportBatchLine {
+  id             String  @id @default(cuid())
+  batchId        String
+  salesEntryId   String?
+  action         String // CREATED | UPDATED | NO_CHANGE | REJECTED_LOCK | REJECTED_PRECEDENCE | REJECTED_INVALID | REJECTED_ERROR
+  boutiqueId     String
+  dateKey        String
+  userId         String
+  stableKey      String  // boutiqueId|dateKey|userId
+  incomingAmount Int
+  amountAfter    Int?
+  amountBefore   Int?
+  sourceBefore   String?
+  rowLabel       String?
+
+  batch          SalesEntryImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([stableKey])
+  @@index([boutiqueId, dateKey, userId])
 }
 
 model SalesEditGrant {

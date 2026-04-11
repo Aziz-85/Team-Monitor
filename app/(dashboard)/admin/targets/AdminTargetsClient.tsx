@@ -104,6 +104,33 @@ type ImportResult = {
     perEmployeePerDay: Array<{ dateKey: string; employee: string; userId: string; sales: number }>;
   } | null;
   msrLayoutKind?: 'template_columns' | 'legacy_msr' | null;
+  importBatchId?: string | null;
+  fileSha256?: string;
+};
+
+type PendingSalesImport = {
+  fileSha256: string;
+  importMode: 'simple' | 'msr' | 'msr-template';
+  importMonth: string;
+  fileName: string;
+  preview?: {
+    wouldCreate: number;
+    wouldUpdate: number;
+    wouldNoChange: number;
+    fileTotals: { transformedSalesSum: number; cellCount: number };
+    plannedRowSample?: Array<{
+      boutiqueId: string;
+      dateKey: string;
+      userId: string;
+      incoming: number;
+      existingAmount: number | null;
+      existingSource: string | null;
+      rowLabel: string;
+    }>;
+  };
+  message?: string;
+  warnings?: ImportResult['warnings'];
+  msrLayoutKind?: 'template_columns' | null;
 };
 
 export function AdminTargetsClient() {
@@ -116,6 +143,8 @@ export function AdminTargetsClient() {
   const [generating, setGenerating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingSalesImport | null>(null);
   const [regenerateModal, setRegenerateModal] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [clearingBoutique, setClearingBoutique] = useState(false);
@@ -124,6 +153,7 @@ export function AdminTargetsClient() {
   const [editWeights, setEditWeights] = useState<Record<string, string>>({});
   const [savingWeights, setSavingWeights] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingFileRef = useRef<File | null>(null);
 
   // Sync editable weights from API when data loads (fallback to defaults if missing)
   const defaultWeights: Record<string, number> = {
@@ -147,6 +177,16 @@ export function AdminTargetsClient() {
   const [importMode, setImportMode] = useState<'simple' | 'msr' | 'msr-template'>('simple');
   const [importMonth, setImportMonth] = useState(() => getCurrentMonthKeyRiyadh());
   const [showImportDetails, setShowImportDetails] = useState(false);
+
+  useEffect(() => {
+    if (
+      pendingImport &&
+      (pendingImport.importMode !== importMode || pendingImport.importMonth !== importMonth)
+    ) {
+      setPendingImport(null);
+      pendingFileRef.current = null;
+    }
+  }, [importMode, importMonth, pendingImport]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
   const [editReason, setEditReason] = useState('');
@@ -254,35 +294,92 @@ export function AdminTargetsClient() {
     if (!file) return;
     setImporting(true);
     setImportResult(null);
+    setImportError(null);
+    setPendingImport(null);
+    pendingFileRef.current = null;
+
     const form = new FormData();
     form.append('file', file);
     form.append('importMode', importMode);
     form.append('month', importMonth);
+    form.append('dryRun', '1');
     try {
       const res = await fetch('/api/admin/sales-import', { method: 'POST', body: form });
       const json = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setImportResult({
-          importedCount: json.importedCount ?? 0,
-          updatedCount: json.updatedCount ?? 0,
-          skippedCount: json.skippedCount ?? 0,
-          skippedRowCount: json.skippedRowCount ?? json.skippedRowsCount ?? 0,
-          skippedRowsCount: json.skippedRowsCount ?? json.skippedRowCount ?? 0,
-          unchangedCount: json.unchangedCount,
-          skipped: json.skipped ?? [],
-          warnings: json.warnings ?? [],
-          ignoredColumns: json.ignoredColumns ?? [],
-          importSummary: json.importSummary ?? null,
-          employeeSummary: json.employeeSummary ?? null,
+      if (!res.ok) {
+        const msg = typeof json?.error === 'string' ? json.error : t('targets.importApiError');
+        setImportError(msg);
+        return;
+      }
+      if (json.dryRun === true) {
+        pendingFileRef.current = file;
+        setPendingImport({
+          fileSha256: String(json.fileSha256 ?? ''),
+          importMode,
+          importMonth,
+          fileName: file.name,
+          preview: json.preview,
+          message: typeof json.message === 'string' ? json.message : undefined,
+          warnings: json.warnings,
           msrLayoutKind: json.msrLayoutKind ?? null,
         });
-        setShowImportDetails(true);
-        load();
+        return;
       }
+      setImportError(t('targets.importApiError'));
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const confirmPendingImport = async () => {
+    const file = pendingFileRef.current;
+    if (!file || !pendingImport?.fileSha256) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('importMode', pendingImport.importMode);
+      form.append('month', pendingImport.importMonth);
+      form.append('confirmed', '1');
+      form.append('fileSha256', pendingImport.fileSha256);
+      const res = await fetch('/api/admin/sales-import', { method: 'POST', body: form });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = typeof json?.error === 'string' ? json.error : t('targets.importApiError');
+        setImportError(msg);
+        return;
+      }
+      setPendingImport(null);
+      pendingFileRef.current = null;
+      setImportResult({
+        importedCount: json.importedCount ?? 0,
+        updatedCount: json.updatedCount ?? 0,
+        skippedCount: json.skippedCount ?? 0,
+        skippedRowCount: json.skippedRowCount ?? json.skippedRowsCount ?? 0,
+        skippedRowsCount: json.skippedRowsCount ?? json.skippedRowCount ?? 0,
+        unchangedCount: json.unchangedCount,
+        skipped: json.skipped ?? [],
+        warnings: json.warnings ?? [],
+        ignoredColumns: json.ignoredColumns ?? [],
+        importSummary: json.importSummary ?? null,
+        employeeSummary: json.employeeSummary ?? null,
+        msrLayoutKind: json.msrLayoutKind ?? null,
+        importBatchId: json.importBatchId ?? null,
+        fileSha256: typeof json.fileSha256 === 'string' ? json.fileSha256 : undefined,
+      });
+      setShowImportDetails(true);
+      load();
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const cancelPendingImport = () => {
+    setPendingImport(null);
+    pendingFileRef.current = null;
+    setImportError(null);
   };
 
   const formatNum = (n: number) => (Number.isFinite(n) ? Math.round(n).toLocaleString() : '—');
@@ -653,6 +750,63 @@ export function AdminTargetsClient() {
           >
             {importing ? t('common.loading') : t('targets.uploadExcel')}
           </button>
+          {importError != null && importError !== '' && (
+            <p className="mt-2 text-sm text-red-700" role="alert">
+              {importError}
+            </p>
+          )}
+          {pendingImport != null && (
+            <div className="mt-3 rounded border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
+              <p className="font-medium text-foreground">{t('targets.importDryRunReady')}</p>
+              <p className="mt-1 text-xs text-amber-900">
+                {t('targets.importPendingFile')}: {pendingImport.fileName}
+              </p>
+              {pendingImport.preview != null && (
+                <ul className="mt-2 list-inside list-disc text-sm text-foreground">
+                  <li>
+                    {t('targets.importPreviewWouldCreate')}: {pendingImport.preview.wouldCreate}
+                  </li>
+                  <li>
+                    {t('targets.importPreviewWouldUpdate')}: {pendingImport.preview.wouldUpdate}
+                  </li>
+                  <li>
+                    {t('targets.importPreviewNoChange')}: {pendingImport.preview.wouldNoChange}
+                  </li>
+                  <li>
+                    {t('targets.importPreviewFileSum')}:{' '}
+                    {formatNum(pendingImport.preview.fileTotals.transformedSalesSum)} —{' '}
+                    {pendingImport.preview.fileTotals.cellCount} {t('targets.importPreviewCells')}
+                  </li>
+                </ul>
+              )}
+              {pendingImport.message != null && pendingImport.message !== '' && (
+                <p className="mt-2 text-sm text-foreground">{pendingImport.message}</p>
+              )}
+              {(pendingImport.warnings?.length ?? 0) > 0 && (
+                <p className="mt-2 text-xs text-amber-900">
+                  {t('targets.warnings')}: {pendingImport.warnings!.length}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void confirmPendingImport()}
+                  disabled={importing || !pendingImport.fileSha256}
+                  className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                >
+                  {importing ? t('common.loading') : t('targets.importApplyConfirm')}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelPendingImport}
+                  disabled={importing}
+                  className="rounded border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50"
+                >
+                  {t('targets.importCancelPending')}
+                </button>
+              </div>
+            </div>
+          )}
         </OpsCard>
 
         {regenerateModal && (
@@ -705,6 +859,11 @@ export function AdminTargetsClient() {
                   {t('targets.importV2TotalSalesLine')}: {formatNum(importResult.importSummary.totalSales)}{' '}
                   {t('targets.sar')}
                 </p>
+                {importResult.importBatchId != null && importResult.importBatchId !== '' && (
+                  <p className="text-xs text-muted">
+                    {t('targets.importBatchId')}: {importResult.importBatchId}
+                  </p>
+                )}
                 {(importResult.importSummary.totalMismatchRowCount ?? 0) > 0 && (
                   <p className="rounded border border-amber-400 bg-amber-50 px-2 py-1 text-amber-900">
                     {t('targets.importV2TotalMismatch')}: {importResult.importSummary.totalMismatchRowCount}

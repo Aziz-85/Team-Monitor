@@ -49,12 +49,14 @@ export type UpsertCanonicalSalesEntryInput = {
   forceAdminOverride?: boolean;
   /** Optional transaction client (e.g. matrix import `prisma.$transaction`). */
   tx?: Prisma.TransactionClient;
+  /** When set (admin import), stored on SalesEntry for rollback / audit. */
+  entryImportBatchId?: string | null;
 };
 
 export type UpsertCanonicalSalesEntryResult =
-  | { status: 'created'; signals: SalesWriteSignals }
-  | { status: 'updated'; signals: SalesWriteSignals }
-  | { status: 'no_change'; signals: SalesWriteSignals }
+  | { status: 'created'; signals: SalesWriteSignals; salesEntryId: string }
+  | { status: 'updated'; signals: SalesWriteSignals; salesEntryId: string }
+  | { status: 'no_change'; signals: SalesWriteSignals; salesEntryId: string }
   | { status: 'rejected_locked' }
   | {
       status: 'rejected_precedence';
@@ -113,6 +115,7 @@ export async function upsertCanonicalSalesEntry(
           wasForceOverride: forceAdminOverride,
           decision: 'no_change',
         },
+        salesEntryId: existing.id,
       };
     }
   }
@@ -124,7 +127,8 @@ export async function upsertCanonicalSalesEntry(
     decision: existing ? 'updated' : 'created',
   };
 
-  await db.salesEntry.upsert({
+  const batchId = input.entryImportBatchId;
+  const row = await db.salesEntry.upsert({
     where: {
       boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId },
     },
@@ -137,14 +141,17 @@ export async function upsertCanonicalSalesEntry(
       amount,
       source,
       createdById: actorUserId,
+      ...(batchId ? { entryImportBatchId: batchId } : {}),
     },
     update: {
       amount,
       month,
       source,
       updatedAt: new Date(),
+      ...(batchId ? { entryImportBatchId: batchId } : {}),
     },
+    select: { id: true },
   });
 
-  return existing ? { status: 'updated', signals } : { status: 'created', signals };
+  return existing ? { status: 'updated', signals, salesEntryId: row.id } : { status: 'created', signals, salesEntryId: row.id };
 }

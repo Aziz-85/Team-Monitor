@@ -512,7 +512,7 @@ function SalesDailyClientImpl({
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, ledgerDateReady]);
 
   useEffect(() => {
     if (coverageMonth === '') setCoverageMonth(getCurrentMonthRiyadh());
