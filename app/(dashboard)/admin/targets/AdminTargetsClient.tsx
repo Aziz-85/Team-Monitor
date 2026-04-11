@@ -70,9 +70,31 @@ type ImportResult = {
   skippedCount: number;
   skippedRowCount?: number;
   skippedRowsCount?: number;
+  unchangedCount?: number;
   skipped: Array<{ rowNumber: number; empId?: string; columnHeader?: string; reason: string }>;
   warnings?: Array<{ rowNumber: number; date?: string; message?: string; totalAfter?: number; sumEmployees?: number; delta?: number }>;
   ignoredColumns?: string[];
+  importSummary?: {
+    rowsRead: number;
+    rowsGenerated: number;
+    newCount: number;
+    updatedCount: number;
+    skippedUnchangedCount: number;
+    invalidDateRows: number;
+    invalidSalesValues: number;
+    totalSales: number;
+  } | null;
+  employeeSummary?: {
+    ranked: Array<{
+      rank: number;
+      employee: string;
+      userId: string;
+      totalSales: number;
+      contributionPct: number;
+    }>;
+    perEmployeePerDay: Array<{ dateKey: string; employee: string; userId: string; sales: number }>;
+  } | null;
+  msrLayoutKind?: 'template_columns' | 'legacy_msr' | null;
 };
 
 export function AdminTargetsClient() {
@@ -113,7 +135,7 @@ export function AdminTargetsClient() {
     setEditWeights(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- defaultWeights is stable
   }, [data?.roleWeights]);
-  const [importMode, setImportMode] = useState<'simple' | 'msr'>('simple');
+  const [importMode, setImportMode] = useState<'simple' | 'msr' | 'msr-template'>('simple');
   const [importMonth, setImportMonth] = useState(() => getCurrentMonthKeyRiyadh());
   const [showImportDetails, setShowImportDetails] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -237,9 +259,13 @@ export function AdminTargetsClient() {
           skippedCount: json.skippedCount ?? 0,
           skippedRowCount: json.skippedRowCount ?? json.skippedRowsCount ?? 0,
           skippedRowsCount: json.skippedRowsCount ?? json.skippedRowCount ?? 0,
+          unchangedCount: json.unchangedCount,
           skipped: json.skipped ?? [],
           warnings: json.warnings ?? [],
           ignoredColumns: json.ignoredColumns ?? [],
+          importSummary: json.importSummary ?? null,
+          employeeSummary: json.employeeSummary ?? null,
+          msrLayoutKind: json.msrLayoutKind ?? null,
         });
         setShowImportDetails(true);
         load();
@@ -576,8 +602,18 @@ export function AdminTargetsClient() {
                 />
                 {t('targets.importMsr')}
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="importMode"
+                  checked={importMode === 'msr-template'}
+                  onChange={() => setImportMode('msr-template')}
+                  className="rounded border-border"
+                />
+                {t('targets.importMsrStrict')}
+              </label>
             </fieldset>
-            {importMode === 'msr' && (
+            {(importMode === 'msr' || importMode === 'msr-template') && (
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-foreground">{t('targets.month')}</label>
                 <input
@@ -642,6 +678,8 @@ export function AdminTargetsClient() {
             <p>
               {t('targets.imported')}: {importResult.importedCount} · {t('targets.updated')}: {importResult.updatedCount} ·{' '}
               {t('targets.skipped')}: {importResult.skippedCount}
+              {(importResult.unchangedCount ?? 0) > 0 &&
+                ` · ${t('targets.importUnchanged')}: ${importResult.unchangedCount}`}
               {(importResult.skippedRowCount ?? importResult.skippedRowsCount ?? 0) > 0 && ` · ${t('targets.skippedRows')}: ${importResult.skippedRowCount ?? importResult.skippedRowsCount}`}
               {(importResult.warnings?.length ?? 0) > 0 && ` · ${t('targets.warnings')}: ${importResult.warnings!.length}`}
               {(importResult.ignoredColumns?.length ?? 0) > 0 && ` · ${t('targets.ignoredColumns')}: ${importResult.ignoredColumns!.length}`}
@@ -655,6 +693,29 @@ export function AdminTargetsClient() {
             </button>
             {showImportDetails && (
               <div className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface p-2 text-xs">
+                {importResult.importSummary != null && (
+                  <div className="mb-2 border-b border-border pb-2">
+                    <p className="font-medium text-foreground">{t('targets.importParseSummary')}</p>
+                    <p className="text-muted">
+                      {t('targets.importSummaryRowsRead')}: {importResult.importSummary.rowsRead} ·{' '}
+                      {t('targets.importSummaryGenerated')}: {importResult.importSummary.rowsGenerated} ·{' '}
+                      {t('targets.importSummaryInvalidDates')}: {importResult.importSummary.invalidDateRows} ·{' '}
+                      {t('targets.importSummaryInvalidSales')}: {importResult.importSummary.invalidSalesValues} ·{' '}
+                      {t('targets.importSummaryTotalApplied')}:{' '}
+                      {formatNum(importResult.importSummary.totalSales)}
+                    </p>
+                  </div>
+                )}
+                {(importResult.employeeSummary?.ranked?.length ?? 0) > 0 && (
+                  <div className="mb-2 border-b border-border pb-2">
+                    <p className="font-medium text-foreground">{t('targets.importEmployeeRank')}</p>
+                    {importResult.employeeSummary!.ranked.slice(0, 15).map((r) => (
+                      <div key={r.userId} className="py-0.5 text-muted">
+                        #{r.rank} {r.employee}: {formatNum(r.totalSales)} SAR ({r.contributionPct}%)
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {importResult.skipped.length > 0 && (
                   <p className="font-medium text-foreground">{t('targets.skipped')}:</p>
                 )}

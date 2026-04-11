@@ -187,7 +187,8 @@ function upsertLocalLine(lines: Line[], employeeId: string, amountSar: number, s
 }
 
 function formatSarLine(n: number): string {
-  return `${n.toLocaleString('en-SA')} SAR`;
+  const v = Math.trunc(Number(n) || 0);
+  return `${v.toLocaleString('en-SA')} SAR`;
 }
 
 type ScopeBoutiqueDailyMetrics = {
@@ -202,13 +203,13 @@ type ScopeBoutiqueDailyMetrics = {
 };
 
 type DailySummaryCopyLabels = {
-  todaySales: string;
-  dailyTarget: string;
-  achievement: string;
-  unavailable: string;
   dailySales: string;
-  targetAchievedLine: string;
-  aboveTargetTemplate: string;
+  dailyTarget: string;
+  achievementDaily: string;
+  achievementMonthly: string;
+  unavailable: string;
+  closeToDailyTarget: string;
+  strongPerformance: string;
 };
 
 function formatDailySummaryForCopy(
@@ -220,58 +221,60 @@ function formatDailySummaryForCopy(
   const blocks: string[] = [];
   for (const s of summaries) {
     const useScopeMetrics = scopeDaily != null && scopeDaily.boutiqueId === s.boutiqueId;
-    const todaySalesSar = useScopeMetrics ? scopeDaily.todayAchievedSar : s.linesTotal;
+    const dailySalesInt = Math.trunc(
+      Number(useScopeMetrics ? scopeDaily.todayAchievedSar : s.linesTotal) || 0
+    );
 
-    const monthlyTargetAchieved =
-      useScopeMetrics &&
-      scopeDaily.monthTargetSar > 0 &&
-      scopeDaily.mtdThroughDateSar >= scopeDaily.monthTargetSar;
+    if (!useScopeMetrics) {
+      blocks.push(
+        [
+          s.boutique.name,
+          dateStr,
+          '',
+          `${labels.dailySales} ${formatSarLine(dailySalesInt)}`,
+          `${labels.dailyTarget} ${labels.unavailable}`,
+          `${labels.achievementDaily} ${labels.unavailable}`,
+        ].join('\n')
+      );
+      continue;
+    }
 
-    if (monthlyTargetAchieved) {
-      const mtd = Math.trunc(scopeDaily.mtdThroughDateSar);
-      const monthT = Math.trunc(scopeDaily.monthTargetSar);
-      const y = Math.round((mtd * 100) / monthT);
-      const p = Math.round(((mtd - monthT) / monthT) * 100);
+    const monthT = Math.trunc(scopeDaily.monthTargetSar);
+    const mtd = Math.trunc(scopeDaily.mtdThroughDateSar);
+    const dailyT = Math.trunc(scopeDaily.dailyRequiredSar);
+    const monthlyKnown = monthT > 0;
+    const monthlyMetOrExceeded = monthlyKnown && mtd >= monthT;
+
+    if (monthlyMetOrExceeded) {
+      const monthlyAch = Math.round((mtd * 100) / monthT);
       const lines: string[] = [
         s.boutique.name,
         dateStr,
         '',
-        `${labels.dailySales} ${formatSarLine(todaySalesSar)}`,
-        labels.targetAchievedLine,
-        `${labels.achievement} ${y}%`,
-        '',
-        labels.aboveTargetTemplate.replace('{percent}', String(p)),
+        `${labels.dailySales} ${formatSarLine(dailySalesInt)}`,
+        `${labels.achievementMonthly} ${monthlyAch}%`,
       ];
+      if (monthlyAch >= 120) {
+        lines.push(labels.strongPerformance);
+      }
       blocks.push(lines.join('\n'));
       continue;
     }
 
-    const dailyTargetSar: number | null = useScopeMetrics ? scopeDaily.dailyRequiredSar : null;
-    let achievementPct: number | null = null;
-    if (useScopeMetrics) {
-      if (scopeDaily.dailyProgressPending) {
-        achievementPct = 0;
-      } else if (scopeDaily.todayPct !== null && scopeDaily.todayPct !== undefined) {
-        achievementPct = scopeDaily.todayPct;
-      } else {
-        achievementPct = 0;
-      }
-    }
-
-    const lines: string[] = [];
-    lines.push(s.boutique.name);
-    lines.push(dateStr);
-    lines.push('');
-    lines.push(`${labels.todaySales} ${formatSarLine(todaySalesSar)}`);
-    if (dailyTargetSar !== null) {
-      lines.push(`${labels.dailyTarget} ${formatSarLine(dailyTargetSar)}`);
-    } else {
-      lines.push(`${labels.dailyTarget} ${labels.unavailable}`);
-    }
-    if (achievementPct !== null) {
-      lines.push(`${labels.achievement} ${achievementPct}%`);
-    } else {
-      lines.push(`${labels.achievement} ${labels.unavailable}`);
+    const dailyAch =
+      dailyT > 0 ? Math.round((dailySalesInt * 100) / dailyT) : null;
+    const lines: string[] = [
+      s.boutique.name,
+      dateStr,
+      '',
+      `${labels.dailySales} ${formatSarLine(dailySalesInt)}`,
+      `${labels.dailyTarget} ${dailyT > 0 ? formatSarLine(dailyT) : labels.unavailable}`,
+      dailyAch !== null
+        ? `${labels.achievementDaily} ${dailyAch}%`
+        : `${labels.achievementDaily} ${labels.unavailable}`,
+    ];
+    if (dailyAch !== null && dailyAch >= 80 && dailyAch < 100) {
+      lines.push(labels.closeToDailyTarget);
     }
     blocks.push(lines.join('\n'));
   }
@@ -533,13 +536,13 @@ function SalesDailyClientImpl({
     if (!ledgerDateReady || !data?.summaries?.length) return '';
     const dateStr = data.date || date;
     return formatDailySummaryForCopy(data.summaries, dateStr, scopeBoutiqueDaily, {
-      todaySales: t('sales.dailyLedger.copyLabelTodaySales'),
-      dailyTarget: t('sales.dailyLedger.copyLabelDailyTarget'),
-      achievement: t('sales.dailyLedger.copyLabelAchievement'),
-      unavailable: t('sales.dailyLedger.copyValueUnavailable'),
       dailySales: t('sales.dailyLedger.copyLabelDailySales'),
-      targetAchievedLine: t('sales.dailyLedger.copyTargetAchievedLine'),
-      aboveTargetTemplate: t('sales.dailyLedger.copyAboveTargetTemplate'),
+      dailyTarget: t('sales.dailyLedger.copyLabelDailyTarget'),
+      achievementDaily: t('sales.dailyLedger.copyLabelAchievementDaily'),
+      achievementMonthly: t('sales.dailyLedger.copyLabelAchievementMonthly'),
+      unavailable: t('sales.dailyLedger.copyValueUnavailable'),
+      closeToDailyTarget: t('sales.dailyLedger.copyCloseToDailyTarget'),
+      strongPerformance: t('sales.dailyLedger.copyStrongPerformance'),
     });
   }, [ledgerDateReady, data, date, scopeBoutiqueDaily, t]);
 

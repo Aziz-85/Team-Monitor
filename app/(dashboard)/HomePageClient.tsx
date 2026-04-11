@@ -458,7 +458,7 @@ ${dateLine}
 
 Today Sales: ${formatSarInt(performance.daily.sales)}
 Daily Target: ${formatSarInt(performance.daily.target)}
-Achievement: ${performance.daily.percent}%`;
+${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}%`;
     if (copyDailySummaryTimerRef.current) {
       clearTimeout(copyDailySummaryTimerRef.current);
       copyDailySummaryTimerRef.current = null;

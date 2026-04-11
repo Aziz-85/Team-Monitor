@@ -9,6 +9,13 @@ import { logSalesTargetAudit } from '@/lib/sales-target-audit';
 import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { dateKeyUTC, parseExcelDateToYMD, ymdToUTCNoon } from '@/lib/dates/safeCalendar';
+import {
+  detectMsrDataSheetLayout,
+  parseMsrTemplateDataSheetFromAoa,
+  resolveTemplateHeaderToUniqueUser,
+  type MsrTemplateMatchCandidate,
+} from '@/lib/sales/msrTemplateParse';
+import { isOperationalEmployee } from '@/lib/userClassification';
 import * as XLSX from 'xlsx';
 
 function unwrapCell(raw: unknown): unknown {
@@ -49,7 +56,6 @@ const ADMIN_ROLES = ['MANAGER', 'ADMIN'] as const;
 const MAX_ROWS_SIMPLE = 10000;
 const MAX_ROWS_MSR = 5000;
 const MAX_COLS_MSR = 300;
-const MAX_HEADER_SCAN = 15;
 const TOLERANCE_SAR = 1;
 
 const ALLOWED_EXTENSIONS = /\.(xlsx|xlsm|xls)$/i;
@@ -92,6 +98,28 @@ async function getUserIdToBoutiqueId(userIds: string[]): Promise<Map<string, str
 type SkippedItem = { rowNumber: number; empId?: string; columnHeader?: string; reason: string };
 type WarningItem = { rowNumber: number; date?: string; message?: string; totalAfter?: number; sumEmployees?: number; delta?: number };
 
+type ImportSummaryPayload = {
+  rowsRead: number;
+  rowsGenerated: number;
+  newCount: number;
+  updatedCount: number;
+  skippedUnchangedCount: number;
+  invalidDateRows: number;
+  invalidSalesValues: number;
+  totalSales: number;
+};
+
+type EmployeeSummaryPayload = {
+  ranked: Array<{
+    rank: number;
+    employee: string;
+    userId: string;
+    totalSales: number;
+    contributionPct: number;
+  }>;
+  perEmployeePerDay: Array<{ dateKey: string; employee: string; userId: string; sales: number }>;
+};
+
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
   try {
@@ -115,7 +143,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const importMode = (formData.get('importMode') as string)?.toLowerCase() || 'auto';
+  const importMode = ((formData.get('importMode') as string)?.toLowerCase() || 'auto').trim();
   const monthParam = (formData.get('month') as string)?.trim() || '';
 
   const buf = Buffer.from(await file.arrayBuffer());
@@ -132,8 +160,8 @@ export async function POST(request: NextRequest) {
   }
 
   const dataSheetName = workbook.SheetNames.find((n) => n.toLowerCase() === 'data');
-  const useMsrModeExplicit = importMode === 'msr';
-  if (useMsrModeExplicit && !dataSheetName) {
+  const msrOrTemplateExplicit = importMode === 'msr' || importMode === 'msr-template';
+  if (msrOrTemplateExplicit && !dataSheetName) {
     return NextResponse.json(
       { error: "Sheet 'Data' not found. The file must contain a sheet named Data (case-insensitive)." },
       { status: 400 }
@@ -146,38 +174,54 @@ export async function POST(request: NextRequest) {
 
   const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, {
     header: 1,
-    defval: '',
-    raw: false,
+    defval: null,
+    blankrows: false,
+    raw: true,
   }) as unknown[][];
 
-  let useMsrMode = false;
-  let headerRow: string[] = [];
-  let headerIndex = 0;
+  const tryMsrLayout =
+    importMode === 'msr' ||
+    importMode === 'msr-template' ||
+    (!!dataSheetName && importMode !== 'simple');
+  const msrLayout = tryMsrLayout ? detectMsrDataSheetLayout(rows) : null;
 
-  if (rows.length >= 1) {
-    if (importMode === 'msr' || (dataSheetName && importMode !== 'simple')) {
-      for (let r = 0; r < Math.min(rows.length, MAX_HEADER_SCAN); r++) {
-        const cells = (rows[r] as unknown[]).map((c) => String(c ?? '').trim());
-        const hasDate = cells.some((c) => c.toLowerCase().includes('date'));
-        const hasTotalSaleAfter = cells.some((c) => c.toLowerCase().includes('total sale after'));
-        if (hasDate && hasTotalSaleAfter) {
-          headerRow = cells;
-          headerIndex = r;
-          useMsrMode = true;
-          break;
-        }
-      }
-    }
-    if (!useMsrMode) {
-      headerRow = (rows[0] as unknown[]).map((c) => String(c ?? '').trim());
-    }
-  }
-
-  if (importMode === 'msr' && !useMsrMode) {
+  if (msrOrTemplateExplicit && !msrLayout) {
     return NextResponse.json(
-      { error: "Header row not found. The Data sheet must contain a row with both 'Date' and 'Total Sale After' columns within the first 15 rows." },
+      {
+        error:
+          "Could not detect MSR layout. The Data sheet needs a Date column and either employee columns after Date (names) or a Total Sale After column with empId columns after it.",
+      },
       { status: 400 }
     );
+  }
+  if (importMode === 'msr-template' && msrLayout?.kind !== 'template_columns') {
+    return NextResponse.json(
+      {
+        error:
+          "importMode msr-template requires the column-employee MSR layout (employee names as headers next to Date). This file matches the legacy Total Sale After + empId layout — use importMode msr instead.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const useMsrMode =
+    importMode === 'msr' ||
+    importMode === 'msr-template' ||
+    (!!dataSheetName && importMode !== 'simple' && !!msrLayout);
+
+  let headerRow: string[] = [];
+  let headerIndex = 0;
+  let useMsrLegacy = false;
+  let useMsrTemplate = false;
+  if (rows.length >= 1) {
+    if (useMsrMode && msrLayout) {
+      headerRow = msrLayout.header;
+      headerIndex = msrLayout.headerIndex;
+      useMsrLegacy = msrLayout.kind === 'legacy_msr';
+      useMsrTemplate = msrLayout.kind === 'template_columns';
+    } else {
+      headerRow = (rows[0] as unknown[]).map((c) => String(c ?? '').trim());
+    }
   }
 
   if (useMsrMode && (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam))) {
@@ -193,6 +237,7 @@ export async function POST(request: NextRequest) {
       updatedCount: 0,
       skippedCount: 0,
       skippedRowCount: 0,
+      unchangedCount: 0,
       skipped: [],
       warnings: [],
       ignoredColumns: [],
@@ -205,6 +250,9 @@ export async function POST(request: NextRequest) {
   let importedCount = 0;
   let updatedCount = 0;
   let skippedRowsCount = 0;
+  let unchangedCount = 0;
+  let importSummary: ImportSummaryPayload | undefined;
+  let employeeSummary: EmployeeSummaryPayload | undefined;
 
   if (!useMsrMode) {
     const dateCol = headerRow.findIndex((h) => h.toLowerCase() === 'date');
@@ -257,9 +305,6 @@ export async function POST(request: NextRequest) {
       }
       const boutiqueId = userIdToBoutique.get(userId) ?? defaultBoutiqueId;
       try {
-        const existing = await prisma.salesEntry.findUnique({
-          where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
-        });
         const res = await upsertCanonicalSalesEntry({
           kind: 'direct',
           boutiqueId,
@@ -286,7 +331,7 @@ export async function POST(request: NextRequest) {
         }
         if (res.status === 'created') importedCount += 1;
         else if (res.status === 'updated') updatedCount += 1;
-        else if (res.status === 'no_change' && existing) updatedCount += 1;
+        else if (res.status === 'no_change') unchangedCount += 1;
       } catch {
         skipped.push({ rowNumber: i + 1, reason: 'Upsert failed' });
       }
@@ -297,7 +342,7 @@ export async function POST(request: NextRequest) {
         reason: `Row limit (${MAX_ROWS_SIMPLE}) exceeded`,
       });
     }
-  } else {
+  } else if (useMsrLegacy) {
     const header = headerRow;
     const dateCol = header.findIndex((h) => h.toLowerCase().includes('date'));
     const totalSaleAfterCol = header.findIndex((h) =>
@@ -305,7 +350,7 @@ export async function POST(request: NextRequest) {
     );
     if (dateCol < 0 || totalSaleAfterCol < 0) {
       return NextResponse.json(
-        { error: 'MSR sheet must have Date and Total Sale After columns' },
+        { error: 'Legacy MSR sheet must have Date and Total Sale After columns' },
         { status: 400 }
       );
     }
@@ -326,8 +371,8 @@ export async function POST(request: NextRequest) {
       const label = String(header[c] ?? '').trim();
       if (!label) continue;
       if (validEmpIds.has(label)) {
-        const userId = empIdToUserId.get(label)!;
-        employeeCols.push({ col: c, empId: label, userId });
+        const uid = empIdToUserId.get(label)!;
+        employeeCols.push({ col: c, empId: label, userId: uid });
       } else {
         ignoredColumnsSet.add(label);
       }
@@ -344,9 +389,9 @@ export async function POST(request: NextRequest) {
     const dateKeysInRequestedMonth = new Set<string>();
     for (let i = dataStart; i <= rowLimit; i++) {
       const row = rows[i] as unknown[];
-      const dateKey = rawToDateKey(row[dateCol]);
-      if (dateKey && monthParam && dateKey.startsWith(monthParam + '-')) {
-        dateKeysInRequestedMonth.add(dateKey);
+      const dk = rawToDateKey(row[dateCol]);
+      if (dk && monthParam && dk.startsWith(monthParam + '-')) {
+        dateKeysInRequestedMonth.add(dk);
       }
     }
     if (monthParam && /^\d{4}-\d{2}$/.test(monthParam) && !dateKeysInRequestedMonth.has(monthParam + '-01')) {
@@ -357,6 +402,7 @@ export async function POST(request: NextRequest) {
           updatedCount: 0,
           skippedCount: 0,
           skippedRowCount: 0,
+          unchangedCount: 0,
           skipped: [],
           warnings: [],
         },
@@ -399,9 +445,6 @@ export async function POST(request: NextRequest) {
         sumEmployees += amount;
         const boutiqueId = userIdToBoutiqueMsr.get(userId) ?? defaultBoutiqueIdMsr;
         try {
-          const existing = await prisma.salesEntry.findUnique({
-            where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
-          });
           const res = await upsertCanonicalSalesEntry({
             kind: 'direct',
             boutiqueId,
@@ -428,7 +471,7 @@ export async function POST(request: NextRequest) {
           }
           if (res.status === 'created') importedCount += 1;
           else if (res.status === 'updated') updatedCount += 1;
-          else if (res.status === 'no_change' && existing) updatedCount += 1;
+          else if (res.status === 'no_change') unchangedCount += 1;
         } catch {
           skipped.push({ rowNumber: i + 1, reason: 'Upsert failed' });
         }
@@ -447,6 +490,156 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+  } else if (useMsrTemplate) {
+    const header = headerRow;
+    const usersForMatch = await prisma.user.findMany({
+      where: { disabled: false },
+      select: {
+        id: true,
+        empId: true,
+        boutiqueId: true,
+        employee: { select: { empId: true, name: true, isSystemOnly: true } },
+      },
+    });
+    const matchCandidates: MsrTemplateMatchCandidate[] = [];
+    for (const u of usersForMatch) {
+      const e = u.employee;
+      if (!e || !isOperationalEmployee(e)) continue;
+      matchCandidates.push({
+        userId: u.id,
+        empId: u.empId,
+        boutiqueId: u.boutiqueId,
+        name: e.name,
+      });
+    }
+    const validEmpIds = new Set(matchCandidates.map((c) => c.empId));
+
+    const parsed = parseMsrTemplateDataSheetFromAoa(rows, {
+      headerRowIndex: headerIndex,
+      monthFilter: monthParam,
+      maxDataRows: MAX_ROWS_MSR,
+    });
+
+    const columnToUser = new Map<
+      number,
+      { userId: string; employeeName: string }
+    >();
+    for (const col of parsed.employeeColumnIndices) {
+      const label = String(header[col] ?? '').trim();
+      if (!label) continue;
+      const resolved = resolveTemplateHeaderToUniqueUser(label, matchCandidates, validEmpIds);
+      if (resolved) {
+        columnToUser.set(col, { userId: resolved.userId, employeeName: resolved.name });
+      } else {
+        ignoredColumnsSet.add(label);
+      }
+    }
+
+    const templateUserIds = Array.from(
+      new Set(Array.from(columnToUser.values(), (v) => v.userId))
+    );
+    const userIdToBoutiqueTpl =
+      templateUserIds.length > 0 ? await getUserIdToBoutiqueId(templateUserIds) : new Map<string, string>();
+    const defaultBoutiqueTpl = await getDefaultBoutiqueId();
+
+    const perDay = new Map<string, { dateKey: string; userId: string; employee: string; sales: number }>();
+    let totalSalesApplied = 0;
+
+    for (const cell of parsed.rows) {
+      const mapped = columnToUser.get(cell.columnIndex);
+      if (!mapped) continue;
+      const boutiqueId = userIdToBoutiqueTpl.get(mapped.userId) ?? defaultBoutiqueTpl;
+      try {
+        const res = await upsertCanonicalSalesEntry({
+          kind: 'direct',
+          boutiqueId,
+          userId: mapped.userId,
+          amount: cell.sales,
+          source: SALES_ENTRY_SOURCE.EXCEL_IMPORT,
+          actorUserId: user.id,
+          date: cell.date,
+        });
+        if (res.status === 'rejected_locked') {
+          skipped.push({
+            rowNumber: cell.sourceRowNumber,
+            columnHeader: cell.employeeHeader,
+            reason: 'Day locked in daily sales ledger',
+          });
+          continue;
+        }
+        if (res.status === 'rejected_precedence') {
+          skipped.push({
+            rowNumber: cell.sourceRowNumber,
+            columnHeader: cell.employeeHeader,
+            reason: `Source precedence: existing "${res.existingSource ?? ''}" outranks EXCEL_IMPORT`,
+          });
+          continue;
+        }
+        if (res.status === 'rejected_invalid') {
+          skipped.push({
+            rowNumber: cell.sourceRowNumber,
+            columnHeader: cell.employeeHeader,
+            reason: res.reason,
+          });
+          continue;
+        }
+        if (res.status === 'created') importedCount += 1;
+        else if (res.status === 'updated') updatedCount += 1;
+        else if (res.status === 'no_change') unchangedCount += 1;
+
+        if (res.status === 'created' || res.status === 'updated') {
+          totalSalesApplied += cell.sales;
+          const dk = `${mapped.userId}|${cell.dateKey}`;
+          const prev = perDay.get(dk);
+          const nextSales = (prev?.sales ?? 0) + cell.sales;
+          perDay.set(dk, {
+            dateKey: cell.dateKey,
+            userId: mapped.userId,
+            employee: mapped.employeeName,
+            sales: nextSales,
+          });
+        }
+      } catch {
+        skipped.push({ rowNumber: cell.sourceRowNumber, columnHeader: cell.employeeHeader, reason: 'Upsert failed' });
+      }
+    }
+
+    skippedRowsCount = parsed.invalidDateRows;
+
+    const perEmployeePerDay = Array.from(perDay.values()).sort((a, b) => {
+      if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
+      return a.employee.localeCompare(b.employee);
+    });
+
+    const employeeTotals = new Map<string, { employee: string; totalSales: number }>();
+    for (const row of perEmployeePerDay) {
+      const cur = employeeTotals.get(row.userId) ?? { employee: row.employee, totalSales: 0 };
+      cur.totalSales += row.sales;
+      employeeTotals.set(row.userId, cur);
+    }
+    const rankedArr = Array.from(employeeTotals.entries())
+      .map(([userId, v]) => ({ userId, ...v }))
+      .sort((a, b) => b.totalSales - a.totalSales);
+    const ranked = rankedArr.map((r, i) => ({
+      rank: i + 1,
+      employee: r.employee,
+      userId: r.userId,
+      totalSales: r.totalSales,
+      contributionPct:
+        totalSalesApplied > 0 ? Math.round((r.totalSales * 10000) / totalSalesApplied) / 100 : 0,
+    }));
+
+    employeeSummary = { ranked, perEmployeePerDay };
+    importSummary = {
+      rowsRead: parsed.rowsRead,
+      rowsGenerated: parsed.rowsGenerated,
+      newCount: importedCount,
+      updatedCount,
+      skippedUnchangedCount: unchangedCount,
+      invalidDateRows: parsed.invalidDateRows,
+      invalidSalesValues: parsed.invalidSalesValues,
+      totalSales: totalSalesApplied,
+    };
   }
 
   const monthKey =
@@ -458,17 +651,21 @@ export async function POST(request: NextRequest) {
     updatedCount,
     skippedCount: skipped.length,
     warningsCount: warnings.length,
-    mode: useMsrMode ? 'msr' : 'simple',
+    mode: useMsrTemplate ? 'msr_template' : useMsrLegacy ? 'msr' : useMsrMode ? 'msr' : 'simple',
   });
 
   return NextResponse.json({
     importedCount,
     updatedCount,
+    unchangedCount,
     skippedCount: skipped.length,
     skippedRowCount: skippedRowsCount,
     skippedRowsCount,
     skipped,
     warnings,
     ignoredColumns: useMsrMode ? Array.from(ignoredColumnsSet) : [],
+    importSummary: importSummary ?? null,
+    employeeSummary: employeeSummary ?? null,
+    msrLayoutKind: useMsrMode ? (useMsrTemplate ? 'template_columns' : 'legacy_msr') : null,
   });
 }
