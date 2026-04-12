@@ -26,13 +26,13 @@ type MatrixData = {
   totalsByEmployee: { employeeId: string; totalSar: number }[];
   totalsByDay: { date: string; totalSar: number }[];
   grandTotalSar: number;
+  matrixVersion?: number;
   unlock: {
     sessionId: string;
     expiresAt: string;
     reason: string;
     createdAt: string;
   } | null;
-  passcodeConfigured: boolean;
 };
 
 function addMonth(m: string, d: number): string {
@@ -55,13 +55,14 @@ export function SecureMonthlyMatrixEditClient() {
   const [onlyNonZero, setOnlyNonZero] = useState(false);
 
   const baselineRef = useRef<Record<string, Record<string, number | null>> | null>(null);
+  const baselineGrandTotalRef = useRef<number>(0);
   const unlockSessionIdAfterFetchRef = useRef<string | null>(null);
   const [dirty, setDirty] = useState<Map<string, number>>(() => new Map());
   const [unlockSession, setUnlockSession] = useState<MatrixData['unlock']>(null);
   const [expiresLeftSec, setExpiresLeftSec] = useState<number | null>(null);
 
   const [showUnlock, setShowUnlock] = useState(false);
-  const [passcode, setPasscode] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
   const [unlockReason, setUnlockReason] = useState('');
   const [confirmLive, setConfirmLive] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
@@ -69,6 +70,13 @@ export function SecureMonthlyMatrixEditClient() {
   const [saveReason, setSaveReason] = useState('');
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [lastSaveBatchId, setLastSaveBatchId] = useState<string | null>(null);
+
+  const [showReview, setShowReview] = useState(false);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewPayload, setReviewPayload] = useState<Record<string, unknown> | null>(null);
+  const [confirmForceSaveChk, setConfirmForceSaveChk] = useState(false);
+  const [forceSaveChk, setForceSaveChk] = useState(false);
 
   const [showHistory, setShowHistory] = useState(false);
   const [historyJson, setHistoryJson] = useState<unknown>(null);
@@ -97,6 +105,8 @@ export function SecureMonthlyMatrixEditClient() {
         return;
       }
       setData(j as MatrixData);
+      baselineGrandTotalRef.current =
+        typeof j.grandTotalSar === 'number' ? j.grandTotalSar : 0;
       baselineRef.current = JSON.parse(JSON.stringify(j.matrix ?? {})) as Record<
         string,
         Record<string, number | null>
@@ -253,7 +263,8 @@ export function SecureMonthlyMatrixEditClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           month: monthKey,
-          passcode,
+          ...(data?.scopeId ? { boutiqueId: data.scopeId } : {}),
+          password: accountPassword,
           reason: unlockReason,
           confirmLive,
         }),
@@ -264,7 +275,7 @@ export function SecureMonthlyMatrixEditClient() {
         return;
       }
       setShowUnlock(false);
-      setPasscode('');
+      setAccountPassword('');
       const reasonSaved = unlockReason.trim();
       setUnlockReason('');
       setConfirmLive(false);
@@ -310,7 +321,30 @@ export function SecureMonthlyMatrixEditClient() {
     setSaveMsg(null);
   };
 
-  const saveChanges = async () => {
+  const buildChangedCells = (): Array<{
+    dateKey: string;
+    userId: string;
+    oldAmount: number;
+    newAmount: number;
+  }> => {
+    const changedCells: Array<{
+      dateKey: string;
+      userId: string;
+      oldAmount: number;
+      newAmount: number;
+    }> = [];
+    for (const [key, newAmount] of Array.from(dirty.entries())) {
+      const [empId, dateKey] = key.split('\t');
+      const userId = empToUser.get(empId);
+      if (!userId) continue;
+      const oldAmount = baselineNum(baselineRef.current ?? undefined, dateKey, empId);
+      if (oldAmount === newAmount) continue;
+      changedCells.push({ dateKey, userId, oldAmount, newAmount });
+    }
+    return changedCells;
+  };
+
+  const openReview = async () => {
     if (!unlockSession || dirty.size === 0) return;
     if (saveReason.trim().length < REASON_MIN) {
       setError(
@@ -318,23 +352,57 @@ export function SecureMonthlyMatrixEditClient() {
       );
       return;
     }
+    const changedCells = buildChangedCells();
+    if (changedCells.length === 0) {
+      setSaveMsg('Nothing to save.');
+      return;
+    }
+    let clientTotalDelta = 0;
+    for (const c of changedCells) clientTotalDelta += c.newAmount - c.oldAmount;
+    const clientExpectedGrandTotalAfter = baselineGrandTotalRef.current + clientTotalDelta;
+
+    setReviewBusy(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/admin/sales/monthly-matrix-secure-edit/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: monthKey,
+          unlockSessionId: unlockSession.sessionId,
+          reason: saveReason.trim(),
+          changedCells,
+          matrixVersion: data?.matrixVersion ?? 0,
+          clientTotalDelta,
+          clientExpectedGrandTotalAfter,
+          confirmForceSave: confirmForceSaveChk,
+          forceSave: forceSaveChk,
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(typeof j.error === 'string' ? j.error : 'Preview failed');
+        return;
+      }
+      setReviewPayload(j as Record<string, unknown>);
+      setShowReview(true);
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+
+  const commitSaveFromReview = async () => {
+    if (!unlockSession || !reviewPayload) return;
+    const changedCells = buildChangedCells();
+    if (changedCells.length === 0) return;
+    let clientTotalDelta = 0;
+    for (const c of changedCells) clientTotalDelta += c.newAmount - c.oldAmount;
+    const clientExpectedGrandTotalAfter = baselineGrandTotalRef.current + clientTotalDelta;
+
     setSaveBusy(true);
     setError(null);
     setSaveMsg(null);
     try {
-      const changedCells: Array<{ dateKey: string; userId: string; oldAmount: number; newAmount: number }> = [];
-      for (const [key, newAmount] of Array.from(dirty.entries())) {
-        const [empId, dateKey] = key.split('\t');
-        const userId = empToUser.get(empId);
-        if (!userId) continue;
-        const oldAmount = baselineNum(baselineRef.current ?? undefined, dateKey, empId);
-        if (oldAmount === newAmount) continue;
-        changedCells.push({ dateKey, userId, oldAmount, newAmount });
-      }
-      if (changedCells.length === 0) {
-        setSaveMsg('Nothing to save.');
-        return;
-      }
       const r = await fetch('/api/admin/sales/monthly-matrix-secure-edit/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,17 +411,31 @@ export function SecureMonthlyMatrixEditClient() {
           unlockSessionId: unlockSession.sessionId,
           reason: saveReason.trim(),
           changedCells,
+          matrixVersion: data?.matrixVersion ?? 0,
+          clientTotalDelta,
+          clientExpectedGrandTotalAfter,
+          confirmForceSave: confirmForceSaveChk,
+          forceSave: forceSaveChk,
           autoLock: true,
         }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         setError(typeof j.error === 'string' ? j.error : 'Save failed');
+        if (j.code === 'MATRIX_VERSION_CONFLICT') {
+          setSaveMsg('Version conflict — refreshing.');
+          await fetchData();
+        }
         if (Array.isArray(j.stale)) {
           setSaveMsg('Stale data — refresh required.');
         }
         return;
       }
+      setShowReview(false);
+      setReviewPayload(null);
+      setConfirmForceSaveChk(false);
+      setForceSaveChk(false);
+      if (typeof j.saveBatchId === 'string') setLastSaveBatchId(j.saveBatchId);
       setSaveMsg(
         (t('matrixSecureEdit.saveOk') ?? 'Saved {n} cells.').replace('{n}', String(j.saved ?? 0))
       );
@@ -405,8 +487,16 @@ export function SecureMonthlyMatrixEditClient() {
 
   const cellClass = (dateKey: string, empId: string): string => {
     const dk = `${empId}\t${dateKey}`;
-    if (dirty.has(dk)) return 'bg-amber-100 dark:bg-amber-950/40 ring-1 ring-amber-400';
-    return '';
+    if (!dirty.has(dk)) return '';
+    const base = baselineNum(baselineRef.current ?? undefined, dateKey, empId);
+    const cur = dirty.get(dk)!;
+    if (cur > base) {
+      return 'bg-emerald-50 dark:bg-emerald-950/30 ring-1 ring-emerald-500/60';
+    }
+    if (cur < base) {
+      return 'bg-red-50 dark:bg-red-950/30 ring-1 ring-red-400/70';
+    }
+    return 'bg-amber-100 dark:bg-amber-950/40 ring-1 ring-amber-400';
   };
 
   return (
@@ -415,19 +505,14 @@ export function SecureMonthlyMatrixEditClient() {
         {t('matrixSecureEdit.title') ?? 'Secure matrix edit (production)'}
       </h1>
       <p className="mt-1 text-sm text-muted">
-        {t('matrixSecureEdit.subtitle') ?? 'Admin-only. Passcode required. All saves are audited.'}
+        {t('matrixSecureEdit.subtitle') ??
+          'Admin-only. Re-enter your password to unlock editing. All saves are audited.'}
       </p>
-
-      {data && !data.passcodeConfigured && (
-        <div className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
-          {t('matrixSecureEdit.noPasscode') ??
-            'MONTHLY_MATRIX_EDIT_PASSCODE_HASH is not set. Unlock is disabled.'}
-        </div>
-      )}
 
       {isEditMode && (
         <div className="mt-3 rounded-lg border border-amber-500 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
-          {t('matrixSecureEdit.bannerEdit') ?? 'Editing live production sales data.'}{' '}
+          {t('matrixSecureEdit.editingSession') ??
+            'Editing session active — you are changing live production sales data.'}{' '}
           {expiresLeftSec != null && expiresLeftSec > 0 && (
             <span className="ms-2 tabular-nums">
               {t('matrixSecureEdit.expiresIn') ?? 'Session expires in'} {Math.floor(expiresLeftSec / 60)}:
@@ -488,7 +573,6 @@ export function SecureMonthlyMatrixEditClient() {
         {!isEditMode ? (
           <button
             type="button"
-            disabled={!data?.passcodeConfigured}
             onClick={() => setShowUnlock(true)}
             className="rounded bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
@@ -512,11 +596,11 @@ export function SecureMonthlyMatrixEditClient() {
             />
             <button
               type="button"
-              disabled={saveBusy || dirty.size === 0}
-              onClick={() => void saveChanges()}
+              disabled={saveBusy || reviewBusy || dirty.size === 0}
+              onClick={() => void openReview()}
               className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
-              {saveBusy ? '…' : t('matrixSecureEdit.save') ?? 'Save changes'}
+              {reviewBusy ? '…' : t('matrixSecureEdit.reviewSave') ?? 'Review changes'}
             </button>
             <button
               type="button"
@@ -543,7 +627,16 @@ export function SecureMonthlyMatrixEditClient() {
       </div>
 
       <p className="mt-2 text-xs text-muted">
+        {t('matrixSecureEdit.matrixVersion') ?? 'Matrix version'}: {data?.matrixVersion ?? 0}
+        {' · '}
         {t('matrixSecureEdit.dirtyCount') ?? 'Pending cells'}: {dirty.size}
+        {lastSaveBatchId && (
+          <>
+            {' · '}
+            {t('matrixSecureEdit.lastBatch') ?? 'Last batch'}:{' '}
+            <code className="rounded bg-surface-subtle px-1">{lastSaveBatchId}</code>
+          </>
+        )}
         {unlockSession && (
           <>
             {' · '}
@@ -659,15 +752,21 @@ export function SecureMonthlyMatrixEditClient() {
             <h2 className="text-lg font-semibold">{t('matrixSecureEdit.unlockTitle') ?? 'Unlock editing'}</h2>
             <p className="mt-2 text-sm text-muted">
               {t('matrixSecureEdit.unlockBlurb') ??
-                'Enter the operations passcode and a reason. This is logged.'}
+                'Enter your current account password and a reason. Unlock events are audited.'}
             </p>
-            <label className="mt-3 block text-sm font-medium">Passcode</label>
+            <p className="mt-2 text-xs text-muted">
+              {t('matrixSecureEdit.unlockPasswordHint') ??
+                'For security, re-enter your account password before editing production sales data.'}
+            </p>
+            <label className="mt-3 block text-sm font-medium">
+              {t('matrixSecureEdit.accountPassword') ?? 'Current account password'}
+            </label>
             <input
               type="password"
-              autoComplete="off"
+              autoComplete="current-password"
               className="mt-1 w-full rounded border border-border px-3 py-2 text-sm"
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
+              value={accountPassword}
+              onChange={(e) => setAccountPassword(e.target.value)}
             />
             <label className="mt-3 block text-sm font-medium">Reason</label>
             <textarea
@@ -695,12 +794,117 @@ export function SecureMonthlyMatrixEditClient() {
               <button
                 type="button"
                 disabled={
-                  unlockBusy || !confirmLive || unlockReason.trim().length < REASON_MIN || !passcode
+                  unlockBusy ||
+                  !confirmLive ||
+                  unlockReason.trim().length < REASON_MIN ||
+                  !accountPassword
                 }
                 className="rounded bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
                 onClick={() => void submitUnlock()}
               >
                 {unlockBusy ? '…' : 'Unlock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReview && reviewPayload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-xl">
+            <h2 className="text-lg font-semibold">
+              {t('matrixSecureEdit.reviewTitle') ?? 'Review changes before save'}
+            </h2>
+            {Array.isArray(reviewPayload.warnings) && reviewPayload.warnings.length > 0 && (
+              <ul className="mt-2 list-inside list-disc text-sm text-amber-900">
+                {(reviewPayload.warnings as string[]).map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
+            {reviewPayload.stale != null && (
+              <p className="mt-2 text-sm text-red-700">
+                {t('matrixSecureEdit.stalePreview') ??
+                  'Data changed since load. Refresh and re-open review.'}
+              </p>
+            )}
+            <div className="mt-3 rounded border border-border bg-surface-subtle p-2 text-sm">
+              <p className="font-medium">
+                {t('matrixSecureEdit.totals') ?? 'Totals'} (month)
+              </p>
+              <p className="tabular-nums">
+                {(reviewPayload.totals as { oldGrand?: number })?.oldGrand != null
+                  ? `Old: ${Number((reviewPayload.totals as { oldGrand: number }).oldGrand).toLocaleString('en-SA')}`
+                  : ''}
+              </p>
+              <p className="tabular-nums">
+                {(reviewPayload.totals as { newGrand?: number })?.newGrand != null
+                  ? `New: ${Number((reviewPayload.totals as { newGrand: number }).newGrand).toLocaleString('en-SA')}`
+                  : ''}
+              </p>
+              <p className="tabular-nums">
+                Δ{' '}
+                {Number((reviewPayload.totals as { delta?: number })?.delta ?? 0).toLocaleString('en-SA')}
+              </p>
+            </div>
+            <ul className="mt-3 max-h-48 overflow-y-auto text-xs">
+              {Array.isArray(reviewPayload.changedRows) &&
+                (reviewPayload.changedRows as Array<Record<string, unknown>>).map((row, i) => (
+                  <li key={i} className="border-b border-border py-1">
+                    <span className="font-medium">{String(row.name ?? row.empId)}</span>{' '}
+                    {String(row.dateKey)}: {Number(row.oldAmount).toLocaleString('en-SA')} →{' '}
+                    {Number(row.newAmount).toLocaleString('en-SA')}
+                  </li>
+                ))}
+            </ul>
+            {reviewPayload.needsConfirmForceSave === true && (
+              <label className="mt-3 flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={confirmForceSaveChk}
+                  onChange={(e) => setConfirmForceSaveChk(e.target.checked)}
+                />
+                {t('matrixSecureEdit.confirmSuspicious') ??
+                  'I reviewed the warnings and confirm these edits are intentional.'}
+              </label>
+            )}
+            {reviewPayload.requiresForceSaveReason === true && (
+              <label className="mt-2 flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={forceSaveChk}
+                  onChange={(e) => setForceSaveChk(e.target.checked)}
+                />
+                {t('matrixSecureEdit.forceHighRisk') ??
+                  'High-risk edit: I require a detailed reason (15+ chars) and confirm force save.'}
+              </label>
+            )}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded border border-border px-4 py-2 text-sm"
+                disabled={reviewBusy}
+                onClick={() => void openReview()}
+              >
+                {t('matrixSecureEdit.revalidate') ?? 'Re-run review'}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border px-4 py-2 text-sm"
+                onClick={() => {
+                  setShowReview(false);
+                  setReviewPayload(null);
+                }}
+              >
+                {t('common.cancel') ?? 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={saveBusy || reviewPayload.stale != null}
+                className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                onClick={() => void commitSaveFromReview()}
+              >
+                {saveBusy ? '…' : t('matrixSecureEdit.confirmApply') ?? 'Save to database'}
               </button>
             </div>
           </div>

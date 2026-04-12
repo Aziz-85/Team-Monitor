@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import * as bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import type { User, Role } from '@prisma/client';
 import { SESSION_IDLE_MINUTES, SESSION_MAX_HOURS, SESSION_LAST_SEEN_THROTTLE_MINUTES } from '@/lib/sessionConfig';
@@ -171,6 +172,24 @@ export async function invalidateSessionByToken(token: string): Promise<void> {
 /** Invalidate all sessions for a user (e.g. on password change). */
 export async function invalidateAllSessionsForUser(userId: string): Promise<void> {
   await prisma.session.deleteMany({ where: { userId } }).catch(() => {});
+}
+
+/**
+ * Verify plaintext password against the user's stored hash (same strategy as login / change-password).
+ * Does not persist or log the password.
+ */
+export async function verifyUserPassword(userId: string, plainPassword: string): Promise<boolean> {
+  if (typeof plainPassword !== 'string' || plainPassword.length === 0) return false;
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true, disabled: true },
+  });
+  if (!u || u.disabled) return false;
+  try {
+    return await bcrypt.compare(plainPassword, u.passwordHash);
+  } catch {
+    return false;
+  }
 }
 
 export function setSessionCookie(sessionToken: string, options?: { secure?: boolean }) {

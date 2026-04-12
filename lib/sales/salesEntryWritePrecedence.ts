@@ -2,7 +2,7 @@
  * Deterministic source precedence for SalesEntry writes (single definition).
  * Higher rank = stronger source. Incoming must be >= existing to replace (unless same source or admin force).
  *
- * Order (highest → lowest): MANUAL → LEDGER → HISTORICAL_CORRECTION → EXCEL_IMPORT / YEARLY_IMPORT / HISTORICAL_IMPORT → API → MATRIX → legacy IMPORT
+ * Order (highest → lowest): MATRIX_MANUAL_EDIT (secure matrix console) → MANUAL → LEDGER → …
  *
  * HISTORICAL_CORRECTION (81) may replace same-tier historical rows; routes use `forceAdminOverride` only after
  * excluding MANUAL targets (see `lib/historical-sales-import/`).
@@ -14,10 +14,10 @@
 export function getSalesEntrySourceRank(source: string | null | undefined): number {
   const s = (source ?? '').trim().toUpperCase();
   switch (s) {
+    case 'MATRIX_MANUAL_EDIT':
+      return 105;
     case 'MANUAL':
       return 100;
-    case 'MATRIX_MANUAL_EDIT':
-      return 97;
     case 'LEDGER':
       return 90;
     /** Admin correction import: between LEDGER and bulk imports; never overwrites MANUAL (enforced in route). */

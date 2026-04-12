@@ -12,6 +12,7 @@ import { normalizeMonthKey } from '@/lib/time';
 import { getMonthlyMatrixPayload } from '@/lib/sales/monthlyMatrixPayload';
 import { prisma } from '@/lib/db';
 import { assertAdminMatrixSecureEditRole } from '@/lib/matrixSecureEdit/session';
+import { getMatrixEditVersion } from '@/lib/matrixSecureEdit/versioning';
 import type { Role } from '@prisma/client';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -50,6 +51,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: payload.error }, { status: 400 });
   }
 
+  const matrixVersion = await getMatrixEditVersion(boutiqueId, monthKey);
+
   const now = new Date();
   const activeUnlock = await prisma.salesMatrixEditUnlockSession.findFirst({
     where: {
@@ -66,6 +69,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ...payload,
     boutiqueLabel: scope.boutiqueLabel,
+    matrixVersion,
     unlock: activeUnlock
       ? {
           sessionId: activeUnlock.id,
@@ -74,9 +78,5 @@ export async function GET(request: NextRequest) {
           createdAt: activeUnlock.createdAt.toISOString(),
         }
       : null,
-    passcodeConfigured: Boolean(
-      typeof process.env.MONTHLY_MATRIX_EDIT_PASSCODE_HASH === 'string' &&
-        process.env.MONTHLY_MATRIX_EDIT_PASSCODE_HASH.trim()
-    ),
   });
 }

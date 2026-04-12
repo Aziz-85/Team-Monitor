@@ -176,6 +176,8 @@ model Boutique {
   employeeMonthlyTargets  EmployeeMonthlyTarget[]
   complianceItems       ComplianceItem[]
   salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
+  salesMatrixEditVersions       SalesMatrixEditVersion[]
+  salesMatrixSnapshots          SalesMatrixSnapshot[]
 
   @@index([regionId])
   @@index([isActive])
@@ -319,6 +321,7 @@ model User {
   salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
   salesMatrixCellAudits         SalesMatrixEditCellAudit[]     @relation("SalesMatrixCellAuditActor")
   salesMatrixActivityLogs       SalesMatrixEditActivityLog[]   @relation("SalesMatrixActivityActor")
+  salesMatrixSnapshotsCreated   SalesMatrixSnapshot[]          @relation("SalesMatrixSnapshotCreator")
 
   @@index([boutiqueId])
 }
@@ -1477,13 +1480,15 @@ model SalesEditGrant {
   @@index([date])
 }
 
-/// Temporary unlock for admin secure monthly matrix editing (passcode-gated).
+/// Temporary unlock for admin secure monthly matrix editing (re-auth gated).
 model SalesMatrixEditUnlockSession {
   id          String    @id @default(cuid())
   userId      String
   boutiqueId  String
   month       String
   reason      String
+  /// e.g. PASSWORD_REAUTH — how the user proved identity for this unlock.
+  unlockAuthMethod String @default("PASSWORD_REAUTH")
   createdAt   DateTime  @default(now())
   expiresAt   DateTime
   revokedAt   DateTime?
@@ -1500,6 +1505,8 @@ model SalesMatrixEditUnlockSession {
 model SalesMatrixEditCellAudit {
   id              String   @id @default(cuid())
   unlockSessionId String
+  /// Batch id for one save operation (rollback target).
+  saveBatchId     String?
   actorUserId     String
   actorRole       String
   boutiqueId      String
@@ -1512,12 +1519,42 @@ model SalesMatrixEditCellAudit {
   reason          String
   sourcePage      String   @default("monthly-matrix-secure-edit")
   createdAt       DateTime @default(now())
+  rolledBackAt    DateTime?
   unlockSession   SalesMatrixEditUnlockSession @relation(fields: [unlockSessionId], references: [id], onDelete: Cascade)
   actor           User     @relation("SalesMatrixCellAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@index([boutiqueId, month, createdAt])
   @@index([unlockSessionId])
+  @@index([saveBatchId])
   @@index([actorUserId, createdAt])
+}
+
+/// Optimistic concurrency for secure matrix saves (per boutique + month).
+model SalesMatrixEditVersion {
+  boutiqueId String
+  month      String // YYYY-MM
+  version    Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  boutique   Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@id([boutiqueId, month])
+}
+
+/// Point-in-time matrix JSON before a save (restore / forensics).
+model SalesMatrixSnapshot {
+  id            String   @id @default(cuid())
+  boutiqueId    String
+  month         String
+  /// Subset of matrix payload: matrix, days, employees, grandTotalSar, etc.
+  data          Json
+  grandTotalSar Int
+  saveBatchId   String   @unique
+  createdById   String
+  createdAt     DateTime @default(now())
+  boutique      Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+  createdBy     User     @relation("SalesMatrixSnapshotCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([boutiqueId, month, createdAt])
 }
 
 /// Page-level events (unlock, lock, save attempts, failures).

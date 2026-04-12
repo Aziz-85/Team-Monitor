@@ -5,13 +5,13 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { requireRole, getSessionUser } from '@/lib/auth';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
 import { normalizeMonthKey } from '@/lib/time';
 import { prisma } from '@/lib/db';
 import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
-import { monthDaysUTC } from '@/lib/dates/safeCalendar';
 import {
   assertAdminMatrixSecureEditRole,
   getValidUnlockSession,
@@ -20,18 +20,25 @@ import {
 } from '@/lib/matrixSecureEdit/session';
 import { dateKeyToUTCNoon } from '@/lib/matrixSecureEdit/dateKeyToDate';
 import {
-  MAX_ABS_DELTA_BATCH_SAR,
-  MAX_CELL_SAR,
   MATRIX_SECURE_EDIT_PAGE,
   REASON_MIN_LEN,
 } from '@/lib/matrixSecureEdit/constants';
+import {
+  parseChangedCells,
+  validateClientDeltaClaim,
+  validateGrandTotalAfterClaim,
+  analyzeSuspiciousPatterns,
+  assessHighRiskSave,
+  assertHighRiskGate,
+} from '@/lib/matrixSecureEdit/saveValidation';
+import { loadAllowedUserIdsForMatrixMonth, monthDayKeys } from '@/lib/matrixSecureEdit/saveContext';
+import { getMonthlyMatrixPayload } from '@/lib/sales/monthlyMatrixPayload';
+import { finalizeMatrixVersionInTx, MatrixVersionConflictError } from '@/lib/matrixSecureEdit/versioning';
 import type { Prisma } from '@prisma/client';
 import type { Role } from '@prisma/client';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
 const ADMIN_ROLES: Role[] = ['ADMIN', 'SUPER_ADMIN'];
-
-type ChangedCellInput = { dateKey: string; userId: string; oldAmount: number; newAmount: number };
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
@@ -60,6 +67,9 @@ export async function POST(request: NextRequest) {
     typeof body.unlockSessionId === 'string' ? body.unlockSessionId.trim() : '';
   const autoLock = body.autoLock === true;
   const changedCellsRaw = body.changedCells;
+  const clientMatrixVersion = Number(body.matrixVersion);
+  const confirmForceSave = body.confirmForceSave === true;
+  const forceSave = body.forceSave === true;
 
   if (!MONTH_REGEX.test(month)) {
     return NextResponse.json({ error: 'month must be YYYY-MM' }, { status: 400 });
@@ -72,6 +82,9 @@ export async function POST(request: NextRequest) {
   }
   if (!unlockSessionId) {
     return NextResponse.json({ error: 'unlockSessionId required' }, { status: 400 });
+  }
+  if (!Number.isInteger(clientMatrixVersion) || clientMatrixVersion < 0) {
+    return NextResponse.json({ error: 'matrixVersion must be a non-negative integer' }, { status: 400 });
   }
 
   const session = await getValidUnlockSession(unlockSessionId, user.id, boutiqueId, month);
@@ -86,69 +99,79 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unlock session expired or invalid. Unlock again.' }, { status: 403 });
   }
 
-  if (!Array.isArray(changedCellsRaw) || changedCellsRaw.length === 0) {
-    return NextResponse.json({ error: 'changedCells must be a non-empty array' }, { status: 400 });
-  }
-
-  const allowedDays = new Set(monthDaysUTC(month));
-  const allowedUserIds = new Set(
-    (
-      await prisma.user.findMany({
-        where: {
-          disabled: false,
-          employee: { boutiqueId, isSystemOnly: false, active: true },
-        },
-        select: { id: true },
-      })
-    ).map((u) => u.id)
-  );
-  // Include users who have sales this month at this boutique (historical rows)
-  const extraUserIds = await prisma.salesEntry.findMany({
-    where: { boutiqueId, month },
-    select: { userId: true },
-    distinct: ['userId'],
+  const serverMatrixVersionPre = await prisma.salesMatrixEditVersion.findUnique({
+    where: { boutiqueId_month: { boutiqueId, month } },
+    select: { version: true },
   });
-  for (const r of extraUserIds) allowedUserIds.add(r.userId);
-
-  const changedCells: ChangedCellInput[] = [];
-  for (const raw of changedCellsRaw) {
-    if (!raw || typeof raw !== 'object') {
-      return NextResponse.json({ error: 'Invalid changedCells entry' }, { status: 400 });
-    }
-    const dateKey = typeof raw.dateKey === 'string' ? raw.dateKey.trim() : '';
-    const uid = typeof raw.userId === 'string' ? raw.userId.trim() : '';
-    const oldAmount = Number(raw.oldAmount);
-    const newAmount = Number(raw.newAmount);
-    if (!dateKey || !allowedDays.has(dateKey)) {
-      return NextResponse.json({ error: `Invalid dateKey: ${dateKey}` }, { status: 400 });
-    }
-    if (!uid || !allowedUserIds.has(uid)) {
-      return NextResponse.json({ error: 'Invalid or out-of-scope userId' }, { status: 400 });
-    }
-    if (!Number.isInteger(oldAmount) || oldAmount < 0 || !Number.isInteger(newAmount) || newAmount < 0) {
-      return NextResponse.json({ error: 'Amounts must be non-negative integers' }, { status: 400 });
-    }
-    if (newAmount > MAX_CELL_SAR) {
-      return NextResponse.json(
-        { error: `Per-cell amount exceeds maximum (${MAX_CELL_SAR} SAR)` },
-        { status: 400 }
-      );
-    }
-    if (oldAmount === newAmount) continue;
-    changedCells.push({ dateKey, userId: uid, oldAmount, newAmount });
-  }
-
-  if (changedCells.length === 0) {
-    return NextResponse.json({ error: 'No effective changes after validation' }, { status: 400 });
-  }
-
-  let absDeltaSum = 0;
-  for (const c of changedCells) absDeltaSum += Math.abs(c.newAmount - c.oldAmount);
-  if (absDeltaSum > MAX_ABS_DELTA_BATCH_SAR) {
+  const actualVersionPre = serverMatrixVersionPre?.version ?? 0;
+  if (actualVersionPre !== clientMatrixVersion) {
+    await logMatrixSecureActivity({
+      unlockSessionId,
+      actorUserId: user.id,
+      boutiqueId,
+      month,
+      eventType: 'SAVE_FAILURE',
+      detail: 'matrix_version_conflict',
+      meta: { expected: clientMatrixVersion, actual: actualVersionPre },
+    });
     return NextResponse.json(
       {
-        error: `Total change magnitude exceeds safety limit (${MAX_ABS_DELTA_BATCH_SAR} SAR). Split saves or contact engineering.`,
+        error: 'Matrix was updated by another session. Refresh and retry.',
+        code: 'MATRIX_VERSION_CONFLICT',
+        matrixVersion: actualVersionPre,
       },
+      { status: 409 }
+    );
+  }
+
+  const allowedDays = monthDayKeys(month);
+  const allowedUserIds = await loadAllowedUserIdsForMatrixMonth(boutiqueId, month);
+
+  const parsed = parseChangedCells(changedCellsRaw, allowedDays, allowedUserIds);
+  if (!parsed.ok) {
+    const e = parsed.error;
+    return NextResponse.json({ error: e.message, code: e.code }, { status: 400 });
+  }
+  const changedCells = parsed.cells;
+
+  const deltaClaim = validateClientDeltaClaim(changedCells, body.clientTotalDelta);
+  if (!deltaClaim.ok) {
+    return NextResponse.json({ error: deltaClaim.error.message, code: deltaClaim.error.code }, { status: 400 });
+  }
+
+  const grandAgg = await prisma.salesEntry.aggregate({
+    where: { boutiqueId, month },
+    _sum: { amount: true },
+  });
+  const grandBefore = grandAgg._sum.amount ?? 0;
+
+  const grandClaim = validateGrandTotalAfterClaim(grandBefore, changedCells, body.clientExpectedGrandTotalAfter);
+  if (!grandClaim.ok) {
+    return NextResponse.json(
+      { error: grandClaim.error.message, code: grandClaim.error.code },
+      { status: 400 }
+    );
+  }
+
+  const suspicious = analyzeSuspiciousPatterns(changedCells);
+  let absDeltaSum = 0;
+  for (const c of changedCells) absDeltaSum += Math.abs(c.newAmount - c.oldAmount);
+
+  const highRisk = assessHighRiskSave({
+    absDeltaSum,
+    cells: changedCells,
+    suspicious,
+    confirmForceSave,
+  });
+
+  const gate = assertHighRiskGate(highRisk, forceSave, reason.length);
+  if (!gate.ok) {
+    return NextResponse.json(
+      {
+        error: gate.message,
+        code: gate.code,
+        warnings: suspicious.warnings,
+ },
       { status: 400 }
     );
   }
@@ -191,20 +214,72 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const payload = await getMonthlyMatrixPayload({
+    boutiqueId,
+    monthParam: month,
+    includePreviousMonth: false,
+    ledgerOnly: false,
+    includeUserIds: true,
+  });
+  if ('error' in payload) {
+    return NextResponse.json({ error: payload.error }, { status: 400 });
+  }
+
+  const snapshotData = {
+    month: payload.month,
+    days: payload.days,
+    matrix: payload.matrix,
+    employees: payload.employees.map((e) => ({
+      empId: e.empId,
+      name: e.name,
+      userId: e.userId,
+    })),
+    grandTotalSar: payload.grandTotalSar,
+  };
+
+  const saveBatchId = randomUUID();
+  const actorRole = user.role;
+  const results: Array<{ dateKey: string; userId: string; ok: boolean; error?: string }> = [];
+
   await logMatrixSecureActivity({
     unlockSessionId,
     actorUserId: user.id,
     boutiqueId,
     month,
     eventType: 'SAVE_ATTEMPT',
-    meta: { cellCount: changedCells.length, absDeltaSum },
+    meta: {
+      cellCount: changedCells.length,
+      absDeltaSum,
+      saveBatchId,
+      highRisk: highRisk.logAsHighRisk,
+    },
   });
 
-  const results: Array<{ dateKey: string; userId: string; ok: boolean; error?: string }> = [];
-  const actorRole = user.role;
+  if (highRisk.logAsHighRisk && highRisk.requiresForceSaveReason && forceSave) {
+    await logMatrixSecureActivity({
+      unlockSessionId,
+      actorUserId: user.id,
+      boutiqueId,
+      month,
+      eventType: 'HIGH_RISK_EDIT',
+      detail: 'confirmed_force_save',
+      meta: { saveBatchId, absDeltaSum, warnings: suspicious.warnings },
+    });
+  }
 
   try {
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.salesMatrixSnapshot.create({
+        data: {
+          boutiqueId,
+          month,
+          data: JSON.parse(JSON.stringify(snapshotData)) as Prisma.InputJsonValue,
+          grandTotalSar: payload.grandTotalSar,
+          saveBatchId,
+          createdById: user.id,
+        },
+      });
+
       for (const c of changedCells) {
         let dateNorm: Date;
         try {
@@ -245,6 +320,7 @@ export async function POST(request: NextRequest) {
         await tx.salesMatrixEditCellAudit.create({
           data: {
             unlockSessionId,
+            saveBatchId,
             actorUserId: user.id,
             actorRole,
             boutiqueId,
@@ -261,8 +337,29 @@ export async function POST(request: NextRequest) {
 
         results.push({ dateKey: c.dateKey, userId: c.userId, ok: true });
       }
+
+      await finalizeMatrixVersionInTx(tx, boutiqueId, month, clientMatrixVersion);
     });
   } catch (e) {
+    if (e instanceof MatrixVersionConflictError) {
+      await logMatrixSecureActivity({
+        unlockSessionId,
+        actorUserId: user.id,
+        boutiqueId,
+        month,
+        eventType: 'SAVE_FAILURE',
+        detail: 'matrix_version_race',
+        meta: { currentVersion: e.currentVersion },
+      });
+      return NextResponse.json(
+        {
+          error: 'Concurrent update detected. Refresh and retry.',
+          code: 'MATRIX_VERSION_CONFLICT',
+          matrixVersion: e.currentVersion,
+        },
+        { status: 409 }
+      );
+    }
     const msg = e instanceof Error ? e.message : 'transaction_failed';
     await logMatrixSecureActivity({
       unlockSessionId,
@@ -271,9 +368,15 @@ export async function POST(request: NextRequest) {
       month,
       eventType: 'SAVE_FAILURE',
       detail: msg,
+      meta: { saveBatchId },
     });
     return NextResponse.json({ error: 'Save failed', detail: msg, results }, { status: 500 });
   }
+
+  const newMatrixVersion = await prisma.salesMatrixEditVersion.findUnique({
+    where: { boutiqueId_month: { boutiqueId, month } },
+    select: { version: true },
+  });
 
   await logMatrixSecureActivity({
     unlockSessionId,
@@ -281,7 +384,7 @@ export async function POST(request: NextRequest) {
     boutiqueId,
     month,
     eventType: 'SAVE_SUCCESS',
-    meta: { saved: results.length },
+    meta: { saved: results.length, saveBatchId, matrixVersion: newMatrixVersion?.version },
   });
 
   if (autoLock) {
@@ -299,6 +402,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     saved: results.length,
+    saveBatchId,
+    matrixVersion: newMatrixVersion?.version ?? clientMatrixVersion + 1,
     results,
     locked: autoLock,
   });

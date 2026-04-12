@@ -69,6 +69,7 @@ export async function createUnlockSession(input: {
   boutiqueId: string;
   month: string;
   reason: string;
+  unlockAuthMethod?: string;
 }): Promise<{ id: string; expiresAt: Date }> {
   const expiresAt = new Date(Date.now() + UNLOCK_TTL_MS);
   await revokeOpenSessionsForScope(input.userId, input.boutiqueId, input.month);
@@ -78,6 +79,7 @@ export async function createUnlockSession(input: {
       boutiqueId: input.boutiqueId,
       month: input.month,
       reason: input.reason,
+      unlockAuthMethod: input.unlockAuthMethod ?? 'PASSWORD_REAUTH',
       expiresAt,
     },
   });
