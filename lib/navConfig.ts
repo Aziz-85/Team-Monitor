@@ -240,6 +240,12 @@ const GROUP_DATA_IMPORTS: NavGroup = {
     item('/admin/import/monthly-snapshot', 'nav.admin.monthSnapshot', ['ADMIN', 'SUPER_ADMIN'], 'DATA'),
     item('/admin/import/historical', 'nav.admin.historicalImport', ['ADMIN', 'SUPER_ADMIN'], 'DATA'),
     item('/admin/import/issues', 'nav.admin.importIssues', ['ADMIN', 'SUPER_ADMIN'], 'DATA'),
+    item(
+      '/admin/sales/monthly-matrix-secure-edit',
+      'nav.admin.matrixSecureEdit',
+      ['ADMIN', 'SUPER_ADMIN'],
+      'DATA'
+    ),
     // Legacy: monthly-matrix accessible from Import Center; hidden from nav
     item('/admin/import/monthly-matrix', 'nav.admin.importMonthlyMatrix', ['ADMIN', 'SUPER_ADMIN'], 'LEGACY', true),
   ],

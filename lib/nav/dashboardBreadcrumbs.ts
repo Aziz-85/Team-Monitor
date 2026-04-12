@@ -42,6 +42,7 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/admin/reset-password', titleKey: 'nav.drilldown.routes.admin.resetPassword.title' },
   { prefix: '/admin/sales-edit-requests', titleKey: 'nav.salesEditRequests' },
   { prefix: '/admin/sales-integrity', titleKey: 'admin.salesIntegrity.title' },
+  { prefix: '/admin/sales/monthly-matrix-secure-edit', titleKey: 'matrixSecureEdit.title' },
   { prefix: '/admin/system-audit', titleKey: 'nav.drilldown.routes.admin.systemAudit.title' },
   { prefix: '/admin/system/version', titleKey: 'nav.drilldown.routes.admin.version.title' },
   { prefix: '/admin/system', titleKey: 'nav.drilldown.routes.admin.system.title' },

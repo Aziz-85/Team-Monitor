@@ -175,6 +175,7 @@ model Boutique {
   boutiqueMonthlyTargets BoutiqueMonthlyTarget[]
   employeeMonthlyTargets  EmployeeMonthlyTarget[]
   complianceItems       ComplianceItem[]
+  salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
 
   @@index([regionId])
   @@index([isActive])
@@ -315,6 +316,9 @@ model User {
   employeeTransferAudits     EmployeeTransferAudit[] @relation("EmployeeTransferAuditActor")
   targetChangeAudits         TargetChangeAudit[]     @relation("TargetChangeAuditActor")
   plannerTaskCompletions     PlannerTaskCompletion[]
+  salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
+  salesMatrixCellAudits         SalesMatrixEditCellAudit[]     @relation("SalesMatrixCellAuditActor")
+  salesMatrixActivityLogs       SalesMatrixEditActivityLog[]   @relation("SalesMatrixActivityActor")
 
   @@index([boutiqueId])
 }
@@ -1471,6 +1475,68 @@ model SalesEditGrant {
   @@unique([userId, date])
   @@index([boutiqueId])
   @@index([date])
+}
+
+/// Temporary unlock for admin secure monthly matrix editing (passcode-gated).
+model SalesMatrixEditUnlockSession {
+  id          String    @id @default(cuid())
+  userId      String
+  boutiqueId  String
+  month       String
+  reason      String
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boutique    Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
+  cellAudits  SalesMatrixEditCellAudit[]
+  activities  SalesMatrixEditActivityLog[]
+
+  @@index([userId, boutiqueId, month])
+  @@index([expiresAt])
+}
+
+/// Per-cell audit for secure matrix saves (immutable log).
+model SalesMatrixEditCellAudit {
+  id              String   @id @default(cuid())
+  unlockSessionId String
+  actorUserId     String
+  actorRole       String
+  boutiqueId      String
+  month           String
+  dateKey         String
+  targetUserId    String
+  oldAmount       Int
+  newAmount       Int
+  delta           Int
+  reason          String
+  sourcePage      String   @default("monthly-matrix-secure-edit")
+  createdAt       DateTime @default(now())
+  unlockSession   SalesMatrixEditUnlockSession @relation(fields: [unlockSessionId], references: [id], onDelete: Cascade)
+  actor           User     @relation("SalesMatrixCellAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([boutiqueId, month, createdAt])
+  @@index([unlockSessionId])
+  @@index([actorUserId, createdAt])
+}
+
+/// Page-level events (unlock, lock, save attempts, failures).
+model SalesMatrixEditActivityLog {
+  id              String    @id @default(cuid())
+  unlockSessionId String?
+  actorUserId     String
+  boutiqueId      String
+  month           String?
+  eventType       String
+  detail          String?
+  meta            Json?
+  createdAt       DateTime  @default(now())
+  unlockSession   SalesMatrixEditUnlockSession? @relation(fields: [unlockSessionId], references: [id], onDelete: SetNull)
+  actor           User     @relation("SalesMatrixActivityActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt])
+  @@index([boutiqueId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 // --- Daily Sales Ledger (Phase 2): manager summary + employee lines, SAR int only ---

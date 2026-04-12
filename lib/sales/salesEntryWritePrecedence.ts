@@ -16,6 +16,8 @@ export function getSalesEntrySourceRank(source: string | null | undefined): numb
   switch (s) {
     case 'MANUAL':
       return 100;
+    case 'MATRIX_MANUAL_EDIT':
+      return 97;
     case 'LEDGER':
       return 90;
     /** Admin correction import: between LEDGER and bulk imports; never overwrites MANUAL (enforced in route). */

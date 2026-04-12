@@ -18,6 +18,8 @@
 export const SALES_ENTRY_SOURCE = {
   LEDGER: 'LEDGER',
   MATRIX: 'MATRIX',
+  /** Admin-only secure matrix correction UI (`/admin/sales/monthly-matrix-secure-edit`). */
+  MATRIX_MANUAL_EDIT: 'MATRIX_MANUAL_EDIT',
   EXCEL_IMPORT: 'EXCEL_IMPORT',
   MANUAL: 'MANUAL',
   API: 'API',
