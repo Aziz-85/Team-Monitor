@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
+import { MobileBottomNav } from '@/components/nav/MobileBottomNav';
 import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
 import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
@@ -71,6 +72,11 @@ export default async function DashboardLayout({
           <DashboardBreadcrumbBar />
           <RouteGuard role={navRole}>{children}</RouteGuard>
         </main>
+        <MobileBottomNav
+          role={navRole}
+          canEditSchedule={canEditSchedule}
+          canApproveWeek={canApproveWeek}
+        />
       </div>
     </div>
   );
