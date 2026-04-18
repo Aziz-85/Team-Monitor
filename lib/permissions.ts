@@ -354,8 +354,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
 };
 
-
-export { getNavLinksForUser, getNavLinksForRole } from '@/lib/navConfig';
+/** Nav helpers live in `@/lib/navConfig` — do not re-export here (circular import with `navConsistency` / dev checks). */
 
 export function canAccessRoute(role: Role, pathname: string): boolean {
   const pathOnly = pathname.split('?')[0]?.split('#')[0] ?? pathname;

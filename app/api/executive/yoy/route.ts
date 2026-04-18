@@ -1,14 +1,14 @@
 /**
  * GET /api/executive/yoy?month=YYYY-MM&daysPassed=N
- * Read-only. YoY reference from Excel (data/historical-excel/{branchCode}/{YYYY-MM}.xlsx).
+ * Read-only. YoY from live SalesEntry for the same calendar month last year (boutique scope).
  * Auth: same as other executive endpoints. Scope: active boutique only.
- * Returns 200 with lyMtdHalalas, lyEomHalalas, etc. or 204 if file missing.
+ * Returns 200 with lyMtdHalalas, lyEomHalalas, etc. or 204 if no prior-year sales rows.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { loadYoYFromExcel } from '@/lib/yoy/loadYoYFromExcel';
+import { loadYoYFromDb } from '@/lib/yoy/loadYoYFromDb';
 import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +43,9 @@ export async function GET(request: NextRequest) {
   const lyYear = y - 1;
   const lyMonth = `${lyYear}-${String(m).padStart(2, '0')}`;
 
-  const daily = await loadYoYFromExcel({
-    branchCode: boutique.code,
+  const daily = await loadYoYFromDb({
+    boutiqueId: gate.scope.boutiqueId,
     month: lyMonth,
-    year: lyYear,
   });
 
   if (!daily || daily.size === 0) {

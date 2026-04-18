@@ -1,14 +1,13 @@
 /**
  * GET /api/executive/month-snapshot?month=YYYY-MM
- * Read-only. Current-month Excel snapshot (daily + staff). No DB write.
+ * Read-only. Current-month snapshot from live SalesEntry (daily + staff).
  * Auth: same as other executive endpoints. Scope: active boutique only.
- * Returns 200 with snapshot or 204 if file missing.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { loadMonthSnapshotFromExcel } from '@/lib/snapshots/loadMonthSnapshotFromExcel';
+import { loadMonthSnapshotFromDb } from '@/lib/snapshots/loadMonthSnapshotFromDb';
 import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
 
 export const dynamic = 'force-dynamic';
@@ -34,13 +33,14 @@ export async function GET(request: NextRequest) {
       ? monthParam
       : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const snapshot = await loadMonthSnapshotFromExcel({
+  const snapshot = await loadMonthSnapshotFromDb({
+    boutiqueId: gate.scope.boutiqueId,
     branchCode: boutique.code,
     month,
   });
 
   if (!snapshot) {
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json({ error: 'Invalid month' }, { status: 400 });
   }
 
   return NextResponse.json(snapshot);
