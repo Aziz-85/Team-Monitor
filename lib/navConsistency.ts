@@ -9,8 +9,8 @@
  * unified RBAC layer may merge nav + access. Production behavior is unchanged.
  */
 
-import { canAccessRoute } from '@/lib/permissions';
-import type { Role } from '@/lib/permissions';
+import { canAccessRoute } from '@/lib/routeMatrix';
+import type { Role } from '@/lib/routeMatrix';
 
 /** Minimal shape to avoid circular imports with navConfig. */
 export type NavGroupForConsistency = {

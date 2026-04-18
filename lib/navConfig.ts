@@ -15,7 +15,7 @@
  * - ORGANIZATION, RULES_TEMPLATES, INTEGRATIONS, DATA_IMPORTS, SYSTEM_ADMIN (admin)
  */
 
-import type { Role } from '@/lib/permissions';
+import type { Role } from '@/lib/routeMatrix';
 import type { User } from '@prisma/client';
 import { canEditSchedule as canEditScheduleRbac, canApproveWeek as canApproveWeekRbac } from '@/lib/rbac/schedulePermissions';
 import { FEATURES } from '@/lib/featureFlags';
