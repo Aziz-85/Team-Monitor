@@ -175,12 +175,14 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  // Revenue: use only MANUAL-source ledger lines (hand-entered by manager, not imported)
+  // Revenue: prefer MANUAL-source ledger lines; fallback to ledger summary.
+  // If both are empty (common in historical months under Policy A), fallback to SalesEntry total.
   const manualLineRow = ledgerLinesBySource.find((r) => r.source === 'MANUAL');
   const manualLinesTotal = manualLineRow?._sum?.amountSar ?? 0;
   const ledgerSummaryTotal = ledgerAgg._sum.totalSar ?? 0;
-  // Use the lower of: manual lines total vs summary totalSar (guards against import inflation)
-  const revenue = manualLinesTotal > 0 ? manualLinesTotal : ledgerSummaryTotal;
+  const salesEntryTotal = salesBySource.reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
+  const revenue =
+    manualLinesTotal > 0 ? manualLinesTotal : ledgerSummaryTotal > 0 ? ledgerSummaryTotal : salesEntryTotal;
   const target = boutiqueTarget?.amount ?? 0;
   const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
   const totalEmployeeTarget = employeeTargets.reduce((s, e) => s + e.amount, 0);
