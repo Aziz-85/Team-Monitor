@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       ? Math.round((zoneCompletedCount / zoneRunsCount) * 100)
       : 100;
 
-  const salesEntryCount = ledgerAgg._count.id;
+  const salesEntryCount = salesBySource.reduce((sum, row) => sum + row._count.id, 0);
 
   // Source breakdown for transparency
   const sourceBreakdown = {
