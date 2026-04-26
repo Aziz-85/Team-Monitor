@@ -11,6 +11,7 @@ import { whereBoutiqueStrict } from '@/lib/scope/whereStrict';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { rosterForDate } from '@/lib/services/roster';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
+import { normalizeMonthKey, toRiyadhDateString } from '@/lib/time';
 
 const BURST_WINDOW_MS = 3 * 60 * 1000;
 const BURST_MIN_TASKS = 4;
@@ -80,6 +81,12 @@ function classificationFromScore(score: number): BoutiqueScoreClassification {
   return 'Needs Improvement';
 }
 
+/** Same normalization as Planner metadata KEY (aligns Task.taskKey with PlannerTaskCompletion.internalTaskKey). */
+function normalizePlannerTaskKey(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  return raw.trim().toUpperCase().replace(/\s+/g, '_');
+}
+
 /**
  * Calculate boutique performance score for a FULL MONTH.
  * boutiqueIds required — filter at source.
@@ -89,7 +96,8 @@ export async function calculateBoutiqueScore(
   boutiqueIds: string[]
 ): Promise<BoutiqueScoreResult> {
   const boutiqueFilter = whereBoutiqueStrict(boutiqueIds);
-  const [y, m] = monthKey.split('-').map(Number);
+  const mk = normalizeMonthKey(monthKey);
+  const [y, m] = mk.split('-').map(Number);
 
   const monthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
   const monthEndExclusive = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0));
@@ -108,12 +116,13 @@ export async function calculateBoutiqueScore(
     salesSum,
     tasks,
     completionsInMonth,
+    plannerCompletionsInMonth,
     zoneRuns,
     rosterMid,
     allUsers,
   ] = await Promise.all([
     prisma.boutiqueMonthlyTarget.findFirst({
-      where: { month: monthKey, ...boutiqueFilter },
+      where: { month: mk, ...boutiqueFilter },
     }),
     // Revenue component: Daily Sales Ledger summary totals (NOT raw SalesEntry sum).
     // Under Policy A, HISTORICAL_IMPORT exists only in SalesEntry — score revenue can diverge from SE month total.
@@ -143,6 +152,18 @@ export async function calculateBoutiqueScore(
       },
       select: { taskId: true, userId: true, completedAt: true },
     }),
+    prisma.plannerTaskCompletion.findMany({
+      where: {
+        ...boutiqueFilter,
+        completedOnDateKey: { startsWith: `${mk}-` },
+      },
+      select: {
+        internalTaskKey: true,
+        completedOnDateKey: true,
+        completedByUserId: true,
+        completedAt: true,
+      },
+    }),
     zoneIdsForFilter.length > 0
       ? prisma.inventoryWeeklyZoneRun.findMany({
           where: {
@@ -157,6 +178,19 @@ export async function calculateBoutiqueScore(
   ]);
 
   const empIdToUserId = new Map(allUsers.map((u) => [u.empId, u.id]));
+
+  const plannerKeysByDate = new Map<string, Set<string>>();
+  for (const row of plannerCompletionsInMonth) {
+    const d = row.completedOnDateKey;
+    const k = normalizePlannerTaskKey(row.internalTaskKey);
+    if (!d || !k) continue;
+    let set = plannerKeysByDate.get(d);
+    if (!set) {
+      set = new Set();
+      plannerKeysByDate.set(d, set);
+    }
+    set.add(k);
+  }
 
   // Revenue (40%) — from authoritative ledger
   const revenue = salesSum._sum.totalSar ?? 0;
@@ -174,12 +208,15 @@ export async function calculateBoutiqueScore(
       const a = await assignTaskOnDate(task, date);
       totalExpected++;
       const assignedUserId = a.assignedEmpId ? empIdToUserId.get(a.assignedEmpId) : null;
-      const comp = completionsInMonth.find(
-        (c) =>
-          c.taskId === task.id &&
-          (assignedUserId ? c.userId === assignedUserId : false)
-      );
-      if (comp) totalCompleted++;
+      const comp = completionsInMonth.find((c) => {
+        if (c.taskId !== task.id) return false;
+        if (assignedUserId) return c.userId === assignedUserId;
+        return toRiyadhDateString(c.completedAt) === dateStr;
+      });
+      const taskKeyNorm = normalizePlannerTaskKey(task.taskKey);
+      const plannerHit =
+        taskKeyNorm != null && plannerKeysByDate.get(dateStr)?.has(taskKeyNorm) === true;
+      if (comp || plannerHit) totalCompleted++;
     }
   }
   const taskPct = totalExpected > 0 ? Math.min(100, Math.round((totalCompleted / totalExpected) * 100)) : 100;
@@ -204,9 +241,13 @@ export async function calculateBoutiqueScore(
   const zoneScore = (zonePct / 100) * 10;
 
   // Discipline / anti-gaming (10%) — full month
-  const burstCount = countBursts(
-    completionsInMonth.map((c) => ({ userId: c.userId, completedAt: c.completedAt }))
-  );
+  const plannerBursts = plannerCompletionsInMonth
+    .filter((p) => p.completedByUserId != null)
+    .map((p) => ({ userId: p.completedByUserId as string, completedAt: p.completedAt }));
+  const burstCount = countBursts([
+    ...completionsInMonth.map((c) => ({ userId: c.userId, completedAt: c.completedAt })),
+    ...plannerBursts,
+  ]);
   const disciplinePct = Math.max(0, 100 - Math.min(100, burstCount * 8));
   const disciplineScore = (disciplinePct / 100) * 10;
 

@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
     leaveCount,
     approvedLeaveCount,
     scheduleEditCount,
-    taskCompletionsCount,
+    taskCompletionsInAppCount,
+    plannerTaskCompletionsMonthCount,
     zoneRunsCount,
     zoneCompletedCount,
     scoreResult,
@@ -151,6 +152,12 @@ export async function GET(request: NextRequest) {
         task: { boutiqueId: operationalBoutiqueId },
       },
     }),
+    prisma.plannerTaskCompletion.count({
+      where: {
+        boutiqueId: operationalBoutiqueId,
+        completedOnDateKey: { startsWith: `${monthKey}-` },
+      },
+    }),
     zoneIds.length > 0
       ? prisma.inventoryWeeklyZoneRun.count({
           where: {
@@ -192,6 +199,7 @@ export async function GET(request: NextRequest) {
       : 100;
 
   const salesEntryCount = salesBySource.reduce((sum, row) => sum + row._count.id, 0);
+  const taskCompletionsCount = taskCompletionsInAppCount + plannerTaskCompletionsMonthCount;
 
   // Source breakdown for transparency
   const sourceBreakdown = {
