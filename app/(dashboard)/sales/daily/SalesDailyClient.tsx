@@ -63,6 +63,9 @@ type DraftLine = {
   serverLineId: string | null;
   employeeId: string;
   amountStr: string;
+  /** Optional; sent to POST /api/sales/entry only when non-empty integers (not stored on BoutiqueSalesLine). */
+  invoiceCountStr: string;
+  pieceCountStr: string;
   dirty: boolean;
   saveState: 'idle' | 'saving' | 'saved' | 'error';
 };
@@ -76,6 +79,16 @@ function parseAmountInt(raw: string): { ok: true; value: number } | { ok: false 
   const value = parseInt(t, 10);
   if (!Number.isInteger(value) || value < 0) return { ok: false };
   return { ok: true, value };
+}
+
+/** Non-negative integer for optional metrics; invalid input → undefined (omitted from API). */
+function parseOptionalCountInput(raw: string): number | undefined {
+  const t = raw.trim();
+  if (t === '') return undefined;
+  if (!/^\d+$/.test(t)) return undefined;
+  const value = parseInt(t, 10);
+  if (!Number.isInteger(value) || value < 0) return undefined;
+  return value;
 }
 
 function isRowEmpty(d: DraftLine): boolean {
@@ -94,6 +107,8 @@ function linesToDrafts(lines: Line[], locked: boolean): DraftLine[] {
     serverLineId: l.id,
     employeeId: l.employeeId,
     amountStr: String(l.amountSar),
+    invoiceCountStr: '',
+    pieceCountStr: '',
     dirty: false,
     saveState: 'idle',
   }));
@@ -103,6 +118,8 @@ function linesToDrafts(lines: Line[], locked: boolean): DraftLine[] {
       serverLineId: null,
       employeeId: '',
       amountStr: '',
+      invoiceCountStr: '',
+      pieceCountStr: '',
       dirty: false,
       saveState: 'idle',
     });
@@ -128,6 +145,8 @@ function maintainTrailingBlank(rows: DraftLine[], locked: boolean): DraftLine[] 
       serverLineId: null,
       employeeId: '',
       amountStr: '',
+      invoiceCountStr: '',
+      pieceCountStr: '',
       dirty: false,
       saveState: 'idle',
     });
@@ -140,6 +159,8 @@ function maintainTrailingBlank(rows: DraftLine[], locked: boolean): DraftLine[] 
       serverLineId: null,
       employeeId: '',
       amountStr: '',
+      invoiceCountStr: '',
+      pieceCountStr: '',
       dirty: false,
       saveState: 'idle',
     });
@@ -637,6 +658,7 @@ function SalesDailyClientImpl({
     batchSaveLockedRef.current = true;
     setBatchSavingBoutique(boutiqueId);
     setActionError(null);
+    const metricsWarnings: string[] = [];
 
     try {
     const dirtyRows = rows
@@ -683,11 +705,52 @@ function SalesDailyClientImpl({
         if (res.ok && (j as LinesPostOk).ok) {
           const ok = j as LinesPostOk;
           applyLineSuccessToState(boutiqueId, r.employeeId.trim(), amt.value, r.serverLineId, ok);
+          const invOpt = parseOptionalCountInput(r.invoiceCountStr);
+          const pcOpt = parseOptionalCountInput(r.pieceCountStr);
+          let optionalMetricsFailed = false;
+          if (invOpt !== undefined || pcOpt !== undefined) {
+            const entryBody: {
+              date: string;
+              salesSar: number;
+              employeeId: string;
+              invoiceCount?: number;
+              pieceCount?: number;
+            } = {
+              date,
+              salesSar: amt.value,
+              employeeId: r.employeeId.trim(),
+            };
+            if (invOpt !== undefined) entryBody.invoiceCount = invOpt;
+            if (pcOpt !== undefined) entryBody.pieceCount = pcOpt;
+            try {
+              const entryRes = await fetch('/api/sales/entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entryBody),
+              });
+              const ej = await entryRes.json().catch(() => ({}));
+              if (!entryRes.ok) {
+                optionalMetricsFailed = true;
+                firstErr =
+                  (ej as { error?: string }).error ??
+                  'Line saved, but optional invoice/piece could not be synced to sales entry.';
+              } else if ((ej as { metricsNote?: string }).metricsNote) {
+                metricsWarnings.push(String((ej as { metricsNote: string }).metricsNote));
+              }
+            } catch {
+              optionalMetricsFailed = true;
+              firstErr = 'Line saved, but optional invoice/piece sync request failed.';
+            }
+          }
           setDraftsByBoutique((prev) => ({
             ...prev,
             [boutiqueId]: (prev[boutiqueId] ?? []).map((row) =>
               row.clientRowId === r.clientRowId
-                ? { ...row, dirty: false, saveState: 'saved' as const }
+                ? {
+                    ...row,
+                    dirty: false,
+                    saveState: optionalMetricsFailed ? ('error' as const) : ('saved' as const),
+                  }
                 : row
             ),
           }));
@@ -712,6 +775,9 @@ function SalesDailyClientImpl({
     }
 
     if (firstErr) setActionError(firstErr);
+    else if (metricsWarnings.length > 0) {
+      setActionError(metricsWarnings.filter(Boolean).join(' '));
+    }
 
     setDraftsByBoutique((prev) => ({
       ...prev,
@@ -922,7 +988,11 @@ function SalesDailyClientImpl({
   };
 
   const zeroDraftAmount = (boutiqueId: string, clientRowId: string) => {
-    updateDraftRow(boutiqueId, clientRowId, { amountStr: '0' });
+    updateDraftRow(boutiqueId, clientRowId, {
+      amountStr: '0',
+      invoiceCountStr: '',
+      pieceCountStr: '',
+    });
   };
 
   const removeLedgerLine = async (boutiqueId: string, row: DraftLine, summaryLocked: boolean) => {
@@ -938,6 +1008,8 @@ function SalesDailyClientImpl({
           ...rows[idx],
           employeeId: '',
           amountStr: '',
+          invoiceCountStr: '',
+          pieceCountStr: '',
           dirty: false,
           saveState: 'idle',
           serverLineId: null,
@@ -1163,6 +1235,9 @@ function SalesDailyClientImpl({
                   actionsColumnLabel={t('sales.dailyLedger.actionsColumn')}
                   removeLineLabel={t('sales.dailyLedger.removeLine')}
                   zeroAmountLabel={t('sales.dailyLedger.zeroAmount')}
+                  invoiceCountLabel={t('sales.dailyLedger.invoiceCountLabel')}
+                  pieceCountLabel={t('sales.dailyLedger.pieceCountLabel')}
+                  invoicePieceHint={t('sales.dailyLedger.invoicePieceOptionalHint')}
                   onUpdateRow={(clientRowId, patch) => updateDraftRow(s.boutiqueId, clientRowId, patch)}
                   onRemoveRow={(row) => void removeLedgerLine(s.boutiqueId, row, locked)}
                   onZeroAmount={(clientRowId) => zeroDraftAmount(s.boutiqueId, clientRowId)}
@@ -1544,6 +1619,9 @@ function LedgerTable({
   actionsColumnLabel,
   removeLineLabel,
   zeroAmountLabel,
+  invoiceCountLabel,
+  pieceCountLabel,
+  invoicePieceHint,
   onUpdateRow,
   onRemoveRow,
   onZeroAmount,
@@ -1562,6 +1640,9 @@ function LedgerTable({
   actionsColumnLabel: string;
   removeLineLabel: string;
   zeroAmountLabel: string;
+  invoiceCountLabel: string;
+  pieceCountLabel: string;
+  invoicePieceHint: string;
   onUpdateRow: (clientRowId: string, patch: Partial<DraftLine>) => void;
   onRemoveRow: (row: DraftLine) => void;
   onZeroAmount: (clientRowId: string) => void;
@@ -1569,11 +1650,11 @@ function LedgerTable({
 }) {
   return (
     <div className="w-full min-w-0 overflow-x-auto sm:overflow-x-visible [-webkit-overflow-scrolling:touch]">
-      <table className="w-full min-w-[36rem] sm:min-w-0 table-auto border-collapse text-sm">
+      <table className="w-full min-w-[42rem] sm:min-w-0 table-auto border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-start text-muted">
-            <th className="w-[34%] py-2 pe-2">Employee</th>
-            <th className="w-[18%] py-2 pe-2">Amount (SAR)</th>
+            <th className="w-[30%] py-2 pe-2">Employee</th>
+            <th className="w-[24%] py-2 pe-2">Amount (SAR)</th>
             <th className="w-[14%] py-2 pe-2">Status</th>
             <th className="w-[14%] py-2 pe-2">Save</th>
             <th className="w-[20%] py-2 pe-2">{actionsColumnLabel}</th>
@@ -1648,6 +1729,51 @@ function LedgerTable({
                   {amtInvalid && fieldErr.amount ? (
                     <p className="mt-1 text-xs text-red-600">{fieldErr.amount}</p>
                   ) : null}
+                  {!locked && (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex flex-wrap gap-2">
+                        <div className="min-w-[6rem] flex-1">
+                          <label className="mb-0.5 block text-[10px] font-medium text-muted">
+                            {invoiceCountLabel}
+                          </label>
+                          <input
+                            type="number"
+                            name="invoiceCount"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            disabled={batchSaving}
+                            value={row.invoiceCountStr}
+                            onChange={(e) =>
+                              onUpdateRow(row.clientRowId, { invoiceCountStr: e.target.value })
+                            }
+                            className="w-full rounded border border-border bg-surface px-2 py-1 text-xs font-mono text-foreground"
+                          />
+                        </div>
+                        <div className="min-w-[6rem] flex-1">
+                          <label className="mb-0.5 block text-[10px] font-medium text-muted">
+                            {pieceCountLabel}
+                          </label>
+                          <input
+                            type="number"
+                            name="pieceCount"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            disabled={batchSaving}
+                            value={row.pieceCountStr}
+                            onChange={(e) =>
+                              onUpdateRow(row.clientRowId, { pieceCountStr: e.target.value })
+                            }
+                            className="w-full rounded border border-border bg-surface px-2 py-1 text-xs font-mono text-foreground"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] leading-snug text-muted">{invoicePieceHint}</p>
+                    </div>
+                  )}
                 </td>
                 <td className={`py-2 pe-2 text-xs ${statusClass}`}>{statusLabel}</td>
                 <td className="py-2 pe-2 text-xs text-muted">
