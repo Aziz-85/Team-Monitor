@@ -51,6 +51,13 @@ export type UpsertCanonicalSalesEntryInput = {
   tx?: Prisma.TransactionClient;
   /** When set (admin import), stored on SalesEntry for rollback / audit. */
   entryImportBatchId?: string | null;
+  /**
+   * Optional metrics — omitted from ledger sync callers.
+   * Create: included in Prisma `create` only when `!== undefined`.
+   * Update: included only when `!== undefined` and `!== null` (never clear to null via upsert).
+   */
+  invoiceCount?: number | null;
+  pieceCount?: number | null;
 };
 
 export type UpsertCanonicalSalesEntryResult =
@@ -74,6 +81,18 @@ export async function upsertCanonicalSalesEntry(
     return { status: 'rejected_invalid', reason: 'amount must be a non-negative integer (SAR)' };
   }
 
+  const { invoiceCount: invIn, pieceCount: pcIn } = input;
+  if (invIn !== undefined && invIn !== null) {
+    if (!Number.isFinite(invIn) || !Number.isInteger(invIn) || invIn < 0) {
+      return { status: 'rejected_invalid', reason: 'invoiceCount must be a non-negative integer or null' };
+    }
+  }
+  if (pcIn !== undefined && pcIn !== null) {
+    if (!Number.isFinite(pcIn) || !Number.isInteger(pcIn) || pcIn < 0) {
+      return { status: 'rejected_invalid', reason: 'pieceCount must be a non-negative integer or null' };
+    }
+  }
+
   const dateOnly = normalizeDateOnlyRiyadh(input.date);
   const dateKey = formatDateRiyadh(dateOnly);
   const month = formatMonthKey(dateOnly);
@@ -91,7 +110,7 @@ export async function upsertCanonicalSalesEntry(
 
   const existing = await db.salesEntry.findUnique({
     where: { boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId } },
-    select: { id: true, amount: true, source: true },
+    select: { id: true, amount: true, source: true, invoiceCount: true, pieceCount: true },
   });
 
   if (existing) {
@@ -103,10 +122,15 @@ export async function upsertCanonicalSalesEntry(
         incomingSource: source,
       };
     }
-    if (
-      existing.amount === amount &&
-      (existing.source ?? '').trim().toUpperCase() === source.trim().toUpperCase()
-    ) {
+    const sourceUnchanged = (existing.source ?? '').trim().toUpperCase() === source.trim().toUpperCase();
+    const invoiceUnchangedOrNotSet =
+      invIn === undefined ||
+      invIn === null ||
+      (existing.invoiceCount ?? null) === invIn;
+    const pieceUnchangedOrNotSet =
+      pcIn === undefined || pcIn === null || (existing.pieceCount ?? null) === pcIn;
+
+    if (existing.amount === amount && sourceUnchanged && invoiceUnchangedOrNotSet && pieceUnchangedOrNotSet) {
       return {
         status: 'no_change',
         signals: {
@@ -128,6 +152,7 @@ export async function upsertCanonicalSalesEntry(
   };
 
   const batchId = input.entryImportBatchId;
+
   const row = await db.salesEntry.upsert({
     where: {
       boutiqueId_dateKey_userId: { boutiqueId, dateKey, userId },
@@ -142,6 +167,8 @@ export async function upsertCanonicalSalesEntry(
       source,
       createdById: actorUserId,
       ...(batchId ? { entryImportBatchId: batchId } : {}),
+      ...(invIn !== undefined ? { invoiceCount: invIn } : {}),
+      ...(pcIn !== undefined ? { pieceCount: pcIn } : {}),
     },
     update: {
       amount,
@@ -149,6 +176,8 @@ export async function upsertCanonicalSalesEntry(
       source,
       updatedAt: new Date(),
       ...(batchId ? { entryImportBatchId: batchId } : {}),
+      ...(invIn !== undefined && invIn !== null ? { invoiceCount: invIn } : {}),
+      ...(pcIn !== undefined && pcIn !== null ? { pieceCount: pcIn } : {}),
     },
     select: { id: true },
   });

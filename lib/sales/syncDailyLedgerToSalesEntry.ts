@@ -2,6 +2,9 @@
  * Sync Daily Sales Ledger (BoutiqueSalesSummary + BoutiqueSalesLine) to SalesEntry.
  * Call after any ledger mutation so Executive Monthly / Dashboard read correct totals.
  * Input: boutiqueId + date + actorUserId. Operates on dateKey (YYYY-MM-DD Riyadh) only.
+ *
+ * **Metrics:** This path delegates to `syncSummaryToSalesEntry`, which does not pass
+ * `invoiceCount` / `pieceCount` — those fields are not set or cleared by ledger sync.
  */
 
 import { prisma } from '@/lib/db';

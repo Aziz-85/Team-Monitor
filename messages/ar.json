@@ -124,8 +124,19 @@
       "schedule": "الجدول",
       "tasks": "المهام",
       "inventory": "الجرد",
+      "analytics": "التحليلات",
       "team": "إدارة الفريق",
       "system": "النظام"
+    },
+    "analytics": {
+      "salesSummary": "ملخص المبيعات",
+      "salesAnalytics": "تحليلات المبيعات",
+      "performance": "الأداء",
+      "weeklyReports": "التقارير الأسبوعية",
+      "executive": "نظرة تنفيذية",
+      "executiveMonthly": "التقرير الشهري التنفيذي",
+      "executiveInsights": "رؤى تنفيذية",
+      "targets": "الأهداف"
     },
     "group": {
       "DASHBOARD": "لوحة القيادة",

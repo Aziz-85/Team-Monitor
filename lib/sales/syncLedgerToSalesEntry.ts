@@ -3,6 +3,9 @@
  *
  * **SalesEntry** is the canonical read model for reporting; this sync is the approved path
  * from ledger lines → canonical rows. Stale row deletes (same source, missing userIds) stay here.
+ *
+ * **Metrics:** Do not pass `invoiceCount` / `pieceCount` into `upsertCanonicalSalesEntry` here —
+ * ledger lines only carry amount; optional counts must remain untouched by this sync.
  */
 
 import { prisma } from '@/lib/db';

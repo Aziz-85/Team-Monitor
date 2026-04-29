@@ -124,8 +124,19 @@
       "schedule": "Schedule",
       "tasks": "Tasks",
       "inventory": "Inventory",
+      "analytics": "Analytics",
       "team": "Team Management",
       "system": "System"
+    },
+    "analytics": {
+      "salesSummary": "Sales Summary",
+      "salesAnalytics": "Sales Analytics",
+      "performance": "Performance",
+      "weeklyReports": "Weekly Reports",
+      "executive": "Executive Overview",
+      "executiveMonthly": "Executive Monthly",
+      "executiveInsights": "Executive Insights",
+      "targets": "Targets"
     },
     "group": {
       "DASHBOARD": "Dashboard",

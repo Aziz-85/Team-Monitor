@@ -59,6 +59,20 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     ],
   },
   {
+    key: 'analytics',
+    labelKey: 'nav.groups.analytics',
+    items: [
+      { key: 'SALES_SUMMARY', href: '/sales/summary', labelKey: 'nav.analytics.salesSummary' },
+      { key: 'SALES_ANALYTICS', href: '/sales/analytics', labelKey: 'nav.analytics.salesAnalytics' },
+      { key: 'PERFORMANCE', href: '/performance', labelKey: 'nav.analytics.performance' },
+      { key: 'WEEKLY_REPORTS', href: '/reports/weekly', labelKey: 'nav.analytics.weeklyReports' },
+      { key: 'EXECUTIVE', href: '/executive', labelKey: 'nav.analytics.executive' },
+      { key: 'EXECUTIVE_MONTHLY', href: '/executive/monthly', labelKey: 'nav.analytics.executiveMonthly' },
+      { key: 'EXECUTIVE_INSIGHTS', href: '/executive/insights', labelKey: 'nav.analytics.executiveInsights' },
+      { key: 'ADMIN_TARGETS', href: '/admin/targets', labelKey: 'nav.analytics.targets' },
+    ],
+  },
+  {
     key: 'team',
     labelKey: 'nav.groups.team',
     items: [
