@@ -95,7 +95,14 @@ type TargetsData = {
   scheduledDaysInMonth?: number | null;
 };
 
-type SalesEntry = { id: string; date: string; amount: number; canEdit: boolean };
+type SalesEntry = {
+  id: string;
+  date: string;
+  amount: number;
+  invoiceCount?: number | null;
+  pieceCount?: number | null;
+  canEdit: boolean;
+};
 
 const WEEKDAY_LABELS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -110,6 +117,8 @@ export function MyTargetClient() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [date, setDate] = useState(() => getRiyadhDateKey());
   const [amount, setAmount] = useState('');
+  const [invoiceCount, setInvoiceCount] = useState('');
+  const [pieceCount, setPieceCount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [requestEditSuccess, setRequestEditSuccess] = useState(false);
@@ -227,29 +236,47 @@ export function MyTargetClient() {
 
   const selectDay = (dateStr: string) => {
     setDate(dateStr);
-    const e = entriesByDate[dateStr];
-    setAmount(e ? String(e.amount) : '');
   };
 
   useEffect(() => {
     const e = entriesByDate[date];
     setAmount(e ? String(e.amount) : '');
+    setInvoiceCount(e != null && e.invoiceCount != null ? String(e.invoiceCount) : '');
+    setPieceCount(e != null && e.pieceCount != null ? String(e.pieceCount) : '');
   }, [date, entriesByDate]);
 
   const submitSales = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Math.round(Number(amount));
     if (amt < 0 || !Number.isFinite(amt)) return;
+    const invTrim = invoiceCount.trim();
+    const pcTrim = pieceCount.trim();
+    if (invTrim !== '') {
+      const v = Number(invTrim);
+      if (!Number.isInteger(v) || v < 0) return;
+    }
+    if (pcTrim !== '') {
+      const v = Number(pcTrim);
+      if (!Number.isInteger(v) || v < 0) return;
+    }
+    const payload: { date: string; amount: number; invoiceCount?: number; pieceCount?: number } = {
+      date,
+      amount: amt,
+    };
+    if (invTrim !== '') payload.invoiceCount = Number(invTrim);
+    if (pcTrim !== '') payload.pieceCount = Number(pcTrim);
     setSubmitting(true);
     setSaveSuccess(false);
     try {
       const res = await fetch('/api/me/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, amount: amt }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setAmount('');
+        setInvoiceCount('');
+        setPieceCount('');
         refresh();
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -488,41 +515,72 @@ export function MyTargetClient() {
               {t('targets.today')}
             </button>
           </div>
-          <form onSubmit={submitSales} className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">{t('targets.amount')}</label>
-              <input
-                type="number"
-                min={0}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-28 rounded border border-border px-3 py-2 text-sm"
-                placeholder="0"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting || !canEditSelected}
-              className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!canEditSelected ? t('targets.salesEntryPolicyTooltip') : undefined}
-            >
-              {submitting ? t('common.loading') : t('common.save')}
-            </button>
-            {saveSuccess && <span className="py-2 text-sm text-emerald-600">{t('targets.saved')}</span>}
-            {!canEditSelected && !pendingDates.has(date) && (
+          <form onSubmit={submitSales} className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('targets.amount')}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-28 rounded border border-border px-3 py-2 text-sm"
+                  placeholder="0"
+                />
+              </div>
               <button
-                type="button"
-                onClick={requestEdit}
-                disabled={requestingEdit}
-                className="rounded border border-amber-500 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                type="submit"
+                disabled={submitting || !canEditSelected}
+                className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!canEditSelected ? t('targets.salesEntryPolicyTooltip') : undefined}
               >
-                {requestingEdit ? t('common.loading') : t('targets.requestEdit')}
+                {submitting ? t('common.loading') : t('common.save')}
               </button>
-            )}
-            {pendingDates.has(date) && (
-              <span className="py-2 text-sm text-amber-600">{t('targets.editPending')}</span>
-            )}
-            {requestEditSuccess && <span className="py-2 text-sm text-emerald-600">{t('targets.requestSubmitted')}</span>}
+              {saveSuccess && <span className="py-2 text-sm text-emerald-600">{t('targets.saved')}</span>}
+              {!canEditSelected && !pendingDates.has(date) && (
+                <button
+                  type="button"
+                  onClick={requestEdit}
+                  disabled={requestingEdit}
+                  className="rounded border border-amber-500 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                >
+                  {requestingEdit ? t('common.loading') : t('targets.requestEdit')}
+                </button>
+              )}
+              {pendingDates.has(date) && (
+                <span className="py-2 text-sm text-amber-600">{t('targets.editPending')}</span>
+              )}
+              {requestEditSuccess && <span className="py-2 text-sm text-emerald-600">{t('targets.requestSubmitted')}</span>}
+            </div>
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('targets.invoiceCountShort')}</label>
+                <input
+                  name="invoiceCount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={invoiceCount}
+                  onChange={(e) => setInvoiceCount(e.target.value)}
+                  className="w-28 rounded border border-border px-3 py-2 text-sm"
+                  placeholder=""
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('targets.pieceCountShort')}</label>
+                <input
+                  name="pieceCount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={pieceCount}
+                  onChange={(e) => setPieceCount(e.target.value)}
+                  className="w-28 rounded border border-border px-3 py-2 text-sm"
+                  placeholder=""
+                />
+              </div>
+            </div>
           </form>
         </OpsCard>
 

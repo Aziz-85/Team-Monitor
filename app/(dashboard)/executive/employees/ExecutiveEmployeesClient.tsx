@@ -6,6 +6,7 @@ import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
 import { ProductivityTable } from '@/components/analytics/ProductivityTable';
+import type { EmployeeProductivityRollup } from '@/lib/sales-analytics/types';
 
 type ProductivityEmployeeRow = {
   userId: string;
@@ -14,6 +15,7 @@ type ProductivityEmployeeRow = {
   activeDays: number;
   avgDailySales: number;
   contributionPct: number;
+  employeeProductivity?: EmployeeProductivityRollup;
 };
 
 type EmployeeRow = {
@@ -123,6 +125,10 @@ export function ExecutiveEmployeesClient() {
             activeDays: t('analytics.activeDays'),
             avgDaily: t('analytics.avgDaily'),
             contribution: t('analytics.contribution'),
+            productivityInvoices: t('analytics.productivityInvoices'),
+            productivityPieces: t('analytics.productivityPieces'),
+            productivityAvgTicket: t('analytics.productivityAvgTicket'),
+            productivityUpt: t('analytics.productivityUpt'),
           }}
           rows={productivityRows.map((e) => ({
             id: e.userId,
@@ -131,6 +137,7 @@ export function ExecutiveEmployeesClient() {
             activeDays: e.activeDays,
             avgDailySales: e.avgDailySales,
             contributionPct: e.contributionPct,
+            employeeProductivity: e.employeeProductivity,
           }))}
         />
       </div>

@@ -20,6 +20,22 @@ import {
   computeProductivityMetrics,
   paceDaysPassedForMonth,
 } from '@/lib/analytics/performanceLayer';
+import type { EmployeeProductivityRollup } from '@/lib/sales-analytics/types';
+
+function employeeProductivityFromTotals(
+  totalAmount: number,
+  totalInvoiceCount: number,
+  totalPieceCount: number
+): EmployeeProductivityRollup {
+  return {
+    totalInvoiceCount,
+    totalPieceCount,
+    averageTicketSar:
+      totalInvoiceCount > 0 ? totalAmount / totalInvoiceCount : null,
+    unitsPerTransaction:
+      totalInvoiceCount > 0 ? totalPieceCount / totalInvoiceCount : null,
+  };
+}
 
 export type PerformanceAnalyticsEmployeeRow = {
   userId: string;
@@ -33,6 +49,7 @@ export type PerformanceAnalyticsEmployeeRow = {
   contributionPct: number;
   pace: ReturnType<typeof computePaceMetrics>;
   forecast: ReturnType<typeof computeForecast>;
+  employeeProductivity: EmployeeProductivityRollup;
 };
 
 export type PerformanceAnalyticsPayload = {
@@ -47,6 +64,7 @@ export type PerformanceAnalyticsPayload = {
     pace: ReturnType<typeof computePaceMetrics>;
     forecast: ReturnType<typeof computeForecast>;
     forecastRolling7: ReturnType<typeof computeForecastRolling7> | null;
+    boutiqueProductivity: EmployeeProductivityRollup;
   };
   employees: PerformanceAnalyticsEmployeeRow[];
 };
@@ -142,19 +160,26 @@ export async function buildPerformanceAnalytics(input: {
     }),
     prisma.salesEntry.aggregate({
       where: mtdWhere,
-      _sum: { amount: true },
+      _sum: { amount: true, invoiceCount: true, pieceCount: true },
     }),
     needUserBreakdown
       ? prisma.salesEntry.groupBy({
           by: ['userId', 'dateKey'],
           where: userDayWhere,
-          _sum: { amount: true },
+          _sum: { amount: true, invoiceCount: true, pieceCount: true },
         })
       : Promise.resolve([]),
   ]);
 
   const monthlyTarget = targetRows.reduce((s, r) => s + (r.amount ?? 0), 0);
   const boutiqueMtd = actualMTD._sum.amount ?? 0;
+  const boutiqueInvoiceCount = actualMTD._sum.invoiceCount ?? 0;
+  const boutiquePieceCount = actualMTD._sum.pieceCount ?? 0;
+  const boutiqueProductivity = employeeProductivityFromTotals(
+    boutiqueMtd,
+    boutiqueInvoiceCount,
+    boutiquePieceCount
+  );
   const remaining = Math.max(0, monthlyTarget - boutiqueMtd);
 
   const pace = computePaceMetrics({
@@ -200,13 +225,31 @@ export async function buildPerformanceAnalytics(input: {
     });
   }
 
-  const byUser = new Map<string, { total: number; activeDays: number }>();
+  const byUser = new Map<
+    string,
+    {
+      total: number;
+      activeDays: number;
+      totalInvoiceCount: number;
+      totalPieceCount: number;
+    }
+  >();
   for (const row of perUserDay) {
     const uid = row.userId;
     if (!uid) continue;
     const amt = row._sum.amount ?? 0;
-    const cur = byUser.get(uid) ?? { total: 0, activeDays: 0 };
+    const inv = row._sum.invoiceCount ?? 0;
+    const pc = row._sum.pieceCount ?? 0;
+    const cur =
+      byUser.get(uid) ?? {
+        total: 0,
+        activeDays: 0,
+        totalInvoiceCount: 0,
+        totalPieceCount: 0,
+      };
     cur.total += amt;
+    cur.totalInvoiceCount += inv;
+    cur.totalPieceCount += pc;
     if (amt > 0) cur.activeDays += 1;
     byUser.set(uid, cur);
   }
@@ -282,6 +325,11 @@ export async function buildPerformanceAnalytics(input: {
         contributionPct: prod.contributionPct,
         pace: empPace,
         forecast: empForecast,
+        employeeProductivity: employeeProductivityFromTotals(
+          agg.total,
+          agg.totalInvoiceCount,
+          agg.totalPieceCount
+        ),
       };
     })
     .filter((x): x is PerformanceAnalyticsEmployeeRow => x != null)
@@ -330,6 +378,7 @@ export async function buildPerformanceAnalytics(input: {
           totalDaysInMonth: daysInMonth,
           daysPassed,
         }),
+        employeeProductivity: employeeProductivityFromTotals(0, 0, 0),
       });
     }
   }
@@ -346,6 +395,7 @@ export async function buildPerformanceAnalytics(input: {
       pace,
       forecast,
       forecastRolling7,
+      boutiqueProductivity,
     },
     employees,
   };

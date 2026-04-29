@@ -33,7 +33,8 @@
     "workingOnBoutiqueShort": "البوتيك",
     "prev": "السابق",
     "next": "التالي",
-    "thisMonth": "الشهر الحالي"
+    "thisMonth": "الشهر الحالي",
+    "notApplicable": "غير متاح"
   },
   "adminEmp": {
     "addEmployee": "إضافة موظف",
@@ -784,8 +785,36 @@
     "tableGap": "الفجوة",
     "tableEmployee": "الموظف",
     "tableBestPeriod": "فترة التركيز",
+    "tableInvoices": "فواتير",
+    "tablePieces": "قطع",
+    "tableAvgTicket": "متوسط الفاتورة",
+    "tableUpt": "قطع/فاتورة",
     "emptyEmployees": "لا يوجد موظفون ضمن النطاق لهذا الاختيار.",
-    "sar": "ر.س"
+    "sar": "ر.س",
+    "signalInsightsTitle": "رؤى",
+    "insight": {
+      "low_achievement": "نسبة الإنجاز {achievementPct}% مقارنة بالهدف. الفجوة: {gapSales} ر.س.",
+      "missing_invoice_data": "توجد مبيعات في هذه الفترة لكن عدد الفواتير صفر. تسجيل عدد الفواتير يحسّن تقارير متوسط الفاتورة وقطع/فاتورة.",
+      "low_upt": "لدى {count} من أعضاء الفريق وحدات لكل معاملة أقل من 2 مع وجود فواتير.",
+      "high_ticket_low_achievement": "متوسط الفاتورة يتجاوز 500 ر.س لكيان واحد على الأقل، لكن الإجمالي أقل من 80%. راجع مزج القيمة والحجم.",
+      "performance_gap": "الإنجاز يختلف بشكل ملحوظ بين الكيانات المقارنة (الفارق: {diff} نقطة مئوية)."
+    },
+    "rankingsTitle": "أفضل الأداء",
+    "rank": {
+      "topSales": "أعلى مبيعات",
+      "topInvoices": "أعلى فواتير",
+      "topPieces": "أعلى قطع",
+      "topAverageTicket": "أعلى متوسط فاتورة",
+      "topUPT": "أعلى قطع/فاتورة",
+      "coachingCandidates": "تركيز تدريبي (فجوة عن الهدف)"
+    },
+    "recommendation": {
+      "rec_review_pace": "راجع الإيقاع اليومي والأسبوعي مقابل الأيام المتبقية؛ وفّق الطاقم والعروض مع الفجوة ({gapSales} ر.س عند إنجاز {achievementPct}%).",
+      "rec_capture_sales_metrics": "تأكد أن كل عملية بيع تسجّل عدد الفواتير وعدد القطع (نقطة البيع أو الاستيراد أو الإدخال اليدوي) حتى يبقى متوسط الفاتورة وUPT موثوقين.",
+      "rec_increase_basket_size": "درب الإضافات والتنسيق لـ {count} من الموظفين المشار إليهم؛ اربط ذلك بأهداف قصيرة لحجم السلة لكل وردية.",
+      "rec_balance_ticket_and_conversion": "افصل قوة متوسط الفاتورة عن التحويل: راجع الزحام والخصومات والمخزون حتى لا يخفي ارتفاع الفاتورة ضعف الحجم.",
+      "rec_compare_operations": "قارن التوظيف والساعات والحملات والمخزون بين الكيانات حيث يتفاوت الإنجاز بـ {diff} نقطة أو أكثر."
+    }
   },
   "dashboard": {
     "asOfToday": "حتى تاريخ اليوم",
@@ -1413,6 +1442,10 @@
     "activeDays": "أيام نشطة",
     "avgDaily": "المتوسط / يوم نشط",
     "contribution": "المساهمة",
+    "productivityInvoices": "فواتير",
+    "productivityPieces": "قطع",
+    "productivityAvgTicket": "متوسط الفاتورة",
+    "productivityUpt": "قطع/فاتورة",
     "monthPaceTitle": "إيقاع الشهر مقابل الهدف",
     "monthForecastTitle": "توقع نهاية الشهر (خطي)"
   },
@@ -1931,6 +1964,8 @@
     "daysNeedAttention": "{count} يوم هذا الأسبوع",
     "targetsTodayOnly": "تقدم اليوم",
     "targetsTodayOnlySubtitle": "الأهداف لليوم؛ الجدول يستخدم التاريخ المحدد.",
+    "salesInvoicesLabel": "الفواتير",
+    "salesPiecesLabel": "القطع",
     "operationalAlerts": "التنبيهات التشغيلية",
     "allClear": "كل شيء سليم",
     "complianceAlerts": "تنبيهات الوثائق الحكومية",
@@ -2202,6 +2237,8 @@
     "sales": "المبيعات",
     "enterSales": "إدخال المبيعات",
     "amount": "المبلغ",
+    "invoiceCountShort": "الفواتير",
+    "pieceCountShort": "القطع",
     "last7Days": "آخر 7 أيام",
     "thisMonth": "هذا الشهر",
     "today": "اليوم",
@@ -2389,6 +2426,12 @@
       "guestCoverage": "تغطية الضيوف",
       "sourceBoutique": "فرع المصدر",
       "sourcesNote": "المصادر: السجل + الاستيراد + اليدوي",
+      "productivityTitle": "الإنتاجية (فواتير وقطع)",
+      "productivitySubtitle": "نفس نطاق تاريخ صافي المبيعات؛ العدد الاختياري حيث تم الإدخال فقط.",
+      "productivityInvoices": "الفواتير",
+      "productivityPieces": "القطع",
+      "productivityAvgTicket": "متوسط الفاتورة",
+      "productivityUpt": "متوسط القطع لكل فاتورة",
       "noDataForPeriod": "لا توجد مبيعات في هذه الفترة للبوتيك المحدد.",
       "failedToLoad": "فشل التحميل",
       "chartMtdSubtitle": "المتراكم حتى نهاية شهر تاريخ النهاية",
@@ -2811,6 +2854,12 @@
     "emptyDesc": "اختر المتجر والتاريخ ثم حدّث.",
     "viewingLine": "{boutique} ({code}) · اعتباراً من {date}",
     "kpiTitle": "ملخص المؤشرات",
+    "productivityTitle": "إنتاجية الشهر حتى التاريخ (فواتير وقطع)",
+    "productivitySubtitle": "من بداية الشهر حتى التاريخ المحدد؛ العدد الاختياري حيث تم الإدخال فقط.",
+    "productivityInvoices": "الفواتير",
+    "productivityPieces": "القطع",
+    "productivityAvgTicket": "متوسط الفاتورة",
+    "productivityUpt": "متوسط القطع لكل فاتورة",
     "kpiToday": "مبيعات اليوم",
     "kpiDailyTarget": "هدف اليوم",
     "kpiDailyAch": "نسبة إنجاز اليوم",

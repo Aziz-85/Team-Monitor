@@ -341,6 +341,43 @@ export function SalesAnalyticsClient() {
             </KPIGrid>
           </SectionBlock>
 
+          <SectionBlock title={t('salesAnalytics.productivityTitle')} subtitle={t('salesAnalytics.productivitySubtitle')}>
+            <KPIGrid cols={4} className="mt-0">
+              <KPIStatCard
+                title={t('salesAnalytics.productivityInvoices')}
+                value={String(data.mtdProductivity.totalInvoiceCount)}
+                tone="default"
+                className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-base md:[&>p:first-of-type]:text-lg"
+              />
+              <KPIStatCard
+                title={t('salesAnalytics.productivityPieces')}
+                value={String(data.mtdProductivity.totalPieceCount)}
+                tone="default"
+                className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-base md:[&>p:first-of-type]:text-lg"
+              />
+              <KPIStatCard
+                title={t('salesAnalytics.productivityAvgTicket')}
+                value={
+                  data.mtdProductivity.averageTicketSar == null
+                    ? t('common.notApplicable')
+                    : formatSarInt(Math.round(data.mtdProductivity.averageTicketSar))
+                }
+                tone="default"
+                className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-base md:[&>p:first-of-type]:text-lg"
+              />
+              <KPIStatCard
+                title={t('salesAnalytics.productivityUpt')}
+                value={
+                  data.mtdProductivity.unitsPerTransaction == null
+                    ? t('common.notApplicable')
+                    : data.mtdProductivity.unitsPerTransaction.toFixed(2)
+                }
+                tone="default"
+                className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-base md:[&>p:first-of-type]:text-lg"
+              />
+            </KPIGrid>
+          </SectionBlock>
+
           <SectionBlock title={t('salesAnalytics.compareTitle')}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {data.comparisons.map((c) => {

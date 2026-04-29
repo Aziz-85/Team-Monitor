@@ -18,6 +18,47 @@ import {
   DataTableTd,
 } from '@/components/ui/DataTable';
 import type { PerformanceHubPayload } from '@/lib/performance/hubEngine';
+import { formatSarInt } from '@/lib/utils/money';
+
+function hubProductivitySignal(inv: number, pieces: number): boolean {
+  return inv > 0 || pieces > 0;
+}
+
+function applyInsightParams(
+  template: string,
+  params?: Record<string, number | string>
+): string {
+  if (!params) return template;
+  let out = template;
+  for (const [k, v] of Object.entries(params)) {
+    out = out.split(`{${k}}`).join(String(v));
+  }
+  return out;
+}
+
+function hubRankingsHasAny(rankings: Record<string, unknown> | undefined): boolean {
+  if (!rankings || typeof rankings !== 'object') return false;
+  for (const v of Object.values(rankings)) {
+    if (Array.isArray(v) && v.length > 0) return true;
+  }
+  return false;
+}
+
+function formatRankValue(kind: 'count' | 'sar' | 'upt', value: number): string {
+  if (kind === 'upt') return value.toFixed(1);
+  if (kind === 'count') return Math.round(value).toLocaleString('en-US');
+  return formatSarInt(Math.round(value));
+}
+
+function insightSeverityClass(severity: 'high' | 'medium' | 'low'): string {
+  if (severity === 'high') {
+    return 'border-l-4 border-red-600 bg-red-50/80 pl-3 dark:bg-red-950/25';
+  }
+  if (severity === 'medium') {
+    return 'border-l-4 border-amber-500 bg-amber-50/80 pl-3 dark:bg-amber-950/20';
+  }
+  return 'border-l-4 border-border bg-surface-subtle pl-3';
+}
 
 type Bootstrap = {
   role: string;
@@ -129,6 +170,20 @@ export function PerformanceHubClient() {
       }
     }
     return m;
+  }, [payload]);
+
+  const showEntityProductivity = useMemo(() => {
+    if (!payload?.entities?.length) return false;
+    return payload.entities.some((e) =>
+      hubProductivitySignal(e.productivity.totalInvoiceCount, e.productivity.totalPieceCount)
+    );
+  }, [payload]);
+
+  const showEmployeeProductivity = useMemo(() => {
+    if (!payload?.employees?.length) return false;
+    return payload.employees.some((r) =>
+      hubProductivitySignal(r.totalInvoiceCount, r.totalPieceCount)
+    );
   }, [payload]);
 
   return (
@@ -307,6 +362,103 @@ export function PerformanceHubClient() {
             ) : null}
           </div>
 
+          {payload.entity === 'employees' &&
+          hubRankingsHasAny(
+            payload.rankings as Record<string, unknown> | undefined
+          ) ? (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">
+                {t('performanceHub.rankingsTitle')}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {(
+                  [
+                    { key: 'topSales', labelKey: 'performanceHub.rank.topSales', valueKind: 'sar' as const },
+                    { key: 'topInvoices', labelKey: 'performanceHub.rank.topInvoices', valueKind: 'count' as const },
+                    { key: 'topPieces', labelKey: 'performanceHub.rank.topPieces', valueKind: 'count' as const },
+                    {
+                      key: 'topAverageTicket',
+                      labelKey: 'performanceHub.rank.topAverageTicket',
+                      valueKind: 'sar' as const,
+                    },
+                    { key: 'topUPT', labelKey: 'performanceHub.rank.topUPT', valueKind: 'upt' as const },
+                    {
+                      key: 'coachingCandidates',
+                      labelKey: 'performanceHub.rank.coachingCandidates',
+                      valueKind: 'sar' as const,
+                    },
+                  ] as const
+                ).map((col) => {
+                  const slots = (
+                    payload.rankings as Record<string, { rank: number; label: string; value: number }[]>
+                  )?.[col.key];
+                  if (!Array.isArray(slots) || slots.length === 0) return null;
+                  return (
+                    <Card key={col.key} className="!p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                        {t(col.labelKey)}
+                      </p>
+                      <ol className="mt-2 list-none space-y-1.5 p-0">
+                        {slots.map((row) => (
+                          <li
+                            key={`${col.key}-${row.rank}-${row.label}`}
+                            className="flex items-baseline justify-between gap-2 text-sm"
+                          >
+                            <span className="tabular-nums text-muted">#{row.rank}</span>
+                            <span className="min-w-0 flex-1 truncate font-medium text-foreground" title={row.label}>
+                              {row.label}
+                            </span>
+                            <span className="shrink-0 tabular-nums text-foreground">
+                              {formatRankValue(col.valueKind, row.value)}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {Array.isArray(payload.insights) && payload.insights.length > 0 ? (
+            <Card className="!p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {t('performanceHub.signalInsightsTitle')}
+              </p>
+              <ul className="mt-3 list-none space-y-2 p-0">
+                {payload.insights.map((ins) => {
+                  const key = `performanceHub.insight.${ins.id}` as const;
+                  const raw = t(key);
+                  const text = raw === key ? ins.id : applyInsightParams(raw, ins.params);
+                  const recList = Array.isArray(payload.recommendations)
+                    ? payload.recommendations
+                    : [];
+                  const rec = recList.find((r) => r.relatedInsightId === ins.id);
+                  const recKey = rec
+                    ? (`performanceHub.recommendation.${rec.id}` as const)
+                    : null;
+                  const recRaw = recKey ? t(recKey) : '';
+                  const recText =
+                    rec && recKey && recRaw !== recKey
+                      ? applyInsightParams(recRaw, rec.params)
+                      : null;
+                  return (
+                    <li
+                      key={ins.id}
+                      className={`rounded-md py-2 pr-2 text-sm leading-snug ${insightSeverityClass(ins.severity)}`}
+                    >
+                      <p className="text-foreground">{text}</p>
+                      {recText ? (
+                        <p className="mt-1.5 text-xs leading-snug text-muted">{recText}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ) : null}
+
           {entity === 'boutique' && payload.entities.length > 0 ? (
             <ChartCard title={t('performanceHub.chartTitle')} subtitle={payload.windowLabel}>
               <div className="space-y-6 overflow-x-auto">
@@ -401,17 +553,47 @@ export function PerformanceHubClient() {
                 <DataTableTh className="text-end">{t('performanceHub.tableTarget')}</DataTableTh>
                 <DataTableTh className="text-end">{t('performanceHub.tableAchievement')}</DataTableTh>
                 <DataTableTh className="text-end">{t('performanceHub.tableGap')}</DataTableTh>
+                {showEntityProductivity ? (
+                  <>
+                    <DataTableTh className="text-end">{t('performanceHub.tableInvoices')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tablePieces')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tableAvgTicket')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tableUpt')}</DataTableTh>
+                  </>
+                ) : null}
               </DataTableHead>
               <DataTableBody>
-                {payload.entities.map((e) => (
-                  <tr key={e.id}>
-                    <DataTableTd>{e.label}</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{e.actualSales.toLocaleString()}</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{e.targetSales.toLocaleString()}</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{e.achievementPct}%</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{e.gapSales.toLocaleString()}</DataTableTd>
-                  </tr>
-                ))}
+                {payload.entities.map((e) => {
+                  const p = e.productivity;
+                  const sig = hubProductivitySignal(p.totalInvoiceCount, p.totalPieceCount);
+                  return (
+                    <tr key={e.id}>
+                      <DataTableTd>{e.label}</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{e.actualSales.toLocaleString()}</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{e.targetSales.toLocaleString()}</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{e.achievementPct}%</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{e.gapSales.toLocaleString()}</DataTableTd>
+                      {showEntityProductivity ? (
+                        <>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig ? p.totalInvoiceCount.toLocaleString('en-US') : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig ? p.totalPieceCount.toLocaleString('en-US') : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig && p.averageTicketSar != null
+                              ? formatSarInt(Math.round(p.averageTicketSar))
+                              : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig && p.unitsPerTransaction != null ? p.unitsPerTransaction.toFixed(1) : '—'}
+                          </DataTableTd>
+                        </>
+                      ) : null}
+                    </tr>
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           ) : payload.employees.length === 0 ? (
@@ -424,21 +606,50 @@ export function PerformanceHubClient() {
                 <DataTableTh className="text-end">{t('performanceHub.tableTarget')}</DataTableTh>
                 <DataTableTh className="text-end">{t('performanceHub.tableAchievement')}</DataTableTh>
                 <DataTableTh className="text-end">{t('performanceHub.tableGap')}</DataTableTh>
+                {showEmployeeProductivity ? (
+                  <>
+                    <DataTableTh className="text-end">{t('performanceHub.tableInvoices')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tablePieces')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tableAvgTicket')}</DataTableTh>
+                    <DataTableTh className="text-end">{t('performanceHub.tableUpt')}</DataTableTh>
+                  </>
+                ) : null}
                 <DataTableTh>{t('performanceHub.tableBestPeriod')}</DataTableTh>
               </DataTableHead>
               <DataTableBody>
-                {payload.employees.map((r) => (
-                  <tr key={r.userId}>
-                    <DataTableTd>
-                      {r.name} ({r.empId})
-                    </DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{r.actualSales.toLocaleString()}</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{r.targetSales.toLocaleString()}</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{r.achievementPct}%</DataTableTd>
-                    <DataTableTd className="text-end tabular-nums">{r.gapSales.toLocaleString()}</DataTableTd>
-                    <DataTableTd>{r.bestPeriodLabel}</DataTableTd>
-                  </tr>
-                ))}
+                {payload.employees.map((r) => {
+                  const sig = hubProductivitySignal(r.totalInvoiceCount, r.totalPieceCount);
+                  return (
+                    <tr key={r.userId}>
+                      <DataTableTd>
+                        {r.name} ({r.empId})
+                      </DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{r.actualSales.toLocaleString()}</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{r.targetSales.toLocaleString()}</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{r.achievementPct}%</DataTableTd>
+                      <DataTableTd className="text-end tabular-nums">{r.gapSales.toLocaleString()}</DataTableTd>
+                      {showEmployeeProductivity ? (
+                        <>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig ? r.totalInvoiceCount.toLocaleString('en-US') : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig ? r.totalPieceCount.toLocaleString('en-US') : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig && r.averageTicketSar != null
+                              ? formatSarInt(Math.round(r.averageTicketSar))
+                              : '—'}
+                          </DataTableTd>
+                          <DataTableTd className="text-end tabular-nums">
+                            {sig && r.unitsPerTransaction != null ? r.unitsPerTransaction.toFixed(1) : '—'}
+                          </DataTableTd>
+                        </>
+                      ) : null}
+                      <DataTableTd>{r.bestPeriodLabel}</DataTableTd>
+                    </tr>
+                  );
+                })}
               </DataTableBody>
             </DataTable>
           )}

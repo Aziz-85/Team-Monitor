@@ -11,7 +11,8 @@ import { prisma } from '@/lib/db';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { parseDateRiyadh, formatDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import {
-  aggregateSalesEntrySum,
+  aggregateSalesEntryProductivitySums,
+  deriveSalesProductivityMetrics,
   salesEntryWhereDateRangeInclusive,
 } from '@/lib/sales/readSalesAggregate';
 
@@ -53,8 +54,8 @@ export async function GET(request: NextRequest) {
         : {}),
   });
 
-  const [netTotal, groupByResult] = await Promise.all([
-    aggregateSalesEntrySum(whereBase),
+  const [totalsAgg, groupByResult] = await Promise.all([
+    aggregateSalesEntryProductivitySums(whereBase),
     prisma.salesEntry.groupBy({
       by: ['userId'],
       where: whereBase,
@@ -62,9 +63,9 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const rawNetSales = netTotal;
-  const netSalesTotal = rawNetSales;
-  const grossSalesTotal = rawNetSales;
+  const netSalesTotal = totalsAgg.totalAmount;
+  const productivity = deriveSalesProductivityMetrics(totalsAgg);
+  const grossSalesTotal = netSalesTotal;
   const returnsTotal = 0;
   const exchangesTotal = 0;
   const guestCoverageNetSales = 0;
@@ -103,6 +104,7 @@ export async function GET(request: NextRequest) {
     returnsTotal,
     exchangesTotal,
     guestCoverageNetSales,
+    productivity,
     breakdownByEmployee,
   });
 }

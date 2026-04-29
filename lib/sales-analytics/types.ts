@@ -2,6 +2,16 @@
  * Production sales analytics API payload types (integer SAR, Asia/Riyadh).
  */
 
+import type { SalesProductivityMetrics } from '@/lib/sales/readSalesAggregate';
+
+/** Invoice/piece rollups and derived rates (performance analytics MTD). */
+export type EmployeeProductivityRollup = {
+  totalInvoiceCount: number;
+  totalPieceCount: number;
+  averageTicketSar: number | null;
+  unitsPerTransaction: number | null;
+};
+
 export type ComparisonSignal = 'good' | 'warning' | 'risk';
 
 export type SalesAnalyticsComparison = {
@@ -68,4 +78,6 @@ export type SalesAnalyticsPayload = {
   dailyTrajectory: SalesAnalyticsTrajectoryPoint[];
   employeeBars: SalesAnalyticsBarItem[];
   insights: string[];
+  /** MTD through `asOf` for scoped boutique: invoice/piece sums and derived rates (read-only). */
+  mtdProductivity: SalesProductivityMetrics;
 };

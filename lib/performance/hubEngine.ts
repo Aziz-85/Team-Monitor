@@ -3,8 +3,13 @@
  * SAR integers only; achievement via calculatePerformance. No duplicated pace/forecast logic.
  */
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { aggregateSalesEntrySum } from '@/lib/sales/readSalesAggregate';
+import {
+  aggregateSalesEntryProductivitySums,
+  aggregateSalesEntrySum,
+} from '@/lib/sales/readSalesAggregate';
+import type { EmployeeProductivityRollup } from '@/lib/sales-analytics/types';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { addDays, addMonths, getDaysInMonth, normalizeMonthKey, toRiyadhDateString } from '@/lib/time';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
@@ -15,6 +20,27 @@ import {
   sumEmployeeReportingTargetForRange,
 } from '@/lib/performance/hubTargets';
 import type { PerformanceHubCompareMode, PerformanceHubContext } from '@/lib/performance/hubScope';
+import { buildHubInsights } from '@/lib/performance/hubInsights';
+import type { HubInsight, HubInsightsInput } from '@/lib/performance/hubInsights';
+import { buildHubRecommendations } from '@/lib/performance/hubRecommendations';
+import type { HubRecommendation } from '@/lib/performance/hubRecommendations';
+import { buildHubRankings } from '@/lib/performance/hubRankings';
+import type { HubRankings } from '@/lib/performance/hubRankings';
+
+function hubProductivityRollup(
+  totalAmount: number,
+  totalInvoiceCount: number,
+  totalPieceCount: number
+): EmployeeProductivityRollup {
+  return {
+    totalInvoiceCount,
+    totalPieceCount,
+    averageTicketSar:
+      totalInvoiceCount > 0 ? totalAmount / totalInvoiceCount : null,
+    unitsPerTransaction:
+      totalInvoiceCount > 0 ? totalPieceCount / totalInvoiceCount : null,
+  };
+}
 
 export type HubSeriesPoint = { label: string; actualSales: number; targetSales: number; achievementPct: number };
 
@@ -26,6 +52,7 @@ export type HubEntitySummary = {
   achievementPct: number;
   gapSales: number;
   series: HubSeriesPoint[];
+  productivity: EmployeeProductivityRollup;
 };
 
 export type HubBestsBlock = {
@@ -54,6 +81,10 @@ export type HubEmployeeRow = {
   achievementPct: number;
   gapSales: number;
   bestPeriodLabel: string;
+  totalInvoiceCount: number;
+  totalPieceCount: number;
+  averageTicketSar: number | null;
+  unitsPerTransaction: number | null;
 };
 
 export type PerformanceHubPayload = {
@@ -74,6 +105,9 @@ export type PerformanceHubPayload = {
   entities: HubEntitySummary[];
   bests: HubBestsBlock | null;
   employees: HubEmployeeRow[];
+  insights: HubInsight[];
+  recommendations: HubRecommendation[];
+  rankings: HubRankings;
 };
 
 async function salesForRangeBoutiques(
@@ -120,9 +154,23 @@ async function buildEntitySeries(
       achievementPct: p.percent,
     });
   }
-  const actualSales = await salesForRangeBoutiques(boutiqueIds, windowFrom, windowToExclusive);
+  const windowWhere: Prisma.SalesEntryWhereInput =
+    boutiqueIds.length === 0
+      ? { id: { in: [] } }
+      : {
+          boutiqueId:
+            boutiqueIds.length === 1 ? boutiqueIds[0] : { in: boutiqueIds },
+          date: { gte: windowFrom, lt: windowToExclusive },
+        };
+  const windowSums = await aggregateSalesEntryProductivitySums(windowWhere);
+  const actualSales = windowSums.totalAmount;
   const targetSales = await targetForRangeBoutiques(boutiqueIds, windowFrom, windowToExclusive);
   const perf = calculatePerformance({ target: targetSales, sales: actualSales });
+  const productivity = hubProductivityRollup(
+    windowSums.totalAmount,
+    windowSums.totalInvoiceCount,
+    windowSums.totalPieceCount
+  );
   return {
     id,
     label,
@@ -131,6 +179,7 @@ async function buildEntitySeries(
     achievementPct: perf.percent,
     gapSales: perf.remaining,
     series,
+    productivity,
   };
 }
 
@@ -417,12 +466,44 @@ export async function buildPerformanceHubPayload(input: {
       ? users.filter((u) => u.id === input.employeeUserId)
       : users;
 
-    for (const u of filtered) {
-      const a = await aggregateSalesEntrySum({
-        userId: u.id,
-        boutiqueId: u.boutiqueId,
-        date: { gte: window.from, lt: window.toExclusive },
+    const employeeUserIds = filtered.map((u) => u.id);
+    const salesByUserId = new Map<
+      string,
+      { totalAmount: number; totalInvoiceCount: number; totalPieceCount: number }
+    >();
+    if (employeeUserIds.length > 0) {
+      const salesRows = await prisma.salesEntry.groupBy({
+        by: ['userId'],
+        where: {
+          boutiqueId:
+            scopeBoutiques.length === 1
+              ? scopeBoutiques[0]
+              : { in: scopeBoutiques },
+          userId: { in: employeeUserIds },
+          date: { gte: window.from, lt: window.toExclusive },
+        },
+        _sum: { amount: true, invoiceCount: true, pieceCount: true },
       });
+      for (const row of salesRows) {
+        const uid = row.userId;
+        if (!uid) continue;
+        salesByUserId.set(uid, {
+          totalAmount: row._sum.amount ?? 0,
+          totalInvoiceCount: row._sum.invoiceCount ?? 0,
+          totalPieceCount: row._sum.pieceCount ?? 0,
+        });
+      }
+    }
+
+    for (const u of filtered) {
+      const sales = salesByUserId.get(u.id) ?? {
+        totalAmount: 0,
+        totalInvoiceCount: 0,
+        totalPieceCount: 0,
+      };
+      const a = sales.totalAmount;
+      const inv = sales.totalInvoiceCount;
+      const pc = sales.totalPieceCount;
       const tgt = await sumEmployeeReportingTargetForRange(u.boutiqueId, u.id, window.from, window.toExclusive);
       const perf = calculatePerformance({ target: tgt, sales: a });
       employees.push({
@@ -434,6 +515,10 @@ export async function buildPerformanceHubPayload(input: {
         achievementPct: perf.percent,
         gapSales: perf.remaining,
         bestPeriodLabel: window.label,
+        totalInvoiceCount: inv,
+        totalPieceCount: pc,
+        averageTicketSar: inv > 0 ? a / inv : null,
+        unitsPerTransaction: inv > 0 ? pc / inv : null,
       });
     }
     employees.sort((x, y) => y.actualSales - x.actualSales);
@@ -467,7 +552,7 @@ export async function buildPerformanceHubPayload(input: {
         ? entities.reduce((a, b) => (b.actualSales > a.actualSales ? b : a)).label
         : null;
 
-  return {
+  const hubPayload: HubInsightsInput = {
     period,
     anchorDateKey,
     windowLabel: window.label,
@@ -484,5 +569,14 @@ export async function buildPerformanceHubPayload(input: {
     entities,
     bests,
     employees,
+  };
+
+  const insights = buildHubInsights(hubPayload);
+
+  return {
+    ...hubPayload,
+    insights,
+    recommendations: buildHubRecommendations(insights, hubPayload),
+    rankings: buildHubRankings(hubPayload),
   };
 }

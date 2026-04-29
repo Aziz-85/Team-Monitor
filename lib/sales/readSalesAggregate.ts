@@ -102,6 +102,49 @@ export async function aggregateSalesEntrySum(where: Prisma.SalesEntryWhereInput)
   return r._sum.amount ?? 0;
 }
 
+/** Single-query amount + optional invoice/piece sums (nulls excluded from SQL SUM; all-null → 0). */
+export type SalesEntryProductivitySums = {
+  totalAmount: number;
+  totalInvoiceCount: number;
+  totalPieceCount: number;
+};
+
+export async function aggregateSalesEntryProductivitySums(
+  where: Prisma.SalesEntryWhereInput
+): Promise<SalesEntryProductivitySums> {
+  const r = await prisma.salesEntry.aggregate({
+    where,
+    _sum: { amount: true, invoiceCount: true, pieceCount: true },
+  });
+  return {
+    totalAmount: r._sum.amount ?? 0,
+    totalInvoiceCount: r._sum.invoiceCount ?? 0,
+    totalPieceCount: r._sum.pieceCount ?? 0,
+  };
+}
+
+/** Derived read-only metrics; use null averages when the denominator would be 0. */
+export type SalesProductivityMetrics = {
+  totalInvoiceCount: number;
+  totalPieceCount: number;
+  averageTicketSar: number | null;
+  averagePieceValueSar: number | null;
+  unitsPerTransaction: number | null;
+};
+
+export function deriveSalesProductivityMetrics(sums: SalesEntryProductivitySums): SalesProductivityMetrics {
+  const A = sums.totalAmount;
+  const I = sums.totalInvoiceCount;
+  const P = sums.totalPieceCount;
+  return {
+    totalInvoiceCount: I,
+    totalPieceCount: P,
+    averageTicketSar: I > 0 ? A / I : null,
+    averagePieceValueSar: P > 0 ? A / P : null,
+    unitsPerTransaction: I > 0 ? P / I : null,
+  };
+}
+
 /** Multi-boutique scope + calendar month (executive KPIs, compare). */
 export function salesEntryWhereForBoutiquesInMonth(
   monthKey: string,

@@ -14,6 +14,7 @@ import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { salesEntryWhereForUserMonth } from '@/lib/sales/readSalesAggregate';
+import { parseOptionalNonNegativeInt } from '@/lib/sales/parseOptionalSalesMetrics';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       prisma.salesEntry.findMany({
         where: salesEntryWhereForUserMonth(user.id, monthKey, null),
         orderBy: { dateKey: 'asc' },
-        select: { id: true, date: true, dateKey: true, amount: true },
+        select: { id: true, date: true, dateKey: true, amount: true, invoiceCount: true, pieceCount: true },
       }),
       prisma.salesEditGrant.findMany({
         where: {
@@ -48,7 +49,14 @@ export async function GET(request: NextRequest) {
       const dateStr = e.dateKey ?? toRiyadhDateString(e.date);
       const canEdit =
         canEditSalesForDate(user.role, dateStr) || grantDateSet.has(dateStr);
-      return { id: e.id, date: dateStr, amount: e.amount, canEdit };
+      return {
+        id: e.id,
+        date: dateStr,
+        amount: e.amount,
+        invoiceCount: e.invoiceCount ?? null,
+        pieceCount: e.pieceCount ?? null,
+        canEdit,
+      };
     });
     const daysInMonth = getDaysInMonth(monthKey);
     const [y, m] = monthKey.split('-').map(Number);
@@ -71,13 +79,20 @@ export async function GET(request: NextRequest) {
   const entries = await prisma.salesEntry.findMany({
     where: { userId: user.id, date: { gte: from, lte: today } },
     orderBy: { date: 'desc' },
-    select: { id: true, date: true, amount: true },
+    select: { id: true, date: true, amount: true, invoiceCount: true, pieceCount: true },
   });
   const withDateStr = await Promise.all(
     entries.map(async (e) => {
       const dateStr = toRiyadhDateString(e.date);
       const canEdit = await canEditSalesForDateWithGrant(prisma, user, dateStr);
-      return { id: e.id, date: dateStr, amount: e.amount, canEdit };
+      return {
+        id: e.id,
+        date: dateStr,
+        amount: e.amount,
+        invoiceCount: e.invoiceCount ?? null,
+        pieceCount: e.pieceCount ?? null,
+        canEdit,
+      };
     })
   );
   return NextResponse.json({ entries: withDateStr });
@@ -87,7 +102,7 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  let body: { date?: string; amount?: number };
+  let body: { date?: string; amount?: number; invoiceCount?: number | null; pieceCount?: number | null };
   try {
     body = await request.json();
   } catch {
@@ -111,6 +126,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'amount must be >= 0' }, { status: 400 });
   }
 
+  const invParsed = parseOptionalNonNegativeInt(body.invoiceCount, 'invoiceCount');
+  if ('error' in invParsed) {
+    return NextResponse.json({ error: invParsed.error }, { status: 400 });
+  }
+  const pcParsed = parseOptionalNonNegativeInt(body.pieceCount, 'pieceCount');
+  if ('error' in pcParsed) {
+    return NextResponse.json({ error: pcParsed.error }, { status: 400 });
+  }
+
   const dateNorm = toRiyadhDateOnly(new Date(dateStr + 'T12:00:00.000Z'));
   const dateKey = formatDateRiyadh(dateNorm);
 
@@ -131,6 +155,8 @@ export async function POST(request: NextRequest) {
     source: SALES_ENTRY_SOURCE.MANUAL,
     actorUserId: user.id,
     date: dateNorm,
+    ...(invParsed.provided ? { invoiceCount: invParsed.value } : {}),
+    ...(pcParsed.provided ? { pieceCount: pcParsed.value } : {}),
   });
   if (result.status === 'rejected_locked') {
     return NextResponse.json(

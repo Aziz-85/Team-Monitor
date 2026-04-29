@@ -3,7 +3,11 @@
  */
 
 import { prisma } from '@/lib/db';
-import { aggregateSalesEntrySum } from '@/lib/sales/readSalesAggregate';
+import {
+  aggregateSalesEntryProductivitySums,
+  aggregateSalesEntrySum,
+  deriveSalesProductivityMetrics,
+} from '@/lib/sales/readSalesAggregate';
 import type { SalesScopeResult } from '@/lib/sales/ledgerRbac';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { getDailyTargetForDay } from '@/lib/targets/dailyTarget';
@@ -106,7 +110,7 @@ export async function buildSalesAnalyticsPayload(
     todaySales,
     yesterdaySales,
     weekAgoSales,
-    mtdSales,
+    mtdAgg,
     salesByDay,
     prevMonthMtd,
   ] = await Promise.all([
@@ -133,7 +137,7 @@ export async function buildSalesAnalyticsPayload(
       boutiqueId,
       date: { gte: normalizeDateOnlyRiyadh(shiftDateKey(asOf, -7)), lte: normalizeDateOnlyRiyadh(shiftDateKey(asOf, -7)) },
     }),
-    aggregateSalesEntrySum({
+    aggregateSalesEntryProductivitySums({
       boutiqueId,
       date: { gte: monthStart, lte: asOfDate },
     }),
@@ -158,6 +162,9 @@ export async function buildSalesAnalyticsPayload(
       });
     })(),
   ]);
+
+  const mtdSales = mtdAgg.totalAmount;
+  const mtdProductivity = deriveSalesProductivityMetrics(mtdAgg);
 
   const monthTargetSar = monthTargetRow?.amount ?? 0;
   const dailyTargetSar = getDailyTargetForDay(monthTargetSar, daysInMonth, dayOfMonth);
@@ -396,5 +403,6 @@ export async function buildSalesAnalyticsPayload(
     dailyTrajectory,
     employeeBars,
     insights,
+    mtdProductivity,
   };
 }

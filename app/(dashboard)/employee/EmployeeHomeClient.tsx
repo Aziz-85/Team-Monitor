@@ -38,9 +38,14 @@ export function EmployeeHomeClient() {
 
   const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
   const [salesEntryAmount, setSalesEntryAmount] = useState<string>('');
+  const [salesEntryInvoiceCount, setSalesEntryInvoiceCount] = useState<string>('');
+  const [salesEntryPieceCount, setSalesEntryPieceCount] = useState<string>('');
   const [salesEntrySaving, setSalesEntrySaving] = useState(false);
   const [salesEntryError, setSalesEntryError] = useState<string | null>(null);
-  const [lastEntries, setLastEntries] = useState<Array<{ id: string; date: string; amount: number }>>([]);
+  const [salesEntryInfo, setSalesEntryInfo] = useState<string | null>(null);
+  const [lastEntries, setLastEntries] = useState<
+    Array<{ id: string; date: string; amount: number; invoiceCount?: number | null; pieceCount?: number | null }>
+  >([]);
   const [selfAnalytics, setSelfAnalytics] = useState<{
     employees?: Array<{ pace: PaceMetrics; forecast: ForecastMetrics }>;
   } | null>(null);
@@ -48,9 +53,19 @@ export function EmployeeHomeClient() {
   const fetchLastEntries = useCallback(() => {
     fetch('/api/me/sales?days=7')
       .then((r) => r.json())
-      .then((j: { entries?: Array<{ id: string; date: string; amount: number }> }) => {
-        setLastEntries(j.entries ?? []);
-      })
+      .then(
+        (j: {
+          entries?: Array<{
+            id: string;
+            date: string;
+            amount: number;
+            invoiceCount?: number | null;
+            pieceCount?: number | null;
+          }>;
+        }) => {
+          setLastEntries(j.entries ?? []);
+        }
+      )
       .catch(() => setLastEntries([]));
   }, []);
 
@@ -64,23 +79,48 @@ export function EmployeeHomeClient() {
       setSalesEntryError('Enter a whole number ≥ 0');
       return;
     }
+    const invTrim = salesEntryInvoiceCount.trim();
+    const pcTrim = salesEntryPieceCount.trim();
+    if (invTrim !== '') {
+      const v = Number(invTrim);
+      if (!Number.isInteger(v) || v < 0) {
+        setSalesEntryError('Invoices must be a whole number ≥ 0');
+        return;
+      }
+    }
+    if (pcTrim !== '') {
+      const v = Number(pcTrim);
+      if (!Number.isInteger(v) || v < 0) {
+        setSalesEntryError('Pieces must be a whole number ≥ 0');
+        return;
+      }
+    }
     setSalesEntryError(null);
+    setSalesEntryInfo(null);
     setSalesEntrySaving(true);
     try {
+      const body: {
+        date: string;
+        salesSar: number;
+        invoiceCount?: number;
+        pieceCount?: number;
+      } = { date: salesEntryDate, salesSar: amount };
+      if (invTrim !== '') body.invoiceCount = Number(invTrim);
+      if (pcTrim !== '') body.pieceCount = Number(pcTrim);
       const res = await fetch('/api/sales/entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: salesEntryDate,
-          salesSar: amount,
-        }),
+        body: JSON.stringify(body),
       });
       const j = await res.json();
       if (!res.ok) {
         setSalesEntryError(j.error ?? 'Save failed');
         return;
       }
+      setSalesEntryInfo(typeof j.metricsNote === 'string' && j.metricsNote ? j.metricsNote : null);
       setSalesEntryAmount('');
+      setSalesEntryInvoiceCount('');
+      setSalesEntryPieceCount('');
       fetchLastEntries();
       fetch('/api/me/targets')
         .then((r) => r.json())
@@ -290,43 +330,88 @@ export function EmployeeHomeClient() {
 
         <OpsCard title="My Sales" className="mb-4">
           <p className="mb-2 text-sm text-muted">Enter daily sales (SAR). Zero is valid.</p>
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-0 sm:w-auto">
-              <label className="me-1 text-xs text-muted">Date</label>
-              <input
-                type="date"
-                value={salesEntryDate}
-                onChange={(e) => setSalesEntryDate(e.target.value)}
-                className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-auto"
-              />
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <div className="min-w-0 sm:w-auto">
+                <label className="me-1 text-xs text-muted">Date</label>
+                <input
+                  type="date"
+                  value={salesEntryDate}
+                  onChange={(e) => setSalesEntryDate(e.target.value)}
+                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-auto"
+                />
+              </div>
+              <div className="min-w-0 sm:w-auto">
+                <label className="me-1 text-xs text-muted">Amount (SAR)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={salesEntryAmount}
+                  onChange={(e) => setSalesEntryAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={salesEntrySaving}
+                onClick={saveSalesEntry}
+                className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
+              >
+                {salesEntrySaving ? 'Saving…' : 'Save'}
+              </button>
             </div>
-            <div className="min-w-0 sm:w-auto">
-              <label className="me-1 text-xs text-muted">Amount (SAR)</label>
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={salesEntryAmount}
-                onChange={(e) => setSalesEntryAmount(e.target.value)}
-                placeholder="0"
-                className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
-              />
+            <div className="flex min-w-0 flex-wrap items-end gap-4">
+              <div className="min-w-0 sm:w-auto">
+                <label className="me-1 text-xs text-muted">{t('home.salesInvoicesLabel')}</label>
+                <input
+                  name="invoiceCount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={salesEntryInvoiceCount}
+                  onChange={(e) => setSalesEntryInvoiceCount(e.target.value)}
+                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                  placeholder=""
+                />
+              </div>
+              <div className="min-w-0 sm:w-auto">
+                <label className="me-1 text-xs text-muted">{t('home.salesPiecesLabel')}</label>
+                <input
+                  name="pieceCount"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={salesEntryPieceCount}
+                  onChange={(e) => setSalesEntryPieceCount(e.target.value)}
+                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                  placeholder=""
+                />
+              </div>
             </div>
-            <button
-              type="button"
-              disabled={salesEntrySaving}
-              onClick={saveSalesEntry}
-              className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
-            >
-              {salesEntrySaving ? 'Saving…' : 'Save'}
-            </button>
           </div>
           {salesEntryError && <p className="mt-2 text-sm text-red-600">{salesEntryError}</p>}
+          {salesEntryInfo && !salesEntryError && (
+            <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">{salesEntryInfo}</p>
+          )}
           <p className="mt-2 text-xs text-muted">Last 7 entries:</p>
           <ul className="mt-1 list-inside list-disc ps-4 text-sm text-foreground">
             {lastEntries.length === 0 && <li>—</li>}
             {lastEntries.map((e) => (
-              <li key={e.id} className="break-words">{e.date}: {formatSarInt(e.amount)}</li>
+              <li key={e.id} className="break-words">
+                {e.date}: {formatSarInt(e.amount)}
+                {(e.invoiceCount != null || e.pieceCount != null) && (
+                  <span className="text-muted">
+                    {' '}
+                    (
+                    {e.invoiceCount != null ? `${e.invoiceCount} ${t('home.salesInvoicesLabel')}` : ''}
+                    {e.invoiceCount != null && e.pieceCount != null ? ' · ' : ''}
+                    {e.pieceCount != null ? `${e.pieceCount} ${t('home.salesPiecesLabel')}` : ''}
+                    )
+                  </span>
+                )}
+              </li>
             ))}
           </ul>
         </OpsCard>

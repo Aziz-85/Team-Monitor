@@ -1,6 +1,7 @@
 /**
  * POST /api/sales/entry — Employee daily sales entry (or manager entering for employee).
  * Body JSON: scopeId, date (YYYY-MM-DD), salesSar (Int >= 0), employeeId (optional; default current user).
+ * Optional: invoiceCount, pieceCount (non-negative integers) — written to SalesEntry after ledger sync when possible.
  * EMPLOYEE: only for self. MANAGER/ADMIN: for any employee in same scope.
  */
 
@@ -16,6 +17,9 @@ import { normalizeDateOnlyRiyadh, formatDateRiyadh } from '@/lib/time';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { logAudit } from '@/lib/audit';
+import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
+import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
+import { parseOptionalNonNegativeInt } from '@/lib/sales/parseOptionalSalesMetrics';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -54,7 +58,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let body: { scopeId?: string; date?: string; salesSar?: number; employeeId?: string };
+  let body: {
+    scopeId?: string;
+    date?: string;
+    salesSar?: number;
+    employeeId?: string;
+    invoiceCount?: number | null;
+    pieceCount?: number | null;
+  };
   try {
     body = await request.json();
   } catch {
@@ -76,6 +87,15 @@ export async function POST(request: NextRequest) {
   }
   const salesSar = Math.round(rawSar);
   const hadDecimals = rawSar !== salesSar;
+
+  const invParsed = parseOptionalNonNegativeInt(body.invoiceCount, 'invoiceCount');
+  if ('error' in invParsed) {
+    return NextResponse.json({ error: invParsed.error }, { status: 400 });
+  }
+  const pcParsed = parseOptionalNonNegativeInt(body.pieceCount, 'pieceCount');
+  if ('error' in pcParsed) {
+    return NextResponse.json({ error: pcParsed.error }, { status: 400 });
+  }
 
   const employeeId = ((body.employeeId ?? '').trim() || (roleUser.empId ?? ''));
   if (!employeeId) {
@@ -185,12 +205,59 @@ export async function POST(request: NextRequest) {
     actorUserId: roleUser.id,
   });
 
+  const dateKey = formatDateRiyadh(date);
+  let metricsNote: string | undefined;
+
+  if (invParsed.provided || pcParsed.provided) {
+    const ledgerUser = await prisma.user.findFirst({
+      where: { empId: employeeId },
+      select: { id: true },
+    });
+    if (ledgerUser) {
+      const canonical = await prisma.salesEntry.findFirst({
+        where: { boutiqueId: scopeId, dateKey, userId: ledgerUser.id },
+        select: { source: true },
+      });
+      if (canonical) {
+        const sourceForRow = (canonical.source?.trim() || SALES_ENTRY_SOURCE.LEDGER) as string;
+        const metricsResult = await upsertCanonicalSalesEntry({
+          kind: 'direct',
+          boutiqueId: scopeId,
+          userId: ledgerUser.id,
+          amount: salesSar,
+          source: sourceForRow,
+          actorUserId: roleUser.id,
+          date,
+          ...(invParsed.provided ? { invoiceCount: invParsed.value } : {}),
+          ...(pcParsed.provided ? { pieceCount: pcParsed.value } : {}),
+        });
+        if (
+          metricsResult.status !== 'created' &&
+          metricsResult.status !== 'updated' &&
+          metricsResult.status !== 'no_change'
+        ) {
+          if (metricsResult.status === 'rejected_locked') {
+            metricsNote = 'invoiceCount/pieceCount were not saved: day is locked for canonical edits.';
+          } else if (metricsResult.status === 'rejected_precedence') {
+            metricsNote =
+              'invoiceCount/pieceCount were not saved: SalesEntry is owned by a higher-priority source.';
+          } else if (metricsResult.status === 'rejected_invalid') {
+            metricsNote = metricsResult.reason;
+          }
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     scopeId,
-    date: formatDateRiyadh(date),
+    date: dateKey,
     employeeId,
     salesSar,
     totalSar,
+    ...(invParsed.provided ? { invoiceCount: invParsed.value } : {}),
+    ...(pcParsed.provided ? { pieceCount: pcParsed.value } : {}),
+    ...(metricsNote ? { metricsNote } : {}),
   });
 }

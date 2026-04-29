@@ -122,6 +122,14 @@ type TargetsResponse = {
   monthKey?: string;
 };
 
+type SummaryProductivity = {
+  totalInvoiceCount: number;
+  totalPieceCount: number;
+  averageTicketSar: number | null;
+  averagePieceValueSar: number | null;
+  unitsPerTransaction: number | null;
+};
+
 type Summary = {
   from: string;
   to: string;
@@ -130,6 +138,7 @@ type Summary = {
   returnsTotal: number;
   exchangesTotal: number;
   guestCoverageNetSales: number;
+  productivity?: SummaryProductivity;
   breakdownByEmployee: Array<{
     employeeId: string;
     employeeName: string;
@@ -526,6 +535,45 @@ export function SalesSummaryClient() {
               value={activeEmployees}
               tone="default"
               className="[&>p:first-of-type]:text-xl md:[&>p:first-of-type]:text-2xl [&>p:first-of-type]:text-foreground/85"
+            />
+          </KPIGrid>
+        </SectionBlock>
+      )}
+
+      {summary && summary.productivity && (
+        <SectionBlock title={t('sales.summary.productivityTitle')} subtitle={t('sales.summary.productivitySubtitle')}>
+          <KPIGrid cols={4} className="mt-0">
+            <KPIStatCard
+              title={t('sales.summary.productivityInvoices')}
+              value={String(summary.productivity.totalInvoiceCount)}
+              tone="default"
+              className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-lg md:[&>p:first-of-type]:text-xl"
+            />
+            <KPIStatCard
+              title={t('sales.summary.productivityPieces')}
+              value={String(summary.productivity.totalPieceCount)}
+              tone="default"
+              className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-lg md:[&>p:first-of-type]:text-xl"
+            />
+            <KPIStatCard
+              title={t('sales.summary.productivityAvgTicket')}
+              value={
+                summary.productivity.averageTicketSar == null
+                  ? t('common.notApplicable')
+                  : formatSarInt(Math.round(summary.productivity.averageTicketSar))
+              }
+              tone="default"
+              className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-lg md:[&>p:first-of-type]:text-xl"
+            />
+            <KPIStatCard
+              title={t('sales.summary.productivityUpt')}
+              value={
+                summary.productivity.unitsPerTransaction == null
+                  ? t('common.notApplicable')
+                  : summary.productivity.unitsPerTransaction.toFixed(2)
+              }
+              tone="default"
+              className="border-border/80 bg-surface-subtle/50 [&>p:first-of-type]:text-lg md:[&>p:first-of-type]:text-xl"
             />
           </KPIGrid>
         </SectionBlock>

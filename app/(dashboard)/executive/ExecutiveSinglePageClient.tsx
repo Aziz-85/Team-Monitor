@@ -213,6 +213,12 @@ type AnalyticsPerformanceResponse = {
       forecastRatio: number | null;
       avgDailyActual: number;
     } | null;
+    boutiqueProductivity?: {
+      totalInvoiceCount: number;
+      totalPieceCount: number;
+      averageTicketSar: number | null;
+      unitsPerTransaction: number | null;
+    };
   };
   employees?: Array<{
     userId: string;
@@ -221,6 +227,12 @@ type AnalyticsPerformanceResponse = {
     activeDays: number;
     avgDailySales: number;
     contributionPct: number;
+    employeeProductivity?: {
+      totalInvoiceCount: number;
+      totalPieceCount: number;
+      averageTicketSar: number | null;
+      unitsPerTransaction: number | null;
+    };
   }>;
 };
 
@@ -790,6 +802,10 @@ export function ExecutiveSinglePageClient() {
               activeDays: t('analytics.activeDays'),
               avgDaily: t('analytics.avgDaily'),
               contribution: t('analytics.contribution'),
+              productivityInvoices: t('analytics.productivityInvoices'),
+              productivityPieces: t('analytics.productivityPieces'),
+              productivityAvgTicket: t('analytics.productivityAvgTicket'),
+              productivityUpt: t('analytics.productivityUpt'),
             }}
             rows={(analyticsPerformance?.employees ?? []).map((e) => ({
               id: e.userId,
@@ -798,6 +814,7 @@ export function ExecutiveSinglePageClient() {
               activeDays: e.activeDays,
               avgDailySales: e.avgDailySales,
               contributionPct: e.contributionPct,
+              employeeProductivity: e.employeeProductivity,
             }))}
           />
         </section>
