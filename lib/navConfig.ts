@@ -106,7 +106,6 @@ const GROUP_TEAM: NavGroup = {
   items: [
     item('/schedule/view', 'nav.scheduleView', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEMO_VIEWER'], 'CORE'),
     item('/schedule/edit', 'nav.scheduleEditor', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
-    item('/schedule/editor', 'nav.scheduleEditorDay', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit', 'nav.scheduleAudit', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit-edits', 'schedule.auditEditsTitle', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/approvals', 'nav.approvalsAll', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
@@ -389,7 +388,7 @@ function itemVisible(
   it: NavItem
 ): boolean {
   if (!it.roles.includes(user.role)) return false;
-  if (it.href === '/schedule/edit' || it.href === '/schedule/editor') return canEditScheduleRbac(user);
+  if (it.href === '/schedule/edit') return canEditScheduleRbac(user);
   if (it.href === '/approvals' || it.href.startsWith('/approvals?'))
     return user.canApproveWeek ?? canApproveWeekRbac(user);
   return true;

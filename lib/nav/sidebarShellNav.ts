@@ -15,6 +15,69 @@ import { canAccessRoute } from '@/lib/permissions';
 export const ENTRY_DAILY_SALES_SIDEBAR_ROLES = APP_SHELL_ENTRY_DAILY_ROLES;
 
 export type SidebarShellLink = { key: string; label: string; href: string };
+export type SidebarShellGroup = { key: string; label: string; items: SidebarShellLink[] };
+
+type SidebarShellGroupedItem = { key: string; href: string; labelKey: string };
+type SidebarShellGroupedSection = { key: string; labelKey: string; items: SidebarShellGroupedItem[] };
+
+const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
+  {
+    key: 'home',
+    labelKey: 'nav.groups.home',
+    items: [
+      { key: 'HOME', href: '/', labelKey: 'nav.dashboard' },
+      { key: 'EMPLOYEE_HOME', href: '/employee', labelKey: 'nav.employeeHome' },
+    ],
+  },
+  {
+    key: 'schedule',
+    labelKey: 'nav.groups.schedule',
+    items: [
+      { key: 'SCHEDULE_VIEW', href: '/schedule/view', labelKey: 'nav.scheduleView' },
+      { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor' },
+      { key: 'SCHEDULE_AUDIT', href: '/schedule/audit', labelKey: 'nav.scheduleAudit' },
+      { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },
+    ],
+  },
+  {
+    key: 'tasks',
+    labelKey: 'nav.groups.tasks',
+    items: [
+      { key: 'TASKS', href: '/tasks', labelKey: 'nav.tasks' },
+      { key: 'TASK_SETUP', href: '/tasks/setup', labelKey: 'tasks.setup' },
+      { key: 'TASK_MONITOR', href: '/tasks/monitor', labelKey: 'tasks.monitorNav' },
+    ],
+  },
+  {
+    key: 'inventory',
+    labelKey: 'nav.groups.inventory',
+    items: [
+      { key: 'INV_DAILY', href: '/inventory/daily', labelKey: 'nav.inventoryDaily' },
+      { key: 'INV_HISTORY', href: '/inventory/daily/history', labelKey: 'nav.inventoryDailyHistory' },
+      { key: 'INV_ZONES', href: '/inventory/zones', labelKey: 'nav.inventoryZones' },
+      { key: 'INV_FOLLOW', href: '/inventory/follow-up', labelKey: 'nav.inventoryFollowUp' },
+    ],
+  },
+  {
+    key: 'team',
+    labelKey: 'nav.groups.team',
+    items: [
+      { key: 'ADMIN_EMPLOYEES', href: '/admin/employees', labelKey: 'nav.admin.employees' },
+      { key: 'LEAVES', href: '/leaves', labelKey: 'nav.leaves' },
+      { key: 'ADMIN_USERS', href: '/admin/users', labelKey: 'nav.admin.users' },
+    ],
+  },
+  {
+    key: 'system',
+    labelKey: 'nav.groups.system',
+    items: [
+      { key: 'COVERAGE_RULES', href: '/admin/coverage-rules', labelKey: 'nav.admin.coverageRules' },
+      { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
+      { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
+      { key: 'CHANGE_PASSWORD', href: '/change-password', labelKey: 'nav.changePassword' },
+    ],
+  },
+];
 
 export function getSidebarQuickAccess(role: Role, t: (key: string) => string): SidebarShellLink[] {
   const items: SidebarShellLink[] = [];
@@ -35,4 +98,13 @@ export function getSidebarHubSections(t: (key: string) => string): SidebarShellL
 
 export function getAppShellEntryDaily() {
   return APP_SHELL_ENTRY_DAILY;
+}
+
+export function getSidebarGroupedSections(role: Role, t: (key: string) => string): SidebarShellGroup[] {
+  return SIDEBAR_GROUPS.map((section) => {
+    const items = section.items
+      .filter((item) => canAccessRoute(role, item.href))
+      .map((item) => ({ key: item.key, href: item.href, label: t(item.labelKey) }));
+    return { key: section.key, label: t(section.labelKey), items };
+  }).filter((section) => section.items.length > 0);
 }

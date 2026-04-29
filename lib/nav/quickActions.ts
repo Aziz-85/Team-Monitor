@@ -32,7 +32,6 @@ export function actionKeyFromPathname(pathname: string): QuickActionKey | null {
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) return 'dashboard';
   if (pathname === '/schedule/view' || pathname.startsWith('/schedule/view/')) return 'schedule';
   if (pathname === '/schedule/edit' || pathname.startsWith('/schedule/edit/')) return 'schedule';
-  if (pathname === '/schedule/editor' || pathname.startsWith('/schedule/editor/')) return 'schedule';
   if (pathname === '/tasks' || pathname.startsWith('/tasks/')) return 'tasks';
   if (pathname === '/sales/summary' || pathname.startsWith('/sales/summary/')) return 'salesSummary';
   if (pathname === '/inventory/daily' || pathname.startsWith('/inventory/daily/')) return 'inventoryDaily';

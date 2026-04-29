@@ -92,7 +92,6 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/sales/summary', titleKey: 'nav.drilldown.routes.sales.summary.title' },
   { prefix: '/schedule/audit-edits', titleKey: 'nav.drilldown.routes.schedule.auditEdits.title' },
   { prefix: '/schedule/audit', titleKey: 'nav.drilldown.routes.schedule.audit.title' },
-  { prefix: '/schedule/editor', titleKey: 'nav.drilldown.routes.schedule.dayEditor.title' },
   { prefix: '/schedule/edit', titleKey: 'nav.drilldown.routes.schedule.edit.title' },
   { prefix: '/schedule/view', titleKey: 'nav.drilldown.routes.schedule.view.title' },
   { prefix: '/schedule', titleKey: 'nav.drilldown.routes.schedule.view.title' },

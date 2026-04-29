@@ -119,6 +119,14 @@
     "employeeHome": "صفحتي",
     "changePassword": "تغيير كلمة المرور",
     "compliance": "الوثائق الحكومية",
+    "groups": {
+      "home": "الرئيسية",
+      "schedule": "الجدول",
+      "tasks": "المهام",
+      "inventory": "الجرد",
+      "team": "إدارة الفريق",
+      "system": "النظام"
+    },
     "group": {
       "DASHBOARD": "لوحة القيادة",
       "TEAM": "الفريق",

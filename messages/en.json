@@ -119,6 +119,14 @@
     "employeeHome": "My Home",
     "changePassword": "Change Password",
     "compliance": "Government Documents",
+    "groups": {
+      "home": "Home",
+      "schedule": "Schedule",
+      "tasks": "Tasks",
+      "inventory": "Inventory",
+      "team": "Team Management",
+      "system": "System"
+    },
     "group": {
       "DASHBOARD": "Dashboard",
       "TEAM": "Team",

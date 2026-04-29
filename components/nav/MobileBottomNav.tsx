@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
-import { getNavLinksForUser } from '@/lib/navLinks';
+import { getSidebarGroupedSections } from '@/lib/nav/sidebarShellNav';
 import type { Role } from '@prisma/client';
 
 const PRIMARY_COUNT = 4;
+const PREFERRED_BOTTOM_HREFS = ['/', '/schedule/view', '/tasks', '/inventory/daily'] as const;
 
 export function MobileBottomNav({
   role,
@@ -21,10 +22,22 @@ export function MobileBottomNav({
   const pathname = usePathname();
   const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
+  void canEditSchedule;
+  void canApproveWeek;
 
   const links = useMemo(
-    () => getNavLinksForUser({ role, canEditSchedule, canApproveWeek }),
-    [role, canEditSchedule, canApproveWeek]
+    () => {
+      const grouped = getSidebarGroupedSections(role, t);
+      const flat = grouped.flatMap((group) => group.items);
+      const byHref = new Map(flat.map((item) => [item.href, item]));
+      const preferred = PREFERRED_BOTTOM_HREFS.map((href) => byHref.get(href)).filter(
+        (item): item is NonNullable<typeof item> => Boolean(item)
+      );
+      const chosen = new Set(preferred.map((item) => item.href));
+      const remainder = flat.filter((item) => !chosen.has(item.href));
+      return [...preferred, ...remainder];
+    },
+    [role, t]
   );
 
   const primary = links.slice(0, PRIMARY_COUNT);

@@ -4,16 +4,8 @@ import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
 
 const ROUTES = [
   { href: '/admin/import', key: 'imports.center' },
-  { href: '/admin/import-center', key: 'imports.centerLegacy' },
-  { href: '/admin/historical-import', key: 'imports.historicalLegacy' },
-  { href: '/admin/import/monthly-snapshot', key: 'imports.monthlySnapshot' },
   { href: '/admin/import/historical', key: 'imports.historical' },
-  { href: '/admin/import/issues', key: 'imports.issues' },
   { href: '/admin/import/sales', key: 'imports.salesAdmin' },
-  { href: '/sales/import', key: 'imports.sales' },
-  { href: '/sales/import-matrix', key: 'imports.matrix' },
-  { href: '/sales/import-issues', key: 'imports.salesIssues' },
-  { href: '/sales/monthly-matrix', key: 'imports.monthlyMatrix' },
 ];
 
 export default async function NavSystemImportsPage() {

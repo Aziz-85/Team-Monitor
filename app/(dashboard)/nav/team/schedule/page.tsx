@@ -5,7 +5,6 @@ import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
 const ROUTES = [
   { href: '/schedule/view', key: 'schedule.view' },
   { href: '/schedule/edit', key: 'schedule.edit' },
-  { href: '/schedule/editor', key: 'schedule.dayEditor' },
   { href: '/schedule/audit', key: 'schedule.audit' },
   { href: '/schedule/audit-edits', key: 'schedule.auditEdits' },
   { href: '/approvals?module=SCHEDULE', key: 'schedule.approvals' },
