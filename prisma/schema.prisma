@@ -175,6 +175,7 @@ model Boutique {
   boutiqueMonthlyTargets BoutiqueMonthlyTarget[]
   employeeMonthlyTargets  EmployeeMonthlyTarget[]
   complianceItems       ComplianceItem[]
+  storeReportKpis       StoreReportKpi[]
   salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
   salesMatrixEditVersions       SalesMatrixEditVersion[]
   salesMatrixSnapshots          SalesMatrixSnapshot[]
@@ -1838,4 +1839,23 @@ model DeployRecord {
   @@unique([appVersion, gitHash, environment])
   @@index([createdAt])
   @@index([environment])
+}
+
+// --- Executive Store Performance Report (boutique-level operational KPIs) ---
+model StoreReportKpi {
+  id              String   @id @default(cuid())
+  boutiqueId      String
+  month           String   // "YYYY-MM"
+  footfall        Int?
+  conversionRate  Float?   // percentage 0–100
+  crmRate         Float?   // CRM registration rate % 0–100
+  discountRate    Float?   // discount % 0–100
+  pipelineAmount  Int?     // SAR pipeline deals
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  boutique        Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([boutiqueId, month])
+  @@index([boutiqueId])
+  @@index([month])
 }
