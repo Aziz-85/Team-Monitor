@@ -684,7 +684,8 @@
       "performanceHub": "Performance Hub",
       "compareBranches": "Compare branches",
       "teamPerformance": "Team performance",
-      "weeklyReport": "Weekly report (DB)"
+      "weeklyReport": "Weekly report (DB)",
+      "storePerformance": "Store performance report"
     }
   },
   "matrixSecureEdit": {
@@ -2305,6 +2306,17 @@
       "linkMatrixImport": "Matrix import",
       "jumpToDate": "Jump to date",
       "dailyEntrySection": "Daily entry",
+      "entryModeLabel": "Entry mode",
+      "entryModeEmployee": "Employee lines",
+      "entryModeBranchTotal": "Daily total only",
+      "branchTotalWarning": "Use this only when you do not have employee-level sales details for this date. Boutique totals include this row; it does not appear in employee rankings.",
+      "branchTotalBlockedHint": "Employee lines with sales already exist for this date — switch to employee mode or remove those lines before using daily total only.",
+      "branchTotalTotalSales": "Total sales (SAR)",
+      "branchTotalInvoices": "Total invoices",
+      "branchTotalPieces": "Total pieces",
+      "branchTotalSave": "Save daily total",
+      "branchTotalSaving": "Saving…",
+      "branchTotalFetchError": "Could not load daily total status.",
       "dailyEntryHint": "Keyboard: Tab between fields, Enter on amount moves to the next row. Save all pending rows at once.",
       "employeeListFallback": "Could not load the boutique roster. Names may show as IDs until the list loads.",
       "saving": "Saving…",
