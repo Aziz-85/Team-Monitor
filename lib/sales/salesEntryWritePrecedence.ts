@@ -16,6 +16,9 @@ export function getSalesEntrySourceRank(source: string | null | undefined): numb
   switch (s) {
     case 'MATRIX_MANUAL_EDIT':
       return 105;
+    /** Boutique daily total (admin); above MANUAL so generic manual entry cannot overwrite branch totals. */
+    case 'BRANCH_DAILY_TOTAL':
+      return 103;
     case 'MANUAL':
       return 100;
     case 'LEDGER':

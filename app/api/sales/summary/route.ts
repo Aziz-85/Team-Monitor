@@ -15,6 +15,7 @@ import {
   deriveSalesProductivityMetrics,
   salesEntryWhereDateRangeInclusive,
 } from '@/lib/sales/readSalesAggregate';
+import { SYSTEM_BRANCH_TOTAL_EMP_ID } from '@/lib/sales/systemBranchTotalConstants';
 
 const DEFAULT_DAYS = 31;
 
@@ -78,23 +79,31 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             empId: true,
-            employee: { select: { name: true } },
+            employee: { select: { name: true, isSystemOnly: true } },
           },
         })
       : [];
   const userMap = new Map(users.map((u) => [u.id, u]));
 
-  const breakdownByEmployee = groupByResult.map((row) => {
-    const u = userMap.get(row.userId);
-    const employeeName = u?.employee?.name ?? u?.empId ?? row.userId;
-    return {
-      employeeId: u?.empId ?? row.userId,
-      employeeName,
-      netSales: row._sum.amount ?? 0,
-      guestCoverageNetSales: 0,
-      guestCoverageSources: [] as Array<{ sourceBoutiqueId: string; sourceBoutiqueName?: string; netSales: number }>,
-    };
-  });
+  const breakdownByEmployee = groupByResult
+    .filter((row) => {
+      const u = userMap.get(row.userId);
+      const empId = u?.empId ?? '';
+      if (empId === SYSTEM_BRANCH_TOTAL_EMP_ID) return false;
+      if (u?.employee?.isSystemOnly === true) return false;
+      return true;
+    })
+    .map((row) => {
+      const u = userMap.get(row.userId);
+      const employeeName = u?.employee?.name ?? u?.empId ?? row.userId;
+      return {
+        employeeId: u?.empId ?? row.userId,
+        employeeName,
+        netSales: row._sum.amount ?? 0,
+        guestCoverageNetSales: 0,
+        guestCoverageSources: [] as Array<{ sourceBoutiqueId: string; sourceBoutiqueName?: string; netSales: number }>,
+      };
+    });
 
   return NextResponse.json({
     from: formatDateRiyadh(fromDate),

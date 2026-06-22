@@ -26,6 +26,11 @@ export default async function NavAnalyticsSalesPage() {
   const { groups } = await getDrilldownUser();
   const user = await getSessionUser();
   const canAdminUnlockLedger = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const canManageDailyTotal =
+    user?.role === 'MANAGER' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'AREA_MANAGER';
   const allowed = hrefSetFromGroups(groups);
   const cards = ROUTES.filter((c) => allowed.has(c.href));
   return (
@@ -35,7 +40,10 @@ export default async function NavAnalyticsSalesPage() {
       cards={cards.map((c) => ({ href: c.href, title: t(`routes.${c.key}.title`), hint: t(`routes.${c.key}.hint`) }))}
       belowCards={
         allowed.has('/sales/daily') ? (
-          <AnalyticsSalesLedgerBelow canAdminUnlockLedger={canAdminUnlockLedger} />
+          <AnalyticsSalesLedgerBelow
+            canAdminUnlockLedger={canAdminUnlockLedger}
+            canManageDailyTotal={Boolean(canManageDailyTotal)}
+          />
         ) : undefined
       }
     />

@@ -27,6 +27,8 @@ export const SALES_ENTRY_SOURCE = {
   HISTORICAL_IMPORT: 'HISTORICAL_IMPORT',
   /** Admin correction pass for rows already loaded from historical/yearly paths; never targets MANUAL rows. */
   HISTORICAL_CORRECTION: 'HISTORICAL_CORRECTION',
+  /** Boutique-level daily total when employee-level lines are not used (admin daily-total API). */
+  BRANCH_DAILY_TOTAL: 'BRANCH_DAILY_TOTAL',
   /** @deprecated prefer MATRIX or EXCEL_IMPORT */
   IMPORT: 'IMPORT',
 } as const;

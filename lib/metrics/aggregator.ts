@@ -21,6 +21,7 @@ import {
   salesEntryWhereForUserMonth,
   salesEntryWherePerformanceMonth,
 } from '@/lib/sales/readSalesAggregate';
+import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
 import {
   getRiyadhNow,
   toRiyadhDateString,
@@ -249,7 +250,7 @@ export async function getDashboardSalesMetrics(
 ): Promise<DashboardSalesMetricsResult> {
   const monthKey = normalizeMonthKey(input.monthKey);
 
-  const [boutiqueTarget, salesAgg] = await Promise.all([
+  const [boutiqueTarget, salesAgg, systemBranchUserId] = await Promise.all([
     input.employeeOnly && input.userId
       ? prisma.employeeMonthlyTarget.findFirst({
           where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
@@ -262,6 +263,7 @@ export async function getDashboardSalesMetrics(
       monthKey,
       input.employeeOnly && input.userId ? input.userId : null
     ),
+    getSystemBranchTotalUserId(),
   ]);
 
   const targetSar = boutiqueTarget?.amount ?? 0;
@@ -270,8 +272,10 @@ export async function getDashboardSalesMetrics(
   let currentMonthActual = 0;
   for (const row of salesAgg) {
     const sumSar = row._sum.amount ?? 0;
-    byUserId[row.userId] = sumSar;
     currentMonthActual += sumSar;
+    if (!systemBranchUserId || row.userId !== systemBranchUserId) {
+      byUserId[row.userId] = sumSar;
+    }
   }
 
   const perf = calculatePerformance({ target: currentMonthTarget, sales: currentMonthActual });
@@ -491,7 +495,7 @@ export async function getPerformanceSummaryExtended(
 
   const hasSalesEntryForToday = base.hasSalesEntryForToday;
 
-  const [salesByDate, weekByUser, monthByUser] = await Promise.all([
+  const [salesByDate, weekByUser, monthByUser, systemBranchUserId] = await Promise.all([
     prisma.salesEntry.groupBy({
       by: ['dateKey'],
       where: { ...wherePerf, dateKey: { lte: todayStr } },
@@ -511,7 +515,13 @@ export async function getPerformanceSummaryExtended(
           _sum: { amount: true },
         })
       : Promise.resolve([]),
+    getSystemBranchTotalUserId(),
   ]);
+
+  const excludeBranchDailyTotalUser = <T extends { userId: string }>(rows: T[]): T[] =>
+    systemBranchUserId ? rows.filter((r) => r.userId !== systemBranchUserId) : rows;
+  const weekByUserForRanking = excludeBranchDailyTotalUser(weekByUser);
+  const monthByUserForRanking = excludeBranchDailyTotalUser(monthByUser);
 
   const salesByDateKey = new Map(salesByDate.map((r) => [r.dateKey, r._sum?.amount ?? 0]));
 
@@ -576,11 +586,14 @@ export async function getPerformanceSummaryExtended(
     });
   };
 
-  const [topWeek, topMonth] = await Promise.all([pickTop3(weekByUser), pickTop3(monthByUser)]);
+  const [topWeek, topMonth] = await Promise.all([
+    pickTop3(weekByUserForRanking),
+    pickTop3(monthByUserForRanking),
+  ]);
 
   const byUserId: Record<string, number> = input.employeeOnly
     ? {}
-    : Object.fromEntries(monthByUser.map((r) => [r.userId, r._sum?.amount ?? 0]));
+    : Object.fromEntries(monthByUserForRanking.map((r) => [r.userId, r._sum?.amount ?? 0]));
 
   return {
     ...base,
