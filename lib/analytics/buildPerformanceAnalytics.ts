@@ -5,6 +5,7 @@
 
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
 import {
   addDays,
   formatMonthKey,
@@ -255,6 +256,10 @@ export async function buildPerformanceAnalytics(input: {
   }
 
   let userIds = Array.from(byUser.keys());
+  const systemBranchUserId = await getSystemBranchTotalUserId();
+  if (systemBranchUserId) {
+    userIds = userIds.filter((id) => id !== systemBranchUserId);
+  }
   if (input.userIdFilter) {
     userIds = userIds.filter((id) => id === input.userIdFilter);
   }

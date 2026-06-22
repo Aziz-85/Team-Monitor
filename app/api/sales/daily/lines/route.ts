@@ -14,6 +14,10 @@ import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { validateSarInteger, reconcileSummary } from '@/lib/sales/reconcile';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { syncSummaryToSalesEntry } from '@/lib/sales/syncLedgerToSalesEntry';
+import { formatDateRiyadh, normalizeDateOnlyRiyadh } from '@/lib/time';
+import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
+import { SYSTEM_BRANCH_TOTAL_EMP_ID } from '@/lib/sales/systemBranchTotalConstants';
+import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
@@ -36,6 +40,12 @@ export async function POST(request: NextRequest) {
 
   if (!boutiqueId || !employeeId) {
     return NextResponse.json({ error: 'boutiqueId and employeeId required' }, { status: 400 });
+  }
+  if (employeeId === SYSTEM_BRANCH_TOTAL_EMP_ID) {
+    return NextResponse.json(
+      { error: 'This employee cannot be used on daily sales lines.' },
+      { status: 400 }
+    );
   }
   if (!amountSarResult.ok) {
     return NextResponse.json({ error: amountSarResult.error }, { status: 400 });
@@ -89,6 +99,32 @@ export async function POST(request: NextRequest) {
   }
 
   const amountSar = amountSarResult.value;
+  const dateKey = formatDateRiyadh(normalizeDateOnlyRiyadh(date));
+  if (amountSar > 0) {
+    const sysUid = await getSystemBranchTotalUserId();
+    if (sysUid) {
+      const branchBlock = await prisma.salesEntry.findFirst({
+        where: {
+          boutiqueId,
+          dateKey,
+          userId: sysUid,
+          amount: { gt: 0 },
+          source: SALES_ENTRY_SOURCE.BRANCH_DAILY_TOTAL,
+        },
+        select: { id: true },
+      });
+      if (branchBlock) {
+        return NextResponse.json(
+          {
+            error:
+              'Cannot save employee line because a branch daily total is recorded for this date. Remove or zero the daily total first.',
+          },
+          { status: 409 }
+        );
+      }
+    }
+  }
+
   const wasLocked = summary.status === 'LOCKED';
 
   if (wasLocked) {

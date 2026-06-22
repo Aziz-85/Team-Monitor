@@ -1,11 +1,21 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type MutableRefObject,
+} from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { PageContainer, SectionBlock } from '@/components/ui/ExecutiveIntelligence';
 import { useT } from '@/lib/i18n/useT';
+import { SYSTEM_BRANCH_TOTAL_EMP_ID } from '@/lib/sales/systemBranchTotalConstants';
 
 function toLocalDateString(d: Date): string {
   const y = d.getFullYear();
@@ -57,6 +67,20 @@ type DailyData = {
 };
 
 type EmployeeOption = { empId: string; name: string };
+
+type LedgerEntryMode = 'employees' | 'branch_total';
+
+type BranchTotalApiInfo = {
+  hasEmployeeLedgerLines: boolean;
+  hasNonBranchSalesEntries: boolean;
+  hasBranchDailyTotal: boolean;
+  branchTotal: {
+    amount: number;
+    invoiceCount: number | null;
+    pieceCount: number | null;
+    source: string | null;
+  } | null;
+};
 
 type DraftLine = {
   clientRowId: string;
@@ -305,10 +329,13 @@ function formatDailySummaryForCopy(
 function SalesDailyClientImpl({
   embedded = false,
   canAdminUnlockLedger = false,
+  canManageDailyTotal = false,
 }: {
   embedded?: boolean;
   /** ADMIN / SUPER_ADMIN: show Unlock when the day is ledger-locked. */
   canAdminUnlockLedger?: boolean;
+  /** MANAGER+ / AREA_MANAGER / ADMIN: branch daily total API + mode toggle. */
+  canManageDailyTotal?: boolean;
 } = {}) {
   const { t } = useT();
   const router = useRouter();
@@ -389,6 +416,11 @@ function SalesDailyClientImpl({
     return `${year}-${month}`;
   }
 
+  const [entryModeByBoutique, setEntryModeByBoutique] = useState<Record<string, LedgerEntryMode>>({});
+  const [branchTotalByBoutique, setBranchTotalByBoutique] = useState<Record<string, BranchTotalApiInfo>>({});
+  const [branchTotalFetchError, setBranchTotalFetchError] = useState<string | null>(null);
+  const [branchTotalNonce, setBranchTotalNonce] = useState(0);
+
   const [coverageMonth, setCoverageMonth] = useState('');
   const [coverageLoading, setCoverageLoading] = useState(false);
   const [coverageResult, setCoverageResult] = useState<{
@@ -457,6 +489,70 @@ function SalesDailyClientImpl({
     void loadDaily();
   }, [loadDaily]);
 
+  useEffect(() => {
+    setEntryModeByBoutique({});
+    setBranchTotalByBoutique({});
+    setBranchTotalFetchError(null);
+  }, [date]);
+
+  const boutiqueIdsKey = data?.summaries?.map((s) => s.boutiqueId).join(',') ?? '';
+
+  useEffect(() => {
+    if (!canManageDailyTotal || !ledgerDateReady || !date || !boutiqueIdsKey || !data?.summaries?.length) {
+      return;
+    }
+    let cancelled = false;
+    setBranchTotalFetchError(null);
+    void (async () => {
+      try {
+        const summaries = data.summaries;
+        const results = await Promise.all(
+          summaries.map((s) =>
+            fetch(
+              `/api/sales/daily-total?date=${encodeURIComponent(date)}&boutiqueId=${encodeURIComponent(s.boutiqueId)}`,
+              { cache: 'no-store' }
+            ).then(async (r) => {
+              const j = await r.json();
+              if (!r.ok) return { error: (j as { error?: string }).error ?? r.statusText };
+              return j as BranchTotalApiInfo;
+            })
+          )
+        );
+        if (cancelled) return;
+        const m: Record<string, BranchTotalApiInfo> = {};
+        let firstErr: string | null = null;
+        summaries.forEach((s, i) => {
+          const r = results[i] as BranchTotalApiInfo & { error?: string };
+          if ('error' in r && r.error) {
+            firstErr = firstErr ?? String(r.error);
+          } else {
+            m[s.boutiqueId] = r as BranchTotalApiInfo;
+          }
+        });
+        setBranchTotalByBoutique(m);
+        setBranchTotalFetchError(firstErr);
+        setEntryModeByBoutique((prev) => {
+          const next = { ...prev };
+          for (const s of summaries) {
+            if (next[s.boutiqueId] !== undefined) continue;
+            const info = m[s.boutiqueId];
+            if (info?.hasBranchDailyTotal && !info?.hasEmployeeLedgerLines) {
+              next[s.boutiqueId] = 'branch_total';
+            } else {
+              next[s.boutiqueId] = 'employees';
+            }
+          }
+          return next;
+        });
+      } catch {
+        if (!cancelled) setBranchTotalFetchError('Request failed');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageDailyTotal, ledgerDateReady, date, boutiqueIdsKey, branchTotalNonce]);
+
   const coverageMonthFromDate = ledgerDateReady && date.length >= 7 ? date.slice(0, 7) : '';
 
   useEffect(() => {
@@ -478,10 +574,12 @@ function SalesDailyClientImpl({
         }
         const list = Array.isArray(j.byEmployee) ? j.byEmployee : [];
         setEmployees(
-          list.map((e: { employeeId: string; name: string }) => ({
-            empId: e.employeeId,
-            name: e.name,
-          }))
+          list
+            .filter((e: { employeeId: string }) => e.employeeId !== SYSTEM_BRANCH_TOTAL_EMP_ID)
+            .map((e: { employeeId: string; name: string }) => ({
+              empId: e.employeeId,
+              name: e.name,
+            }))
         );
         setEmployeesLoadFailed(false);
       })
@@ -1134,6 +1232,11 @@ function SalesDailyClientImpl({
         <h3 className="mb-1 border-b border-border pb-2 text-sm font-medium text-foreground">
           {t('sales.dailyLedger.dailyEntrySection')}
         </h3>
+        {canManageDailyTotal && branchTotalFetchError ? (
+          <p className="mb-2 text-xs text-amber-800" role="alert">
+            {t('sales.dailyLedger.branchTotalFetchError')}: {branchTotalFetchError}
+          </p>
+        ) : null}
         <p className="mb-4 text-xs text-muted">{t('sales.dailyLedger.dailyEntryHint')}</p>
         {employeesLoadFailed && (
           <p className="mb-3 text-xs text-amber-800">{t('sales.dailyLedger.employeeListFallback')}</p>
@@ -1147,6 +1250,9 @@ function SalesDailyClientImpl({
             const rows = draftsByBoutique[s.boutiqueId] ?? linesToDrafts(s.lines, s.status === 'LOCKED');
             const locked = s.status === 'LOCKED';
             const dirtyCount = rows.filter((r) => r.dirty && !isRowEmpty(r)).length;
+            const entryMode: LedgerEntryMode = entryModeByBoutique[s.boutiqueId] ?? 'employees';
+            const btInfo = branchTotalByBoutique[s.boutiqueId];
+            const branchBlocked = Boolean(btInfo?.hasEmployeeLedgerLines);
             return (
               <div key={s.boutiqueId} className={sIdx > 0 ? 'mt-8 border-t border-border pt-8' : ''}>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
@@ -1163,6 +1269,61 @@ function SalesDailyClientImpl({
                     {s.status}
                   </span>
                 </div>
+                {canManageDailyTotal ? (
+                  <div className="mb-4 rounded-md border border-border bg-surface-subtle/60 px-3 py-2">
+                    <p className="mb-2 text-xs font-medium text-foreground">{t('sales.dailyLedger.entryModeLabel')}</p>
+                    <div className="flex flex-wrap gap-4" role="radiogroup" aria-label={t('sales.dailyLedger.entryModeLabel')}>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                        <input
+                          type="radio"
+                          name={`entry-mode-${s.boutiqueId}`}
+                          checked={entryMode === 'employees'}
+                          onChange={() =>
+                            setEntryModeByBoutique((prev) => ({ ...prev, [s.boutiqueId]: 'employees' }))
+                          }
+                        />
+                        {t('sales.dailyLedger.entryModeEmployee')}
+                      </label>
+                      <label
+                        className={`flex items-center gap-2 text-sm ${
+                          branchBlocked ? 'cursor-not-allowed text-muted' : 'cursor-pointer text-foreground'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`entry-mode-${s.boutiqueId}`}
+                          checked={entryMode === 'branch_total'}
+                          disabled={branchBlocked}
+                          onChange={() => {
+                            if (!branchBlocked) {
+                              setEntryModeByBoutique((prev) => ({ ...prev, [s.boutiqueId]: 'branch_total' }));
+                            }
+                          }}
+                        />
+                        {t('sales.dailyLedger.entryModeBranchTotal')}
+                      </label>
+                    </div>
+                    {entryMode === 'branch_total' ? (
+                      <p className="mt-2 text-xs text-amber-900">{t('sales.dailyLedger.branchTotalWarning')}</p>
+                    ) : null}
+                    {branchBlocked ? (
+                      <p className="mt-2 text-xs text-muted">{t('sales.dailyLedger.branchTotalBlockedHint')}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {entryMode === 'branch_total' && canManageDailyTotal ? (
+                  <BranchDailyTotalForm
+                    boutiqueId={s.boutiqueId}
+                    date={date}
+                    branchTotal={btInfo?.branchTotal ?? null}
+                    onSaved={() => {
+                      setBranchTotalNonce((n) => n + 1);
+                      void loadDaily({ silent: true });
+                    }}
+                    t={t}
+                  />
+                ) : (
+                  <>
                 <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   <div>
                     <label className="text-xs text-muted">Manager total (SAR)</label>
@@ -1248,6 +1409,8 @@ function SalesDailyClientImpl({
                     nextEmp?.focus();
                   }}
                 />
+                  </>
+                )}
               </div>
             );
           })}
@@ -1553,6 +1716,7 @@ function SalesDailyClientImpl({
 export function SalesDailyClient(props: {
   embedded?: boolean;
   canAdminUnlockLedger?: boolean;
+  canManageDailyTotal?: boolean;
 } = {}) {
   return (
     <Suspense
@@ -1602,6 +1766,138 @@ function ManagerTotalInput({
         </button>
       )}
     </div>
+  );
+}
+
+function BranchDailyTotalForm({
+  boutiqueId,
+  date,
+  branchTotal,
+  onSaved,
+  t,
+}: {
+  boutiqueId: string;
+  date: string;
+  branchTotal: BranchTotalApiInfo['branchTotal'];
+  onSaved: () => void;
+  t: (key: string) => string;
+}) {
+  const [amountStr, setAmountStr] = useState('');
+  const [invStr, setInvStr] = useState('');
+  const [pcStr, setPcStr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (branchTotal && branchTotal.amount > 0) {
+      setAmountStr(String(branchTotal.amount));
+      setInvStr(branchTotal.invoiceCount != null ? String(branchTotal.invoiceCount) : '');
+      setPcStr(branchTotal.pieceCount != null ? String(branchTotal.pieceCount) : '');
+    } else {
+      setAmountStr('');
+      setInvStr('');
+      setPcStr('');
+    }
+  }, [branchTotal]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    const amt = parseAmountInt(amountStr);
+    if (!amt.ok) {
+      setErr('Integer ≥ 0 required for total sales.');
+      return;
+    }
+    const invOpt = parseOptionalCountInput(invStr);
+    const pcOpt = parseOptionalCountInput(pcStr);
+    const body: {
+      date: string;
+      boutiqueId: string;
+      amount: number;
+      invoiceCount?: number;
+      pieceCount?: number;
+    } = { date, boutiqueId, amount: amt.value };
+    if (invOpt !== undefined) body.invoiceCount = invOpt;
+    if (pcOpt !== undefined) body.pieceCount = pcOpt;
+    setSaving(true);
+    try {
+      const r = await fetch('/api/sales/daily-total', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setErr(typeof (j as { error?: string }).error === 'string' ? (j as { error: string }).error : 'Save failed');
+        return;
+      }
+      onSaved();
+    } catch {
+      setErr('Request failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => void submit(e)} className="mb-4 max-w-md space-y-3">
+      {err ? (
+        <p className="text-xs text-red-600" role="alert">
+          {err}
+        </p>
+      ) : null}
+      <div>
+        <label className="mb-0.5 block text-xs font-medium text-muted">
+          {t('sales.dailyLedger.branchTotalTotalSales')}
+        </label>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          value={amountStr}
+          onChange={(e) => setAmountStr(e.target.value)}
+          className="w-full rounded border border-border bg-surface px-2 py-1.5 font-mono text-foreground"
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-0.5 block text-xs font-medium text-muted">
+            {t('sales.dailyLedger.invoiceCountLabel')}
+          </label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            value={invStr}
+            onChange={(e) => setInvStr(e.target.value)}
+            className="w-full rounded border border-border bg-surface px-2 py-1.5 font-mono text-sm text-foreground"
+          />
+        </div>
+        <div>
+          <label className="mb-0.5 block text-xs font-medium text-muted">
+            {t('sales.dailyLedger.pieceCountLabel')}
+          </label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            value={pcStr}
+            onChange={(e) => setPcStr(e.target.value)}
+            className="w-full rounded border border-border bg-surface px-2 py-1.5 font-mono text-sm text-foreground"
+          />
+        </div>
+      </div>
+      <button
+        type="submit"
+        disabled={saving}
+        className="rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50"
+      >
+        {saving ? t('sales.dailyLedger.branchTotalSaving') : t('sales.dailyLedger.branchTotalSave')}
+      </button>
+    </form>
   );
 }
 

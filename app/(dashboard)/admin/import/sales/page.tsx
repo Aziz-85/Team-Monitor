@@ -12,6 +12,17 @@ export default async function AdminImportSalesPage() {
 
   const canResolve = user.role === 'MANAGER' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'AREA_MANAGER';
   const canAdminUnlockLedger = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+  const canManageDailyTotal =
+    user.role === 'MANAGER' ||
+    user.role === 'ADMIN' ||
+    user.role === 'SUPER_ADMIN' ||
+    user.role === 'AREA_MANAGER';
 
-  return <SalesImportTabsClient canResolve={canResolve} canAdminUnlockLedger={canAdminUnlockLedger} />;
+  return (
+    <SalesImportTabsClient
+      canResolve={canResolve}
+      canAdminUnlockLedger={canAdminUnlockLedger}
+      canManageDailyTotal={canManageDailyTotal}
+    />
+  );
 }

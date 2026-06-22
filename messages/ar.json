@@ -684,7 +684,8 @@
       "performanceHub": "مركز الأداء",
       "compareBranches": "مقارنة الفروع",
       "teamPerformance": "أداء الفريق",
-      "weeklyReport": "تقرير أسبوعي (قاعدة البيانات)"
+      "weeklyReport": "تقرير أسبوعي (قاعدة البيانات)",
+      "storePerformance": "تقرير أداء المتجر"
     }
   },
   "matrixSecureEdit": {
@@ -2329,6 +2330,17 @@
       "linkMatrixImport": "استيراد المصفوفة",
       "jumpToDate": "الانتقال إلى التاريخ",
       "dailyEntrySection": "الإدخال اليومي",
+      "entryModeLabel": "وضع الإدخال",
+      "entryModeEmployee": "أسطر الموظفين",
+      "entryModeBranchTotal": "إجمالي يومي فقط",
+      "branchTotalWarning": "استخدم هذا فقط عندما لا تتوفر تفاصيل مبيعات لكل موظف لهذا التاريخ. تُحسب إجماليات الفرع مع هذا الصف؛ لا يظهر في ترتيب الموظفين.",
+      "branchTotalBlockedHint": "توجد أسطر موظفين بمبيعات لهذا التاريخ — انتقل لوضع الموظفين أو احذف تلك الأسطر قبل استخدام «إجمالي يومي فقط».",
+      "branchTotalTotalSales": "إجمالي المبيعات (ر.س)",
+      "branchTotalInvoices": "إجمالي الفواتير",
+      "branchTotalPieces": "إجمالي القطع",
+      "branchTotalSave": "حفظ الإجمالي اليومي",
+      "branchTotalSaving": "جاري الحفظ…",
+      "branchTotalFetchError": "تعذّر تحميل حالة الإجمالي اليومي.",
       "dailyEntryHint": "لوحة المفاتيح: Tab للتنقل بين الحقول، Enter في المبلغ ينتقل للصف التالي. احفظ كل الصفوف المعلّقة دفعة واحدة.",
       "employeeListFallback": "تعذّر تحميل قائمة موظفي الفرع. قد تُعرض الأسماء كمعرّفات حتى تُحمَّل القائمة.",
       "saving": "جاري الحفظ…",
