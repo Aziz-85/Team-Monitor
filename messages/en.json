@@ -1261,6 +1261,8 @@
     "addFromOtherBranch": "Add from other branch",
     "guestAdded": "Guest coverage added",
     "pendingApproval": "Pending approval",
+    "guestSaveFailed": "Failed to save external coverage",
+    "weekStartRequired": "Select a valid schedule week before saving external coverage.",
     "guestRemoved": "Guest coverage removed",
     "add": "Add",
     "keys": {

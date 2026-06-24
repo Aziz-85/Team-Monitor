@@ -1261,6 +1261,8 @@
     "addFromOtherBranch": "إضافة موظف من فرع آخر",
     "guestAdded": "تمت إضافة تغطية الضيف",
     "pendingApproval": "في انتظار الموافقة",
+    "guestSaveFailed": "فشل حفظ التغطية الخارجية",
+    "weekStartRequired": "اختر أسبوع جدول صالحاً قبل حفظ التغطية الخارجية.",
     "guestRemoved": "تمت إزالة تغطية الضيف",
     "add": "إضافة",
     "keys": {

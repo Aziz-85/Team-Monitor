@@ -8,8 +8,10 @@ import { requireRole, getSessionUser } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { applyOverrideChange } from '@/lib/services/scheduleApply';
+import { createOrExecuteApproval } from '@/lib/services/approvals';
 import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
+import { requiresApproval } from '@/lib/permissions';
 import { prisma } from '@/lib/db';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
@@ -40,8 +42,12 @@ export async function GET(request: NextRequest) {
   if (!scope?.boutiqueId || !scope.boutiqueIds?.length) {
     return NextResponse.json({ error: 'No schedule scope' }, { status: 403 });
   }
-  const weekStart = request.nextUrl.searchParams.get('weekStart');
-  if (!weekStart) {
+  const weekStart = request.nextUrl.searchParams.get('weekStart')?.trim() ?? '';
+  if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+    console.error('Guests API called without weekStart', {
+      method: 'GET',
+      query: Object.fromEntries(request.nextUrl.searchParams.entries()),
+    });
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
   const { first, last } = weekStartToRange(weekStart);
@@ -177,7 +183,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ guests, pendingGuests, weekStart });
 }
 
-/** POST /api/schedule/guests — add/upsert guest shift. body: { date, employeeId (empId), shift (AM|PM|MORNING|EVENING), reason? } */
+/** POST /api/schedule/guests — add/upsert guest shift. body: { weekStart, date, employeeId (empId), shift (AM|PM|MORNING|EVENING), reason? } */
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof requireRole>> | null = null;
   try {
@@ -194,11 +200,23 @@ export async function POST(request: NextRequest) {
   }
   const hostBoutiqueId = scope.boutiqueId;
 
-  let body: { date?: string; employeeId?: string; empId?: string; shift?: string; reason?: string };
+  let body: {
+    weekStart?: string;
+    date?: string;
+    employeeId?: string;
+    empId?: string;
+    shift?: string;
+    reason?: string;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const weekStart = String(body.weekStart ?? '').trim();
+  if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+    console.error('Guests API called without weekStart', body);
+    return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
   const dateStr = String(body.date ?? '').trim();
   const empId = String(body.employeeId ?? body.empId ?? '').trim();
@@ -238,11 +256,42 @@ export async function POST(request: NextRequest) {
   }
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const created = await applyOverrideChange(
-    { empId, date: dateStr, overrideShift, reason: reason || 'Guest coverage' },
-    user.id,
-    { boutiqueId: hostBoutiqueId, sourceBoutiqueId: emp.boutiqueId }
-  );
+
+  const overridePayload = {
+    empId,
+    date: dateStr,
+    overrideShift,
+    reason: reason || 'Guest coverage',
+    sourceBoutiqueId: emp.boutiqueId,
+  };
+  const perform = () =>
+    applyOverrideChange(
+      { empId, date: dateStr, overrideShift, reason: reason || 'Guest coverage' },
+      user!.id,
+      { boutiqueId: hostBoutiqueId, sourceBoutiqueId: emp.boutiqueId }
+    );
+
+  if (requiresApproval(user.role)) {
+    const result = await createOrExecuteApproval({
+      user,
+      module: 'SCHEDULE',
+      actionType: 'OVERRIDE_CREATE',
+      payload: overridePayload,
+      effectiveDate: dateStr,
+      weekStart,
+      boutiqueId: hostBoutiqueId,
+      perform,
+    });
+    if (result.status === 'PENDING_APPROVAL') {
+      return NextResponse.json(
+        { code: 'PENDING_APPROVAL', requestId: result.requestId },
+        { status: 202 }
+      );
+    }
+    return NextResponse.json(result.result);
+  }
+
+  const created = await perform();
   return NextResponse.json(created);
 }
 

@@ -52,6 +52,13 @@ function weekStartSaturday(dateStr: string): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Validates the selected schedule week (Saturday YYYY-MM-DD) for guest coverage API calls. */
+function resolveGuestWeekStart(weekStart: string): string | null {
+  const ws = weekStart?.trim();
+  if (!ws || !/^\d{4}-\d{2}-\d{2}$/.test(ws)) return null;
+  return weekStartSaturday(ws);
+}
+
 function addDays(dateStr: string, delta: number): string {
   const d = new Date(dateStr + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() + delta);
@@ -510,7 +517,16 @@ export function ScheduleEditClient({
   }, [weekStart]);
 
   const fetchGuests = useCallback(() => {
-    return fetch(`/api/schedule/guests?weekStart=${weekStart}`, { cache: 'no-store' })
+    const ws = resolveGuestWeekStart(weekStart);
+    if (!ws) {
+      setToast(
+        (t('schedule.weekStartRequired') as string) ??
+          'Select a valid schedule week before loading external coverage.'
+      );
+      setTimeout(() => setToast(null), 5000);
+      return Promise.resolve();
+    }
+    return fetch(`/api/schedule/guests?weekStart=${encodeURIComponent(ws)}`, { cache: 'no-store' })
       .then((r) => r.json().catch(() => ({})))
       .then((data: {
         guests?: GuestItem[];
@@ -1039,6 +1055,16 @@ export function ScheduleEditClient({
     setSaving(true);
     setSaveProgress({ done: 0, total: entries.length + guestAdds.length });
     const reason = globalReason.trim() || DEFAULT_REASON;
+    const guestWeekStart = resolveGuestWeekStart(weekStart);
+    if (guestAdds.length > 0 && !guestWeekStart) {
+      setToast(
+        (t('schedule.weekStartRequired') as string) ??
+          'Cannot save external coverage: the schedule week is not set. Select a week and try again.'
+      );
+      setSaving(false);
+      setTimeout(() => setToast(null), 5000);
+      return;
+    }
     try {
       let appliedEdits = 0;
       let skippedEdits = 0;
@@ -1091,12 +1117,13 @@ export function ScheduleEditClient({
         setSaveProgress((p) => ({ ...p, done: entries.length }));
       }
 
-      if (guestAdds.length > 0) {
+      if (guestAdds.length > 0 && guestWeekStart) {
         for (const g of guestAdds) {
           const res = await fetch('/api/schedule/guests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              weekStart: guestWeekStart,
               date: g.date,
               employeeId: g.empId,
               shift: g.shift,
@@ -1113,6 +1140,14 @@ export function ScheduleEditClient({
             setTimeout(() => setToast(null), 5000);
             return;
           }
+          if (res.status === 202 && data.code === 'PENDING_APPROVAL') {
+            setToast(
+              (t('schedule.pendingApproval') as string) ??
+                'External coverage submitted for manager approval.'
+            );
+            setTimeout(() => setToast(null), 5000);
+            continue;
+          }
           if (res.status === 400 && (data.code === 'RAMADAN_PM_BLOCKED' || data.code === 'FRIDAY_PM_ONLY')) {
             setToast(
               locale === 'ar'
@@ -1125,7 +1160,10 @@ export function ScheduleEditClient({
             return;
           }
           if (!res.ok) {
-            setToast((data.error as string) || 'Failed');
+            setToast(
+              (data.error as string) ||
+                ((t('schedule.guestSaveFailed') as string) ?? 'Failed to save external coverage')
+            );
             setTimeout(() => setToast(null), 4000);
             return;
           }
@@ -1165,6 +1203,7 @@ export function ScheduleEditClient({
     pendingEdits,
     localPendingGuests,
     globalReason,
+    weekStart,
     fetchGrid,
     fetchWeekGovernance,
     fetchGuests,
@@ -2610,6 +2649,14 @@ export function ScheduleEditClient({
                 onClick={async () => {
                   const date = weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0];
                   if (!guestForm.empId || !date || !guestForm.reason.trim()) return;
+                  if (!resolveGuestWeekStart(weekStart)) {
+                    setToast(
+                      (t('schedule.weekStartRequired') as string) ??
+                        'Select a valid schedule week before adding external coverage.'
+                    );
+                    setTimeout(() => setToast(null), 5000);
+                    return;
+                  }
                   setGuestSubmitting(true);
                   try {
                     // Draft-only add: external coverage must be persisted via unified "Save changes".
