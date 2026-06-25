@@ -46,6 +46,7 @@ enum LeaveType {
 enum OverrideShift {
   MORNING
   EVENING
+  SPLIT
   NONE
   COVER_RASHID_AM
   COVER_RASHID_PM

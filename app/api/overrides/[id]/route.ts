@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
-import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
+import { isOverrideShiftForbiddenOnDate, EDITOR_OVERRIDE_SHIFTS } from '@/lib/schedule/shiftRules';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { API_ERROR_MESSAGES } from '@/lib/validationErrors';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
@@ -11,7 +11,7 @@ import { getWeekStart } from '@/lib/services/scheduleLock';
 import { emitEventAsync } from '@/lib/notify/emitEvent';
 import type { Role } from '@prisma/client';
 
-const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE', 'COVER_RASHID_AM', 'COVER_RASHID_PM'] as const;
+const ALLOWED_SHIFTS = [...EDITOR_OVERRIDE_SHIFTS, 'COVER_RASHID_AM', 'COVER_RASHID_PM'] as const;
 
 export async function PATCH(
   request: NextRequest,
@@ -75,11 +75,11 @@ export async function PATCH(
   if (overrideShift !== undefined) {
     if (!ALLOWED_SHIFTS.includes(overrideShift as (typeof ALLOWED_SHIFTS)[number])) {
       return NextResponse.json(
-        { error: 'overrideShift must be MORNING, EVENING, NONE, COVER_RASHID_AM, or COVER_RASHID_PM' },
+        { error: 'overrideShift must be MORNING, EVENING, SPLIT, NONE, COVER_RASHID_AM, or COVER_RASHID_PM' },
         { status: 400 }
       );
     }
-    if (isAmShiftForbiddenOnDate(existing.date, overrideShift as 'MORNING' | 'COVER_RASHID_AM')) {
+    if (isOverrideShiftForbiddenOnDate(existing.date, overrideShift)) {
       return NextResponse.json(
         { error: API_ERROR_MESSAGES.FRIDAY_PM_ONLY, code: 'FRIDAY_PM_ONLY' },
         { status: 400 }

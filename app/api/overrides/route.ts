@@ -5,7 +5,7 @@ import { applyOverrideChange } from '@/lib/services/scheduleApply';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { requiresApproval } from '@/lib/permissions';
-import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
+import { isOverrideShiftForbiddenOnDate, EDITOR_OVERRIDE_SHIFTS } from '@/lib/schedule/shiftRules';
 import { API_ERROR_MESSAGES } from '@/lib/validationErrors';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { requireOperationalScope } from '@/lib/scope/operationalScope';
@@ -13,8 +13,8 @@ import { prisma } from '@/lib/db';
 import { emitEventAsync } from '@/lib/notify/emitEvent';
 import type { Role } from '@prisma/client';
 
-/** Legacy COVER_RASHID_* removed; only MORNING, EVENING, NONE accepted for new overrides. */
-const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE'] as const;
+/** Legacy COVER_RASHID_* removed; MORNING, EVENING, SPLIT, NONE for new overrides. */
+const ALLOWED_SHIFTS = EDITOR_OVERRIDE_SHIFTS;
 
 export async function POST(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
   }
 
   const date = new Date(dateStr + 'T00:00:00Z');
-  if (isAmShiftForbiddenOnDate(date, overrideShift as 'MORNING' | 'COVER_RASHID_AM')) {
+  if (isOverrideShiftForbiddenOnDate(date, overrideShift)) {
     return NextResponse.json({ error: API_ERROR_MESSAGES.FRIDAY_PM_ONLY, code: 'FRIDAY_PM_ONLY' }, { status: 400 });
   }
 

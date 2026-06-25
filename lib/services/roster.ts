@@ -55,7 +55,10 @@ export async function rosterForDate(
     if (cell.availability === 'WORK') {
       if (cell.effectiveShift === 'MORNING') amEmployees.push(emp);
       else if (cell.effectiveShift === 'EVENING') pmEmployees.push(emp);
-      else offEmployees.push(emp);
+      else if (cell.effectiveShift === 'SPLIT') {
+        amEmployees.push(emp);
+        pmEmployees.push(emp);
+      } else offEmployees.push(emp);
     } else {
       offEmployees.push(emp);
     }

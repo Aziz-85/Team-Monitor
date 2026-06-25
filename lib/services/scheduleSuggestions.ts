@@ -66,7 +66,7 @@ export function buildScheduleSuggestions(grid: ScheduleGridResult): ScheduleSugg
       if (afterPm >= effectiveMinPm && afterPm >= afterAm) {
         const amCandidates = rows.filter((r) => {
           const cell = r.cells[dayIndex];
-          return cell?.availability === 'WORK' && cell?.effectiveShift === 'MORNING';
+          return cell?.availability === 'WORK' && (cell?.effectiveShift === 'MORNING' || cell?.effectiveShift === 'SPLIT');
         });
         if (amCandidates.length > 0) {
           const chosen = amCandidates[0];
@@ -89,7 +89,7 @@ export function buildScheduleSuggestions(grid: ScheduleGridResult): ScheduleSugg
     if (isFriday && am >= 1) {
       const amCandidates = rows.filter((r) => {
         const cell = r.cells[dayIndex];
-        return cell?.availability === 'WORK' && (cell?.effectiveShift === 'MORNING' || cell?.effectiveShift === 'COVER_RASHID_AM');
+        return cell?.availability === 'WORK' && (cell?.effectiveShift === 'MORNING' || cell?.effectiveShift === 'SPLIT' || cell?.effectiveShift === 'COVER_RASHID_AM');
       });
       if (amCandidates.length > 0) {
         const chosen = amCandidates[0];

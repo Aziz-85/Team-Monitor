@@ -155,7 +155,11 @@ export async function getScheduleMonthExcel(
       const cell = row.cells[dayIdx];
       if (cell.availability !== 'WORK') continue;
       if (cell.effectiveShift === 'MORNING') morningAssignees.push(row.name);
-      if (cell.effectiveShift === 'EVENING') eveningAssignees.push(row.name);
+      else if (cell.effectiveShift === 'EVENING') eveningAssignees.push(row.name);
+      else if (cell.effectiveShift === 'SPLIT') {
+        morningAssignees.push(`${row.name} (SPLIT)`);
+        eveningAssignees.push(`${row.name} (SPLIT)`);
+      }
       if (cell.effectiveShift === 'COVER_RASHID_AM') rashidCoverage.push({ name: row.name, shift: 'AM' });
       if (cell.effectiveShift === 'COVER_RASHID_PM') rashidCoverage.push({ name: row.name, shift: 'PM' });
     }

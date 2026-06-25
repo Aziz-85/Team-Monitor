@@ -17,6 +17,7 @@ import { normShift } from '@/lib/shiftNorm';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
+import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -595,12 +596,17 @@ export function ScheduleViewClient({
       const evening: string[] = [];
       const rashidAm: string[] = [];
       const rashidPm: string[] = [];
+      const isFridayDay = gridData.days[i]?.dayOfWeek === 5;
       for (const row of gridData.rows) {
         const cell = row.cells[i];
         if (cell.availability !== 'WORK') continue;
         const displayName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
-        if (cell.effectiveShift === 'MORNING') morning.push(displayName);
-        if (cell.effectiveShift === 'EVENING') evening.push(displayName);
+        if (contributesToMorningList(cell.effectiveShift, isFridayDay)) {
+          morning.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+        }
+        if (contributesToEveningList(cell.effectiveShift)) {
+          evening.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+        }
         if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(displayName);
         if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(displayName);
       }
@@ -1001,6 +1007,10 @@ export function ScheduleViewClient({
               <span className="h-4 w-4 rounded-full bg-amber-200" aria-hidden />
               {t('schedule.evening')}
             </span>
+            <span className="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-violet-50 px-2 py-1 font-medium text-violet-900">
+              <span className="h-4 w-4 rounded-full bg-violet-200" aria-hidden />
+              {t('schedule.shift.splitShift')}
+            </span>
             {fullGrid && (
               <>
                 <span className="ms-2 font-medium text-muted">{t('governance.weekStatus') ?? 'Status'}:</span>
@@ -1195,6 +1205,12 @@ function ScheduleGridView({
                             ? t('schedule.morning')
                             : cell.effectiveShift === 'EVENING'
                               ? t('schedule.evening')
+                              : cell.effectiveShift === 'SPLIT'
+                                ? (
+                                  <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-900">
+                                    {t('schedule.shift.splitShort')}
+                                  </span>
+                                )
                               : cell.effectiveShift === 'COVER_RASHID_AM' || cell.effectiveShift === 'COVER_RASHID_PM'
                                 ? (t('schedule.externalCoverage') ?? 'External')
                                 : '—'}

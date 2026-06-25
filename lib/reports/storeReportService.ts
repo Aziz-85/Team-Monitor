@@ -283,7 +283,6 @@ export async function buildStoreReport(
   const parsed = parseMonthKey(monthKey)!;
   const year = parsed.y;
   const dayOfMonth = Number(asOfDateKey.slice(8, 10));
-  const daysInMonth = getDaysInMonth(monthKey);
   const daysRemaining = getDaysRemainingInMonthIncluding(monthKey, asOfDateKey);
   const daysPassed = Math.max(1, dayOfMonth);
 

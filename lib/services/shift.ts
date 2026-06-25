@@ -6,6 +6,7 @@ import { getEmployeeTeam } from './employeeTeam';
 export type ShiftType =
   | 'MORNING'
   | 'EVENING'
+  | 'SPLIT'
   | 'NONE'
   | 'COVER_RASHID_AM'
   | 'COVER_RASHID_PM';

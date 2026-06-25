@@ -1166,6 +1166,8 @@
       "pmShort": "PM",
       "morning": "صباح (AM)",
       "evening": "مساء (PM)",
+      "splitShift": "دوام مجزأ",
+      "splitShort": "SPLIT",
       "rashidAm": "تغطية الراشد AM",
       "rashidPm": "تغطية الراشد PM",
       "none": "بدون"

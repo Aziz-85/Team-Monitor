@@ -9,7 +9,7 @@ import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { applyOverrideChange } from '@/lib/services/scheduleApply';
 import { createOrExecuteApproval } from '@/lib/services/approvals';
-import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
+import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
 import { requiresApproval } from '@/lib/permissions';
 import { API_ERROR_MESSAGES } from '@/lib/validationErrors';
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
     throw e;
   }
   const date = new Date(dateStr + 'T00:00:00Z');
-  if (isAmShiftForbiddenOnDate(date, overrideShift as 'MORNING' | 'COVER_RASHID_AM')) {
+  if (isOverrideShiftForbiddenOnDate(date, overrideShift)) {
     return NextResponse.json(
       { error: API_ERROR_MESSAGES.FRIDAY_PM_ONLY, code: 'FRIDAY_PM_ONLY' },
       { status: 400 }

@@ -5,12 +5,20 @@
 
 import { isFriday, isAmShiftForbiddenOnDate, FRIDAY_DAY_OF_WEEK } from '@/lib/services/shift';
 import { computeDayCountsFromCells, computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
+import {
+  isOverrideShiftForbiddenOnDate,
+  contributesToMorningList,
+  contributesToEveningList,
+} from '@/lib/schedule/shiftRules';
 
 function computeCountsForDay(cells: Array<{ availability: string; effectiveShift: string }>) {
   return computeDayCountsFromCells(cells);
 }
 
-function buildListsForDay(cells: Array<{ name: string; availability: string; effectiveShift: string }>): {
+function buildListsForDay(
+  cells: Array<{ name: string; availability: string; effectiveShift: string }>,
+  isFridayDay = false
+): {
   morning: string[];
   evening: string[];
   rashidAm: string[];
@@ -22,8 +30,8 @@ function buildListsForDay(cells: Array<{ name: string; availability: string; eff
   const rashidPm: string[] = [];
   for (const cell of cells) {
     if (cell.availability !== 'WORK') continue;
-    if (cell.effectiveShift === 'MORNING') morning.push(cell.name);
-    if (cell.effectiveShift === 'EVENING') evening.push(cell.name);
+    if (contributesToMorningList(cell.effectiveShift, isFridayDay)) morning.push(cell.name);
+    if (contributesToEveningList(cell.effectiveShift)) evening.push(cell.name);
     if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(cell.name);
     if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(cell.name);
   }
@@ -85,6 +93,22 @@ describe('schedule counts and Friday rule', () => {
       ];
       const counts = computeCountsForDay(cells);
       expect(counts.amCount).toBe(2);
+    });
+
+    it('SPLIT increments both AM and PM counts', () => {
+      const cells = [
+        { availability: 'WORK', effectiveShift: 'SPLIT' as const },
+        { availability: 'WORK', effectiveShift: 'MORNING' as const },
+      ];
+      const counts = computeCountsForDay(cells);
+      expect(counts.amCount).toBe(2);
+      expect(counts.pmCount).toBe(1);
+    });
+
+    it('SPLIT is forbidden on Friday (PM-only)', () => {
+      const friday = new Date('2026-04-03T00:00:00Z');
+      expect(isOverrideShiftForbiddenOnDate(friday, 'SPLIT')).toBe(true);
+      expect(isOverrideShiftForbiddenOnDate(friday, 'EVENING')).toBe(false);
     });
   });
 

@@ -60,6 +60,10 @@ export async function schedulePlannerRows(
       const shift = await effectiveShiftFor(emp.empId, cur);
       if (shift === 'MORNING') am.push(emp.name);
       else if (shift === 'EVENING') pm.push(emp.name);
+      else if (shift === 'SPLIT') {
+        am.push(emp.name);
+        pm.push(emp.name);
+      }
       else if (shift === 'COVER_RASHID_AM') rashidAm.push(emp.name);
       else if (shift === 'COVER_RASHID_PM') rashidPm.push(emp.name);
     }

@@ -24,6 +24,7 @@ import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import type { Role } from '@prisma/client';
+import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -187,8 +188,34 @@ const SHIFT_LABEL_FALLBACKS: Record<string, string> = {
   pmShort: 'PM',
   morning: 'Morning (AM)',
   evening: 'Afternoon (PM)',
+  splitShift: 'Split Shift',
+  splitShort: 'SPLIT',
   none: 'NONE',
 };
+
+function shiftToCompactLabel(shift: string, t: (key: string) => string): string {
+  if (shift === 'MORNING') return 'AM';
+  if (shift === 'EVENING') return 'PM';
+  if (shift === 'SPLIT') return shiftLabel(t, 'splitShort');
+  if (shift === 'COVER_RASHID_AM' || shift === 'COVER_RASHID_PM') return t('schedule.externalCoverage') ?? 'External';
+  return 'NONE';
+}
+
+function ShiftCellBadge({ shift, t }: { shift: string; t: (key: string) => string }) {
+  if (shift === 'MORNING') return <>{t('schedule.morning')}</>;
+  if (shift === 'EVENING') return <>{t('schedule.evening')}</>;
+  if (shift === 'SPLIT') {
+    return (
+      <span
+        className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-900"
+        title={shiftLabel(t, 'splitShift')}
+      >
+        {shiftLabel(t, 'splitShort')}
+      </span>
+    );
+  }
+  return <>—</>;
+}
 
 function shiftLabel(t: (key: string) => string, key: keyof typeof SHIFT_LABEL_FALLBACKS): string {
   const fullKey = `schedule.shift.${key}`;
@@ -196,7 +223,7 @@ function shiftLabel(t: (key: string) => string, key: keyof typeof SHIFT_LABEL_FA
   return value && value !== fullKey ? value : SHIFT_LABEL_FALLBACKS[key] ?? key;
 }
 
-type EditableShift = 'MORNING' | 'EVENING' | 'NONE' | 'COVER_RASHID_AM' | 'COVER_RASHID_PM';
+type EditableShift = 'MORNING' | 'EVENING' | 'SPLIT' | 'NONE' | 'COVER_RASHID_AM' | 'COVER_RASHID_PM';
 
 type GridCell = {
   date: string;
@@ -934,6 +961,14 @@ export function ScheduleEditClient({
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
       if (cell.availability === 'LEAVE') return;
+      if (
+        isFridayPmOnlyDay(date, ramadanRange) &&
+        isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), newShift)
+      ) {
+        setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM and Split Shift are not allowed.');
+        setTimeout(() => setToast(null), 6000);
+        return;
+      }
       const key = editKey(empId, date);
       if (newShift === cell.effectiveShift) {
         setPendingEdits((m) => {
@@ -954,7 +989,7 @@ export function ScheduleEditClient({
         return next;
       });
     },
-    [locale]
+    [locale, ramadanRange]
   );
 
   const clearPendingEdit = useCallback((empId: string, date: string) => {
@@ -1062,6 +1097,17 @@ export function ScheduleEditClient({
       for (const [key] of entries) {
         if (leaveSet.has(key)) {
           setToast('Cannot save: one or more shift changes are on a leave day. Remove those changes.');
+          setTimeout(() => setToast(null), 6000);
+          return;
+        }
+        const [, date] = key.split('|');
+        const edit = pendingEdits.get(key);
+        if (
+          edit &&
+          isFridayPmOnlyDay(date, ramadanRange) &&
+          isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), edit.newShift)
+        ) {
+          setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM and Split Shift are not allowed.');
           setTimeout(() => setToast(null), 6000);
           return;
         }
@@ -2047,6 +2093,7 @@ export function ScheduleEditClient({
                                               : [
                                                   { value: 'MORNING', label: shiftLabel(t, 'amShort') },
                                                   { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
+                                                  { value: 'SPLIT', label: shiftLabel(t, 'splitShift') },
                                                   { value: 'NONE', label: shiftLabel(t, 'none') },
                                                 ];
                                           if (isEdited || hasOverride) {
@@ -2091,11 +2138,13 @@ export function ScheduleEditClient({
                                           🔒
                                         </span>
                                       )}
-                                      {draftShift === 'MORNING'
-                                        ? t('schedule.morning')
-                                        : draftShift === 'EVENING'
-                                        ? t('schedule.evening')
-                                        : '—'}
+                                      {draftShift === 'MORNING' ||
+                                      draftShift === 'EVENING' ||
+                                      draftShift === 'SPLIT' ? (
+                                        <ShiftCellBadge shift={draftShift} t={t} />
+                                      ) : (
+                                        '—'
+                                      )}
                                     </div>
                                   )}
                                 </LuxuryTd>
@@ -2517,22 +2566,8 @@ export function ScheduleEditClient({
             <ul className="mt-2 max-h-48 overflow-y-auto rounded border border-border bg-surface-subtle p-2 text-sm">
               {Array.from(pendingEdits.entries()).map(([key, edit]) => {
                 const [, date] = key.split('|');
-                const from =
-                  edit.originalEffectiveShift === 'MORNING'
-                    ? 'AM'
-                    : edit.originalEffectiveShift === 'EVENING'
-                      ? 'PM'
-                      : edit.originalEffectiveShift === 'COVER_RASHID_AM' || edit.originalEffectiveShift === 'COVER_RASHID_PM'
-                        ? (t('schedule.externalCoverage') ?? 'External')
-                        : 'NONE';
-                const to =
-                  edit.newShift === 'MORNING'
-                    ? 'AM'
-                    : edit.newShift === 'EVENING'
-                      ? 'PM'
-                      : edit.newShift === 'COVER_RASHID_AM' || edit.newShift === 'COVER_RASHID_PM'
-                        ? (t('schedule.externalCoverage') ?? 'External')
-                        : 'NONE';
+                const from = shiftToCompactLabel(edit.originalEffectiveShift, t);
+                const to = shiftToCompactLabel(edit.newShift, t);
                 return (
                   <li key={key} className="flex justify-between gap-2 py-0.5">
                     <span className="text-foreground">{formatDDMM(date)} {edit.employeeName}</span>

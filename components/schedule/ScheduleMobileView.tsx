@@ -2,6 +2,7 @@
 
 /** Uses same row height (38px) and text-sm as schedule table tokens in lib/scheduleUi */
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
+import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 
 type GridDay = { date: string; dayName?: string; dayOfWeek: number };
 type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> };
@@ -34,8 +35,13 @@ export function ScheduleMobileView({
       const cell = row.cells[i];
       if (!cell || cell.availability !== 'WORK') continue;
       const displayName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
-      if (cell.effectiveShift === 'MORNING') morning.push(displayName);
-      if (cell.effectiveShift === 'EVENING') evening.push(displayName);
+      const isFridayDay = day.dayOfWeek === 5;
+      if (contributesToMorningList(cell.effectiveShift, isFridayDay)) {
+        morning.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+      }
+      if (contributesToEveningList(cell.effectiveShift)) {
+        evening.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+      }
       if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(displayName);
       if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(displayName);
     }

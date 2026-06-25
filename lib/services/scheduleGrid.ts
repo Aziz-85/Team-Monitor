@@ -14,6 +14,7 @@ import type { Team } from '@prisma/client';
 import { isRamadan } from '@/lib/time/ramadan';
 import { getWeekIndexInYear, FRIDAY_DAY_OF_WEEK } from './shift';
 import type { ShiftType } from './shift';
+import { incrementCountsForWorkingShift } from '@/lib/schedule/shiftRules';
 import { getEmployeeTeamsForDateRange } from './employeeTeam';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
@@ -68,11 +69,7 @@ export function computeDayCountsFromCells(
   const counts: DayCounts = { amCount: 0, pmCount: 0, rashidAmCount: 0, rashidPmCount: 0 };
   for (const cell of cells) {
     if (cell.availability !== 'WORK') continue;
-    const s = cell.effectiveShift as ShiftType;
-    if (s === 'MORNING') counts.amCount++;
-    else if (s === 'EVENING') counts.pmCount++;
-    else if (s === 'COVER_RASHID_AM') counts.rashidAmCount++;
-    else if (s === 'COVER_RASHID_PM') counts.rashidPmCount++;
+    incrementCountsForWorkingShift(counts, cell.effectiveShift);
   }
   return counts;
 }
@@ -98,10 +95,7 @@ export function computeCountsFromGridRows(
       const cell = row.cells[i];
       const shift = getEffectiveShift(row.empId, cell.date, cell.effectiveShift);
       if (cell.availability !== 'WORK') continue;
-      if (shift === 'MORNING') counts[i].amCount++;
-      else if (shift === 'EVENING') counts[i].pmCount++;
-      else if (shift === 'COVER_RASHID_AM') counts[i].rashidAmCount++;
-      else if (shift === 'COVER_RASHID_PM') counts[i].rashidPmCount++;
+      incrementCountsForWorkingShift(counts[i], shift);
     }
   }
   return counts;
@@ -456,8 +450,11 @@ export async function getScheduleGridForWeek(
     for (const cell of row.cells) {
       if (cell.availability !== 'WORK') continue;
       const d = new Date(cell.date + 'T00:00:00Z');
-      if (d.getUTCDay() === FRIDAY_DAY_OF_WEEK && (cell.effectiveShift === 'MORNING' || cell.effectiveShift === 'COVER_RASHID_AM') && !isRamadan(d)) {
-        integrityWarnings.push(`Friday AM present: ${row.name} on ${cell.date}`);
+      if (d.getUTCDay() === FRIDAY_DAY_OF_WEEK && !isRamadan(d)) {
+        const s = cell.effectiveShift as ShiftType;
+        if (s === 'MORNING' || s === 'COVER_RASHID_AM' || s === 'SPLIT') {
+          integrityWarnings.push(`Friday AM present: ${row.name} on ${cell.date}`);
+        }
       }
     }
   }

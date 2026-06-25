@@ -5,6 +5,7 @@
 
 import { computeCountsFromGridRows } from './scheduleGrid';
 import type { DayCounts } from './scheduleGrid';
+import { contributesToMorningList, contributesToEveningList } from '@/lib/schedule/shiftRules';
 
 export type EffectiveCell = { date: string; availability: string; effectiveShift: string };
 export type EffectiveRow = { empId: string; name: string; team: string; cells: EffectiveCell[] };
@@ -101,10 +102,10 @@ export function buildExcelSlots(
       if (!cell || cell.availability !== 'WORK') continue;
       eligible.push({ empId: row.empId, name: row.name, team: row.team });
       if (isFriday) {
-        if (cell.effectiveShift === 'EVENING') evening.push(row.empId);
+        if (contributesToEveningList(cell.effectiveShift)) evening.push(row.empId);
       } else {
-        if (cell.effectiveShift === 'MORNING') morning.push(row.empId);
-        if (cell.effectiveShift === 'EVENING') evening.push(row.empId);
+        if (contributesToMorningList(cell.effectiveShift, false)) morning.push(row.empId);
+        if (contributesToEveningList(cell.effectiveShift)) evening.push(row.empId);
       }
     }
 

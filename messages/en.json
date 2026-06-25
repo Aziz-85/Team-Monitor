@@ -1166,6 +1166,8 @@
       "pmShort": "PM",
       "morning": "Morning (AM)",
       "evening": "Afternoon (PM)",
+      "splitShift": "Split Shift",
+      "splitShort": "SPLIT",
       "rashidAm": "Rashid AM",
       "rashidPm": "Rashid PM",
       "none": "NONE"

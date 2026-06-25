@@ -5,6 +5,7 @@ import { getFirstName } from '@/lib/name';
 import { getVisibleSlotCount, getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
 import { SCHEDULE_UI, SCHEDULE_COLS } from '@/lib/scheduleUi';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
+import { contributesToMorningList, contributesToEveningList } from '@/lib/schedule/shiftRules';
 
 const FRIDAY_DAY_OF_WEEK = 5;
 
@@ -84,10 +85,10 @@ export function ScheduleEditExcelViewClient({
         eligible.push(row);
         const shift = getDraftShift(row.empId, date, cell.effectiveShift);
         if (isFriday) {
-          if (shift === 'EVENING') evening.push(row.empId);
+          if (contributesToEveningList(shift)) evening.push(row.empId);
         } else {
-          if (shift === 'MORNING') morning.push(row.empId);
-          if (shift === 'EVENING') evening.push(row.empId);
+          if (contributesToMorningList(shift, false)) morning.push(row.empId);
+          if (contributesToEveningList(shift)) evening.push(row.empId);
         }
       }
       morningByDay.push(morning);
@@ -117,21 +118,38 @@ export function ScheduleEditExcelViewClient({
 
   const handleSlotChange = useCallback(
     (date: string, shift: 'MORNING' | 'EVENING', slotIndex: number, newEmpId: string, currentEmpId: string | null) => {
+      const resolveNextShift = (empId: string, period: 'MORNING' | 'EVENING', assign: boolean): string | null => {
+        const rc = getRowAndCell(empId, date);
+        if (!rc) return null;
+        const existing = getDraftShift(empId, date, rc.cell.effectiveShift);
+        if (!assign) {
+          if (existing === 'SPLIT') return period === 'MORNING' ? 'EVENING' : 'MORNING';
+          return 'NONE';
+        }
+        if (period === 'MORNING') {
+          return existing === 'EVENING' ? 'SPLIT' : 'MORNING';
+        }
+        return existing === 'MORNING' ? 'SPLIT' : 'EVENING';
+      };
+
       if (newEmpId === '' || newEmpId === '—') {
         if (currentEmpId) {
           const rc = getRowAndCell(currentEmpId, date);
-          if (rc) addPendingEdit(currentEmpId, date, 'NONE', rc.row, rc.cell);
+          const next = resolveNextShift(currentEmpId, shift, false);
+          if (rc && next) addPendingEdit(currentEmpId, date, next, rc.row, rc.cell);
         }
         return;
       }
       if (currentEmpId && currentEmpId !== newEmpId) {
         const rcPrev = getRowAndCell(currentEmpId, date);
-        if (rcPrev) addPendingEdit(currentEmpId, date, 'NONE', rcPrev.row, rcPrev.cell);
+        const next = resolveNextShift(currentEmpId, shift, false);
+        if (rcPrev && next) addPendingEdit(currentEmpId, date, next, rcPrev.row, rcPrev.cell);
       }
       const rc = getRowAndCell(newEmpId, date);
-      if (rc) addPendingEdit(newEmpId, date, shift, rc.row, rc.cell);
+      const next = resolveNextShift(newEmpId, shift, true);
+      if (rc && next) addPendingEdit(newEmpId, date, next, rc.row, rc.cell);
     },
-    [getRowAndCell, addPendingEdit]
+    [getRowAndCell, getDraftShift, addPendingEdit]
   );
 
   const cellDate = `${SCHEDULE_UI.dateCell} ${SCHEDULE_UI.borderL2} text-center`;

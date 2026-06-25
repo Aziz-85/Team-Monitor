@@ -6,13 +6,13 @@
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
-import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
+import { EDITOR_OVERRIDE_SHIFTS, isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { toYmdRiyadh, ensureForceWorkAndCompCredit, getEffectiveWeeklyOffDay, getDowRiyadhFromYmd } from '@/lib/schedule/dayOverride';
 
-/** Legacy COVER_RASHID_* removed from UI; only MORNING, EVENING, NONE accepted for new overrides. */
-const ALLOWED_SHIFTS = ['MORNING', 'EVENING', 'NONE'] as const;
+/** Legacy COVER_RASHID_* removed from UI; MORNING, EVENING, SPLIT, NONE for new overrides. */
+const ALLOWED_SHIFTS = EDITOR_OVERRIDE_SHIFTS;
 
 export type OverridePayload = {
   empId: string;
@@ -46,7 +46,7 @@ export async function applyOverrideChange(
     await assertScheduleEditable({ dates: [dateStr], boutiqueId: options.boutiqueId });
   }
   const date = new Date(dateStr + 'T00:00:00Z');
-  if (isAmShiftForbiddenOnDate(date, overrideShift as 'MORNING' | 'COVER_RASHID_AM')) {
+  if (isOverrideShiftForbiddenOnDate(date, overrideShift)) {
     throw new Error('FRIDAY_PM_ONLY');
   }
 
@@ -155,7 +155,7 @@ export async function applyScheduleGridSave(
     const shift = String(newShift).toUpperCase();
     if (!ALLOWED_SHIFTS.includes(shift as (typeof ALLOWED_SHIFTS)[number])) continue;
     const dateObj = new Date(date + 'T00:00:00Z');
-    if (isAmShiftForbiddenOnDate(dateObj, shift as 'MORNING' | 'COVER_RASHID_AM')) {
+    if (isOverrideShiftForbiddenOnDate(dateObj, shift)) {
       skipped.push({ empId, date, reason: 'FRIDAY_AM_NOT_ALLOWED' });
       continue;
     }
@@ -179,7 +179,7 @@ export async function applyScheduleGridSave(
           },
         });
         applied++;
-        if ((shift === 'MORNING' || shift === 'EVENING') && overrideBoutiqueId) {
+        if ((shift === 'MORNING' || shift === 'EVENING' || shift === 'SPLIT') && overrideBoutiqueId) {
           const ymdRiyadh = toYmdRiyadh(dateObj);
           const effectiveOff = empWeeklyOffMap.get(empId);
           if (effectiveOff !== undefined && effectiveOff !== 'NONE' && getDowRiyadhFromYmd(ymdRiyadh) === effectiveOff) {
@@ -211,7 +211,7 @@ export async function applyScheduleGridSave(
           },
         });
         applied++;
-        if ((shift === 'MORNING' || shift === 'EVENING') && overrideBoutiqueId) {
+        if ((shift === 'MORNING' || shift === 'EVENING' || shift === 'SPLIT') && overrideBoutiqueId) {
           const ymdRiyadh = toYmdRiyadh(dateObj);
           const effectiveOff = empWeeklyOffMap.get(empId);
           if (effectiveOff !== undefined && effectiveOff !== 'NONE' && getDowRiyadhFromYmd(ymdRiyadh) === effectiveOff) {
