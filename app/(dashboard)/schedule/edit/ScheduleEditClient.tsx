@@ -98,6 +98,23 @@ function isFriday(dateStr: string): boolean {
   return d.getUTCDay() === FRIDAY_DAY_OF_WEEK;
 }
 
+/** Friday is PM-only unless the date falls in Ramadan (same rule as grid editor). */
+function isFridayPmOnlyDay(
+  dateStr: string,
+  ramadanRange?: { start: string; end: string } | null
+): boolean {
+  if (!isFriday(dateStr)) return false;
+  if (ramadanRange && isDateInRamadanRange(new Date(dateStr + 'T12:00:00Z'), ramadanRange)) return false;
+  return true;
+}
+
+function defaultGuestShiftForDate(
+  dateStr: string,
+  ramadanRange?: { start: string; end: string } | null
+): 'MORNING' | 'EVENING' {
+  return isFridayPmOnlyDay(dateStr, ramadanRange) ? 'EVENING' : 'MORNING';
+}
+
 function formatAuditBeforeAfter(
   before: string | null,
   after: string | null,
@@ -410,10 +427,16 @@ export function ScheduleEditClient({
           list.find((b) => /dhahran/i.test(b.name) || /dhahran/i.test(b.code))?.id ?? list[0]?.id ?? '';
         setSelectedSourceBoutiqueId(defaultId);
         const firstDay = gridData?.days?.[0]?.date ?? weekStart;
-        setGuestForm((prev) => ({ ...prev, empId: '', date: firstDay, shift: 'MORNING', reason: '' }));
+        setGuestForm((prev) => ({
+          ...prev,
+          empId: '',
+          date: firstDay,
+          shift: defaultGuestShiftForDate(firstDay, ramadanRange),
+          reason: '',
+        }));
       })
       .catch(() => setSourceBoutiques([]));
-  }, [addGuestOpen, weekStart, gridData?.days]);
+  }, [addGuestOpen, weekStart, gridData?.days, ramadanRange]);
 
   useEffect(() => {
     if (!addGuestOpen || !selectedSourceBoutiqueId) {
@@ -1049,6 +1072,11 @@ export function ScheduleEditClient({
           setTimeout(() => setToast(null), 6000);
           return;
         }
+        if (isFridayPmOnlyDay(g.date, ramadanRange) && g.shift === 'MORNING') {
+          setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM is not allowed.');
+          setTimeout(() => setToast(null), 6000);
+          return;
+        }
       }
     }
 
@@ -1211,6 +1239,7 @@ export function ScheduleEditClient({
     locale,
     gridData,
     router,
+    ramadanRange,
   ]);
 
   useEffect(() => {
@@ -2601,7 +2630,17 @@ export function ScheduleEditClient({
                   <label className="block text-sm font-medium text-foreground">{t('schedule.day') ?? 'Day'}</label>
                   <select
                     value={weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0]}
-                    onChange={(e) => setGuestForm((f) => ({ ...f, date: e.target.value }))}
+                    onChange={(e) => {
+                      const nextDate = e.target.value;
+                      setGuestForm((f) => ({
+                        ...f,
+                        date: nextDate,
+                        shift:
+                          isFridayPmOnlyDay(nextDate, ramadanRange) && f.shift === 'MORNING'
+                            ? 'EVENING'
+                            : f.shift,
+                      }));
+                    }}
                     className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
@@ -2618,9 +2657,18 @@ export function ScheduleEditClient({
                     className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
-                    <option value="MORNING">{t('schedule.morning') ?? 'Morning'}</option>
+                    {!isFridayPmOnlyDay(
+                      weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
+                      ramadanRange
+                    ) && <option value="MORNING">{t('schedule.morning') ?? 'Morning'}</option>}
                     <option value="EVENING">{t('schedule.evening') ?? 'Afternoon'}</option>
                   </select>
+                  {isFridayPmOnlyDay(
+                    weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
+                    ramadanRange
+                  ) && (
+                    <p className="mt-1 text-xs text-muted">{t('schedule.fridayPmOnly')}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">{t('common.reason')}</label>
@@ -2657,6 +2705,10 @@ export function ScheduleEditClient({
                     setTimeout(() => setToast(null), 5000);
                     return;
                   }
+                  const shift =
+                    isFridayPmOnlyDay(date, ramadanRange) && guestForm.shift === 'MORNING'
+                      ? 'EVENING'
+                      : guestForm.shift;
                   setGuestSubmitting(true);
                   try {
                     // Draft-only add: external coverage must be persisted via unified "Save changes".
@@ -2664,7 +2716,7 @@ export function ScheduleEditClient({
                       (g) =>
                         g.empId === guestForm.empId &&
                         g.date === date &&
-                        g.shift === guestForm.shift &&
+                        g.shift === shift &&
                         (g.sourceBoutiqueId ?? '') === selectedSourceBoutiqueId
                     );
                     if (exists) {
@@ -2684,7 +2736,7 @@ export function ScheduleEditClient({
                       id: localId,
                       date,
                       empId: guestForm.empId,
-                      shift: guestForm.shift,
+                      shift,
                       reason: guestForm.reason.trim(),
                       sourceBoutiqueId: selectedSourceBoutiqueId,
                       sourceBoutique: sourceBoutique

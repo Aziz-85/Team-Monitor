@@ -12,6 +12,7 @@ import { createOrExecuteApproval } from '@/lib/services/approvals';
 import { isAmShiftForbiddenOnDate } from '@/lib/services/shift';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
 import { requiresApproval } from '@/lib/permissions';
+import { API_ERROR_MESSAGES } from '@/lib/validationErrors';
 import { prisma } from '@/lib/db';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import type { Role } from '@prisma/client';
@@ -251,8 +252,11 @@ export async function POST(request: NextRequest) {
     throw e;
   }
   const date = new Date(dateStr + 'T00:00:00Z');
-  if (isAmShiftForbiddenOnDate(date, 'MORNING')) {
-    return NextResponse.json({ error: 'Friday AM not allowed', code: 'FRIDAY_PM_ONLY' }, { status: 400 });
+  if (isAmShiftForbiddenOnDate(date, overrideShift as 'MORNING' | 'COVER_RASHID_AM')) {
+    return NextResponse.json(
+      { error: API_ERROR_MESSAGES.FRIDAY_PM_ONLY, code: 'FRIDAY_PM_ONLY' },
+      { status: 400 }
+    );
   }
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
