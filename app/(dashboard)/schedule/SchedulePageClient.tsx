@@ -7,8 +7,8 @@ import { ScheduleExcelViewClient } from '@/app/(dashboard)/schedule/excel/Schedu
 import { useT } from '@/lib/i18n/useT';
 import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
+import { buildScheduleDisplayNames, getScheduleDisplayName, type ScheduleNameSlot } from '@/lib/schedule/displayName';
 import { getWeekStartSaturday } from '@/lib/utils/week';
-import { getFirstName } from '@/lib/name';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 
@@ -284,23 +284,24 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
 
   const excelData = useMemo(() => {
     if (!gridData) return null;
-    const morningByDay: string[][] = [];
-    const eveningByDay: string[][] = [];
-    const rashidAmByDay: string[][] = [];
-    const rashidPmByDay: string[][] = [];
+    const morningByDay: ScheduleNameSlot[][] = [];
+    const eveningByDay: ScheduleNameSlot[][] = [];
+    const rashidAmByDay: ScheduleNameSlot[][] = [];
+    const rashidPmByDay: ScheduleNameSlot[][] = [];
     for (let i = 0; i < gridData.days.length; i++) {
-      const morning: string[] = [];
-      const evening: string[] = [];
-      const rashidAm: string[] = [];
-      const rashidPm: string[] = [];
+      const morning: ScheduleNameSlot[] = [];
+      const evening: ScheduleNameSlot[] = [];
+      const rashidAm: ScheduleNameSlot[] = [];
+      const rashidPm: ScheduleNameSlot[] = [];
       for (const row of gridData.rows) {
         const cell = row.cells[i];
         if (!cell || cell.availability !== 'WORK') continue;
         const shift = getDraftShift(row.empId, cell.date, cell.effectiveShift);
-        if (shift === 'MORNING') morning.push(row.name);
-        if (shift === 'EVENING') evening.push(row.name);
-        if (shift === 'COVER_RASHID_AM') rashidAm.push(row.name);
-        if (shift === 'COVER_RASHID_PM') rashidPm.push(row.name);
+        const slot = { empId: row.empId, fullName: row.name };
+        if (shift === 'MORNING') morning.push(slot);
+        if (shift === 'EVENING') evening.push(slot);
+        if (shift === 'COVER_RASHID_AM') rashidAm.push(slot);
+        if (shift === 'COVER_RASHID_PM') rashidPm.push(slot);
       }
       morningByDay.push(morning);
       eveningByDay.push(evening);
@@ -309,6 +310,11 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
     }
     return { morningByDay, eveningByDay, rashidAmByDay, rashidPmByDay };
   }, [gridData, getDraftShift]);
+
+  const scheduleDisplayNames = useMemo(
+    () => (gridData ? buildScheduleDisplayNames(gridData.rows.map((r) => ({ empId: r.empId, name: r.name }))) : new Map()),
+    [gridData]
+  );
 
   const applyBatch = useCallback(async () => {
     const entries = Array.from(pendingEdits.entries());
@@ -557,6 +563,7 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
             <ScheduleExcelViewClient
               gridData={{ days: gridData.days, counts: draftCounts.length ? draftCounts : gridData.counts }}
               excelData={excelData}
+              displayNameMap={scheduleDisplayNames}
               visibleSlots={visibleSlots}
               maxPerCell={maxPerCell}
               formatDDMM={formatDDMM}
@@ -590,7 +597,9 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                     {gridData.rows.map((row) => (
                       <tr key={row.empId}>
                         <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface font-medium" title={row.name}>
-                          <span className="whitespace-nowrap">{getFirstName(row.name)}</span>
+                          <span className="whitespace-nowrap" title={row.name}>
+                            {getScheduleDisplayName(row.empId, row.name, scheduleDisplayNames)}
+                          </span>
                         </LuxuryTd>
                         {row.cells.map((cell) => {
                           const locked = cell.availability !== 'WORK';

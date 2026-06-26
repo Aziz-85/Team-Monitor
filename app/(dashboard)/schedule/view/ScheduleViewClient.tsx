@@ -17,6 +17,12 @@ import { normShift } from '@/lib/shiftNorm';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
+import {
+  buildScheduleDisplayNameMapForRows,
+  buildScheduleDisplayNames,
+  getScheduleDisplayName,
+  type ScheduleNameSlot,
+} from '@/lib/schedule/displayName';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
@@ -585,30 +591,46 @@ export function ScheduleViewClient({
   }, [externalGuests, locale, t]);
 
   // Excel view: per-day lists by shift (boutique AM/PM); external coverage from guestsByDay
+  const scheduleDisplayNames = useMemo(() => {
+    if (!gridData) return new Map<string, string>();
+    const pool = gridData.rows.map((row) => ({
+      empId: row.empId,
+      name: getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale),
+    }));
+    for (const g of externalGuests) {
+      pool.push({
+        empId: g.empId,
+        name: getEmployeeDisplayName(g.employee, locale) || g.empId,
+      });
+    }
+    return buildScheduleDisplayNames(pool);
+  }, [gridData, externalGuests, locale]);
+
   const excelData = useMemo(() => {
     if (!gridData) return null;
-    const morningByDay: string[][] = [];
-    const eveningByDay: string[][] = [];
-    const rashidAmByDay: string[][] = [];
-    const rashidPmByDay: string[][] = [];
+    const morningByDay: ScheduleNameSlot[][] = [];
+    const eveningByDay: ScheduleNameSlot[][] = [];
+    const rashidAmByDay: ScheduleNameSlot[][] = [];
+    const rashidPmByDay: ScheduleNameSlot[][] = [];
     for (let i = 0; i < 7; i++) {
-      const morning: string[] = [];
-      const evening: string[] = [];
-      const rashidAm: string[] = [];
-      const rashidPm: string[] = [];
+      const morning: ScheduleNameSlot[] = [];
+      const evening: ScheduleNameSlot[] = [];
+      const rashidAm: ScheduleNameSlot[] = [];
+      const rashidPm: ScheduleNameSlot[] = [];
       const isFridayDay = gridData.days[i]?.dayOfWeek === 5;
       for (const row of gridData.rows) {
         const cell = row.cells[i];
         if (cell.availability !== 'WORK') continue;
-        const displayName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
+        const fullName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
+        const slot = { empId: row.empId, fullName };
         if (contributesToMorningList(cell.effectiveShift, isFridayDay)) {
-          morning.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+          morning.push(isSplitShift(cell.effectiveShift) ? { ...slot, note: '(SPLIT)' } : slot);
         }
         if (contributesToEveningList(cell.effectiveShift)) {
-          evening.push(isSplitShift(cell.effectiveShift) ? `${displayName} (SPLIT)` : displayName);
+          evening.push(isSplitShift(cell.effectiveShift) ? { ...slot, note: '(SPLIT)' } : slot);
         }
-        if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(displayName);
-        if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(displayName);
+        if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(slot);
+        if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(slot);
       }
       morningByDay.push(morning);
       eveningByDay.push(evening);
@@ -932,6 +954,7 @@ export function ScheduleViewClient({
                   </div>
                   <ScheduleGridView
                     gridData={w.gridData}
+                    displayNameMap={buildScheduleDisplayNameMapForRows(w.gridData.rows, locale)}
                     dayRefs={dayRefs}
                     formatDDMM={formatDDMM}
                     getDayName={(d: string) => getDayName(d, locale)}
@@ -1032,6 +1055,7 @@ export function ScheduleViewClient({
             <ScheduleExcelViewClient
               gridData={gridData}
               excelData={excelData}
+              displayNameMap={scheduleDisplayNames}
               guestsByDay={guestsByDay}
               coverageHeaderLabel={coverageHeaderLabel}
               visibleSlots={visibleSlots}
@@ -1049,6 +1073,7 @@ export function ScheduleViewClient({
         {timeScope === 'week' && gridData && viewMode === 'grid' && (
           <ScheduleGridView
             gridData={gridData}
+            displayNameMap={scheduleDisplayNames}
             dayRefs={dayRefs}
             formatDDMM={formatDDMM}
             getDayName={(d: string) => getDayName(d, locale)}
@@ -1063,6 +1088,7 @@ export function ScheduleViewClient({
         {timeScope === 'week' && gridData && viewMode === 'mobile' && (
           <ScheduleMobileView
             gridData={gridData}
+            displayNameMap={scheduleDisplayNames}
             guestsByDay={guestsByDay}
             formatDDMM={formatDDMM}
             getDayName={(d: string) => getDayName(d, locale)}
@@ -1082,6 +1108,7 @@ export function ScheduleViewClient({
 // --- Grid View: employee rows × days, read-only, count row on top; External Coverage row per day ---
 function ScheduleGridView({
   gridData,
+  displayNameMap,
   dayRefs,
   formatDDMM,
   getDayName,
@@ -1092,6 +1119,7 @@ function ScheduleGridView({
   weekGuests = [],
 }: {
   gridData: GridData;
+  displayNameMap: Map<string, string>;
   dayRefs: React.MutableRefObject<Record<string, HTMLTableCellElement | null>>;
   formatDDMM: (d: string) => string;
   getDayName: (d: string) => string;
@@ -1183,7 +1211,16 @@ function ScheduleGridView({
                   </LuxuryTd>
                 )}
                 <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface font-medium">
-                  <NameChip name={getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale)} empId={row.empId} variant="rashid" />
+                  <NameChip
+                    name={getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale)}
+                    shortName={getScheduleDisplayName(
+                      row.empId,
+                      getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale),
+                      displayNameMap
+                    )}
+                    empId={row.empId}
+                    variant="rashid"
+                  />
                 </LuxuryTd>
                 {row.cells.map((cell) => {
                   const locked = cell.availability !== 'WORK';

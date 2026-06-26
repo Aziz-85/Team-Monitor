@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
-import { getFirstName } from '@/lib/name';
+import { Fragment, useMemo } from 'react';
 import { getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
+import {
+  formatScheduleNameSlot,
+  type ScheduleNameSlot,
+} from '@/lib/schedule/displayName';
 import { SCHEDULE_UI, SCHEDULE_COLS, MAX_COVERAGE_LINES } from '@/lib/scheduleUi';
 import { CoverageCell } from '@/components/schedule/CoverageCell';
 
@@ -12,17 +15,22 @@ export type ExcelClassicGridData = {
 };
 
 export type ExcelClassicExcelData = {
-  morningByDay: string[][];
-  eveningByDay: string[][];
-  rashidAmByDay: string[][];
-  rashidPmByDay: string[][];
+  morningByDay: ScheduleNameSlot[][];
+  eveningByDay: ScheduleNameSlot[][];
+  rashidAmByDay: ScheduleNameSlot[][];
+  rashidPmByDay: ScheduleNameSlot[][];
 };
 
 export type GuestsByDayExcel = Record<string, { am: Array<{ id: string; name: string }>; pm: Array<{ id: string; name: string }> }>;
 
+function slotAt(slots: ScheduleNameSlot[], index: number): ScheduleNameSlot | undefined {
+  return slots[index];
+}
+
 export function ScheduleExcelViewClient({
   gridData,
   excelData,
+  displayNameMap,
   guestsByDay,
   coverageHeaderLabel,
   visibleSlots,
@@ -35,6 +43,7 @@ export function ScheduleExcelViewClient({
 }: {
   gridData: ExcelClassicGridData;
   excelData: ExcelClassicExcelData;
+  displayNameMap: Map<string, string>;
   guestsByDay?: GuestsByDayExcel;
   coverageHeaderLabel?: string;
   visibleSlots: number;
@@ -55,16 +64,10 @@ export function ScheduleExcelViewClient({
   /** أعمدة فارغة طوال الأسبوع (كل الخلايا شرطة) تُعطى عرضاً ضيقاً بحجم الشرطة فقط */
   const { emptyMorningSlots, emptyEveningSlots } = useMemo(() => {
     const emptyM = Array.from({ length: visibleSlots }, (_, i) =>
-      days.every((_, dayIdx) => {
-        const names = (morningByDay[dayIdx] ?? []).map(getFirstName);
-        return !(names[i] ?? '').trim();
-      })
+      days.every((_, dayIdx) => !slotAt(morningByDay[dayIdx] ?? [], i))
     );
     const emptyE = Array.from({ length: visibleSlots }, (_, i) =>
-      days.every((_, dayIdx) => {
-        const names = (eveningByDay[dayIdx] ?? []).map(getFirstName);
-        return !(names[i] ?? '').trim();
-      })
+      days.every((_, dayIdx) => !slotAt(eveningByDay[dayIdx] ?? [], i))
     );
     return { emptyMorningSlots: emptyM, emptyEveningSlots: emptyE };
   }, [days, morningByDay, eveningByDay, visibleSlots]);
@@ -72,7 +75,7 @@ export function ScheduleExcelViewClient({
   const cellDate = `${SCHEDULE_UI.dateCell} ${SCHEDULE_UI.borderL2} text-center`;
   const headerCell = `${SCHEDULE_UI.headerCell} text-center`;
   const headerDate = `${headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.dateExcel}`;
-  const headerDayEnd = `${headerCell} border-r-2 border-border ${SCHEDULE_COLS.dayExcel}`;
+  const headerDayEnd = `${headerCell} border-r-2 border-border ${SCHEDULE_COLS.dateExcel}`;
   const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
   const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300`;
   const headerRashid = `${headerCell} ${SCHEDULE_UI.borderL2}`;
@@ -88,14 +91,25 @@ export function ScheduleExcelViewClient({
   const amCountCell = `${SCHEDULE_UI.amCountCell} ${SCHEDULE_UI.borderL2}`;
   const pmCountCell = `${SCHEDULE_UI.pmCountCell} ${SCHEDULE_UI.borderL2}`;
 
+  const renderSlotNames = (slots: ScheduleNameSlot[]) =>
+    slots.map((slot, idx) => {
+      const { text, title } = formatScheduleNameSlot(slot, displayNameMap);
+      return (
+        <Fragment key={`${slot.empId}-${idx}`}>
+          {idx > 0 ? ', ' : null}
+          <span title={title}>{text}</span>
+        </Fragment>
+      );
+    });
+
   return (
     <>
       {/* Mobile: stacked cards per day (no horizontal scroll) */}
       <div className="space-y-3 md:hidden" dir="ltr">
         {days.map((day) => {
           const dayIdx = days.findIndex((d) => d.date === day.date);
-          const morning = (morningByDay[dayIdx] ?? []).map(getFirstName).filter((n) => n?.trim());
-          const evening = (eveningByDay[dayIdx] ?? []).map(getFirstName).filter((n) => n?.trim());
+          const morning = morningByDay[dayIdx] ?? [];
+          const evening = eveningByDay[dayIdx] ?? [];
           const dayGuests = guestsByDay?.[day.date];
           const guestLines: string[] = [];
           if (dayGuests) {
@@ -116,14 +130,14 @@ export function ScheduleExcelViewClient({
                 <div>
                   <div className="text-xs font-medium text-muted mb-1">{t('schedule.morning')}</div>
                   <div className="bg-blue-50 rounded border border-blue-200 px-2 py-1.5 text-blue-900 min-h-[2.25rem]">
-                    {morning.length > 0 ? morning.join(', ') : null}
+                    {morning.length > 0 ? renderSlotNames(morning) : null}
                   </div>
                   <div className="text-xs text-muted mt-0.5">{t('schedule.amCount')}: {amCount}</div>
                 </div>
                 <div>
                   <div className="text-xs font-medium text-muted mb-1">{t('schedule.evening')}</div>
                   <div className="bg-amber-50 rounded border border-amber-200 px-2 py-1.5 text-amber-900 min-h-[2.25rem]">
-                    {evening.length > 0 ? evening.join(', ') : null}
+                    {evening.length > 0 ? renderSlotNames(evening) : null}
                   </div>
                   <div className="text-xs text-muted mt-0.5">{t('schedule.pmCount')}: {pmCount}</div>
                 </div>
@@ -187,8 +201,8 @@ export function ScheduleExcelViewClient({
         </thead>
         <tbody>
           {days.map((day, dayIdx) => {
-            const morning = (morningByDay[dayIdx] ?? []).map(getFirstName);
-            const evening = (eveningByDay[dayIdx] ?? []).map(getFirstName);
+            const morning = morningByDay[dayIdx] ?? [];
+            const evening = eveningByDay[dayIdx] ?? [];
             const dayGuests = guestsByDay?.[day.date];
             const guestLines: string[] = [];
             if (dayGuests) {
@@ -203,16 +217,24 @@ export function ScheduleExcelViewClient({
                 <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-border whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(day.date)}>
                   {dayShort(day.date)}
                 </td>
-                {Array.from({ length: visibleSlots }, (_, i) => (
-                  <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={morning[i] && morning[i].trim() ? morning[i] : undefined}>
-                    <span className="block truncate text-start">{morning[i] && morning[i].trim() ? morning[i] : null}</span>
-                  </td>
-                ))}
-                {Array.from({ length: visibleSlots }, (_, i) => (
-                  <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={evening[i] && evening[i].trim() ? evening[i] : undefined}>
-                    <span className="block truncate text-start">{evening[i] && evening[i].trim() ? evening[i] : null}</span>
-                  </td>
-                ))}
+                {Array.from({ length: visibleSlots }, (_, i) => {
+                  const slot = slotAt(morning, i);
+                  const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
+                  return (
+                    <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
+                      <span className="block truncate text-start">{label?.text ?? null}</span>
+                    </td>
+                  );
+                })}
+                {Array.from({ length: visibleSlots }, (_, i) => {
+                  const slot = slotAt(evening, i);
+                  const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
+                  return (
+                    <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
+                      <span className="block truncate text-start">{label?.text ?? null}</span>
+                    </td>
+                  );
+                })}
                 <td className={rashidCell}>
                   <CoverageCell dayGuests={dayGuests} />
                 </td>

@@ -7,8 +7,8 @@ const BASE_SLOTS = 4;
 const MAX_SLOTS = 6;
 
 export type WeekSlotData = {
-  morningByDay: string[][];
-  eveningByDay: string[][];
+  morningByDay: Array<Array<unknown>>;
+  eveningByDay: Array<Array<unknown>>;
 };
 
 /**

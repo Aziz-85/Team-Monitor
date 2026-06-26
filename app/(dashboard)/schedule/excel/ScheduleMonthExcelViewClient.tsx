@@ -1,7 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { getFirstName } from '@/lib/name';
 import { getWeekStartSaturday } from '@/lib/utils/week';
+import { buildScheduleDisplayNamesByFullName } from '@/lib/schedule/displayName';
 
 export type MonthExcelDayRow = {
   date: string;
@@ -68,6 +70,16 @@ export function ScheduleMonthExcelViewClient({
 
   const rowsByDate = new Map(dayRows.map((r) => [r.date, r]));
 
+  const displayNamesByFullName = useMemo(() => {
+    const names: string[] = [];
+    for (const row of dayRows) {
+      names.push(...row.morningAssignees, ...row.eveningAssignees, ...row.rashidCoverage.map((r) => r.name));
+    }
+    return buildScheduleDisplayNamesByFullName(names);
+  }, [dayRows]);
+
+  const shortName = (fullName: string) => displayNamesByFullName.get(fullName.trim()) ?? getFirstName(fullName);
+
   const [year, monthNum] = month.split('-').map(Number);
   const firstOfMonth = `${month}-01`;
   const lastDateObj = new Date(Date.UTC(year, monthNum, 0));
@@ -128,8 +140,8 @@ export function ScheduleMonthExcelViewClient({
                 {weekDates.map((dateStr) => {
                   const inMonth = dateStr.slice(0, 7) === month;
                   const row = rowsByDate.get(dateStr);
-                  const morning = row ? row.morningAssignees.map(getFirstName) : [];
-                  const evening = row ? row.eveningAssignees.map(getFirstName) : [];
+                  const morning = row ? row.morningAssignees.map((n) => ({ full: n, short: shortName(n) })) : [];
+                  const evening = row ? row.eveningAssignees.map((n) => ({ full: n, short: shortName(n) })) : [];
                   const rashidFirst = row?.rashidCoverage[0];
                   const amCount = row?.amCount ?? null;
                   const pmCount = row?.pmCount ?? null;
@@ -146,7 +158,9 @@ export function ScheduleMonthExcelViewClient({
                           key={i}
                           className={i === 0 ? morningFirst : i === MORNING_SLOTS - 1 ? morningLast : morningCell}
                         >
-                          {inMonth && morning[i] && morning[i].trim() ? morning[i] : null}
+                          {inMonth && morning[i] ? (
+                            <span title={morning[i].full}>{morning[i].short}</span>
+                          ) : null}
                         </td>
                       ))}
                       {Array.from({ length: EVENING_SLOTS }, (_, i) => (
@@ -154,13 +168,15 @@ export function ScheduleMonthExcelViewClient({
                           key={i}
                           className={i === 0 ? eveningFirst : i === EVENING_SLOTS - 1 ? eveningLast : eveningCell}
                         >
-                          {inMonth && evening[i] && evening[i].trim() ? evening[i] : null}
+                          {inMonth && evening[i] ? (
+                            <span title={evening[i].full}>{evening[i].short}</span>
+                          ) : null}
                         </td>
                       ))}
                       <td className={rashidCell}>
                         {inMonth && rashidFirst ? (
-                          <>
-                            {getFirstName(rashidFirst.name)}
+                          <span title={rashidFirst.name}>
+                            {shortName(rashidFirst.name)}
                             <span
                               className={`ms-1 rounded px-1 py-0.5 text-[10px] leading-4 ${
                                 rashidFirst.shift === 'AM' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
@@ -171,7 +187,7 @@ export function ScheduleMonthExcelViewClient({
                                 ? t('schedule.rashid.amShort')
                                 : t('schedule.rashid.pmShort')}
                             </span>
-                          </>
+                          </span>
                         ) : null}
                       </td>
                       <td className={amCountCell}>{inMonth && amCount != null ? amCount : ''}</td>

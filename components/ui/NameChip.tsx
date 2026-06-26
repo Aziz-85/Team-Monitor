@@ -29,11 +29,13 @@ const AVATAR_STYLES: Record<NameChipVariant, string> = {
 
 export function NameChip({
   name,
+  shortName,
   empId,
   variant = 'rashid',
   suffix = '',
 }: {
   name: string;
+  shortName?: string;
   empId?: string;
   variant?: NameChipVariant;
   suffix?: string;
@@ -41,7 +43,7 @@ export function NameChip({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
-  const displayText = getFirstName(name);
+  const displayText = shortName ?? getFirstName(name);
   const initial = firstInitial(name);
   const tooltipText = empId ? `${name} (${empId})` : suffix ? `${name} ${suffix}` : name;
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { getFirstName } from '@/lib/name';
+import { getScheduleDisplayName } from '@/lib/schedule/displayName';
 import { getVisibleSlotCount, getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
 import { SCHEDULE_UI, SCHEDULE_COLS, SCHEDULE_EMPTY_SLOT_OPTION } from '@/lib/scheduleUi';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
@@ -23,6 +23,7 @@ type GuestItem = {
 
 export type ScheduleEditExcelViewProps = {
   gridData: { days: GridDay[]; rows: GridRow[]; counts: Array<{ amCount: number; pmCount: number }> };
+  displayNameMap: Map<string, string>;
   weekGuests?: GuestItem[];
   coverageHeaderLabel?: string;
   onRemoveGuestShift?: (id: string) => void;
@@ -40,6 +41,7 @@ export type ScheduleEditExcelViewProps = {
 
 export function ScheduleEditExcelViewClient({
   gridData,
+  displayNameMap,
   weekGuests = [],
   coverageHeaderLabel,
   onRemoveGuestShift,
@@ -250,12 +252,20 @@ export function ScheduleEditExcelViewClient({
                         <ScheduleCellSelect
                           compact
                           value={occupant ?? ''}
-                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
+                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({
+                            value: emp.empId,
+                            label: getScheduleDisplayName(emp.empId, emp.name, displayNameMap),
+                          }))]}
                           onChange={(v) => handleSlotChange(date, 'MORNING', i, v, occupant)}
                           aria-label={t('schedule.morning')}
                         />
                       ) : (
-                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : null
+                        occupant ? (() => {
+                          const row = rows.find((r) => r.empId === occupant);
+                          const fullName = row?.name ?? '';
+                          const short = getScheduleDisplayName(occupant, fullName, displayNameMap);
+                          return <span title={fullName}>{short}</span>;
+                        })() : null
                       )}
                     </td>
                   );
@@ -272,12 +282,20 @@ export function ScheduleEditExcelViewClient({
                         <ScheduleCellSelect
                           compact
                           value={occupant ?? ''}
-                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
+                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({
+                            value: emp.empId,
+                            label: getScheduleDisplayName(emp.empId, emp.name, displayNameMap),
+                          }))]}
                           onChange={(v) => handleSlotChange(date, 'EVENING', i, v, occupant)}
                           aria-label={t('schedule.evening')}
                         />
                       ) : (
-                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : null
+                        occupant ? (() => {
+                          const row = rows.find((r) => r.empId === occupant);
+                          const fullName = row?.name ?? '';
+                          const short = getScheduleDisplayName(occupant, fullName, displayNameMap);
+                          return <span title={fullName}>{short}</span>;
+                        })() : null
                       )}
                     </td>
                   );
@@ -288,7 +306,7 @@ export function ScheduleEditExcelViewClient({
                       <div className="flex flex-col gap-1 items-start">
                         {(guestsByDate.get(date) ?? []).map((g) => {
                           const pending = (g as { pending?: boolean }).pending;
-                          const label = `${getFirstName(g.employee.name)} ${g.shift === 'MORNING' ? 'AM' : 'PM'}${pending ? ` (${t('schedule.pendingApproval') ?? 'في انتظار الموافقة'})` : ''}`;
+                          const label = `${getScheduleDisplayName(g.empId, g.employee.name, displayNameMap)} ${g.shift === 'MORNING' ? 'AM' : 'PM'}${pending ? ` (${t('schedule.pendingApproval') ?? 'في انتظار الموافقة'})` : ''}`;
                           return (
                             <ScheduleCellSelect
                               key={g.id}

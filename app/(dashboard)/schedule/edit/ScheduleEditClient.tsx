@@ -5,7 +5,6 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
-import { getFirstName } from '@/lib/name';
 import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
 import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditExcelViewClient';
 import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditMonthExcelViewClient';
@@ -25,6 +24,10 @@ import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import type { Role } from '@prisma/client';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
+import {
+  buildScheduleDisplayNames,
+  getScheduleDisplayName,
+} from '@/lib/schedule/displayName';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -870,6 +873,21 @@ export function ScheduleEditClient({
     }
     return byDay;
   }, [localPendingGuests, gridData?.days]);
+
+  const scheduleDisplayNames = useMemo(() => {
+    if (!gridData?.rows) return new Map<string, string>();
+    const pool = gridData.rows.map((row) => ({
+      empId: row.empId,
+      name: getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale),
+    }));
+    for (const g of externalGuests) {
+      pool.push({ empId: g.empId, name: g.employee.name });
+    }
+    for (const g of localPendingGuests) {
+      pool.push({ empId: g.empId, name: g.employee.name });
+    }
+    return buildScheduleDisplayNames(pool);
+  }, [gridData?.rows, externalGuests, localPendingGuests, locale]);
 
   /** Counts shown in grid/excel: when using draft, add guest counts; otherwise API counts already include guests. */
   const displayCounts = useMemo(() => {
@@ -1959,8 +1977,12 @@ export function ScheduleEditClient({
                                 >
                                   {row.team}
                                 </span>
-                                                <span className="truncate">
-                                  {getFirstName(getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale))}
+                                                <span className="truncate" title={getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale)}>
+                                  {getScheduleDisplayName(
+                                    row.empId,
+                                    getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale),
+                                    scheduleDisplayNames
+                                  )}
                                 </span>
                                 {gridData.compBalanceByEmpId && (gridData.compBalanceByEmpId[row.empId] ?? 0) !== 0 && (
                                   <span
@@ -2241,6 +2263,7 @@ export function ScheduleEditClient({
                     rows: gridData.rows,
                     counts: displayCounts,
                   }}
+                  displayNameMap={scheduleDisplayNames}
                   weekGuests={externalGuests}
                   coverageHeaderLabel={coverageHeaderLabel}
                   onRemoveGuestShift={handleRemoveGuestShift}
