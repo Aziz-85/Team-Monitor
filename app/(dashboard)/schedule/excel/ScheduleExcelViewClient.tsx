@@ -3,12 +3,13 @@
 import { Fragment, useMemo } from 'react';
 import { getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
 import {
-  formatCoverageName,
   formatScheduleNameSlot,
   type ScheduleNameSlot,
 } from '@/lib/schedule/displayName';
-import { SCHEDULE_UI, SCHEDULE_COLS, MAX_COVERAGE_LINES } from '@/lib/scheduleUi';
+import type { CoverageItem } from '@/lib/schedule/coverageItems';
+import { SCHEDULE_UI, SCHEDULE_COLS } from '@/lib/scheduleUi';
 import { CoverageCell } from '@/components/schedule/CoverageCell';
+import type { CoverageTooltipLabels } from '@/lib/schedule/coverageItems';
 import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 
 export type ExcelClassicGridData = {
@@ -23,7 +24,7 @@ export type ExcelClassicExcelData = {
   rashidPmByDay: ScheduleNameSlot[][];
 };
 
-export type GuestsByDayExcel = Record<string, { am: Array<{ id: string; name: string; empId?: string }>; pm: Array<{ id: string; name: string; empId?: string }> }>;
+export type CoverageByDayExcel = Record<string, CoverageItem[]>;
 
 function slotAt(slots: ScheduleNameSlot[], index: number): ScheduleNameSlot | undefined {
   return slots[index];
@@ -33,8 +34,9 @@ export function ScheduleExcelViewClient({
   gridData,
   excelData,
   displayNameMap,
-  guestsByDay,
+  coverageByDay = {},
   coverageHeaderLabel,
+  coverageTooltipLabels,
   visibleSlots,
   maxPerCell,
   showMaxColumnsWarning,
@@ -46,8 +48,9 @@ export function ScheduleExcelViewClient({
   gridData: ExcelClassicGridData;
   excelData: ExcelClassicExcelData;
   displayNameMap: Map<string, string>;
-  guestsByDay?: GuestsByDayExcel;
+  coverageByDay?: CoverageByDayExcel;
   coverageHeaderLabel?: string;
+  coverageTooltipLabels?: Partial<CoverageTooltipLabels>;
   visibleSlots: number;
   maxPerCell: number;
   showMaxColumnsWarning?: boolean;
@@ -104,9 +107,6 @@ export function ScheduleExcelViewClient({
       );
     });
 
-  const formatGuestLine = (g: { id: string; name: string; empId?: string }, shift: 'AM' | 'PM') =>
-    formatCoverageName(g.name, shift, displayNameMap, g.empId ?? g.id);
-
   return (
     <>
       {/* Mobile: stacked cards per day (no horizontal scroll) */}
@@ -115,12 +115,7 @@ export function ScheduleExcelViewClient({
           const dayIdx = days.findIndex((d) => d.date === day.date);
           const morning = morningByDay[dayIdx] ?? [];
           const evening = eveningByDay[dayIdx] ?? [];
-          const dayGuests = guestsByDay?.[day.date];
-          const guestLines: ReturnType<typeof formatGuestLine>[] = [];
-          if (dayGuests) {
-            dayGuests.am.forEach((g) => guestLines.push(formatGuestLine(g, 'AM')));
-            dayGuests.pm.forEach((g) => guestLines.push(formatGuestLine(g, 'PM')));
-          }
+          const dayCoverage = coverageByDay[day.date] ?? [];
           const amCount = counts[dayIdx]?.amCount ?? 0;
           const pmCount = counts[dayIdx]?.pmCount ?? 0;
           return (
@@ -146,16 +141,14 @@ export function ScheduleExcelViewClient({
                   </div>
                   <div className="text-xs text-muted mt-0.5">{t('schedule.pmCount')}: {pmCount}</div>
                 </div>
-                {guestLines.length > 0 && (
-                  <div className="text-xs text-muted">
-                    {coverageLabel}:{' '}
-                    {guestLines.slice(0, MAX_COVERAGE_LINES).map((line, idx) => (
-                      <Fragment key={idx}>
-                        {idx > 0 ? ', ' : null}
-                        <ScheduleSlotLabelSpan label={line} />
-                      </Fragment>
-                    ))}
-                    {guestLines.length > MAX_COVERAGE_LINES && ` +${guestLines.length - MAX_COVERAGE_LINES}`}
+                {dayCoverage.length > 0 && (
+                  <div>
+                    <div className="text-xs font-medium text-muted mb-1">{coverageLabel}</div>
+                    <CoverageCell
+                      coverageItems={dayCoverage}
+                      displayNameMap={displayNameMap}
+                      tooltipLabels={coverageTooltipLabels}
+                    />
                   </div>
                 )}
               </div>
@@ -214,12 +207,7 @@ export function ScheduleExcelViewClient({
           {days.map((day, dayIdx) => {
             const morning = morningByDay[dayIdx] ?? [];
             const evening = eveningByDay[dayIdx] ?? [];
-            const dayGuests = guestsByDay?.[day.date];
-            const guestLines: ReturnType<typeof formatGuestLine>[] = [];
-            if (dayGuests) {
-              dayGuests.am.forEach((g) => guestLines.push(formatGuestLine(g, 'AM')));
-              dayGuests.pm.forEach((g) => guestLines.push(formatGuestLine(g, 'PM')));
-            }
+            const dayCoverage = coverageByDay[day.date] ?? [];
             const amCount = counts[dayIdx]?.amCount ?? 0;
             const pmCount = counts[dayIdx]?.pmCount ?? 0;
             return (
@@ -247,7 +235,11 @@ export function ScheduleExcelViewClient({
                   );
                 })}
                 <td className={rashidCell}>
-                  <CoverageCell dayGuests={dayGuests} displayNameMap={displayNameMap} />
+                  <CoverageCell
+                    coverageItems={dayCoverage}
+                    displayNameMap={displayNameMap}
+                    tooltipLabels={coverageTooltipLabels}
+                  />
                 </td>
                 <td className={amCountCell}>{amCount}</td>
                 <td className={pmCountCell}>{pmCount}</td>

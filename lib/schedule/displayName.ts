@@ -189,6 +189,17 @@ export function getScheduleDisplayName(
   return getFirstName(fullName) || normalized;
 }
 
+/** Short employee label for schedule tables (first name + disambiguation). */
+export function formatScheduleEmployeeName(
+  fullName: string,
+  displayNameMap?: Map<string, string>,
+  lookupKey?: string
+): string {
+  return displayNameMap
+    ? getScheduleDisplayName(lookupKey, fullName, displayNameMap)
+    : getFirstName(fullName) || normalizeFullName(fullName);
+}
+
 export type ScheduleNameSlot = {
   empId: string;
   fullName: string;
@@ -225,15 +236,14 @@ export function formatScheduleNameSlot(
 
 export type CoverageShift = 'AM' | 'PM' | 'SPLIT';
 
+/** @deprecated Use formatScheduleEmployeeName + CoverageCell shift badges. */
 export function formatCoverageName(
   name: string,
   shift: CoverageShift,
   displayNameMap?: Map<string, string>,
   lookupKey?: string
 ): ScheduleSlotLabel {
-  const short = displayNameMap
-    ? getScheduleDisplayName(lookupKey, name, displayNameMap)
-    : getFirstName(name) || normalizeFullName(name);
+  const short = formatScheduleEmployeeName(name, displayNameMap, lookupKey);
   const isSplit = shift === 'SPLIT';
   const title = isSplit ? `${name} — Split Shift` : name;
   const text = isSplit ? short : `${short} ${shift}`;

@@ -13,18 +13,19 @@ import { getWeekStartSaturday } from '@/lib/utils/week';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
-import { normShift } from '@/lib/shiftNorm';
+import { buildCoverageByDay } from '@/lib/schedule/coverageItems';
+import type { CoverageItem, CoverageTooltipLabels } from '@/lib/schedule/coverageItems';
+import { hasCoverageItems } from '@/lib/schedule/coverageItems';
+import { CoverageCell } from '@/components/schedule/CoverageCell';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import {
   buildScheduleDisplayNameMapForRows,
   buildScheduleDisplayNames,
-  formatCoverageName,
   getScheduleDisplayName,
   type ScheduleNameSlot,
 } from '@/lib/schedule/displayName';
-import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
@@ -566,31 +567,26 @@ export function ScheduleViewClient({
   );
 
   /** External coverage by day (YYYY-MM-DD). Only external guests. */
-  const guestsByDay = useMemo(() => {
-    const map: Record<string, { am: Array<{ id: string; name: string }>; pm: Array<{ id: string; name: string }> }> = {};
-    const list = externalGuests;
-    for (const g of list) {
-      const dateKey = g.date;
-      const shiftNorm = normShift(g.shift);
-      if (shiftNorm === null) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[View] Unknown shift, guest not dropped:', g.shift, g);
-        }
-        continue;
-      }
-      if (!map[dateKey]) map[dateKey] = { am: [], pm: [] };
-      const baseName = getEmployeeDisplayName(g.employee, locale) || g.empId || '';
-      const name = (g as { pending?: boolean }).pending ? `${baseName} (${t('schedule.pendingApproval') ?? 'في انتظار الموافقة'})` : baseName;
-      const item = { id: g.id, name, empId: g.empId };
-      if (shiftNorm === 'AM') map[dateKey].am.push(item);
-      else map[dateKey].pm.push(item);
-    }
-    if (process.env.NODE_ENV === 'development' && list.length > 0) {
-      console.log('[View] guestShifts sample', list.slice(0, 3));
-      console.log('[View] guestsByDay keys', Object.keys(map).slice(0, 7));
-    }
-    return map;
-  }, [externalGuests, locale, t]);
+  const coverageByDay = useMemo(
+    () =>
+      buildCoverageByDay(externalGuests, {
+        destinationBoutique: scopeLabel ?? undefined,
+        locale,
+        pendingLabel: t('schedule.pendingApproval') ?? 'Pending approval',
+      }),
+    [externalGuests, scopeLabel, locale, t]
+  );
+
+  const coverageTooltipLabels = useMemo(
+    () => ({
+      morningShift: t('schedule.shift.morning') ?? 'Morning Shift',
+      afternoonShift: t('schedule.shift.evening') ?? 'Afternoon Shift',
+      splitShift: t('schedule.shift.splitShift') ?? 'Split Shift',
+      from: t('schedule.coverageFrom') ?? 'From',
+      covering: t('schedule.coverageCovering') ?? 'Covering',
+    }),
+    [t]
+  );
 
   // Excel view: per-day lists by shift (boutique AM/PM); external coverage from guestsByDay
   const scheduleDisplayNames = useMemo(() => {
@@ -957,6 +953,16 @@ export function ScheduleViewClient({
                   <ScheduleGridView
                     gridData={w.gridData}
                     displayNameMap={buildScheduleDisplayNameMapForRows(w.gridData.rows, locale)}
+                    coverageByDay={buildCoverageByDay(w.weekGuests, {
+                      destinationBoutique: scopeLabel ?? undefined,
+                      locale,
+                      pendingLabel: t('schedule.pendingApproval') ?? 'Pending approval',
+                    })}
+                    coverageHeaderLabel={getCoverageHeaderLabel(w.weekGuests, {
+                      hostBoutique: scopeLabel ? { name: scopeLabel } : undefined,
+                      externalLabel: t('schedule.externalCoverage') ?? 'External Coverage',
+                    })}
+                    coverageTooltipLabels={coverageTooltipLabels}
                     dayRefs={dayRefs}
                     formatDDMM={formatDDMM}
                     getDayName={(d: string) => getDayName(d, locale)}
@@ -964,7 +970,6 @@ export function ScheduleViewClient({
                     fullGrid={fullGrid}
                     validationsByDay={[]}
                     focusDay={() => {}}
-                    weekGuests={w.weekGuests}
                   />
                 </div>
               ))}
@@ -1058,8 +1063,9 @@ export function ScheduleViewClient({
               gridData={gridData}
               excelData={excelData}
               displayNameMap={scheduleDisplayNames}
-              guestsByDay={guestsByDay}
+              coverageByDay={coverageByDay}
               coverageHeaderLabel={coverageHeaderLabel}
+              coverageTooltipLabels={coverageTooltipLabels}
               visibleSlots={visibleSlots}
               maxPerCell={maxPerCell}
               showMaxColumnsWarning={fullGrid}
@@ -1076,6 +1082,9 @@ export function ScheduleViewClient({
           <ScheduleGridView
             gridData={gridData}
             displayNameMap={scheduleDisplayNames}
+            coverageByDay={coverageByDay}
+            coverageHeaderLabel={coverageHeaderLabel}
+            coverageTooltipLabels={coverageTooltipLabels}
             dayRefs={dayRefs}
             formatDDMM={formatDDMM}
             getDayName={(d: string) => getDayName(d, locale)}
@@ -1083,7 +1092,6 @@ export function ScheduleViewClient({
             fullGrid={fullGrid}
             validationsByDay={validationsByDay}
             focusDay={focusDay}
-            weekGuests={externalGuests}
           />
         )}
 
@@ -1091,7 +1099,9 @@ export function ScheduleViewClient({
           <ScheduleMobileView
             gridData={gridData}
             displayNameMap={scheduleDisplayNames}
-            guestsByDay={guestsByDay}
+            coverageByDay={coverageByDay}
+            coverageHeaderLabel={coverageHeaderLabel}
+            coverageTooltipLabels={coverageTooltipLabels}
             formatDDMM={formatDDMM}
             getDayName={(d: string) => getDayName(d, locale)}
             t={t}
@@ -1111,6 +1121,9 @@ export function ScheduleViewClient({
 function ScheduleGridView({
   gridData,
   displayNameMap,
+  coverageByDay,
+  coverageHeaderLabel,
+  coverageTooltipLabels,
   dayRefs,
   formatDDMM,
   getDayName,
@@ -1118,10 +1131,12 @@ function ScheduleGridView({
   fullGrid,
   validationsByDay,
   focusDay,
-  weekGuests = [],
 }: {
   gridData: GridData;
   displayNameMap: Map<string, string>;
+  coverageByDay: Record<string, CoverageItem[]>;
+  coverageHeaderLabel: string;
+  coverageTooltipLabels: CoverageTooltipLabels;
   dayRefs: React.MutableRefObject<Record<string, HTMLTableCellElement | null>>;
   formatDDMM: (d: string) => string;
   getDayName: (d: string) => string;
@@ -1129,22 +1144,10 @@ function ScheduleGridView({
   fullGrid: boolean;
   validationsByDay: Array<{ date: string; validations: ValidationResult[] }>;
   focusDay: (date: string) => void;
-  weekGuests?: Array<{ id: string; date: string; empId: string; shift: string; reason?: string; sourceBoutiqueId?: string; sourceBoutique?: { id: string; name: string } | null; employee: { name: string; nameAr?: string | null; homeBoutiqueCode: string; homeBoutiqueName?: string } }>;
 }) {
   const { locale } = useT();
   const { days, rows, counts } = gridData;
-  // STRICT OPERATIONAL VIEW: show a single host-centric External Coverage row (never "Other Boutique Coverage" sections).
-  const guestsByDate = useMemo(() => {
-    const list = weekGuests ?? [];
-    const byDate = new Map<string, typeof list>();
-    for (const g of list) {
-      const d = g.date;
-      const existing = byDate.get(d);
-      if (existing) existing.push(g);
-      else byDate.set(d, [g]);
-    }
-    return byDate;
-  }, [weekGuests]);
+  const showCoverageRow = hasCoverageItems(coverageByDay);
   return (
     <>
       <div className="mt-6 rounded-xl border border-border bg-surface p-4">
@@ -1260,36 +1263,21 @@ function ScheduleGridView({
                 })}
               </tr>
             ))}
-            {(weekGuests?.length ?? 0) > 0 && (
+            {showCoverageRow && (
               <tr key="external-coverage" className="border-t-2 border-border bg-surface-subtle">
                 {fullGrid && <LuxuryTd className="sticky left-0 z-10 w-12 bg-surface-subtle border-r border-border" />}
                 <LuxuryTd className="sticky left-0 z-10 min-w-[100px] bg-surface-subtle border-r border-border py-2 font-medium text-foreground">
-                  {t('schedule.externalCoverage') ?? 'External Coverage'}
+                  {coverageHeaderLabel}
                 </LuxuryTd>
-                {days.map((day) => {
-                  const guests = guestsByDate.get(day.date) ?? [];
-                  return (
-                    <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
-                      <div className="space-y-1.5">
-                        {guests.map((g) => {
-                          const fullName = getEmployeeDisplayName(g.employee, locale);
-                          const shift =
-                            g.shift === 'MORNING' || g.shift === 'AM'
-                              ? ('AM' as const)
-                              : g.shift === 'SPLIT'
-                                ? ('SPLIT' as const)
-                                : ('PM' as const);
-                          const label = formatCoverageName(fullName, shift, displayNameMap, g.empId);
-                          return (
-                            <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground">
-                              <ScheduleSlotLabelSpan label={label} />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </LuxuryTd>
-                  );
-                })}
+                {days.map((day) => (
+                  <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
+                    <CoverageCell
+                      coverageItems={coverageByDay[day.date] ?? []}
+                      displayNameMap={displayNameMap}
+                      tooltipLabels={coverageTooltipLabels}
+                    />
+                  </LuxuryTd>
+                ))}
               </tr>
             )}
             {/* Count row moved to bottom (after coverage rows) */}

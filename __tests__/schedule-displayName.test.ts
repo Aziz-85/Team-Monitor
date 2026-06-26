@@ -1,10 +1,13 @@
 import {
   buildScheduleDisplayNames,
   formatCoverageName,
+  formatScheduleEmployeeName,
   getFamilyName,
   getFirstName,
   getMeaningfulFamilyInitial,
 } from '@/lib/schedule/displayName';
+import { buildCoverageItemTooltip } from '@/lib/schedule/coverageItems';
+import type { CoverageItem } from '@/lib/schedule/coverageItems';
 
 describe('schedule displayName', () => {
   it('getFirstName returns first token', () => {
@@ -63,23 +66,16 @@ describe('schedule displayName', () => {
     expect(map.get('e1')).not.toBe(map.get('e2'));
   });
 
-  it('formatCoverageName shortens guest lines', () => {
+  it('formatScheduleEmployeeName shortens names', () => {
     const map = buildScheduleDisplayNames([
       { empId: 'g1', name: 'Abdulmoniem Almulhim' },
       { empId: 'g2', name: 'Mahmoud Alkuaibi' },
     ]);
-    expect(formatCoverageName('Abdulmoniem Almulhim', 'AM', map, 'g1')).toMatchObject({
-      text: 'Abdulmoniem AM',
-      title: 'Abdulmoniem Almulhim',
-      isSplit: false,
-    });
-    expect(formatCoverageName('Mahmoud Alkuaibi', 'PM', map, 'g2')).toMatchObject({
-      text: 'Mahmoud PM',
-      isSplit: false,
-    });
+    expect(formatScheduleEmployeeName('Abdulmoniem Almulhim', map, 'g1')).toBe('Abdulmoniem');
+    expect(formatScheduleEmployeeName('Mahmoud Alkuaibi', map, 'g2')).toBe('Mahmoud');
   });
 
-  it('formatCoverageName disambiguates duplicate first names', () => {
+  it('formatCoverageName legacy helper still works', () => {
     const map = buildScheduleDisplayNames([
       { empId: 'g1', name: 'Hussain Alrashdi' },
       { empId: 'g2', name: 'Hussain Almarhon' },
@@ -88,10 +84,15 @@ describe('schedule displayName', () => {
     expect(formatCoverageName('Hussain Almarhon', 'PM', map, 'g2').text).toBe('Hussain M. PM');
   });
 
-  it('formatCoverageName marks split coverage', () => {
-    const label = formatCoverageName('Abdulaziz Alnasser', 'SPLIT');
-    expect(label.text).toBe('Abdulaziz');
-    expect(label.isSplit).toBe(true);
-    expect(label.title).toBe('Abdulaziz Alnasser — Split Shift');
+  it('buildCoverageItemTooltip includes boutique context', () => {
+    const item: CoverageItem = {
+      fullName: 'Hussain Almarhon',
+      shift: 'AM',
+      sourceBoutique: 'Rashid Boutique',
+      destinationBoutique: 'Dhahran Mall',
+    };
+    expect(buildCoverageItemTooltip(item)).toBe(
+      'Hussain Almarhon\nMorning Shift\nFrom: Rashid Boutique\nCovering: Dhahran Mall'
+    );
   });
 });

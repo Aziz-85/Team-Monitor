@@ -6,20 +6,19 @@ import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 import {
   buildScheduleDisplayNames,
-  formatCoverageName,
   formatScheduleNameSlot,
   type ScheduleSlotLabel,
 } from '@/lib/schedule/displayName';
+import type { CoverageItem } from '@/lib/schedule/coverageItems';
+import { CoverageCell } from '@/components/schedule/CoverageCell';
+import type { CoverageTooltipLabels } from '@/lib/schedule/coverageItems';
 import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 
 type GridDay = { date: string; dayName?: string; dayOfWeek: number };
 type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> };
 type GridData = { days: GridDay[]; rows: GridRow[]; counts?: Array<{ amCount: number; pmCount: number }> };
 
-export type GuestsByDayMobile = Record<
-  string,
-  { am: Array<{ id: string; name: string; empId?: string }>; pm: Array<{ id: string; name: string; empId?: string }> }
->;
+export type CoverageByDayMobile = Record<string, CoverageItem[]>;
 
 type ListedName = { key: string; label: ScheduleSlotLabel };
 
@@ -35,7 +34,9 @@ function renderNameList(items: ListedName[]) {
 export function ScheduleMobileView({
   gridData,
   displayNameMap,
-  guestsByDay = {},
+  coverageByDay = {},
+  coverageHeaderLabel,
+  coverageTooltipLabels,
   formatDDMM,
   getDayName,
   t,
@@ -43,7 +44,9 @@ export function ScheduleMobileView({
 }: {
   gridData: GridData;
   displayNameMap?: Map<string, string>;
-  guestsByDay?: GuestsByDayMobile;
+  coverageByDay?: CoverageByDayMobile;
+  coverageHeaderLabel?: string;
+  coverageTooltipLabels?: Partial<CoverageTooltipLabels>;
   formatDDMM: (d: string) => string;
   getDayName: (d: string, locale: string) => string;
   t: (k: string) => string;
@@ -51,12 +54,11 @@ export function ScheduleMobileView({
 }) {
   const { days, rows } = gridData;
   const nameMap = displayNameMap;
+  const coverageLabel = coverageHeaderLabel ?? (t('schedule.externalCoverage') ?? 'External Coverage');
   const dayCards = days.map((day, i) => {
     const dayEmployees: Array<{ empId: string; name: string }> = [];
     const morning: ListedName[] = [];
     const evening: ListedName[] = [];
-    const rashidAm: ListedName[] = [];
-    const rashidPm: ListedName[] = [];
     const isFridayDay = day.dayOfWeek === 5;
 
     for (const row of rows) {
@@ -80,18 +82,6 @@ export function ScheduleMobileView({
       const listed = { key: row.empId, label: slotLabel };
       if (contributesToMorningList(cell.effectiveShift, isFridayDay)) morning.push(listed);
       if (contributesToEveningList(cell.effectiveShift)) evening.push(listed);
-      if (cell.effectiveShift === 'COVER_RASHID_AM') {
-        rashidAm.push({
-          key: `${row.empId}-am`,
-          label: formatCoverageName(fullName, 'AM', dayMap, row.empId),
-        });
-      }
-      if (cell.effectiveShift === 'COVER_RASHID_PM') {
-        rashidPm.push({
-          key: `${row.empId}-pm`,
-          label: formatCoverageName(fullName, 'PM', dayMap, row.empId),
-        });
-      }
     }
 
     return {
@@ -99,8 +89,7 @@ export function ScheduleMobileView({
       dayName: day.dayName ?? getDayName(day.date, locale),
       morning,
       evening,
-      rashidAm,
-      rashidPm,
+      coverage: coverageByDay[day.date] ?? [],
     };
   });
 
@@ -131,66 +120,16 @@ export function ScheduleMobileView({
                 {card.evening.length > 0 ? renderNameList(card.evening) : null}
               </div>
             </div>
-            {(card.rashidAm.length > 0 || card.rashidPm.length > 0) && (
+            {card.coverage.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-medium text-muted">
-                  {t('schedule.externalCoverage')}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {card.rashidAm.map((item) => (
-                    <span
-                      key={item.key}
-                      className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
-                    >
-                      <ScheduleSlotLabelSpan label={item.label} />
-                    </span>
-                  ))}
-                  {card.rashidPm.map((item) => (
-                    <span
-                      key={item.key}
-                      className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
-                    >
-                      <ScheduleSlotLabelSpan label={item.label} />
-                    </span>
-                  ))}
-                </div>
+                <div className="mb-1 text-xs font-medium text-muted">{coverageLabel}</div>
+                <CoverageCell
+                  coverageItems={card.coverage}
+                  displayNameMap={nameMap}
+                  tooltipLabels={coverageTooltipLabels}
+                />
               </div>
             )}
-            {(() => {
-              const dayGuests = guestsByDay[card.date];
-              const hasGuests = dayGuests && (dayGuests.am.length > 0 || dayGuests.pm.length > 0);
-              if (!hasGuests) return null;
-              const map = nameMap ?? new Map<string, string>();
-              return (
-                <div>
-                  <div className="mb-1 text-xs font-medium text-muted">
-                    {t('schedule.externalCoverage') ?? 'External Coverage'}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(dayGuests.am ?? []).map((g) => (
-                      <span
-                        key={g.id}
-                        className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
-                      >
-                        <ScheduleSlotLabelSpan
-                          label={formatCoverageName(g.name, 'AM', map, g.empId ?? g.id)}
-                        />
-                      </span>
-                    ))}
-                    {(dayGuests.pm ?? []).map((g) => (
-                      <span
-                        key={g.id}
-                        className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
-                      >
-                        <ScheduleSlotLabelSpan
-                          label={formatCoverageName(g.name, 'PM', map, g.empId ?? g.id)}
-                        />
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
           </div>
         </div>
       ))}
