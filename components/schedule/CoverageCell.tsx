@@ -5,7 +5,7 @@ import { SCHEDULE_UI, MAX_COVERAGE_LINES } from '@/lib/scheduleUi';
 export type DayGuests = { am: Array<{ id?: string; name: string }>; pm: Array<{ id?: string; name: string }> };
 
 type CoverageCellProps = {
-  /** Per-day guest coverage (AM/PM). If undefined or empty, shows "—". */
+  /** Per-day guest coverage (AM/PM). Renders nothing when empty. */
   dayGuests?: DayGuests | null;
   /** Optional pre-built lines (overrides dayGuests if provided). */
   lines?: string[];
@@ -29,11 +29,7 @@ export function CoverageCell({ dayGuests, lines: linesProp, className = '', titl
     })();
 
   if (lines.length === 0) {
-    return (
-      <span className={`${SCHEDULE_UI.guestLine} text-muted ${className}`.trim()} title={title}>
-        —
-      </span>
-    );
+    return null;
   }
 
   const show = lines.slice(0, MAX_COVERAGE_LINES);

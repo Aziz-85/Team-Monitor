@@ -48,7 +48,7 @@ export function ScheduleMonthExcelViewClient({
   formatDDMM: (d: string) => string;
   t: (k: string) => string;
 }) {
-  const cellBase = 'border border-border px-2 py-1 text-center text-sm';
+  const cellBase = 'border border-border px-2 py-1 text-center text-sm min-h-[2.25rem]';
   const headerCell = 'border border-border bg-surface-subtle px-2 py-1 text-center text-sm font-semibold text-foreground';
   const headerDayEnd = `${headerCell} border-r-2 border-border`;
   const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
@@ -146,7 +146,7 @@ export function ScheduleMonthExcelViewClient({
                           key={i}
                           className={i === 0 ? morningFirst : i === MORNING_SLOTS - 1 ? morningLast : morningCell}
                         >
-                          {inMonth && morning[i] && morning[i].trim() ? morning[i] : '—'}
+                          {inMonth && morning[i] && morning[i].trim() ? morning[i] : null}
                         </td>
                       ))}
                       {Array.from({ length: EVENING_SLOTS }, (_, i) => (
@@ -154,7 +154,7 @@ export function ScheduleMonthExcelViewClient({
                           key={i}
                           className={i === 0 ? eveningFirst : i === EVENING_SLOTS - 1 ? eveningLast : eveningCell}
                         >
-                          {inMonth && evening[i] && evening[i].trim() ? evening[i] : '—'}
+                          {inMonth && evening[i] && evening[i].trim() ? evening[i] : null}
                         </td>
                       ))}
                       <td className={rashidCell}>
@@ -172,9 +172,7 @@ export function ScheduleMonthExcelViewClient({
                                 : t('schedule.rashid.pmShort')}
                             </span>
                           </>
-                        ) : (
-                          '—'
-                        )}
+                        ) : null}
                       </td>
                       <td className={amCountCell}>{inMonth && amCount != null ? amCount : ''}</td>
                       <td className={pmCountCell}>{inMonth && pmCount != null ? pmCount : ''}</td>

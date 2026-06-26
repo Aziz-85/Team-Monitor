@@ -1213,7 +1213,7 @@ function ScheduleGridView({
                                 )
                               : cell.effectiveShift === 'COVER_RASHID_AM' || cell.effectiveShift === 'COVER_RASHID_PM'
                                 ? (t('schedule.externalCoverage') ?? 'External')
-                                : '—'}
+                                : null}
                         </div>
                       )}
                     </LuxuryTd>

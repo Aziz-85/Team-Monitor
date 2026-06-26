@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { getFirstName } from '@/lib/name';
 import { getVisibleSlotCount, getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
-import { SCHEDULE_UI, SCHEDULE_COLS } from '@/lib/scheduleUi';
+import { SCHEDULE_UI, SCHEDULE_COLS, SCHEDULE_EMPTY_SLOT_OPTION } from '@/lib/scheduleUi';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
 import { contributesToMorningList, contributesToEveningList } from '@/lib/schedule/shiftRules';
 
@@ -246,18 +246,16 @@ export function ScheduleEditExcelViewClient({
                       key={i}
                       className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`}
                     >
-                      {isFriday ? (
-                        <span className="text-muted">—</span>
-                      ) : editable ? (
+                      {isFriday ? null : editable ? (
                         <ScheduleCellSelect
                           compact
                           value={occupant ?? ''}
-                          options={[{ value: '', label: '—' }, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
+                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
                           onChange={(v) => handleSlotChange(date, 'MORNING', i, v, occupant)}
                           aria-label={t('schedule.morning')}
                         />
                       ) : (
-                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : '—'
+                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : null
                       )}
                     </td>
                   );
@@ -274,21 +272,19 @@ export function ScheduleEditExcelViewClient({
                         <ScheduleCellSelect
                           compact
                           value={occupant ?? ''}
-                          options={[{ value: '', label: '—' }, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
+                          options={[SCHEDULE_EMPTY_SLOT_OPTION, ...options.map((emp) => ({ value: emp.empId, label: getFirstName(emp.name) }))]}
                           onChange={(v) => handleSlotChange(date, 'EVENING', i, v, occupant)}
                           aria-label={t('schedule.evening')}
                         />
                       ) : (
-                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : '—'
+                        occupant ? getFirstName(rows.find((r) => r.empId === occupant)?.name ?? '') : null
                       )}
                     </td>
                   );
                 })}
                 <td className={rashidCell}>
                   <div className="space-y-1">
-                    {(guestsByDate.get(date) ?? []).length === 0 ? (
-                      <div className="h-[10px] w-[60px] border-b border-border opacity-70" aria-hidden="true" />
-                    ) : (
+                    {(guestsByDate.get(date) ?? []).length === 0 ? null : (
                       <div className="flex flex-col gap-1 items-start">
                         {(guestsByDate.get(date) ?? []).map((g) => {
                           const pending = (g as { pending?: boolean }).pending;
@@ -298,7 +294,7 @@ export function ScheduleEditExcelViewClient({
                               key={g.id}
                               compact
                               value={g.id}
-                              options={pending ? [{ value: g.id, label }] : [{ value: g.id, label }, { value: '__delete__', label: '—' }]}
+                              options={pending ? [{ value: g.id, label }] : [{ value: g.id, label }, { value: '__delete__', label: t('common.delete') ?? 'Delete' }]}
                               onChange={(v) => {
                                 if (!pending && v === '__delete__') onRemoveGuestShift?.(g.id);
                               }}

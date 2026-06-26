@@ -214,7 +214,7 @@ function ShiftCellBadge({ shift, t }: { shift: string; t: (key: string) => strin
       </span>
     );
   }
-  return <>—</>;
+  return null;
 }
 
 function shiftLabel(t: (key: string) => string, key: keyof typeof SHIFT_LABEL_FALLBACKS): string {
@@ -2142,9 +2142,7 @@ export function ScheduleEditClient({
                                       draftShift === 'EVENING' ||
                                       draftShift === 'SPLIT' ? (
                                         <ShiftCellBadge shift={draftShift} t={t} />
-                                      ) : (
-                                        '—'
-                                      )}
+                                      ) : null}
                                     </div>
                                   )}
                                 </LuxuryTd>
@@ -2171,28 +2169,22 @@ export function ScheduleEditClient({
                               return (
                                 <LuxuryTd key={day.date} className="w-[11.7%] min-w-0 align-top p-2">
                                   <div className="flex flex-col gap-1 items-start">
-                                    {guests.length === 0 ? (
-                                      <select disabled className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-muted">
-                                        <option value="">—</option>
+                                    {guests.map((g) => (
+                                      <select
+                                        key={g.id}
+                                        value={g.id}
+                                        onChange={(e) => {
+                                          if (e.target.value === '__delete__') handleRemoveGuestShift(g.id);
+                                        }}
+                                        disabled={locked || removingGuestId === g.id}
+                                        className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                                      >
+                                        <option value="__delete__">{t('common.delete') ?? 'Delete'}</option>
+                                        <option value={g.id}>
+                                          {getEmployeeDisplayName(g.employee, locale)} {g.shift === 'MORNING' ? 'AM' : 'PM'}
+                                        </option>
                                       </select>
-                                    ) : (
-                                      guests.map((g) => (
-                                        <select
-                                          key={g.id}
-                                          value={g.id}
-                                          onChange={(e) => {
-                                            if (e.target.value === '__delete__') handleRemoveGuestShift(g.id);
-                                          }}
-                                          disabled={locked || removingGuestId === g.id}
-                                          className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
-                                        >
-                                          <option value="__delete__">—</option>
-                                          <option value={g.id}>
-                                            {getEmployeeDisplayName(g.employee, locale)} {g.shift === 'MORNING' ? 'AM' : 'PM'}
-                                          </option>
-                                        </select>
-                                      ))
-                                    )}
+                                    ))}
                                   </div>
                                 </LuxuryTd>
                               );

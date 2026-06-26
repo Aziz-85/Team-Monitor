@@ -34,6 +34,9 @@ export const SCHEDULE_UI = {
   borderL2: 'border-l-2 border-slate-400',
 };
 
+/** Select option for an unassigned schedule slot (blank label — no dash placeholder). */
+export const SCHEDULE_EMPTY_SLOT_OPTION = { value: '', label: '' } as const;
+
 /** Dense column widths: View proportions, same in Editor */
 export const SCHEDULE_COLS = {
   date: 'w-[60px]',

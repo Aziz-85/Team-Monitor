@@ -115,15 +115,15 @@ export function ScheduleExcelViewClient({
               <div className="px-3 py-2 space-y-2 text-sm">
                 <div>
                   <div className="text-xs font-medium text-muted mb-1">{t('schedule.morning')}</div>
-                  <div className="bg-blue-50 rounded border border-blue-200 px-2 py-1.5 text-blue-900">
-                    {morning.length > 0 ? morning.join(', ') : '—'}
+                  <div className="bg-blue-50 rounded border border-blue-200 px-2 py-1.5 text-blue-900 min-h-[2.25rem]">
+                    {morning.length > 0 ? morning.join(', ') : null}
                   </div>
                   <div className="text-xs text-muted mt-0.5">{t('schedule.amCount')}: {amCount}</div>
                 </div>
                 <div>
                   <div className="text-xs font-medium text-muted mb-1">{t('schedule.evening')}</div>
-                  <div className="bg-amber-50 rounded border border-amber-200 px-2 py-1.5 text-amber-900">
-                    {evening.length > 0 ? evening.join(', ') : '—'}
+                  <div className="bg-amber-50 rounded border border-amber-200 px-2 py-1.5 text-amber-900 min-h-[2.25rem]">
+                    {evening.length > 0 ? evening.join(', ') : null}
                   </div>
                   <div className="text-xs text-muted mt-0.5">{t('schedule.pmCount')}: {pmCount}</div>
                 </div>
@@ -205,12 +205,12 @@ export function ScheduleExcelViewClient({
                 </td>
                 {Array.from({ length: visibleSlots }, (_, i) => (
                   <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={morning[i] && morning[i].trim() ? morning[i] : undefined}>
-                    <span className="block truncate text-start">{morning[i] && morning[i].trim() ? morning[i] : '—'}</span>
+                    <span className="block truncate text-start">{morning[i] && morning[i].trim() ? morning[i] : null}</span>
                   </td>
                 ))}
                 {Array.from({ length: visibleSlots }, (_, i) => (
                   <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={evening[i] && evening[i].trim() ? evening[i] : undefined}>
-                    <span className="block truncate text-start">{evening[i] && evening[i].trim() ? evening[i] : '—'}</span>
+                    <span className="block truncate text-start">{evening[i] && evening[i].trim() ? evening[i] : null}</span>
                   </td>
                 ))}
                 <td className={rashidCell}>
