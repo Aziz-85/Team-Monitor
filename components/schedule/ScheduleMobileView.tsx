@@ -4,21 +4,30 @@
 import { Fragment } from 'react';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
-import { buildScheduleDisplayNames, getScheduleDisplayName } from '@/lib/schedule/displayName';
+import {
+  buildScheduleDisplayNames,
+  formatCoverageName,
+  formatScheduleNameSlot,
+  type ScheduleSlotLabel,
+} from '@/lib/schedule/displayName';
+import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 
 type GridDay = { date: string; dayName?: string; dayOfWeek: number };
 type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> };
 type GridData = { days: GridDay[]; rows: GridRow[]; counts?: Array<{ amCount: number; pmCount: number }> };
 
-export type GuestsByDayMobile = Record<string, { am: Array<{ id: string; name: string }>; pm: Array<{ id: string; name: string }> }>;
+export type GuestsByDayMobile = Record<
+  string,
+  { am: Array<{ id: string; name: string; empId?: string }>; pm: Array<{ id: string; name: string; empId?: string }> }
+>;
 
-type ListedName = { key: string; text: string; title: string };
+type ListedName = { key: string; label: ScheduleSlotLabel };
 
 function renderNameList(items: ListedName[]) {
   return items.map((item, idx) => (
     <Fragment key={item.key}>
       {idx > 0 ? ', ' : null}
-      <span title={item.title}>{item.text}</span>
+      <ScheduleSlotLabelSpan label={item.label} />
     </Fragment>
   ));
 }
@@ -41,6 +50,7 @@ export function ScheduleMobileView({
   locale?: string;
 }) {
   const { days, rows } = gridData;
+  const nameMap = displayNameMap;
   const dayCards = days.map((day, i) => {
     const dayEmployees: Array<{ empId: string; name: string }> = [];
     const morning: ListedName[] = [];
@@ -56,25 +66,32 @@ export function ScheduleMobileView({
       dayEmployees.push({ empId: row.empId, name: fullName });
     }
 
-    const dayMap =
-      displayNameMap ??
-      buildScheduleDisplayNames(dayEmployees);
+    const dayMap = nameMap ?? buildScheduleDisplayNames(dayEmployees);
 
     for (const row of rows) {
       const cell = row.cells[i];
       if (!cell || cell.availability !== 'WORK') continue;
       const fullName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
-      const short = getScheduleDisplayName(row.empId, fullName, dayMap);
-      const splitNote = isSplitShift(cell.effectiveShift) ? ' (SPLIT)' : '';
-      const listed = {
-        key: row.empId,
-        text: `${short}${splitNote}`,
-        title: `${fullName}${splitNote}`,
-      };
+      const split = isSplitShift(cell.effectiveShift);
+      const slotLabel = formatScheduleNameSlot(
+        { empId: row.empId, fullName, isSplit: split },
+        dayMap
+      );
+      const listed = { key: row.empId, label: slotLabel };
       if (contributesToMorningList(cell.effectiveShift, isFridayDay)) morning.push(listed);
       if (contributesToEveningList(cell.effectiveShift)) evening.push(listed);
-      if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push({ ...listed, text: short, title: fullName });
-      if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push({ ...listed, text: short, title: fullName });
+      if (cell.effectiveShift === 'COVER_RASHID_AM') {
+        rashidAm.push({
+          key: `${row.empId}-am`,
+          label: formatCoverageName(fullName, 'AM', dayMap, row.empId),
+        });
+      }
+      if (cell.effectiveShift === 'COVER_RASHID_PM') {
+        rashidPm.push({
+          key: `${row.empId}-pm`,
+          label: formatCoverageName(fullName, 'PM', dayMap, row.empId),
+        });
+      }
     }
 
     return {
@@ -123,19 +140,17 @@ export function ScheduleMobileView({
                   {card.rashidAm.map((item) => (
                     <span
                       key={item.key}
-                      title={item.title}
                       className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                     >
-                      {item.text} <span className="text-muted">AM</span>
+                      <ScheduleSlotLabelSpan label={item.label} />
                     </span>
                   ))}
                   {card.rashidPm.map((item) => (
                     <span
                       key={item.key}
-                      title={item.title}
                       className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                     >
-                      {item.text} <span className="text-muted">PM</span>
+                      <ScheduleSlotLabelSpan label={item.label} />
                     </span>
                   ))}
                 </div>
@@ -145,6 +160,7 @@ export function ScheduleMobileView({
               const dayGuests = guestsByDay[card.date];
               const hasGuests = dayGuests && (dayGuests.am.length > 0 || dayGuests.pm.length > 0);
               if (!hasGuests) return null;
+              const map = nameMap ?? new Map<string, string>();
               return (
                 <div>
                   <div className="mb-1 text-xs font-medium text-muted">
@@ -156,7 +172,9 @@ export function ScheduleMobileView({
                         key={g.id}
                         className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                       >
-                        {g.name} <span className="text-muted">AM</span>
+                        <ScheduleSlotLabelSpan
+                          label={formatCoverageName(g.name, 'AM', map, g.empId ?? g.id)}
+                        />
                       </span>
                     ))}
                     {(dayGuests.pm ?? []).map((g) => (
@@ -164,7 +182,9 @@ export function ScheduleMobileView({
                         key={g.id}
                         className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground"
                       >
-                        {g.name} <span className="text-muted">PM</span>
+                        <ScheduleSlotLabelSpan
+                          label={formatCoverageName(g.name, 'PM', map, g.empId ?? g.id)}
+                        />
                       </span>
                     ))}
                   </div>

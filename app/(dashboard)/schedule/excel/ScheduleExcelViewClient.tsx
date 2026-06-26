@@ -3,11 +3,13 @@
 import { Fragment, useMemo } from 'react';
 import { getSlotColumnClass } from '@/lib/schedule/scheduleSlots';
 import {
+  formatCoverageName,
   formatScheduleNameSlot,
   type ScheduleNameSlot,
 } from '@/lib/schedule/displayName';
 import { SCHEDULE_UI, SCHEDULE_COLS, MAX_COVERAGE_LINES } from '@/lib/scheduleUi';
 import { CoverageCell } from '@/components/schedule/CoverageCell';
+import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 
 export type ExcelClassicGridData = {
   days: Array<{ date: string; dayName?: string }>;
@@ -21,7 +23,7 @@ export type ExcelClassicExcelData = {
   rashidPmByDay: ScheduleNameSlot[][];
 };
 
-export type GuestsByDayExcel = Record<string, { am: Array<{ id: string; name: string }>; pm: Array<{ id: string; name: string }> }>;
+export type GuestsByDayExcel = Record<string, { am: Array<{ id: string; name: string; empId?: string }>; pm: Array<{ id: string; name: string; empId?: string }> }>;
 
 function slotAt(slots: ScheduleNameSlot[], index: number): ScheduleNameSlot | undefined {
   return slots[index];
@@ -93,14 +95,17 @@ export function ScheduleExcelViewClient({
 
   const renderSlotNames = (slots: ScheduleNameSlot[]) =>
     slots.map((slot, idx) => {
-      const { text, title } = formatScheduleNameSlot(slot, displayNameMap);
+      const label = formatScheduleNameSlot(slot, displayNameMap);
       return (
         <Fragment key={`${slot.empId}-${idx}`}>
           {idx > 0 ? ', ' : null}
-          <span title={title}>{text}</span>
+          <ScheduleSlotLabelSpan label={label} />
         </Fragment>
       );
     });
+
+  const formatGuestLine = (g: { id: string; name: string; empId?: string }, shift: 'AM' | 'PM') =>
+    formatCoverageName(g.name, shift, displayNameMap, g.empId ?? g.id);
 
   return (
     <>
@@ -111,10 +116,10 @@ export function ScheduleExcelViewClient({
           const morning = morningByDay[dayIdx] ?? [];
           const evening = eveningByDay[dayIdx] ?? [];
           const dayGuests = guestsByDay?.[day.date];
-          const guestLines: string[] = [];
+          const guestLines: ReturnType<typeof formatGuestLine>[] = [];
           if (dayGuests) {
-            dayGuests.am.forEach((g) => guestLines.push(`${g.name} AM`));
-            dayGuests.pm.forEach((g) => guestLines.push(`${g.name} PM`));
+            dayGuests.am.forEach((g) => guestLines.push(formatGuestLine(g, 'AM')));
+            dayGuests.pm.forEach((g) => guestLines.push(formatGuestLine(g, 'PM')));
           }
           const amCount = counts[dayIdx]?.amCount ?? 0;
           const pmCount = counts[dayIdx]?.pmCount ?? 0;
@@ -143,7 +148,13 @@ export function ScheduleExcelViewClient({
                 </div>
                 {guestLines.length > 0 && (
                   <div className="text-xs text-muted">
-                    {coverageLabel}: {guestLines.slice(0, MAX_COVERAGE_LINES).join(', ')}
+                    {coverageLabel}:{' '}
+                    {guestLines.slice(0, MAX_COVERAGE_LINES).map((line, idx) => (
+                      <Fragment key={idx}>
+                        {idx > 0 ? ', ' : null}
+                        <ScheduleSlotLabelSpan label={line} />
+                      </Fragment>
+                    ))}
                     {guestLines.length > MAX_COVERAGE_LINES && ` +${guestLines.length - MAX_COVERAGE_LINES}`}
                   </div>
                 )}
@@ -204,10 +215,10 @@ export function ScheduleExcelViewClient({
             const morning = morningByDay[dayIdx] ?? [];
             const evening = eveningByDay[dayIdx] ?? [];
             const dayGuests = guestsByDay?.[day.date];
-            const guestLines: string[] = [];
+            const guestLines: ReturnType<typeof formatGuestLine>[] = [];
             if (dayGuests) {
-              dayGuests.am.forEach((g) => guestLines.push(`${g.name} AM`));
-              dayGuests.pm.forEach((g) => guestLines.push(`${g.name} PM`));
+              dayGuests.am.forEach((g) => guestLines.push(formatGuestLine(g, 'AM')));
+              dayGuests.pm.forEach((g) => guestLines.push(formatGuestLine(g, 'PM')));
             }
             const amCount = counts[dayIdx]?.amCount ?? 0;
             const pmCount = counts[dayIdx]?.pmCount ?? 0;
@@ -222,7 +233,7 @@ export function ScheduleExcelViewClient({
                   const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
                   return (
                     <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
-                      <span className="block truncate text-start">{label?.text ?? null}</span>
+                      <span className="block truncate text-start">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
                     </td>
                   );
                 })}
@@ -231,12 +242,12 @@ export function ScheduleExcelViewClient({
                   const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
                   return (
                     <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
-                      <span className="block truncate text-start">{label?.text ?? null}</span>
+                      <span className="block truncate text-start">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
                     </td>
                   );
                 })}
                 <td className={rashidCell}>
-                  <CoverageCell dayGuests={dayGuests} />
+                  <CoverageCell dayGuests={dayGuests} displayNameMap={displayNameMap} />
                 </td>
                 <td className={amCountCell}>{amCount}</td>
                 <td className={pmCountCell}>{pmCount}</td>

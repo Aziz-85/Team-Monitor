@@ -20,9 +20,11 @@ import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import {
   buildScheduleDisplayNameMapForRows,
   buildScheduleDisplayNames,
+  formatCoverageName,
   getScheduleDisplayName,
   type ScheduleNameSlot,
 } from '@/lib/schedule/displayName';
+import { ScheduleSlotLabelSpan } from '@/components/schedule/ScheduleSlotLabel';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
@@ -579,7 +581,7 @@ export function ScheduleViewClient({
       if (!map[dateKey]) map[dateKey] = { am: [], pm: [] };
       const baseName = getEmployeeDisplayName(g.employee, locale) || g.empId || '';
       const name = (g as { pending?: boolean }).pending ? `${baseName} (${t('schedule.pendingApproval') ?? 'في انتظار الموافقة'})` : baseName;
-      const item = { id: g.id, name };
+      const item = { id: g.id, name, empId: g.empId };
       if (shiftNorm === 'AM') map[dateKey].am.push(item);
       else map[dateKey].pm.push(item);
     }
@@ -624,10 +626,10 @@ export function ScheduleViewClient({
         const fullName = getEmployeeDisplayName({ name: row.name, nameAr: row.nameAr }, locale);
         const slot = { empId: row.empId, fullName };
         if (contributesToMorningList(cell.effectiveShift, isFridayDay)) {
-          morning.push(isSplitShift(cell.effectiveShift) ? { ...slot, note: '(SPLIT)' } : slot);
+          morning.push(isSplitShift(cell.effectiveShift) ? { ...slot, isSplit: true } : slot);
         }
         if (contributesToEveningList(cell.effectiveShift)) {
-          evening.push(isSplitShift(cell.effectiveShift) ? { ...slot, note: '(SPLIT)' } : slot);
+          evening.push(isSplitShift(cell.effectiveShift) ? { ...slot, isSplit: true } : slot);
         }
         if (cell.effectiveShift === 'COVER_RASHID_AM') rashidAm.push(slot);
         if (cell.effectiveShift === 'COVER_RASHID_PM') rashidPm.push(slot);
@@ -1269,14 +1271,21 @@ function ScheduleGridView({
                   return (
                     <LuxuryTd key={day.date} className="min-w-[88px] p-2 align-top">
                       <div className="space-y-1.5">
-                        {guests.map((g) => (
-                          <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs">
-                            <span className="font-medium text-foreground">{getEmployeeDisplayName(g.employee, locale)}</span>
-                            <span className="ms-1 font-medium text-foreground">
-                              {g.shift === 'MORNING' || g.shift === 'AM' ? ' AM' : ' PM'}
-                            </span>
-                          </div>
-                        ))}
+                        {guests.map((g) => {
+                          const fullName = getEmployeeDisplayName(g.employee, locale);
+                          const shift =
+                            g.shift === 'MORNING' || g.shift === 'AM'
+                              ? ('AM' as const)
+                              : g.shift === 'SPLIT'
+                                ? ('SPLIT' as const)
+                                : ('PM' as const);
+                          const label = formatCoverageName(fullName, shift, displayNameMap, g.empId);
+                          return (
+                            <div key={g.id} className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground">
+                              <ScheduleSlotLabelSpan label={label} />
+                            </div>
+                          );
+                        })}
                       </div>
                     </LuxuryTd>
                   );
