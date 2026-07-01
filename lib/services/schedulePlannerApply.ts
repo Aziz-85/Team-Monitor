@@ -3,7 +3,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import { applyOverrideChange, applyScheduleGridSave, type ChangeItem } from './scheduleApply';
+import { applyScheduleGridSave, type ChangeItem } from './scheduleApply';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { clearCoverageValidationCache } from './coverageValidation';
 import { logAudit } from '@/lib/audit';
@@ -54,15 +54,18 @@ export async function applySchedulePlanActions(input: {
 
   const shiftChanges: ChangeItem[] = [];
   const forceWorkActions: PlanAction[] = [];
-  const guestActions: PlanAction[] = [];
+  const errors: string[] = [];
 
   for (const action of actions) {
-    if (action.type === 'FORCE_WORK') {
-      forceWorkActions.push(action);
+    const legacyType = (action as { type?: string }).type;
+    if (legacyType === 'GUEST_ADD') {
+      errors.push(
+        `${action.employeeName} ${action.date}: external coverage must be added manually (Add External Coverage).`
+      );
       continue;
     }
-    if (action.type === 'GUEST_ADD') {
-      guestActions.push(action);
+    if (action.type === 'FORCE_WORK') {
+      forceWorkActions.push(action);
       continue;
     }
     if (
@@ -83,8 +86,6 @@ export async function applySchedulePlanActions(input: {
   }
 
   let appliedForceWork = 0;
-  const errors: string[] = [];
-
   for (const fw of forceWorkActions) {
     try {
       await prisma.employeeDayOverride.upsert({
@@ -103,25 +104,6 @@ export async function applySchedulePlanActions(input: {
       appliedForceWork++;
     } catch (e) {
       errors.push(`${fw.employeeName} ${fw.date}: ${e instanceof Error ? e.message : 'force work failed'}`);
-    }
-  }
-
-  let appliedGuests = 0;
-  for (const g of guestActions) {
-    try {
-      await applyOverrideChange(
-        {
-          empId: g.empId,
-          date: g.date,
-          overrideShift: g.toShift,
-          reason: reason || g.reason,
-        },
-        actorUserId,
-        { boutiqueId, sourceBoutiqueId: g.sourceBoutiqueId }
-      );
-      appliedGuests++;
-    } catch (e) {
-      errors.push(`${g.employeeName} ${g.date}: ${e instanceof Error ? e.message : 'guest add failed'}`);
     }
   }
 
@@ -146,7 +128,7 @@ export async function applySchedulePlanActions(input: {
     'SchedulePlan',
     `${boutiqueId}:${dates[0]}`,
     null,
-    JSON.stringify({ appliedShifts, appliedForceWork, appliedGuests, actionCount: actions.length }),
+    JSON.stringify({ appliedShifts, appliedForceWork, appliedGuests: 0, actionCount: actions.length }),
     reason,
     { module: 'SCHEDULE', weekStart: dates[0] }
   );
@@ -154,7 +136,7 @@ export async function applySchedulePlanActions(input: {
   return {
     appliedShifts,
     appliedForceWork,
-    appliedGuests,
+    appliedGuests: 0,
     skipped: errors.length,
     errors,
   };

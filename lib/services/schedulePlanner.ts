@@ -18,7 +18,6 @@ import {
 } from '@/lib/schedule/coveragePolicy';
 import {
   mergeGuestCountsIntoDayCounts,
-  type ExternalCandidate,
   type GuestShiftInput,
 } from './schedulePlanGuests';
 import {
@@ -30,7 +29,7 @@ import {
   type FairnessWeights,
 } from './schedulePlannerFairness';
 
-export type PlanActionType = 'SHIFT_CHANGE' | 'REMOVE_COVER' | 'FORCE_WORK' | 'ASSIGN_SHIFT' | 'GUEST_ADD';
+export type PlanActionType = 'SHIFT_CHANGE' | 'REMOVE_COVER' | 'FORCE_WORK' | 'ASSIGN_SHIFT';
 
 export type PlanAction = {
   id: string;
@@ -47,8 +46,8 @@ export type PlanAction = {
 };
 
 export type SchedulePlanOptions = {
+  /** Manually added external coverage already on the week (counts only; never auto-added). */
   guestShifts?: GuestShiftInput[];
-  externalCandidates?: ExternalCandidate[];
 };
 
 export type DayIssue = {
@@ -618,60 +617,11 @@ function tryExpandSplitUsage(
   return null;
 }
 
-function guestShiftForIssue(issue: DayIssue, day: GridDay): 'MORNING' | 'EVENING' {
-  if (isFridayDay(day.dayOfWeek)) return 'EVENING';
-  if (issue.type === 'AM_BELOW_MIN') return 'MORNING';
-  return 'EVENING';
-}
-
-function tryAddExternalGuest(
-  issue: DayIssue,
-  day: GridDay,
-  dayIndex: number,
-  simGuests: GuestShiftInput[],
-  externalCandidates: ExternalCandidate[],
-  actionIndex: number
-): PlanAction | null {
-  if (!externalCandidates.length) return null;
-  const date = day.date;
-  const busy = new Set(simGuests.filter((g) => g.date === date).map((g) => g.empId));
-  const weekUse = new Map<string, number>();
-  for (const g of simGuests) {
-    weekUse.set(g.empId, (weekUse.get(g.empId) ?? 0) + 1);
-  }
-  const candidate = [...externalCandidates]
-    .filter((c) => !busy.has(c.empId))
-    .sort((a, b) => (weekUse.get(a.empId) ?? 0) - (weekUse.get(b.empId) ?? 0))[0];
-  if (!candidate) return null;
-  const shift = guestShiftForIssue(issue, day);
-  simGuests.push({
-    empId: candidate.empId,
-    employeeName: candidate.name,
-    date,
-    shift,
-    sourceBoutiqueId: candidate.boutiqueId,
-  });
-  return {
-    id: `guest-${actionIndex}-${candidate.empId}-${date}`,
-    type: 'GUEST_ADD',
-    date,
-    dayIndex,
-    empId: candidate.empId,
-    employeeName: candidate.name,
-    fromShift: 'EXTERNAL',
-    toShift: shift,
-    reason: `Add external coverage: ${candidate.name} (${candidate.boutiqueName}) on ${shift}`,
-    fairnessScore: weekUse.get(candidate.empId) ?? 0,
-    sourceBoutiqueId: candidate.boutiqueId,
-  };
-}
-
 function tryFixIssue(
   issue: DayIssue,
   sim: SimCell[][],
   days: GridDay[],
   simGuests: GuestShiftInput[],
-  externalCandidates: ExternalCandidate[],
   splitTracker: SplitTracker,
   rows: GridRow[],
   context: FairnessContext,
@@ -759,8 +709,6 @@ function tryFixIssue(
       `PM must be ≥ AM: move one employee AM→PM`
     );
     if (moved) return moved;
-    const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
-    if (guest) return guest;
     return tryForceWork(
       sim,
       day,
@@ -794,8 +742,6 @@ function tryFixIssue(
       splitTracker
     );
     if (split) return split;
-    const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
-    if (guest) return guest;
     return tryForceWork(
       sim,
       day,
@@ -862,9 +808,6 @@ function tryFixIssue(
     );
     if (moved) return moved;
 
-    const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
-    if (guest) return guest;
-
     return tryForceWork(
       sim,
       day,
@@ -892,7 +835,6 @@ function buildScenario(
 ): SchedulePlanScenario {
   const sim = cloneSim(grid.rows);
   const simGuests: GuestShiftInput[] = [...(planOptions.guestShifts ?? [])];
-  const externalCandidates = planOptions.externalCandidates ?? [];
   const splitTracker = countSplitsInSim(sim);
   const countsBefore = effectiveCounts(sim, grid.days, simGuests);
   const issuesBefore = detectIssues(countsBefore, grid.days);
@@ -911,7 +853,6 @@ function buildScenario(
       sim,
       grid.days,
       simGuests,
-      externalCandidates,
       splitTracker,
       grid.rows,
       context,
@@ -951,7 +892,6 @@ function buildScenario(
       sim,
       grid.days,
       simGuests,
-      externalCandidates,
       splitTracker,
       grid.rows,
       context,
@@ -968,14 +908,14 @@ function buildScenario(
   const issuesAfter = detectIssues(countsAfter, grid.days);
   const unresolved = sortIssues(issuesAfter);
 
-  const guestNote =
-    externalCandidates.length > 0 ? ' External staff may be added when needed.' : '';
+  const manualGuestNote =
+    simGuests.length > 0 ? ' Includes manually added external coverage in counts.' : '';
   const summary =
     actions.length === 0 && issuesBefore.length === 0
-      ? `Schedule meets policy (AM ≥ 2, PM ≥ AM Sat–Thu, Friday PM-only).${guestNote}`
+      ? `Schedule meets policy (AM ≥ 2, PM ≥ AM Sat–Thu, Friday PM-only).${manualGuestNote}`
       : actions.length === 0
-        ? `Found ${issuesBefore.length} issue(s) but no automatic fix available.${guestNote}`
-        : `Proposed ${actions.length} change(s); ${unresolved.length} issue(s) may remain.${guestNote}`;
+        ? `Found ${issuesBefore.length} issue(s) but no automatic fix available (boutique staff only; add external coverage manually if needed).${manualGuestNote}`
+        : `Proposed ${actions.length} change(s); ${unresolved.length} issue(s) may remain.${manualGuestNote}`;
 
   return {
     id: scenarioId,

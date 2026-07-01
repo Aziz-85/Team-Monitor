@@ -1,5 +1,6 @@
 /**
- * Guest shifts and external employee candidates for schedule planning.
+ * Guest shifts for schedule planning (manual external coverage already saved).
+ * External employees are never auto-added by the planner — manual Add External Coverage only.
  */
 
 import { prisma } from '@/lib/db';

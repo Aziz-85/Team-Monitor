@@ -5,7 +5,7 @@ import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
 import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { loadFairnessContext } from '@/lib/services/schedulePlannerFairness';
 import { buildSchedulePlan } from '@/lib/services/schedulePlanner';
-import { loadExternalCandidates, loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
+import { loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
 import type { Role } from '@prisma/client';
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
@@ -46,17 +46,15 @@ export async function POST(request: NextRequest) {
     const boutiqueIds = scheduleScope.boutiqueIds;
     const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
     const empIds = grid.rows.map((r) => r.empId);
-    const [fairnessContext, guestShifts, externalCandidates] = await Promise.all([
+    const [fairnessContext, guestShifts] = await Promise.all([
       loadFairnessContext(weekStart, empIds),
       loadWeekGuestShifts(weekStart, boutiqueIds),
-      loadExternalCandidates(boutiqueIds),
     ]);
-    const plan = buildSchedulePlan(grid, fairnessContext, { guestShifts, externalCandidates });
+    const plan = buildSchedulePlan(grid, fairnessContext, { guestShifts });
 
     return NextResponse.json({
       plan,
       aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
-      externalCandidateCount: externalCandidates.length,
       guestShiftCount: guestShifts.length,
     });
   } catch (e) {

@@ -35,7 +35,6 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [plan, setPlan] = useState<SchedulePlanResult | null>(null);
   const [scenarioId, setScenarioId] = useState<string>('balanced');
   const [aiConfigured, setAiConfigured] = useState(false);
-  const [externalCandidateCount, setExternalCandidateCount] = useState(0);
   const [reason, setReason] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -64,7 +63,6 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
       if (!data.plan) throw new Error(t('schedule.assistant.loadFailed') as string);
       setPlan(data.plan as SchedulePlanResult);
       setAiConfigured(Boolean(data.aiConfigured));
-      setExternalCandidateCount(typeof data.externalCandidateCount === 'number' ? data.externalCandidateCount : 0);
       setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'balanced');
     } catch (e) {
       if (seq !== fetchSeq.current) return;
@@ -251,7 +249,6 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                       {scenario.issuesBefore.length > 0 && (
                         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
                           {t('schedule.assistant.noFixHint')}
-                          {externalCandidateCount === 0 ? ` (${t('schedule.assistant.noExternalStaff')})` : ''}
                         </p>
                       )}
                     </div>
