@@ -21,13 +21,14 @@ import {
 } from '@/lib/permissions';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
+import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import type { Role } from '@prisma/client';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
-import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
+import { buildEditorShiftOptions } from '@/lib/schedule/shiftOptions';
 import {
   buildScheduleDisplayNames,
   getScheduleDisplayName,
@@ -495,7 +496,12 @@ export function ScheduleEditClient({
   const [guestLoading, setGuestLoading] = useState(false);
   const [guestError, setGuestError] = useState<string | null>(null);
   const [guestSubmitting, setGuestSubmitting] = useState(false);
-  const [guestForm, setGuestForm] = useState({ empId: '', date: '', shift: 'MORNING' as 'MORNING' | 'EVENING', reason: '' });
+  const [guestForm, setGuestForm] = useState({
+    empId: '',
+    date: '',
+    shift: 'MORNING' as 'MORNING' | 'EVENING' | 'SPLIT',
+    reason: '',
+  });
   type GuestItem = {
     id: string;
     date: string;
@@ -768,6 +774,47 @@ export function ScheduleEditClient({
     [fetchGuests, fetchGrid, fetchWeekGovernance, t]
   );
 
+  const handleGuestShiftChange = useCallback(
+    (guest: GuestItem, newShift: string) => {
+      if (newShift === '__delete__') {
+        handleRemoveGuestShift(guest.id);
+        return;
+      }
+      const shift = newShift.toUpperCase();
+      if (shift === guest.shift) return;
+      if (guest.id.startsWith('local-')) {
+        setWeekGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, shift } : g)));
+        setLocalPendingGuests((prev) => prev.map((g) => (g.id === guest.id ? { ...g, shift } : g)));
+        return;
+      }
+      setRemovingGuestId(guest.id);
+      fetch(`/api/overrides/${encodeURIComponent(guest.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrideShift: shift, reason: guest.reason ?? 'External coverage shift change' }),
+      })
+        .then((r) => {
+          if (r.ok) {
+            fetchGuests();
+            fetchGrid();
+            setToast(t('schedule.guestShiftUpdated') as string);
+            setTimeout(() => setToast(null), 3000);
+          } else {
+            return r.json().then((body: { error?: string }) => {
+              setToast(body?.error ?? 'Failed to update shift');
+              setTimeout(() => setToast(null), 4000);
+            });
+          }
+        })
+        .catch(() => {
+          setToast('Failed to update guest shift');
+          setTimeout(() => setToast(null), 4000);
+        })
+        .finally(() => setRemovingGuestId(null));
+    },
+    [fetchGuests, fetchGrid, handleRemoveGuestShift, t]
+  );
+
   useEffect(() => {
     if (tab === 'week') {
       setGridLoading(true);
@@ -942,6 +989,10 @@ export function ScheduleEditClient({
       if (i >= 0) {
         if (g.shift === 'MORNING') byDay[i].am += 1;
         else if (g.shift === 'EVENING') byDay[i].pm += 1;
+        else if (g.shift === 'SPLIT') {
+          byDay[i].am += 1;
+          byDay[i].pm += 1;
+        }
       }
     }
     return byDay;
@@ -957,6 +1008,10 @@ export function ScheduleEditClient({
       if (i >= 0) {
         if (g.shift === 'MORNING') byDay[i].am += 1;
         else if (g.shift === 'EVENING') byDay[i].pm += 1;
+        else if (g.shift === 'SPLIT') {
+          byDay[i].am += 1;
+          byDay[i].pm += 1;
+        }
       }
     }
     return byDay;
@@ -2310,22 +2365,37 @@ export function ScheduleEditClient({
                               return (
                                 <LuxuryTd key={day.date} className="w-[11.7%] min-w-0 align-top p-2">
                                   <div className="flex flex-col gap-1 items-start">
-                                    {guests.map((g) => (
-                                      <select
-                                        key={g.id}
-                                        value={g.id}
-                                        onChange={(e) => {
-                                          if (e.target.value === '__delete__') handleRemoveGuestShift(g.id);
-                                        }}
-                                        disabled={locked || removingGuestId === g.id}
-                                        className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
-                                      >
-                                        <option value="__delete__">{t('common.delete') ?? 'Delete'}</option>
-                                        <option value={g.id}>
-                                          {getEmployeeDisplayName(g.employee, locale)} {g.shift === 'MORNING' ? 'AM' : 'PM'}
-                                        </option>
-                                      </select>
-                                    ))}
+                                    {guests.map((g) => {
+                                      const guestDate =
+                                        typeof g.date === 'string'
+                                          ? g.date
+                                          : (g.date as Date)?.toISOString?.()?.slice(0, 10) ?? day.date;
+                                      const shiftOptions = buildEditorShiftOptions({
+                                        date: guestDate,
+                                        ramadanRange: ramadanRange ?? null,
+                                        t,
+                                      });
+                                      return (
+                                        <div key={g.id} className="flex w-full flex-col gap-0.5">
+                                          <span className="truncate text-[10px] font-medium text-foreground">
+                                            {getEmployeeDisplayName(g.employee, locale)}
+                                          </span>
+                                          <select
+                                            value={g.shift}
+                                            onChange={(e) => handleGuestShiftChange(g, e.target.value)}
+                                            disabled={locked || removingGuestId === g.id}
+                                            className="min-w-0 w-full max-w-full rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                                          >
+                                            <option value="__delete__">{t('common.delete') ?? 'Delete'}</option>
+                                            {shiftOptions.map((opt) => (
+                                              <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </LuxuryTd>
                               );
@@ -2822,15 +2892,24 @@ export function ScheduleEditClient({
                   <label className="block text-sm font-medium text-foreground">{t('schedule.shift') ?? 'Shift'}</label>
                   <select
                     value={guestForm.shift}
-                    onChange={(e) => setGuestForm((f) => ({ ...f, shift: e.target.value as 'MORNING' | 'EVENING' }))}
+                    onChange={(e) =>
+                      setGuestForm((f) => ({
+                        ...f,
+                        shift: e.target.value as 'MORNING' | 'EVENING' | 'SPLIT',
+                      }))
+                    }
                     className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
-                    {!isFridayPmOnlyDay(
-                      weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
-                      ramadanRange
-                    ) && <option value="MORNING">{t('schedule.morning') ?? 'Morning'}</option>}
-                    <option value="EVENING">{t('schedule.evening') ?? 'Afternoon'}</option>
+                    {buildEditorShiftOptions({
+                      date: weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
+                      ramadanRange: ramadanRange ?? null,
+                      t,
+                    }).map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                   {isFridayPmOnlyDay(
                     weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',

@@ -182,7 +182,7 @@ export async function getScheduleGridForWeek(
         boutiqueId: { in: boutiqueIds },
         date: { gte: firstDate, lte: lastDate },
         isActive: true,
-        overrideShift: { in: ['MORNING', 'EVENING'] },
+        overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
         employee: {
           boutiqueId: { notIn: boutiqueIds },
           active: true,
@@ -196,6 +196,10 @@ export async function getScheduleGridForWeek(
       if (i >= 0) {
         if (o.overrideShift === 'MORNING') guestShiftCountsByDay[i].am += 1;
         else if (o.overrideShift === 'EVENING') guestShiftCountsByDay[i].pm += 1;
+        else if (o.overrideShift === 'SPLIT') {
+          guestShiftCountsByDay[i].am += 1;
+          guestShiftCountsByDay[i].pm += 1;
+        }
       }
     }
   }

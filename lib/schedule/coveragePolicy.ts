@@ -119,6 +119,9 @@ export function isCoverageCompliant(
 }
 
 export const COVERAGE_POLICY_SUMMARY = {
-  en: 'Sat–Thu: min 2 AM, min 2 PM, PM > AM. Friday: PM-only.',
-  ar: 'سبت–خميس: أقلّه 2 صباحاً و 2 مساءً، والمساء أكثر من الصباح. الجمعة: مساءً فقط.',
+  en: 'Sat–Thu: min 2 AM, min 2 PM, PM > AM. Friday: PM-only. Split used rarely.',
+  ar: 'سبت–خميس: أقلّه 2 صباحاً و 2 مساءً، والمساء أكثر من الصباح. الجمعة: مساءً فقط. Split نادراً.',
 };
+
+/** Max Split assignments the auto-planner may propose per week (use sparingly). */
+export const MAX_SPLIT_ASSIGNMENTS_PER_WEEK = 2;

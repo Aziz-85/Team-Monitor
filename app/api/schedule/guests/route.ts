@@ -20,7 +20,7 @@ import type { Role } from '@prisma/client';
 export const dynamic = 'force-dynamic';
 
 const GUEST_ROLES: Role[] = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER'];
-const GUEST_SHIFTS = ['MORNING', 'EVENING'] as const;
+const GUEST_SHIFTS = ['MORNING', 'EVENING', 'SPLIT'] as const;
 
 function weekStartToRange(weekStart: string): { first: Date; last: Date } {
   const first = new Date(weekStart + 'T00:00:00Z');
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       ],
       date: { gte: first, lte: last },
       isActive: true,
-      overrideShift: { in: ['MORNING', 'EVENING'] },
+      overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
       employee: { active: true },
     },
     select: {

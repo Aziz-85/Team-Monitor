@@ -3,7 +3,7 @@
  */
 
 import { prisma } from '@/lib/db';
-import { applyScheduleGridSave, type ChangeItem } from './scheduleApply';
+import { applyOverrideChange, applyScheduleGridSave, type ChangeItem } from './scheduleApply';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { clearCoverageValidationCache } from './coverageValidation';
 import { logAudit } from '@/lib/audit';
@@ -26,7 +26,7 @@ export async function applySchedulePlanActions(input: {
   actions: PlanAction[];
   /** Original grid cells for overrideId lookup */
   gridRows: Array<{ empId: string; cells: Array<{ date: string; effectiveShift: string; overrideId: string | null }> }>;
-}): Promise<{ appliedShifts: number; appliedForceWork: number; skipped: number; errors: string[] }> {
+}): Promise<{ appliedShifts: number; appliedForceWork: number; appliedGuests: number; skipped: number; errors: string[] }> {
   const { boutiqueId, actorUserId, reason, actions, gridRows } = input;
   if (actions.length === 0) {
     throw new ApplySchedulePlanError('EMPTY', 'No actions to apply');
@@ -54,13 +54,22 @@ export async function applySchedulePlanActions(input: {
 
   const shiftChanges: ChangeItem[] = [];
   const forceWorkActions: PlanAction[] = [];
+  const guestActions: PlanAction[] = [];
 
   for (const action of actions) {
     if (action.type === 'FORCE_WORK') {
       forceWorkActions.push(action);
       continue;
     }
-    if (action.type === 'SHIFT_CHANGE' || action.type === 'REMOVE_COVER') {
+    if (action.type === 'GUEST_ADD') {
+      guestActions.push(action);
+      continue;
+    }
+    if (
+      action.type === 'SHIFT_CHANGE' ||
+      action.type === 'REMOVE_COVER' ||
+      action.type === 'ASSIGN_SHIFT'
+    ) {
       const key = `${action.empId}|${action.date}`;
       const cell = cellLookup.get(key);
       shiftChanges.push({
@@ -97,6 +106,25 @@ export async function applySchedulePlanActions(input: {
     }
   }
 
+  let appliedGuests = 0;
+  for (const g of guestActions) {
+    try {
+      await applyOverrideChange(
+        {
+          empId: g.empId,
+          date: g.date,
+          overrideShift: g.toShift,
+          reason: reason || g.reason,
+        },
+        actorUserId,
+        { boutiqueId, sourceBoutiqueId: g.sourceBoutiqueId }
+      );
+      appliedGuests++;
+    } catch (e) {
+      errors.push(`${g.employeeName} ${g.date}: ${e instanceof Error ? e.message : 'guest add failed'}`);
+    }
+  }
+
   let appliedShifts = 0;
   if (shiftChanges.length > 0) {
     const result = await applyScheduleGridSave(
@@ -118,7 +146,7 @@ export async function applySchedulePlanActions(input: {
     'SchedulePlan',
     `${boutiqueId}:${dates[0]}`,
     null,
-    JSON.stringify({ appliedShifts, appliedForceWork, actionCount: actions.length }),
+    JSON.stringify({ appliedShifts, appliedForceWork, appliedGuests, actionCount: actions.length }),
     reason,
     { module: 'SCHEDULE', weekStart: dates[0] }
   );
@@ -126,6 +154,7 @@ export async function applySchedulePlanActions(input: {
   return {
     appliedShifts,
     appliedForceWork,
+    appliedGuests,
     skipped: errors.length,
     errors,
   };

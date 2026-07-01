@@ -5,6 +5,7 @@ import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
 import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { loadFairnessContext } from '@/lib/services/schedulePlannerFairness';
 import { buildSchedulePlan, planToAiContext } from '@/lib/services/schedulePlanner';
+import { loadExternalCandidates, loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
 import { scheduleAssistantChat } from '@/lib/ai/scheduleAssistantChat';
 import type { Role } from '@prisma/client';
 
@@ -51,9 +52,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'weekStart and message required' }, { status: 400 });
   }
 
-  const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds: scheduleScope.boutiqueIds });
-  const fairnessContext = await loadFairnessContext(weekStart, grid.rows.map((r) => r.empId));
-  const plan = buildSchedulePlan(grid, fairnessContext);
+  const boutiqueIds = scheduleScope.boutiqueIds;
+  const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
+  const [fairnessContext, guestShifts, externalCandidates] = await Promise.all([
+    loadFairnessContext(weekStart, grid.rows.map((r) => r.empId)),
+    loadWeekGuestShifts(weekStart, boutiqueIds),
+    loadExternalCandidates(boutiqueIds),
+  ]);
+  const plan = buildSchedulePlan(grid, fairnessContext, { guestShifts, externalCandidates });
   const planContext = planToAiContext(plan, body.scenarioId);
 
   const result = await scheduleAssistantChat({

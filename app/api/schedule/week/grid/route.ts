@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       boutiqueId: { in: scheduleScope.boutiqueIds },
       date: { gte: first, lte: last },
       isActive: true,
-      overrideShift: { in: ['MORNING', 'EVENING'] },
+      overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
       employee: { active: true },
     },
     select: {

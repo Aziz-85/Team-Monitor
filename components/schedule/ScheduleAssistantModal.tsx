@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import type { PlanAction, SchedulePlanResult, SchedulePlanScenario } from '@/lib/services/schedulePlanner';
 
@@ -18,6 +18,7 @@ function shiftLabel(from: string, to: string): string {
     MORNING: 'AM',
     EVENING: 'PM',
     SPLIT: 'Split',
+    EXTERNAL: 'External',
     COVER_RASHID_PM: 'Rashid PM',
     OFF: 'Off',
     NONE: '—',
@@ -34,10 +35,12 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [plan, setPlan] = useState<SchedulePlanResult | null>(null);
   const [scenarioId, setScenarioId] = useState<string>('balanced');
   const [aiConfigured, setAiConfigured] = useState(false);
+  const [externalCandidateCount, setExternalCandidateCount] = useState(0);
   const [reason, setReason] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatLine[]>([]);
+  const fetchSeq = useRef(0);
 
   const scenario: SchedulePlanScenario | null = useMemo(() => {
     if (!plan) return null;
@@ -45,8 +48,10 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   }, [plan, scenarioId]);
 
   const fetchPlan = useCallback(async () => {
+    const seq = ++fetchSeq.current;
     setLoading(true);
     setError(null);
+    setPlan(null);
     try {
       const res = await fetch('/api/schedule/week/plan', {
         method: 'POST',
@@ -54,25 +59,29 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
         body: JSON.stringify({ weekStart }),
       });
       const data = await res.json().catch(() => ({}));
+      if (seq !== fetchSeq.current) return;
       if (!res.ok) throw new Error((data.error as string) || `Failed (${res.status})`);
+      if (!data.plan) throw new Error(t('schedule.assistant.loadFailed') as string);
       setPlan(data.plan as SchedulePlanResult);
       setAiConfigured(Boolean(data.aiConfigured));
+      setExternalCandidateCount(typeof data.externalCandidateCount === 'number' ? data.externalCandidateCount : 0);
       setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'balanced');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load plan');
+      if (seq !== fetchSeq.current) return;
+      setPlan(null);
+      setError(e instanceof Error ? e.message : (t('schedule.assistant.loadFailed') as string));
     } finally {
-      setLoading(false);
+      if (seq === fetchSeq.current) setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, t]);
 
   useEffect(() => {
-    if (open) {
-      setTab('plan');
-      setChatHistory([]);
-      setReason((t('schedule.assistant.defaultReason') as string) || 'Schedule assistant plan');
-      void fetchPlan();
-    }
-  }, [open, fetchPlan, t]);
+    if (!open) return;
+    setTab('plan');
+    setChatHistory([]);
+    setReason((t('schedule.assistant.defaultReason') as string) || 'Schedule assistant plan');
+    void fetchPlan();
+  }, [open, weekStart, fetchPlan, t]);
 
   const applyPlan = useCallback(async () => {
     if (!scenario || scenario.actions.length === 0) return;
@@ -143,6 +152,9 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
         <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-900">
           {t('schedule.assistant.policyHint')}
         </p>
+        <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          {t('schedule.assistant.externalHint')}
+        </p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
@@ -169,7 +181,19 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+          {error ? (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+              <p className="text-sm text-red-600">{error}</p>
+              <button
+                type="button"
+                onClick={() => void fetchPlan()}
+                disabled={loading}
+                className="shrink-0 text-xs font-medium text-red-700 underline disabled:opacity-50"
+              >
+                {t('common.refresh')}
+              </button>
+            </div>
+          ) : null}
 
           {tab === 'plan' && (
             <>
@@ -222,7 +246,15 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                       </ul>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted">{t('schedule.assistant.noActions')}</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted">{t('schedule.assistant.noActions')}</p>
+                      {scenario.issuesBefore.length > 0 && (
+                        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                          {t('schedule.assistant.noFixHint')}
+                          {externalCandidateCount === 0 ? ` (${t('schedule.assistant.noExternalStaff')})` : ''}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {scenario.unresolved.length > 0 && (

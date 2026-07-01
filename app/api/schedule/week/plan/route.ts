@@ -5,6 +5,7 @@ import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
 import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { loadFairnessContext } from '@/lib/services/schedulePlannerFairness';
 import { buildSchedulePlan } from '@/lib/services/schedulePlanner';
+import { loadExternalCandidates, loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
 import type { Role } from '@prisma/client';
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
@@ -41,13 +42,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
 
-  const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds: scheduleScope.boutiqueIds });
-  const empIds = grid.rows.map((r) => r.empId);
-  const fairnessContext = await loadFairnessContext(weekStart, empIds);
-  const plan = buildSchedulePlan(grid, fairnessContext);
+  try {
+    const boutiqueIds = scheduleScope.boutiqueIds;
+    const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
+    const empIds = grid.rows.map((r) => r.empId);
+    const [fairnessContext, guestShifts, externalCandidates] = await Promise.all([
+      loadFairnessContext(weekStart, empIds),
+      loadWeekGuestShifts(weekStart, boutiqueIds),
+      loadExternalCandidates(boutiqueIds),
+    ]);
+    const plan = buildSchedulePlan(grid, fairnessContext, { guestShifts, externalCandidates });
 
-  return NextResponse.json({
-    plan,
-    aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
-  });
+    return NextResponse.json({
+      plan,
+      aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      externalCandidateCount: externalCandidates.length,
+      guestShiftCount: guestShifts.length,
+    });
+  } catch (e) {
+    console.error('[schedule/week/plan]', e);
+    const message = e instanceof Error ? e.message : 'Failed to build schedule plan';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
