@@ -95,20 +95,24 @@ function YtdBarChart({ title, subtitle, points }: ChartBlockProps) {
 }
 
 export function YtdPerformanceReport({ data, meta }: Props) {
-  const year = meta.monthKey.slice(0, 4);
+  const isMonth = meta.periodKind === 'month';
+  const sectionLabel = isMonth ? 'Section 2 — YTD Performance' : 'Section 2 — Period Performance';
+  const title = isMonth ? 'Year-to-Date Executive Summary' : `${meta.periodLabel} Executive Summary`;
+  const subtitle = isMonth
+    ? `Calendar year ${meta.periodYear} · through ${meta.asOfDateKey}`
+    : `${meta.periodLabel} · through ${meta.asOfDateKey}`;
+  const targetLabel = isMonth ? 'Target YTD' : 'Period Target';
 
   return (
     <section className="space-y-8">
       <header className="border-b border-slate-200 pb-6">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0F4C3A]">
-          Section 2 — YTD Performance
+          {sectionLabel}
         </p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-          Year-to-Date Executive Summary
+          {title}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Calendar year {year} · through {meta.asOfDateKey}
-        </p>
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -117,14 +121,14 @@ export function YtdPerformanceReport({ data, meta }: Props) {
           revenueYtd={data.boutique.revenueYtd}
           vsLastYearPct={data.boutique.vsLastYearPct}
           pctOfTarget={data.boutique.pctOfTarget}
-          subtitle={`Target YTD ${formatSarInt(data.boutique.targetYtd)}`}
+          subtitle={`${targetLabel} ${formatSarInt(data.boutique.targetYtd)}`}
         />
         <ExecutiveSummary
           title={data.zone.zoneName != null ? `Zone — ${data.zone.zoneName}` : 'Zone Comparison'}
           revenueYtd={data.zone.revenueYtd}
           vsLastYearPct={data.zone.vsLastYearPct}
           pctOfTarget={data.zone.pctOfTarget}
-          subtitle={`Target YTD ${formatSarInt(data.zone.targetYtd)}`}
+          subtitle={`${targetLabel} ${formatSarInt(data.zone.targetYtd)}`}
         />
       </div>
 

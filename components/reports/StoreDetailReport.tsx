@@ -23,6 +23,11 @@ function pctStatus(pct: number, invert = false): 'positive' | 'negative' | 'warn
 
 export function StoreDetailReport({ data, meta }: Props) {
   const { kpis, closingExpectation, teamPerformance, additionalKpis, teamHighlights } = data;
+  const isMonth = meta.periodKind === 'month';
+  const salesLabel = isMonth ? 'MTD Sales' : 'Period Sales';
+  const performanceSubtitle = isMonth
+    ? `MTD performance · ${meta.periodLabel} · as of ${meta.asOfDateKey}`
+    : `${meta.periodLabel} · ${meta.asOfDateKey}`;
 
   return (
     <section className="space-y-8">
@@ -35,7 +40,7 @@ export function StoreDetailReport({ data, meta }: Props) {
           <span className="ml-2 text-lg font-normal text-slate-500">({meta.boutiqueCode})</span>
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          MTD performance · {meta.monthKey} · as of {meta.asOfDateKey}
+          {performanceSubtitle}
           {meta.regionName != null && ` · ${meta.regionName}`}
         </p>
       </header>
@@ -45,7 +50,7 @@ export function StoreDetailReport({ data, meta }: Props) {
           Top KPIs
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="MTD Sales" value={formatSarInt(kpis.mtdSales)} status="neutral" />
+          <KpiCard label={salesLabel} value={formatSarInt(kpis.mtdSales)} status="neutral" />
           <KpiCard
             label="vs Distributed Target"
             value={`${kpis.vsDistributedTargetPct}%`}
@@ -67,6 +72,7 @@ export function StoreDetailReport({ data, meta }: Props) {
         </div>
       </div>
 
+      {meta.showClosingExpectation && (
       <div>
         <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
           Closing Expectation
@@ -115,6 +121,7 @@ export function StoreDetailReport({ data, meta }: Props) {
           </div>
         </div>
       </div>
+      )}
 
       <TeamPerformanceTable
         rows={teamPerformance}

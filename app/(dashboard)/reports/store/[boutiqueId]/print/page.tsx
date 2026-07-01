@@ -5,7 +5,7 @@ import {
   buildStoreReport,
   StoreReportError,
 } from '@/lib/reports/storeReportService';
-import { getCurrentMonthKeyRiyadh, normalizeMonthKey } from '@/lib/time';
+import { parseStoreReportPeriodFromSearchParams } from '@/lib/reports/storeReportPeriod';
 import { StoreReportView } from '@/components/reports/StoreReportView';
 import { StoreReportPrintStyles } from '@/components/reports/StoreReportPrintStyles';
 import type { Role } from '@prisma/client';
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ boutiqueId: string }>;
-  searchParams: Promise<{ month?: string; auto?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined> & { auto?: string }>;
 };
 
 export default async function StoreReportPrintPage({ params, searchParams }: PageProps) {
@@ -26,15 +26,12 @@ export default async function StoreReportPrintPage({ params, searchParams }: Pag
 
   const { boutiqueId } = await params;
   const sp = await searchParams;
-  const monthKey =
-    typeof sp.month === 'string' && sp.month.trim()
-      ? normalizeMonthKey(sp.month.trim())
-      : getCurrentMonthKeyRiyadh();
+  const periodQuery = parseStoreReportPeriodFromSearchParams(sp);
   const autoPrint = sp.auto === '1' || sp.auto === 'true';
 
   try {
     await assertStoreReportAccess(user.role as Role, boutiqueId);
-    const data = await buildStoreReport(boutiqueId, monthKey);
+    const data = await buildStoreReport(boutiqueId, periodQuery);
     return (
       <>
         <StoreReportPrintStyles autoPrint={autoPrint} />

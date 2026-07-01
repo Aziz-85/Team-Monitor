@@ -5,7 +5,7 @@ import {
   buildStoreReport,
   StoreReportError,
 } from '@/lib/reports/storeReportService';
-import { getCurrentMonthKeyRiyadh, normalizeMonthKey } from '@/lib/time';
+import { parseStoreReportPeriodFromSearchParams } from '@/lib/reports/storeReportPeriod';
 import { StoreReportView } from '@/components/reports/StoreReportView';
 import type { Role } from '@prisma/client';
 
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ boutiqueId: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function StoreReportPage({ params, searchParams }: PageProps) {
@@ -25,14 +25,11 @@ export default async function StoreReportPage({ params, searchParams }: PageProp
 
   const { boutiqueId } = await params;
   const sp = await searchParams;
-  const monthKey =
-    typeof sp.month === 'string' && sp.month.trim()
-      ? normalizeMonthKey(sp.month.trim())
-      : getCurrentMonthKeyRiyadh();
+  const periodQuery = parseStoreReportPeriodFromSearchParams(sp);
 
   try {
     await assertStoreReportAccess(user.role as Role, boutiqueId);
-    const data = await buildStoreReport(boutiqueId, monthKey);
+    const data = await buildStoreReport(boutiqueId, periodQuery);
     return (
       <div className="min-h-screen bg-slate-50/80 p-4 pb-nav md:p-8 print:bg-white print:p-0">
         <StoreReportView data={data} />

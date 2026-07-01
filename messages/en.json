@@ -777,6 +777,45 @@
       "performance": "Employee Task Performance"
     }
   },
+  "storeReport": {
+    "periodFilter": "Report period",
+    "reportType": "Report type",
+    "year": "Year",
+    "month": "Month",
+    "quarter": "Quarter",
+    "halfYear": "Half year",
+    "selectedPeriod": "Selected period",
+    "periodKind": {
+      "month": "Monthly",
+      "quarter": "Quarterly",
+      "half": "Semi-annual",
+      "year": "Annual"
+    },
+    "quarterName": {
+      "1": "Q1 (Jan – Mar)",
+      "2": "Q2 (Apr – Jun)",
+      "3": "Q3 (Jul – Sep)",
+      "4": "Q4 (Oct – Dec)"
+    },
+    "halfName": {
+      "1": "First half (Jan – Jun)",
+      "2": "Second half (Jul – Dec)"
+    },
+    "monthName": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
+    }
+  },
   "scheduleExport": {
     "title": "Schedule Export Center",
     "subtitle": "Download organized schedule data to Excel for a week, date range, or full month.",

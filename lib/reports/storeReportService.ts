@@ -9,20 +9,27 @@ import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import {
   aggregateSalesEntrySum,
-  groupSalesByUserForBoutiqueMonth,
 } from '@/lib/sales/readSalesAggregate';
 import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
 import {
   formatDateRiyadh,
-  getCurrentMonthKeyRiyadh,
   getDaysInMonth,
   getDaysRemainingInMonthIncluding,
-  getMonthRange,
   getRiyadhNow,
-  normalizeMonthKey,
   parseMonthKey,
   toRiyadhDateString,
 } from '@/lib/time';
+import {
+  formatStoreReportPeriodLabel,
+  getDefaultStoreReportPeriodQuery,
+  getMonthKeysForPeriod,
+  getStoreReportPeriodBounds,
+  storeReportPeriodFromMonthKey,
+  type StoreReportPeriodKind,
+  type StoreReportPeriodQuery,
+} from '@/lib/reports/storeReportPeriod';
+
+export type { StoreReportPeriodKind, StoreReportPeriodQuery };
 
 /** Default discount target when not stored in StoreReportKpi (percentage). */
 export const DEFAULT_DISCOUNT_TARGET_PCT = 10;
@@ -66,6 +73,13 @@ export type StoreReportPayload = {
     monthKey: string;
     asOfDateKey: string;
     generatedAt: string;
+    periodKind: StoreReportPeriodKind;
+    periodLabel: string;
+    periodYear: number;
+    periodMonth?: number;
+    periodQuarter?: 1 | 2 | 3 | 4;
+    periodHalf?: 1 | 2;
+    showClosingExpectation: boolean;
   };
   storeDetail: {
     kpis: {
@@ -175,6 +189,48 @@ async function sumTargetsForBoutiquesMonths(
   return rows.reduce((s, r) => s + r.amount, 0);
 }
 
+async function buildMonthlyChartForMonths(
+  boutiqueIds: string[],
+  monthKeys: string[]
+): Promise<MonthlyChartPoint[]> {
+  const points: MonthlyChartPoint[] = [];
+
+  for (const mk of monthKeys) {
+    const parsed = parseMonthKey(mk);
+    if (!parsed) continue;
+    const year = parsed.y;
+    const m = parsed.m;
+    const lyYear = year - 1;
+    const lyMk = `${lyYear}-${String(m).padStart(2, '0')}`;
+    const dim = getDaysInMonth(mk);
+    const mm = String(m).padStart(2, '0');
+    const startKey = `${year}-${mm}-01`;
+    const endKey = `${year}-${mm}-${String(dim).padStart(2, '0')}`;
+    const lyDim = getDaysInMonth(lyMk);
+    const lyStart = `${lyYear}-${mm}-01`;
+    const lyEnd = `${lyYear}-${mm}-${String(lyDim).padStart(2, '0')}`;
+
+    const [cySales, lySales, targetRows] = await Promise.all([
+      sumSalesForBoutiquesDateRange(boutiqueIds, startKey, endKey),
+      sumSalesForBoutiquesDateRange(boutiqueIds, lyStart, lyEnd),
+      prisma.boutiqueMonthlyTarget.findMany({
+        where: { boutiqueId: { in: boutiqueIds }, month: mk },
+        select: { amount: true },
+      }),
+    ]);
+
+    points.push({
+      monthKey: mk,
+      label: monthLabel(mk),
+      currentYear: cySales,
+      lastYear: lySales,
+      target: targetRows.reduce((s, r) => s + r.amount, 0),
+    });
+  }
+
+  return points;
+}
+
 async function buildMonthlyChart(
   boutiqueIds: string[],
   year: number,
@@ -265,37 +321,90 @@ export async function assertStoreReportAccess(
   }
 }
 
+async function sumEmployeeTargetsForMonths(
+  boutiqueId: string,
+  monthKeys: string[]
+): Promise<Map<string, number>> {
+  if (monthKeys.length === 0) return new Map();
+  const rows = await prisma.employeeMonthlyTarget.findMany({
+    where: { boutiqueId, month: { in: monthKeys } },
+    select: { userId: true, amount: true },
+  });
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(row.userId, (map.get(row.userId) ?? 0) + row.amount);
+  }
+  return map;
+}
+
+async function groupSalesByUserForBoutiqueDateRange(
+  boutiqueId: string,
+  fromDateKey: string,
+  toDateKey: string
+) {
+  return prisma.salesEntry.groupBy({
+    by: ['userId'],
+    where: {
+      boutiqueId,
+      dateKey: { gte: fromDateKey, lte: toDateKey },
+    },
+    _sum: { amount: true },
+  });
+}
+
+function shiftDateKeyYear(dateKey: string, deltaYears: number): string {
+  const y = Number(dateKey.slice(0, 4));
+  return `${y + deltaYears}${dateKey.slice(4)}`;
+}
+
+function resolveStoreReportQuery(
+  queryInput?: StoreReportPeriodQuery | string
+): StoreReportPeriodQuery {
+  if (typeof queryInput === 'string') {
+    return storeReportPeriodFromMonthKey(queryInput);
+  }
+  return queryInput ?? getDefaultStoreReportPeriodQuery();
+}
+
 export async function buildStoreReport(
   boutiqueId: string,
-  monthKeyInput?: string
+  queryInput?: StoreReportPeriodQuery | string
 ): Promise<StoreReportPayload> {
-  const monthKey = normalizeMonthKey(monthKeyInput ?? getCurrentMonthKeyRiyadh());
-  if (!parseMonthKey(monthKey)) {
-    throw new StoreReportError('INVALID_MONTH', 'Invalid month key');
+  const periodQuery = resolveStoreReportQuery(queryInput);
+  const monthKeys = getMonthKeysForPeriod(periodQuery);
+  const anchorMonthKey = monthKeys[monthKeys.length - 1]!;
+  if (!parseMonthKey(anchorMonthKey)) {
+    throw new StoreReportError('INVALID_MONTH', 'Invalid period');
   }
 
   const now = getRiyadhNow();
   const todayKey = toRiyadhDateString(now);
-  const currentMonth = getCurrentMonthKeyRiyadh();
-  const asOfDateKey =
-    monthKey === currentMonth ? todayKey : `${monthKey}-${String(getDaysInMonth(monthKey)).padStart(2, '0')}`;
+  const bounds = getStoreReportPeriodBounds(periodQuery, todayKey);
+  const { fromDateKey, toDateKey, showClosingExpectation, chartMonthKeys } = bounds;
+  const asOfDateKey = toDateKey;
 
-  const parsed = parseMonthKey(monthKey)!;
+  const parsed = parseMonthKey(anchorMonthKey)!;
   const year = parsed.y;
-  const dayOfMonth = Number(asOfDateKey.slice(8, 10));
-  const daysRemaining = getDaysRemainingInMonthIncluding(monthKey, asOfDateKey);
+  const isSingleMonth = periodQuery.kind === 'month';
+  const monthKey = anchorMonthKey;
+
+  const dayOfMonth = isSingleMonth ? Number(asOfDateKey.slice(8, 10)) : getDaysInMonth(anchorMonthKey);
+  const daysRemaining = isSingleMonth
+    ? getDaysRemainingInMonthIncluding(monthKey, asOfDateKey)
+    : 0;
   const daysPassed = Math.max(1, dayOfMonth);
 
-  const { start: monthStart } = getMonthRange(monthKey);
+  const rangeStart = new Date(fromDateKey + 'T12:00:00.000Z');
   const asOfDate = new Date(asOfDateKey + 'T12:00:00.000Z');
+  const monthStart = rangeStart;
 
   const [
     boutique,
-    budgetTargetRow,
-    employeeTargets,
-    mtdSales,
+    budgetTargetRows,
+    employeeTargetMap,
+    periodSales,
     salesByUser,
-    storeKpi,
+    storeKpiRows,
     txnDiscountAgg,
     txnDiscountByEmployee,
     systemBranchUserId,
@@ -312,22 +421,18 @@ export async function buildStoreReport(
         region: { select: { name: true } },
       },
     }),
-    prisma.boutiqueMonthlyTarget.findFirst({
-      where: { boutiqueId, month: monthKey },
+    prisma.boutiqueMonthlyTarget.findMany({
+      where: { boutiqueId, month: { in: monthKeys } },
       select: { amount: true },
     }),
-    prisma.employeeMonthlyTarget.findMany({
-      where: { boutiqueId, month: monthKey },
-      select: { userId: true, amount: true },
-    }),
+    sumEmployeeTargetsForMonths(boutiqueId, monthKeys),
     aggregateSalesEntrySum({
       boutiqueId,
-      month: monthKey,
-      dateKey: { lte: asOfDateKey },
+      dateKey: { gte: fromDateKey, lte: toDateKey },
     }),
-    groupSalesByUserForBoutiqueMonth(boutiqueId, monthKey),
-    prisma.storeReportKpi.findUnique({
-      where: { boutiqueId_month: { boutiqueId, month: monthKey } },
+    groupSalesByUserForBoutiqueDateRange(boutiqueId, fromDateKey, toDateKey),
+    prisma.storeReportKpi.findMany({
+      where: { boutiqueId, month: { in: monthKeys } },
     }),
     prisma.salesTransaction.aggregate({
       where: {
@@ -372,10 +477,30 @@ export async function buildStoreReport(
     throw new StoreReportError('NOT_FOUND', 'Boutique not found');
   }
 
-  const budgetTarget = budgetTargetRow?.amount ?? 0;
-  const distributedTarget = employeeTargets.reduce((s, r) => s + r.amount, 0);
+  const budgetTarget = budgetTargetRows.reduce((s, r) => s + r.amount, 0);
+  const distributedTarget = Array.from(employeeTargetMap.values()).reduce((s, v) => s + v, 0);
+  const mtdSales = periodSales;
   const budgetPerf = calculatePerformance({ target: budgetTarget, sales: mtdSales });
   const distributedPerf = calculatePerformance({ target: distributedTarget, sales: mtdSales });
+
+  const storeKpi =
+    storeKpiRows.length === 1
+      ? storeKpiRows[0]!
+      : storeKpiRows.length > 1
+        ? {
+            footfall: storeKpiRows.reduce((s, r) => s + (r.footfall ?? 0), 0),
+            conversionRate: (() => {
+              const vals = storeKpiRows.map((r) => r.conversionRate).filter((v) => v != null);
+              return vals.length ? Math.round(vals.reduce((s, v) => s + v!, 0) / vals.length) : null;
+            })(),
+            crmRate: (() => {
+              const vals = storeKpiRows.map((r) => r.crmRate).filter((v) => v != null);
+              return vals.length ? Math.round(vals.reduce((s, v) => s + v!, 0) / vals.length) : null;
+            })(),
+            pipelineAmount: storeKpiRows.reduce((s, r) => s + (r.pipelineAmount ?? 0), 0),
+            discountRate: storeKpiRows.find((r) => r.discountRate != null)?.discountRate ?? null,
+          }
+        : null;
 
   const txnDiscount =
     computeDiscountPct(
@@ -384,21 +509,23 @@ export async function buildStoreReport(
     ) ?? storeKpi?.discountRate ?? 0;
   const discountPct = Math.round(txnDiscount);
 
-  const isCurrentMonth = monthKey === currentMonth;
-  const daysAfterToday = isCurrentMonth ? Math.max(0, daysRemaining - 1) : 0;
-  const dailyRunRate = daysPassed > 0 ? Math.round(mtdSales / daysPassed) : 0;
+  const daysAfterToday = showClosingExpectation ? Math.max(0, daysRemaining - 1) : 0;
+  const dailyRunRate = showClosingExpectation && daysPassed > 0 ? Math.round(mtdSales / daysPassed) : 0;
   const runRateRemainingMonth = dailyRunRate * daysAfterToday;
-  const pipelineDeals = storeKpi?.pipelineAmount ?? 0;
-  const projectedClosing = mtdSales + runRateRemainingMonth + pipelineDeals;
+  const pipelineDeals = showClosingExpectation ? (storeKpi?.pipelineAmount ?? 0) : 0;
+  const projectedClosing = showClosingExpectation
+    ? mtdSales + runRateRemainingMonth + pipelineDeals
+    : mtdSales;
   const projectedAchievementPct =
-    budgetTarget > 0 ? Math.round((projectedClosing * 100) / budgetTarget) : 0;
+    showClosingExpectation && budgetTarget > 0
+      ? Math.round((projectedClosing * 100) / budgetTarget)
+      : budgetPerf.percent;
 
   const salesMap = new Map(
     salesByUser
       .filter((r) => !systemBranchUserId || r.userId !== systemBranchUserId)
       .map((r) => [r.userId, r._sum.amount ?? 0])
   );
-  const targetMap = new Map(employeeTargets.map((r) => [r.userId, r.amount]));
 
   const empIdToDiscount = new Map<string, number>();
   for (const row of txnDiscountByEmployee) {
@@ -408,7 +535,7 @@ export async function buildStoreReport(
 
   const teamRows: TeamPerformanceRow[] = users.map((u) => {
     const actual = salesMap.get(u.id) ?? 0;
-    const target = targetMap.get(u.id) ?? 0;
+    const target = employeeTargetMap.get(u.id) ?? 0;
     const achievementPct = calculatePerformance({ target, sales: actual }).percent;
     const empId = u.employee?.empId ?? '';
     const rowDiscount = empIdToDiscount.get(empId) ?? (discountPct > 0 ? discountPct : null);
@@ -451,24 +578,57 @@ export async function buildStoreReport(
   const discountTargetPct = DEFAULT_DISCOUNT_TARGET_PCT;
   const discountWarning = discountPct > discountTargetPct;
 
-  // YTD
-  const ytdFrom = `${year}-01-01`;
-  const lyYear = year - 1;
-  const lyAsOf = `${lyYear}-${asOfDateKey.slice(5)}`;
-  const lyFrom = `${lyYear}-01-01`;
-  const ytdMonthKeysList = ytdMonthKeys(year, parsed.m);
+  const lyFrom = shiftDateKeyYear(fromDateKey, -1);
+  const lyTo = shiftDateKeyYear(toDateKey, -1);
 
-  const [boutiqueYtd, boutiqueLyYtd, boutiqueTargetYtd, zoneYtd, zoneLyYtd, zoneTargetYtd, boutiqueMonthly, zoneMonthly] =
-    await Promise.all([
-      sumSalesForBoutiquesDateRange([boutiqueId], ytdFrom, asOfDateKey),
-      sumSalesForBoutiquesDateRange([boutiqueId], lyFrom, lyAsOf),
-      sumTargetsForBoutiquesMonths([boutiqueId], ytdMonthKeysList),
-      sumSalesForBoutiquesDateRange(zoneBoutiqueIds, ytdFrom, asOfDateKey),
-      sumSalesForBoutiquesDateRange(zoneBoutiqueIds, lyFrom, lyAsOf),
-      sumTargetsForBoutiquesMonths(zoneBoutiqueIds, ytdMonthKeysList),
-      buildMonthlyChart([boutiqueId], year, parsed.m),
-      buildMonthlyChart(zoneBoutiqueIds, year, parsed.m),
-    ]);
+  let boutiqueYtd: number;
+  let boutiqueLyYtd: number;
+  let boutiqueTargetYtd: number;
+  let zoneYtd: number;
+  let zoneLyYtd: number;
+  let zoneTargetYtd: number;
+  let boutiqueMonthly: MonthlyChartPoint[];
+  let zoneMonthly: MonthlyChartPoint[];
+  let comparisonLabel: string;
+
+  if (periodQuery.kind === 'month') {
+    const ytdFrom = `${year}-01-01`;
+    const lyYear = year - 1;
+    const lyAsOf = `${lyYear}-${asOfDateKey.slice(5)}`;
+    const lyYtdFrom = `${lyYear}-01-01`;
+    const ytdMonthKeysList = ytdMonthKeys(year, parsed.m);
+    comparisonLabel = 'Boutique YTD';
+
+    [boutiqueYtd, boutiqueLyYtd, boutiqueTargetYtd, zoneYtd, zoneLyYtd, zoneTargetYtd, boutiqueMonthly, zoneMonthly] =
+      await Promise.all([
+        sumSalesForBoutiquesDateRange([boutiqueId], ytdFrom, asOfDateKey),
+        sumSalesForBoutiquesDateRange([boutiqueId], lyYtdFrom, lyAsOf),
+        sumTargetsForBoutiquesMonths([boutiqueId], ytdMonthKeysList),
+        sumSalesForBoutiquesDateRange(zoneBoutiqueIds, ytdFrom, asOfDateKey),
+        sumSalesForBoutiquesDateRange(zoneBoutiqueIds, lyYtdFrom, lyAsOf),
+        sumTargetsForBoutiquesMonths(zoneBoutiqueIds, ytdMonthKeysList),
+        buildMonthlyChart([boutiqueId], year, parsed.m),
+        buildMonthlyChart(zoneBoutiqueIds, year, parsed.m),
+      ]);
+  } else {
+    comparisonLabel = `Boutique ${bounds.periodLabel}`;
+    const comparisonTargetMonths =
+      periodQuery.kind === 'year' && bounds.isInProgress
+        ? chartMonthKeys
+        : monthKeys;
+
+    [boutiqueYtd, boutiqueLyYtd, boutiqueTargetYtd, zoneYtd, zoneLyYtd, zoneTargetYtd, boutiqueMonthly, zoneMonthly] =
+      await Promise.all([
+        mtdSales,
+        sumSalesForBoutiquesDateRange([boutiqueId], lyFrom, lyTo),
+        sumTargetsForBoutiquesMonths([boutiqueId], comparisonTargetMonths),
+        sumSalesForBoutiquesDateRange(zoneBoutiqueIds, fromDateKey, toDateKey),
+        sumSalesForBoutiquesDateRange(zoneBoutiqueIds, lyFrom, lyTo),
+        sumTargetsForBoutiquesMonths(zoneBoutiqueIds, comparisonTargetMonths),
+        buildMonthlyChartForMonths([boutiqueId], chartMonthKeys),
+        buildMonthlyChartForMonths(zoneBoutiqueIds, chartMonthKeys),
+      ]);
+  }
 
   const boutiquePctOfTarget =
     boutiqueTargetYtd > 0 ? Math.round((boutiqueYtd * 100) / boutiqueTargetYtd) : null;
@@ -484,9 +644,16 @@ export async function buildStoreReport(
       boutiqueName: boutique.name,
       boutiqueCode: boutique.code,
       regionName: boutique.region?.name ?? null,
-      monthKey,
+      monthKey: anchorMonthKey,
       asOfDateKey,
       generatedAt: formatDateRiyadh(now),
+      periodKind: periodQuery.kind,
+      periodLabel: formatStoreReportPeriodLabel(periodQuery, 'en'),
+      periodYear: periodQuery.year,
+      periodMonth: periodQuery.month,
+      periodQuarter: periodQuery.quarter,
+      periodHalf: periodQuery.half,
+      showClosingExpectation,
     },
     storeDetail: {
       kpis: {
@@ -542,13 +709,13 @@ export async function buildStoreReport(
       },
       snapshot: {
         boutiqueText: buildSnapshotText({
-          label: 'Boutique YTD',
+          label: comparisonLabel,
           pctOfTarget: boutiquePctOfTarget,
           vsLastYearPct: boutiqueVsLy,
           shareOfZonePct: boutiqueShareOfZonePct,
         }),
         zoneText: buildSnapshotText({
-          label: 'Zone YTD',
+          label: periodQuery.kind === 'month' ? 'Zone YTD' : `Zone ${bounds.periodLabel}`,
           pctOfTarget: zonePctOfTarget,
           vsLastYearPct: zoneVsLy,
         }),

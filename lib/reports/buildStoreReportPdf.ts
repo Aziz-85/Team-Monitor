@@ -164,6 +164,9 @@ export async function buildStoreReportPdfBytes(payload: StoreReportPayload): Pro
   drawReportHeader(ctx, payload.meta);
   ctx.y -= 6;
 
+  sectionTitle(ctx, `Report period: ${payload.meta.periodLabel}`);
+  ctx.y -= 4;
+
   const { storeDetail, ytdPerformance, meta } = payload;
 
   sectionTitle(ctx, 'SECTION 1 — Store Detail (MTD)');
@@ -250,5 +253,6 @@ export async function buildStoreReportPdfBytes(payload: StoreReportPayload): Pro
 
 export function storeReportPdfFilename(meta: StoreReportPayload['meta']): string {
   const code = meta.boutiqueCode.replace(/[^\w-]+/g, '-');
-  return `store-report-${code}-${meta.monthKey}.pdf`;
+  const period = meta.periodLabel.replace(/[^\w-]+/g, '-');
+  return `store-report-${code}-${period}.pdf`;
 }

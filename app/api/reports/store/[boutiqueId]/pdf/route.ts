@@ -9,7 +9,7 @@ import {
   buildStoreReportPdfBytes,
   storeReportPdfFilename,
 } from '@/lib/reports/buildStoreReportPdf';
-import { getCurrentMonthKeyRiyadh, normalizeMonthKey } from '@/lib/time';
+import { parseStoreReportPeriodFromSearchParams } from '@/lib/reports/storeReportPeriod';
 import type { Role } from '@prisma/client';
 
 const ROLES = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] as const;
@@ -25,15 +25,12 @@ export async function GET(
   }
 
   const { boutiqueId } = await params;
-  const monthParam = request.nextUrl.searchParams.get('month');
-  const monthKey =
-    typeof monthParam === 'string' && monthParam.trim()
-      ? normalizeMonthKey(monthParam.trim())
-      : getCurrentMonthKeyRiyadh();
+  const sp = Object.fromEntries(request.nextUrl.searchParams.entries());
+  const periodQuery = parseStoreReportPeriodFromSearchParams(sp);
 
   try {
     await assertStoreReportAccess(user.role as Role, boutiqueId);
-    const data = await buildStoreReport(boutiqueId, monthKey);
+    const data = await buildStoreReport(boutiqueId, periodQuery);
     const pdfBytes = await buildStoreReportPdfBytes(data);
     const filename = storeReportPdfFilename(data.meta);
 
