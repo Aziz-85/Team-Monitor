@@ -27,6 +27,7 @@ import {
   type ScheduleNameSlot,
 } from '@/lib/schedule/displayName';
 import { contributesToMorningList, contributesToEveningList, isSplitShift } from '@/lib/schedule/shiftRules';
+import Link from 'next/link';
 
 const VIEW_MODES = ['excel', 'grid', 'mobile'] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
@@ -778,6 +779,14 @@ export function ScheduleViewClient({
                   className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   aria-label={t('schedule.week')}
                 />
+                {timeScope === 'week' && (
+                  <Link
+                    href={`/reports/schedule-export?weekStart=${encodeURIComponent(weekStart)}`}
+                    className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                  >
+                    {t('nav.export')}
+                  </Link>
+                )}
                 {timeScope === 'week' && fullGrid && ramadanRange && (() => {
                   const weekInRamadan = gridData?.days?.some((d: { date: string }) => isDateInRamadanRange(new Date(d.date + 'T12:00:00Z'), ramadanRange!)) ?? Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).some((d) => isDateInRamadanRange(new Date(d + 'T12:00:00Z'), ramadanRange!));
                   return weekInRamadan ? (

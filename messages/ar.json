@@ -685,6 +685,7 @@
       "compareBranches": "مقارنة الفروع",
       "teamPerformance": "أداء الفريق",
       "weeklyReport": "تقرير أسبوعي (قاعدة البيانات)",
+      "scheduleExport": "تصدير الجدول",
       "storePerformance": "تقرير أداء المتجر"
     }
   },
@@ -724,6 +725,35 @@
     "matrixVersion": "إصدار المصفوفة",
     "lastBatch": "آخر دفعة حفظ",
     "revalidate": "إعادة المراجعة"
+  },
+  "scheduleExport": {
+    "title": "مركز تصدير الجدول",
+    "subtitle": "تنزيل بيانات الجدول المنظمة إلى Excel لأسبوع أو فترة أو شهر كامل.",
+    "exportType": "نوع التصدير",
+    "type": {
+      "week": "الأسبوع الحالي",
+      "range": "نطاق تاريخ",
+      "month": "شهر"
+    },
+    "weekStart": "بداية الأسبوع (السبت)",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "month": "الشهر",
+    "boutique": "البوتيك",
+    "allBoutiques": "جميع البوتيكات المسموحة",
+    "includeSections": "تضمين في التصدير",
+    "include": {
+      "employeeSchedule": "جدول الموظفين",
+      "externalCoverage": "التغطية الخارجية",
+      "coverageCounts": "أعداد التغطية",
+      "audit": "التدقيق / التغييرات",
+      "warnings": "ملاحظات / تحذيرات",
+      "splitShifts": "الورديات المقسمة"
+    },
+    "exportButton": "تصدير إلى Excel",
+    "exporting": "جاري التصدير…",
+    "exportFailed": "فشل التصدير",
+    "formatHint": "Excel (.xlsx) — مرتب حسب التاريخ تصاعدياً، أسماء الموظفين كاملة"
   },
   "weeklyReport": {
     "title": "التقرير الأسبوعي",
@@ -1215,6 +1245,9 @@
     "employee": "الموظف",
     "allTeams": "كل الفرق",
     "excelView": "عرض Excel",
+    "exportFullData": "تصدير بيانات الجدول كاملة",
+    "exportFullDataHint": "تنزيل ملف Excel كامل للأسبوع المحدد",
+    "exportFullDataLoading": "جاري التصدير…",
     "monthlyExcelView": "عرض Excel الشهري",
     "teamsView": "عرض الفرق",
     "gridView": "عرض الشبكة",

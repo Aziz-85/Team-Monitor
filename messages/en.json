@@ -685,6 +685,7 @@
       "compareBranches": "Compare branches",
       "teamPerformance": "Team performance",
       "weeklyReport": "Weekly report (DB)",
+      "scheduleExport": "Schedule Export",
       "storePerformance": "Store performance report"
     }
   },
@@ -724,6 +725,35 @@
     "matrixVersion": "Matrix version",
     "lastBatch": "Last save batch",
     "revalidate": "Re-run review"
+  },
+  "scheduleExport": {
+    "title": "Schedule Export Center",
+    "subtitle": "Download organized schedule data to Excel for a week, date range, or full month.",
+    "exportType": "Export type",
+    "type": {
+      "week": "Current week",
+      "range": "Date range",
+      "month": "Month"
+    },
+    "weekStart": "Week start (Saturday)",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "month": "Month",
+    "boutique": "Boutique",
+    "allBoutiques": "All allowed boutiques",
+    "includeSections": "Include in export",
+    "include": {
+      "employeeSchedule": "Employee Schedule",
+      "externalCoverage": "External Coverage",
+      "coverageCounts": "Coverage Counts",
+      "audit": "Audit / Changes",
+      "warnings": "Notes / Warnings",
+      "splitShifts": "Split Shifts"
+    },
+    "exportButton": "Export to Excel",
+    "exporting": "Exporting…",
+    "exportFailed": "Export failed",
+    "formatHint": "Excel (.xlsx) — sorted by date ascending, full employee names"
   },
   "weeklyReport": {
     "title": "Weekly report",
@@ -1215,6 +1245,9 @@
     "employee": "Employee",
     "allTeams": "All teams",
     "excelView": "Excel View",
+    "exportFullData": "Export Full Schedule Data",
+    "exportFullDataHint": "Download a complete Excel workbook for the selected week",
+    "exportFullDataLoading": "Exporting…",
     "monthlyExcelView": "Monthly Excel View",
     "teamsView": "Teams View",
     "gridView": "Grid View",

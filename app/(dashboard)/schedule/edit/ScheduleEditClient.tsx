@@ -9,6 +9,7 @@ import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
 import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditExcelViewClient';
 import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditMonthExcelViewClient';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
+import { ScheduleFullExportButton } from '@/components/schedule/ScheduleFullExportButton';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import {
   canLockUnlockDay,
@@ -1395,6 +1396,7 @@ export function ScheduleEditClient({
                     {(t('schedule.scopeLabel') ?? 'Scope')}: {scopeLabel}
                   </span>
                 )}
+                <ScheduleFullExportButton weekStart={weekStart} disabled={gridLoading} />
               </div>
               {ramadanRange && (() => {
                 const ramadanMode = gridData?.days.some((d) => isDateInRamadanRange(new Date(d.date + 'T12:00:00Z'), ramadanRange!)) ?? false;
