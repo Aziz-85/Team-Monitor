@@ -14,11 +14,45 @@ type Props = {
 
 export function StoreReportView({ data, printMode = false }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('detail');
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  const handleExportPdf = useCallback(() => {
-    const url = `/reports/store/${data.meta.boutiqueId}/print?month=${encodeURIComponent(data.meta.monthKey)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }, [data.meta.boutiqueId, data.meta.monthKey]);
+  const handleExportPdf = useCallback(async () => {
+    const month = encodeURIComponent(data.meta.monthKey);
+    const boutiqueId = data.meta.boutiqueId;
+    const printUrl = `/reports/store/${boutiqueId}/print?month=${month}`;
+
+    window.open(printUrl, '_blank', 'noopener,noreferrer');
+
+    setExportingPdf(true);
+    setExportError(null);
+    try {
+      const res = await fetch(`/api/reports/store/${boutiqueId}/pdf?month=${month}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body.error as string) || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') ?? '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename =
+        match?.[1] ?? `store-report-${data.meta.boutiqueCode}-${data.meta.monthKey}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : 'PDF export failed');
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [data.meta.boutiqueId, data.meta.boutiqueCode, data.meta.monthKey]);
 
   const showDetail = printMode || activeTab === 'detail';
   const showYtd = printMode || activeTab === 'ytd';
@@ -63,13 +97,19 @@ export function StoreReportView({ data, printMode = false }: Props) {
                 YTD Performance
               </button>
             </div>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              className="rounded-lg bg-[#0F4C3A] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0c3d2f]"
-            >
-              Export PDF
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                type="button"
+                onClick={() => void handleExportPdf()}
+                disabled={exportingPdf}
+                className="rounded-lg bg-[#0F4C3A] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0c3d2f] disabled:pointer-events-none disabled:opacity-60"
+              >
+                {exportingPdf ? 'Exporting…' : 'Export PDF'}
+              </button>
+              {exportError ? (
+                <span className="text-xs text-red-600">{exportError}</span>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
