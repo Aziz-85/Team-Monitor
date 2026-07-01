@@ -10,6 +10,7 @@ import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/Sch
 import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditMonthExcelViewClient';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
 import { ScheduleFullExportButton } from '@/components/schedule/ScheduleFullExportButton';
+import { SwapWeeklyOffModal } from '@/components/schedule/SwapWeeklyOffModal';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import {
   canLockUnlockDay,
@@ -237,7 +238,14 @@ type GridCell = {
   baseShift: string;
 };
 
-type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: GridCell[] };
+type GridRow = {
+  empId: string;
+  name: string;
+  nameAr?: string | null;
+  team: string;
+  cells: GridCell[];
+  effectiveWeeklyOffDay?: number | 'NONE';
+};
 
 type GridDay = { date: string; dayName: string; dayOfWeek: number; minAm: number; minPm: number };
 
@@ -302,6 +310,80 @@ type PendingEdit = {
 type ValidationResult = { type: string; message: string; amCount: number; pmCount: number; minAm?: number };
 
 const DEFAULT_REASON = 'Schedule adjustment';
+
+const LOCKED_LEAVE = '__LEAVE__';
+const LOCKED_OFF = '__OFF__';
+const LOCKED_HOLIDAY = '__HOLIDAY__';
+const LOCKED_ABSENT = '__ABSENT__';
+const LOCKED_FORCE_OFF = '__FORCE_OFF__';
+
+function lockedCellSelectValue(availability: string): string {
+  switch (availability) {
+    case 'LEAVE':
+      return LOCKED_LEAVE;
+    case 'OFF':
+      return LOCKED_OFF;
+    case 'HOLIDAY':
+      return LOCKED_HOLIDAY;
+    case 'ABSENT':
+      return LOCKED_ABSENT;
+    default:
+      return LOCKED_OFF;
+  }
+}
+
+function lockedCellStatusLabel(availability: string, t: (key: string) => string): string {
+  switch (availability) {
+    case 'LEAVE':
+      return (t('schedule.leaveStatus') as string) || 'Leave';
+    case 'OFF':
+      return (t('common.offDay') as string) || 'Off day';
+    case 'HOLIDAY':
+      return (t('schedule.holiday') as string) || 'Holiday';
+    case 'ABSENT':
+      return (t('schedule.absent') as string) || 'Absent';
+    default:
+      return availability;
+  }
+}
+
+function buildLockedCellOptions(
+  cell: GridCell,
+  date: string,
+  ramadanRange: { start: string; end: string } | null,
+  t: (key: string) => string
+): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [
+    {
+      value: lockedCellSelectValue(cell.availability),
+      label: lockedCellStatusLabel(cell.availability, t),
+    },
+  ];
+  const ramadanDay = ramadanRange
+    ? isDateInRamadanRange(new Date(date + 'T12:00:00Z'), ramadanRange)
+    : false;
+  const friday = isFriday(date);
+  if (friday && !ramadanDay) {
+    options.push(
+      { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
+      { value: 'NONE', label: shiftLabel(t, 'none') }
+    );
+  } else {
+    options.push(
+      { value: 'MORNING', label: shiftLabel(t, 'amShort') },
+      { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
+      { value: 'SPLIT', label: shiftLabel(t, 'splitShift') },
+      { value: 'NONE', label: shiftLabel(t, 'none') }
+    );
+  }
+  if (cell.availability === 'LEAVE' || cell.availability === 'HOLIDAY') {
+    options.push({
+      value: LOCKED_FORCE_OFF,
+      label: (t('common.offDay') as string) || 'Off day',
+    });
+  }
+  return options;
+}
 
 function parseWeekStartFromUrl(value: string | null): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return weekStartSaturday(getRiyadhDateKey());
@@ -370,6 +452,8 @@ export function ScheduleEditClient({
   const [toast, setToast] = useState<string | null>(null);
   /** Non-blocking errors from compact admin actions (e.g. comp day / force work) — avoids alert(). */
   const [inlineErrorBanner, setInlineErrorBanner] = useState<string | null>(null);
+  const [lockedCellSavingKey, setLockedCellSavingKey] = useState<string | null>(null);
+  const [swapWeeklyOffOpen, setSwapWeeklyOffOpen] = useState(false);
   const [leaveConfirm, setLeaveConfirm] = useState<{ href: string } | null>(null);
   const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(new Set());
   const [highlightedCells, setHighlightedCells] = useState<Set<string> | null>(null);
@@ -1009,6 +1093,89 @@ export function ScheduleEditClient({
       });
     },
     [locale, ramadanRange]
+  );
+
+  const applyLockedCellChange = useCallback(
+    async (empId: string, date: string, cell: GridCell, value: string) => {
+      if (value === lockedCellSelectValue(cell.availability)) return;
+      const key = editKey(empId, date);
+      setLockedCellSavingKey(key);
+      const reason = globalReason.trim() || DEFAULT_REASON;
+      try {
+        if (value === LOCKED_FORCE_OFF) {
+          const res = await fetch('/api/admin/employees/day-override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: empId,
+              date,
+              mode: 'FORCE_OFF',
+              reason,
+            }),
+          });
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error((d.error as string) || (t('common.failed') as string) || 'Failed');
+          }
+          await fetchGrid();
+          return;
+        }
+
+        if (['MORNING', 'EVENING', 'SPLIT', 'NONE'].includes(value)) {
+          if (
+            value !== 'NONE' &&
+            isFridayPmOnlyDay(date, ramadanRange) &&
+            isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), value)
+          ) {
+            setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only.');
+            setTimeout(() => setToast(null), 6000);
+            return;
+          }
+          const overrideRes = await fetch('/api/admin/employees/day-override', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: empId,
+              date,
+              mode: 'FORCE_WORK',
+              reason,
+            }),
+          });
+          if (!overrideRes.ok) {
+            const d = await overrideRes.json().catch(() => ({}));
+            throw new Error((d.error as string) || (t('common.failed') as string) || 'Failed');
+          }
+          const saveRes = await fetch('/api/schedule/week/grid/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reason,
+              changes: [
+                {
+                  empId,
+                  date,
+                  newShift: value,
+                  originalEffectiveShift: cell.effectiveShift,
+                  overrideId: cell.overrideId,
+                },
+              ],
+            }),
+          });
+          const saveData = await saveRes.json().catch(() => ({}));
+          if (!saveRes.ok) {
+            throw new Error((saveData.error as string) || (t('common.failed') as string) || 'Failed');
+          }
+          await fetchGrid();
+          router.refresh();
+        }
+      } catch (e) {
+        setInlineErrorBanner(e instanceof Error ? e.message : 'Update failed');
+        setTimeout(() => setInlineErrorBanner(null), 6000);
+      } finally {
+        setLockedCellSavingKey(null);
+      }
+    },
+    [fetchGrid, globalReason, ramadanRange, router, t]
   );
 
   const clearPendingEdit = useCallback((empId: string, date: string) => {
@@ -1655,6 +1822,13 @@ export function ScheduleEditClient({
               >
                 {t('schedule.discardChanges') ?? 'Discard changes'}
               </button>
+              <button
+                type="button"
+                onClick={() => setSwapWeeklyOffOpen(true)}
+                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A]/30 bg-[#0F4C3A]/5 px-4 text-sm font-medium text-[#0F4C3A] hover:bg-[#0F4C3A]/10 focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/30 focus:ring-offset-2"
+              >
+                {t('schedule.swapWeeklyOff.button')}
+              </button>
             </>
           )}
         </div>
@@ -1986,14 +2160,6 @@ export function ScheduleEditClient({
                                     scheduleDisplayNames
                                   )}
                                 </span>
-                                {gridData.compBalanceByEmpId && (gridData.compBalanceByEmpId[row.empId] ?? 0) !== 0 && (
-                                  <span
-                                    className="inline-flex h-5 items-center rounded bg-emerald-100 px-1.5 text-[10px] font-medium text-emerald-800"
-                                    title={t('schedule.compBalance') ?? 'Comp day balance'}
-                                  >
-                                    Comp: {gridData.compBalanceByEmpId[row.empId]}
-                                  </span>
-                                )}
                               </span>
                             </LuxuryTd>
                             {row.cells.map((cell) => {
@@ -2017,88 +2183,24 @@ export function ScheduleEditClient({
                               return (
                                 <LuxuryTd key={cell.date} className={cellClass}>
                                   {locked ? (
-                                    <div className={`flex h-9 flex-col items-center justify-center bg-surface-subtle px-2 text-center ${SCHEDULE_UI.guestLine} text-muted`}>
-                                      <span>
-                                        {cell.availability === 'LEAVE'
-                                          ? 'Leave'
-                                          : cell.availability === 'HOLIDAY'
-                                          ? 'Holiday'
-                                          : cell.availability === 'OFF'
-                                          ? 'Off day'
-                                          : 'Absent'}
-                                      </span>
-                                      {gridData.compBalanceByEmpId && (
-                                        <details className="mt-0.5 w-full text-center">
-                                          <summary className="cursor-pointer text-[10px] text-muted hover:text-foreground">
-                                            {t('schedule.advanced') ?? 'Advanced'}
-                                          </summary>
-                                          <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1 text-[10px]">
-                                            <button
-                                              type="button"
-                                              className="rounded bg-surface-subtle px-1 py-0.5 text-foreground hover:bg-surface-subtle"
-                                              onClick={async () => {
-                                                const res = await fetch('/api/admin/employees/day-override', {
-                                                  method: 'POST',
-                                                  headers: { 'Content-Type': 'application/json' },
-                                                  body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_WORK', reason: 'Schedule editor' }),
-                                                });
-                                                if (res.ok) fetchGrid();
-                                                else {
-                                                  const d = await res.json().catch(() => ({}));
-                                                  const msg = (d as { error?: string }).error ?? t('common.failed');
-                                                  setInlineErrorBanner(msg);
-                                                  setTimeout(() => setInlineErrorBanner(null), 6000);
-                                                }
-                                              }}
-                                            >
-                                              {t('schedule.forceWork') ?? 'Force Work'}
-                                            </button>
-                                            <button
-                                              type="button"
-                                              className="rounded bg-surface-subtle px-1 py-0.5 text-foreground hover:bg-surface-subtle"
-                                              onClick={async () => {
-                                                const res = await fetch('/api/admin/employees/day-override', {
-                                                  method: 'POST',
-                                                  headers: { 'Content-Type': 'application/json' },
-                                                  body: JSON.stringify({ employeeId: row.empId, date: cell.date, mode: 'FORCE_OFF', reason: 'Schedule editor' }),
-                                                });
-                                                if (res.ok) fetchGrid();
-                                                else {
-                                                  const d = await res.json().catch(() => ({}));
-                                                  const msg = (d as { error?: string }).error ?? t('common.failed');
-                                                  setInlineErrorBanner(msg);
-                                                  setTimeout(() => setInlineErrorBanner(null), 6000);
-                                                }
-                                              }}
-                                            >
-                                              {t('schedule.forceOff') ?? 'Force Off'}
-                                            </button>
-                                            {(gridData.compBalanceByEmpId[row.empId] ?? 0) > 0 && (
-                                              <button
-                                                type="button"
-                                                className="rounded bg-emerald-200 px-1 py-0.5 text-emerald-800 hover:bg-emerald-300"
-                                                onClick={async () => {
-                                                  const res = await fetch('/api/admin/employees/comp-days', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ employeeId: row.empId, date: cell.date, action: 'USE_COMP_DAY', note: 'Comp day' }),
-                                                  });
-                                                  if (res.ok) fetchGrid();
-                                                  else {
-                                                    const d = await res.json().catch(() => ({}));
-                                                    const msg = (d as { error?: string }).error ?? t('common.failed');
-                                                    setInlineErrorBanner(msg);
-                                                    setTimeout(() => setInlineErrorBanner(null), 6000);
-                                                  }
-                                                }}
-                                              >
-                                                {t('schedule.useCompDay') ?? 'Use Comp Day'}
-                                              </button>
-                                            )}
-                                          </div>
-                                        </details>
-                                      )}
-                                    </div>
+                                    canEdit && !lockedDaySet.has(cell.date) ? (
+                                      <div className="flex h-9 items-center justify-center px-1">
+                                        <ScheduleCellSelect
+                                          compact
+                                          value={lockedCellSelectValue(cell.availability)}
+                                          options={buildLockedCellOptions(cell, cell.date, ramadanRange ?? null, t)}
+                                          disabled={lockedCellSavingKey === editKey(row.empId, cell.date)}
+                                          onChange={(val) => {
+                                            void applyLockedCellChange(row.empId, cell.date, cell, val);
+                                          }}
+                                          className="max-w-[96px] text-center"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className={`flex h-9 items-center justify-center bg-surface-subtle px-2 text-center ${SCHEDULE_UI.guestLine} text-muted`}>
+                                        <span>{lockedCellStatusLabel(cell.availability, t)}</span>
+                                      </div>
+                                    )
                                   ) : canEdit && !lockedDaySet.has(cell.date) ? (
                                     <div
                                       className="relative flex h-9 items-center justify-center px-1"
@@ -2850,6 +2952,22 @@ export function ScheduleEditClient({
             </div>
           </div>
         </>
+      )}
+
+      {gridData && (
+        <SwapWeeklyOffModal
+          open={swapWeeklyOffOpen}
+          onClose={() => setSwapWeeklyOffOpen(false)}
+          weekStart={gridData.weekStart}
+          days={gridData.days}
+          rows={gridData.rows}
+          scheduleDisplayNames={scheduleDisplayNames}
+          onSuccess={() => {
+            fetchGrid();
+            setToast(t('schedule.swapWeeklyOff.success') as string);
+            setTimeout(() => setToast(null), 4000);
+          }}
+        />
       )}
 
       {lockDayModal && (

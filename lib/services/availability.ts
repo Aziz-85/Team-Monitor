@@ -12,8 +12,8 @@ export type AvailabilityStatus = 'LEAVE' | 'OFF' | 'WORK' | 'ABSENT' | 'HOLIDAY'
 
 /**
  * Precedence when boutiqueId is provided (full policy):
- * 1) Approved Leave => LEAVE (highest; never overridden by weekly off)
- * 2) EmployeeDayOverride FORCE_OFF => OFF; FORCE_WORK => treat as WORKABLE
+ * 1) EmployeeDayOverride FORCE_OFF => OFF; FORCE_WORK => treat as WORKABLE (admin schedule override)
+ * 2) Approved Leave => LEAVE
  * 3) OfficialHoliday.isClosed=true => HOLIDAY
  * 4) EventPeriod (suspendWeeklyOff or forceWork) => ignore weekly off
  * 5) Effective weekly off day => OFF
@@ -28,6 +28,18 @@ export async function availabilityFor(
   const d = toDateOnly(date);
   const ymd = toYmdRiyadh(d);
 
+  if (boutiqueId) {
+    const override = await getEmployeeOverride(boutiqueId, empId, ymd);
+    if (override?.mode === 'FORCE_OFF') return 'OFF';
+    if (override?.mode === 'FORCE_WORK') {
+      const absent = await prisma.inventoryAbsent.findUnique({
+        where: { boutiqueId_date_empId: { boutiqueId, date: d, empId } },
+      });
+      if (absent) return 'ABSENT';
+      return 'WORK';
+    }
+  }
+
   const leave = await prisma.leave.findFirst({
     where: {
       empId,
@@ -39,16 +51,6 @@ export async function availabilityFor(
   if (leave) return 'LEAVE';
 
   if (boutiqueId) {
-    const override = await getEmployeeOverride(boutiqueId, empId, ymd);
-    if (override?.mode === 'FORCE_OFF') return 'OFF';
-    if (override?.mode === 'FORCE_WORK') {
-      const absent = await prisma.inventoryAbsent.findUnique({
-        where: { boutiqueId_date_empId: { boutiqueId, date: d, empId } },
-      });
-      if (absent) return 'ABSENT';
-      return 'WORK';
-    }
-
     const isClosedHoliday = await isBoutiqueClosedHoliday(boutiqueId, ymd);
     if (isClosedHoliday) return 'HOLIDAY';
 

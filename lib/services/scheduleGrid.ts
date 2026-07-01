@@ -37,6 +37,8 @@ export type GridRow = {
   nameAr?: string | null;
   team: string;
   cells: GridCell[];
+  /** Regular weekly off (0=Sun..6=Sat, or NONE). Permanent profile — not this week's swap. */
+  effectiveWeeklyOffDay: number | 'NONE';
   /** Cross-boutique guest: shown only on dates with host-boutique override; home boutique code for badge */
   isGuest?: boolean;
   homeBoutiqueCode?: string;
@@ -336,9 +338,9 @@ export async function getScheduleGridForWeek(
       const isOffByWeekly = !inSuspension && effectiveOff !== 'NONE' && dayOfWeekRiyadh === effectiveOff;
 
       let availability: AvailabilityStatus;
-      if (onLeave) availability = 'LEAVE';
-      else if (overrideMode === 'FORCE_OFF') availability = 'OFF';
+      if (overrideMode === 'FORCE_OFF') availability = 'OFF';
       else if (overrideMode === 'FORCE_WORK') availability = isAbsent ? 'ABSENT' : 'WORK';
+      else if (onLeave) availability = 'LEAVE';
       else if (isHoliday) availability = 'HOLIDAY';
       else if (isOffByWeekly) availability = 'OFF';
       else if (isAbsent) availability = 'ABSENT';
@@ -388,9 +390,9 @@ export async function getScheduleGridForWeek(
       const isOffByWeekly = !inSuspension && effectiveOff !== 'NONE' && dayOfWeekRiyadh === effectiveOff;
 
       let availability: AvailabilityStatus;
-      if (onLeave) availability = 'LEAVE';
-      else if (overrideMode === 'FORCE_OFF') availability = 'OFF';
+      if (overrideMode === 'FORCE_OFF') availability = 'OFF';
       else if (overrideMode === 'FORCE_WORK') availability = isAbsent ? 'ABSENT' : 'WORK';
+      else if (onLeave) availability = 'LEAVE';
       else if (isHoliday) availability = 'HOLIDAY';
       else if (isOffByWeekly) availability = 'OFF';
       else if (isAbsent) availability = 'ABSENT';
@@ -416,6 +418,7 @@ export async function getScheduleGridForWeek(
       name: emp.name,
       nameAr: emp.nameAr ?? null,
       team: rowTeam,
+      effectiveWeeklyOffDay: getEffectiveWeeklyOffDay(emp.weeklyOffDay, emp.weeklyOffOverrideDay),
       cells,
     });
   }
