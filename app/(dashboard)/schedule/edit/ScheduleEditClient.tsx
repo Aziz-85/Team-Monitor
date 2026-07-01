@@ -11,6 +11,7 @@ import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edi
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
 import { ScheduleFullExportButton } from '@/components/schedule/ScheduleFullExportButton';
 import { SwapWeeklyOffModal } from '@/components/schedule/SwapWeeklyOffModal';
+import { ScheduleAssistantModal } from '@/components/schedule/ScheduleAssistantModal';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import {
   canLockUnlockDay,
@@ -454,6 +455,7 @@ export function ScheduleEditClient({
   const [inlineErrorBanner, setInlineErrorBanner] = useState<string | null>(null);
   const [lockedCellSavingKey, setLockedCellSavingKey] = useState<string | null>(null);
   const [swapWeeklyOffOpen, setSwapWeeklyOffOpen] = useState(false);
+  const [scheduleAssistantOpen, setScheduleAssistantOpen] = useState(false);
   const [leaveConfirm, setLeaveConfirm] = useState<{ href: string } | null>(null);
   const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(new Set());
   const [highlightedCells, setHighlightedCells] = useState<Set<string> | null>(null);
@@ -1829,6 +1831,13 @@ export function ScheduleEditClient({
               >
                 {t('schedule.swapWeeklyOff.button')}
               </button>
+              <button
+                type="button"
+                onClick={() => setScheduleAssistantOpen(true)}
+                className="h-9 md:h-10 rounded-lg border border-violet-300 bg-violet-50 px-4 text-sm font-medium text-violet-900 hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+              >
+                {t('schedule.assistant.button')}
+              </button>
             </>
           )}
         </div>
@@ -2965,6 +2974,20 @@ export function ScheduleEditClient({
           onSuccess={() => {
             fetchGrid();
             setToast(t('schedule.swapWeeklyOff.success') as string);
+            setTimeout(() => setToast(null), 4000);
+          }}
+        />
+      )}
+
+      {gridData && (
+        <ScheduleAssistantModal
+          open={scheduleAssistantOpen}
+          onClose={() => setScheduleAssistantOpen(false)}
+          weekStart={gridData.weekStart}
+          onApplied={() => {
+            fetchGrid();
+            router.refresh();
+            setToast(t('schedule.assistant.applied') as string);
             setTimeout(() => setToast(null), 4000);
           }}
         />
