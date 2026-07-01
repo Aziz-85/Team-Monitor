@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { actionKeyFromPathname, QUICK_ACTION_DEFS, QUICK_ACTION_FALLBACK, type QuickActionKey } from '@/lib/nav/quickActions';
 
@@ -42,6 +42,7 @@ function saveState(state: UsageStateV1) {
 
 export function useQuickActions(maxItems: number = 5) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<UsageStateV1>(() => loadState());
 
   const track = useCallback((key: QuickActionKey) => {
@@ -63,10 +64,10 @@ export function useQuickActions(maxItems: number = 5) {
   }, []);
 
   useEffect(() => {
-    const k = actionKeyFromPathname(pathname);
+    const k = actionKeyFromPathname(pathname, searchParams.get('section'));
     if (k) track(k);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   const ranked = useMemo(() => {
     const todayKey = getRiyadhDateKey();

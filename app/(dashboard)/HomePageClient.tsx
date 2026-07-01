@@ -35,6 +35,7 @@ import {
   paceSignal,
 } from '@/lib/presentation/executiveIntelligence';
 import { useQuickActions } from '@/lib/nav/useQuickActions';
+import { DAILY_SALES_LEDGER_HREF, QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
 import { Button } from '@/components/ui/Button';
 
 function weekStartFor(dateStr: string): string {
@@ -147,11 +148,22 @@ type PerformanceSummary = {
 type HomePageClientProps = {
   myZone?: { zone: string } | null;
   boutiqueName?: string;
+  canOpenDailySalesLedger?: boolean;
 };
 
-export function HomePageClient({ myZone, boutiqueName = '' }: HomePageClientProps) {
+export function HomePageClient({
+  myZone,
+  boutiqueName = '',
+  canOpenDailySalesLedger = false,
+}: HomePageClientProps) {
   const { t } = useT();
   const { actions: quickActions, track: trackQuickAction } = useQuickActions(5);
+  const ledgerQuickAction = QUICK_ACTION_DEFS.find((a) => a.key === 'dailySalesLedger');
+  const visibleQuickActions = useMemo(() => {
+    if (!canOpenDailySalesLedger || !ledgerQuickAction) return quickActions;
+    const rest = quickActions.filter((a) => a.key !== 'dailySalesLedger');
+    return [ledgerQuickAction, ...rest].slice(0, 5);
+  }, [canOpenDailySalesLedger, ledgerQuickAction, quickActions]);
   const [data, setData] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [date, setDate] = useState(() => getRiyadhDateKey());
@@ -566,9 +578,29 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         className="border-2 p-5 md:p-6"
       />
 
+      {canOpenDailySalesLedger && (
+        <Link
+          href={DAILY_SALES_LEDGER_HREF}
+          onClick={() => trackQuickAction('dailySalesLedger')}
+          className="block"
+        >
+          <RecommendationCard
+            title={t('home.quickActions.dailySalesLedger.title')}
+            message={t('home.dailySalesLedgerPinnedHint')}
+            tone="info"
+            className="border-2 border-accent/40 bg-accent/5 p-5 md:p-6 hover:bg-accent/10"
+            actionSlot={
+              <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+                {t('home.quickActionsGo')}
+              </span>
+            }
+          />
+        </Link>
+      )}
+
       <SectionBlock title={t('home.quickActionsTitle')} subtitle={t('home.quickActionsSubtitle')}>
         <InsightGrid className="gap-4">
-          {quickActions.slice(0, 5).map((a) => (
+          {visibleQuickActions.slice(0, 5).map((a) => (
             <Link
               key={a.key}
               href={a.href}

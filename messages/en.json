@@ -1856,11 +1856,13 @@
     "quickActionsTitle": "Quick Actions",
     "quickActionsSubtitle": "Your most-used actions, updated automatically.",
     "quickActionsGo": "Open",
+    "dailySalesLedgerPinnedHint": "Your daily workflow — jump straight to today’s sales ledger.",
     "quickActions": {
       "dashboard": { "title": "Home", "hint": "Open your home — overview and shortcuts for your role." },
       "schedule": { "title": "Schedule", "hint": "View schedule for today and this week." },
       "tasks": { "title": "Tasks", "hint": "Review and close today’s tasks." },
       "salesSummary": { "title": "Sales Summary", "hint": "Check boutique sales performance and pace." },
+      "dailySalesLedger": { "title": "Daily Sales Ledger", "hint": "Open today’s sales ledger — enter and lock daily totals." },
       "inventoryDaily": { "title": "Daily Inventory", "hint": "Run today’s inventory routine." },
       "targets": { "title": "Targets", "hint": "Track achieved vs remaining targets." },
       "weeklyReport": { "title": "Weekly Report", "hint": "Review the weekly report board." },

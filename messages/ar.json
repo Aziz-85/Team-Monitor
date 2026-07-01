@@ -1856,6 +1856,7 @@
     "quickActionsTitle": "إجراءات سريعة",
     "quickActionsSubtitle": "الأكثر استخدامًا لديك — تتحدث تلقائيًا.",
     "quickActionsGo": "فتح",
+    "dailySalesLedgerPinnedHint": "روتينك اليومي — انتقل مباشرة إلى سجل مبيعات اليوم.",
     "quickActions": {
       "dashboard": {
         "title": "الرئيسية",
@@ -1872,6 +1873,10 @@
       "salesSummary": {
         "title": "ملخص المبيعات",
         "hint": "تحقق من أداء المبيعات والوتيرة."
+      },
+      "dailySalesLedger": {
+        "title": "سجل المبيعات اليومي",
+        "hint": "افتح سجل مبيعات اليوم — إدخال وقفل الإجمالي اليومي."
       },
       "inventoryDaily": {
         "title": "الجرد اليومي",

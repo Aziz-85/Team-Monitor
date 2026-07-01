@@ -52,6 +52,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/change-password',
     '/reports/weekly',
     '/reports/store',
+    '/sales/summary',
   ],
   /** مساعد المدير: مسارات تشغيلية أساسية + الجدول + المهام + الجرد */
   ASSISTANT_MANAGER: [
@@ -68,6 +69,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/zones',
     '/inventory/follow-up',
     '/change-password',
+    '/sales/summary',
   ],
   ADMIN: [
     '/nav',
@@ -129,6 +131,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/system-audit',
     '/targets',
     '/sales/daily',
+    '/sales/summary',
     '/reports/weekly',
     '/reports/store',
     '/sales/analytics',
@@ -253,6 +256,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/area/targets',
     '/targets',
     '/sales/daily',
+    '/sales/summary',
     '/reports/weekly',
     '/reports/store',
     '/sales/analytics',
