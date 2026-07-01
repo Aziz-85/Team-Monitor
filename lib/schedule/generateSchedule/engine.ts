@@ -259,7 +259,6 @@ function solveScenario(
     const maxDaily = maxDailyHoursForDay(day.isRamadan, input);
 
     for (const emp of allEmployees) {
-      const key = unavailKey(emp.empId, day.date);
       if (!isEmployeeAvailable(emp, day.date, day.dayOfWeek, weeklyOffOverrides, unavail)) continue;
 
       const current = input.currentShifts?.find((s) => s.empId === emp.empId && s.date === day.date);
@@ -419,12 +418,7 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
     const { state, violations } = solveScenario(input, bundles, weeklyOff, unavail);
     const working = Array.from(state.values());
     const assignments = workingShiftsToAssignments(working, bundles, unavail);
-    const fairnessBreakdown = calculateFairnessScore(
-      assignments,
-      input,
-      violations.length,
-      bundles
-    );
+    const fairnessBreakdown = calculateFairnessScore(assignments, input, violations.length);
     const proposals = assignmentsToGridProposals(assignments, bundles, input.currentShifts ?? []);
 
     const candidate = {

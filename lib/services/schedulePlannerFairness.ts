@@ -57,12 +57,15 @@ function weekMonthBounds(weekStart: string): {
   const d = new Date(weekStart + 'T12:00:00Z');
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth();
-  const monthStartDate = new Date(Date.UTC(y, m, 1));
-  const monthEndDate = new Date(Date.UTC(y, m + 1, 0));
   const monthStartYmd = `${y}-${String(m + 1).padStart(2, '0')}-01`;
-  const lastDay = monthEndDate.getUTCDate();
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const monthEndYmd = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  return { monthStartDate, monthEndDate, monthStartYmd, monthEndYmd };
+  return {
+    monthStartDate: new Date(`${monthStartYmd}T00:00:00.000Z`),
+    monthEndDate: new Date(`${monthEndYmd}T23:59:59.999Z`),
+    monthStartYmd,
+    monthEndYmd,
+  };
 }
 
 export async function loadFairnessContext(weekStart: string, empIds: string[]): Promise<FairnessContext> {

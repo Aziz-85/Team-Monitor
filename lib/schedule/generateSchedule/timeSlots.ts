@@ -69,14 +69,14 @@ export function buildDaySlotBundles(
 }
 
 function slotRangeMinutes(slot: TimeSlot): { start: number; end: number } {
-  let start = parseTimeToMinutes(slot.startTime);
+  const start = parseTimeToMinutes(slot.startTime);
   let end = parseTimeToMinutes(slot.endTime);
   if (end <= start) end += 24 * 60;
   return { start, end };
 }
 
 function segmentRangeMinutes(segment: ShiftSegment): { start: number; end: number } {
-  let start = parseTimeToMinutes(segment.startTime);
+  const start = parseTimeToMinutes(segment.startTime);
   let end = parseTimeToMinutes(segment.endTime);
   if (end <= start) end += 24 * 60;
   return { start, end };

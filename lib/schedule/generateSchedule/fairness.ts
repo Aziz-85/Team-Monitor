@@ -37,8 +37,7 @@ export type FairnessBreakdown = {
 export function calculateFairnessScore(
   assignments: EmployeeDayAssignment[],
   input: Pick<GenerateScheduleInput, 'historicalStats' | 'settings' | 'days'>,
-  slotViolations: number,
-  _bundles: DaySlotBundle[]
+  slotViolations: number
 ): FairnessBreakdown {
   const maxDaily = input.days.some((d) => d.isRamadan)
     ? input.settings.ramadanMode.maxDailyHours

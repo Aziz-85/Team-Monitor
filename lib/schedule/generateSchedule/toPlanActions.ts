@@ -13,7 +13,7 @@ import type {
 import { parseTimeToMinutes, periodBounds } from './timeSlots';
 
 function segmentMidpointMinutes(segment: ShiftSegment): number {
-  let start = parseTimeToMinutes(segment.startTime);
+  const start = parseTimeToMinutes(segment.startTime);
   let end = parseTimeToMinutes(segment.endTime);
   if (end <= start) end += 24 * 60;
   return (start + end) / 2;
