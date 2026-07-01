@@ -13,6 +13,7 @@ import {
 import type { StoreReportPayload } from '@/lib/reports/storeReportService';
 import { formatSarInt } from '@/lib/utils/money';
 import { ExecutiveSummary } from '@/components/reports/ExecutiveSummary';
+import { RechartsSizedContainer } from '@/components/charts/RechartsSizedContainer';
 
 type Props = {
   data: StoreReportPayload['ytdPerformance'];
@@ -47,42 +48,46 @@ function YtdBarChart({ title, subtitle, points }: ChartBlockProps) {
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:break-inside-avoid">
       <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
       <p className="text-xs text-slate-500">{subtitle}</p>
-      <div className="mt-4 h-72 w-full min-w-0 print:h-64">
+      <div className="mt-4 print:h-64">
         {chartData.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+          <div className="flex h-72 items-center justify-center text-sm text-slate-400">
             No YTD data available
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={{ stroke: '#e2e8f0' }}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={formatChartSar}
-                tick={{ fill: '#64748b', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={48}
-              />
-              <Tooltip
-                formatter={(value) => formatSarInt(Number(value ?? 0))}
-                contentStyle={{
-                  borderRadius: 8,
-                  border: '1px solid #e2e8f0',
-                  fontSize: 12,
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Bar dataKey="Current Year" fill={CY_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="Last Year" fill={LY_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="Target" fill={TARGET_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
-            </BarChart>
-          </ResponsiveContainer>
+          <RechartsSizedContainer className="h-72 w-full min-w-0">
+            {({ width, height }) => (
+              <ResponsiveContainer width={width} height={height}>
+                <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tickFormatter={formatChartSar}
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={48}
+                  />
+                  <Tooltip
+                    formatter={(value) => formatSarInt(Number(value ?? 0))}
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: '1px solid #e2e8f0',
+                      fontSize: 12,
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Bar dataKey="Current Year" fill={CY_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="Last Year" fill={LY_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="Target" fill={TARGET_COLOR} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </RechartsSizedContainer>
         )}
       </div>
     </div>
