@@ -15,11 +15,45 @@ import { isRamadan } from '@/lib/time/ramadan';
 import { getWeekIndexInYear, FRIDAY_DAY_OF_WEEK } from './shift';
 import type { ShiftType } from './shift';
 import { incrementCountsForWorkingShift } from '@/lib/schedule/shiftRules';
+import { incrementCountsFromShiftCoverage, shiftAmPmContribution } from '@/lib/schedule/segmentCoverage';
+import { buildWeekOperatingConfigs } from '@/lib/schedule/generateSchedule/operatingPeriods';
+import { getRamadanRange } from '@/lib/time/ramadan';
+import type { OperatingPeriod } from '@/lib/schedule/generateSchedule/types';
+import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay, toYmdRiyadh } from '@/lib/schedule/dayOverride';
 import { getEmployeeTeamsForDateRange } from './employeeTeam';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
-import { getDowRiyadhFromYmd, getEffectiveWeeklyOffDay } from '@/lib/schedule/dayOverride';
 import { toRiyadhDateString } from '@/lib/time';
+
+export type DayCountContext = {
+  date: string;
+  dayOfWeek: number;
+  isRamadan: boolean;
+  operatingPeriods: OperatingPeriod[];
+  maxDailyHours: number;
+};
+
+export function buildDayCountContexts(weekDates: string[]): DayCountContext[] {
+  const ramadanRange = getRamadanRange();
+  return buildWeekOperatingConfigs(weekDates, ramadanRange).map((day) => ({
+    date: day.date,
+    dayOfWeek: day.dayOfWeek,
+    isRamadan: day.isRamadan,
+    operatingPeriods: day.operatingPeriods,
+    maxDailyHours: day.isRamadan ? 6 : 8,
+  }));
+}
+
+function isOnApprovedLeaveForYmd(
+  leaveRanges: Array<{ start: Date; end: Date }>,
+  ymdRiyadh: string
+): boolean {
+  return leaveRanges.some((r) => {
+    const startYmd = toYmdRiyadh(new Date(r.start));
+    const endYmd = toYmdRiyadh(new Date(r.end));
+    return ymdRiyadh >= startYmd && ymdRiyadh <= endYmd;
+  });
+}
 
 export type AvailabilityStatus = 'LEAVE' | 'OFF' | 'WORK' | 'ABSENT' | 'HOLIDAY';
 
@@ -66,12 +100,24 @@ export type DayCounts = {
  * Used by grid builder and by unit tests to prevent regression.
  */
 export function computeDayCountsFromCells(
-  cells: Array<{ availability: string; effectiveShift: string }>
+  cells: Array<{ availability: string; effectiveShift: string }>,
+  dayContext?: DayCountContext
 ): DayCounts {
   const counts: DayCounts = { amCount: 0, pmCount: 0, rashidAmCount: 0, rashidPmCount: 0 };
   for (const cell of cells) {
     if (cell.availability !== 'WORK') continue;
-    incrementCountsForWorkingShift(counts, cell.effectiveShift);
+    if (dayContext) {
+      incrementCountsFromShiftCoverage(
+        counts,
+        cell.effectiveShift,
+        dayContext.operatingPeriods,
+        dayContext.dayOfWeek,
+        dayContext.isRamadan,
+        dayContext.maxDailyHours
+      );
+    } else {
+      incrementCountsForWorkingShift(counts, cell.effectiveShift);
+    }
   }
   return counts;
 }
@@ -83,7 +129,8 @@ export function computeDayCountsFromCells(
  */
 export function computeCountsFromGridRows(
   rows: Array<{ empId: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> }>,
-  getEffectiveShift: (empId: string, date: string, serverShift: string) => string = (_e, _d, s) => s
+  getEffectiveShift: (empId: string, date: string, serverShift: string) => string = (_e, _d, s) => s,
+  dayContexts?: DayCountContext[]
 ): DayCounts[] {
   const dayCount = rows[0]?.cells.length ?? 0;
   const counts: DayCounts[] = Array.from({ length: dayCount }, () => ({
@@ -93,11 +140,23 @@ export function computeCountsFromGridRows(
     rashidPmCount: 0,
   }));
   for (const row of rows) {
-    for (let i = 0; i < row.cells.length; i++) {
+    for (let i = 0; i < dayCount; i++) {
       const cell = row.cells[i];
       const shift = getEffectiveShift(row.empId, cell.date, cell.effectiveShift);
       if (cell.availability !== 'WORK') continue;
-      incrementCountsForWorkingShift(counts[i], shift);
+      const ctx = dayContexts?.[i];
+      if (ctx) {
+        incrementCountsFromShiftCoverage(
+          counts[i],
+          shift,
+          ctx.operatingPeriods,
+          ctx.dayOfWeek,
+          ctx.isRamadan,
+          ctx.maxDailyHours
+        );
+      } else {
+        incrementCountsForWorkingShift(counts[i], shift);
+      }
     }
   }
   return counts;
@@ -142,6 +201,7 @@ export async function getScheduleGridForWeek(
     weekDates.push(d);
   }
   const dateStrs = weekDates.map((d) => d.toISOString().slice(0, 10));
+  const dayCountContexts = buildDayCountContexts(dateStrs);
   const firstDate = weekDates[0];
   const lastDate = weekDates[6];
 
@@ -194,12 +254,16 @@ export async function getScheduleGridForWeek(
       const dateStr = o.date.toISOString().slice(0, 10);
       const i = dateStrs.indexOf(dateStr);
       if (i >= 0) {
-        if (o.overrideShift === 'MORNING') guestShiftCountsByDay[i].am += 1;
-        else if (o.overrideShift === 'EVENING') guestShiftCountsByDay[i].pm += 1;
-        else if (o.overrideShift === 'SPLIT') {
-          guestShiftCountsByDay[i].am += 1;
-          guestShiftCountsByDay[i].pm += 1;
-        }
+        const ctx = dayCountContexts[i];
+        const contrib = shiftAmPmContribution(
+          o.overrideShift,
+          ctx.operatingPeriods,
+          ctx.dayOfWeek,
+          ctx.isRamadan,
+          ctx.maxDailyHours
+        );
+        if (contrib.am) guestShiftCountsByDay[i].am += 1;
+        if (contrib.pm) guestShiftCountsByDay[i].pm += 1;
       }
     }
   }
@@ -327,14 +391,7 @@ export async function getScheduleGridForWeek(
       const absentKey = `${emp.empId}_${dateStr}`;
       const isAbsent = absentSet.has(absentKey);
       const leaveRanges = leaveRangesByEmp.get(emp.empId) ?? [];
-      const onLeave = leaveRanges.some((r) => {
-        const dd = d.getTime();
-        const start = new Date(r.start);
-        start.setUTCHours(0, 0, 0, 0);
-        const end = new Date(r.end);
-        end.setUTCHours(23, 59, 59, 999);
-        return dd >= start.getTime() && dd <= end.getTime();
-      });
+      const onLeave = isOnApprovedLeaveForYmd(leaveRanges, ymdRiyadh);
       const overrideMode = boutiqueId ? dayOverrideByKey.get(`${boutiqueId}_${emp.empId}_${ymdRiyadh}`) : null;
       const isHoliday = boutiqueId ? holidaySet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
       const inSuspension = boutiqueId ? suspensionSet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
@@ -372,21 +429,13 @@ export async function getScheduleGridForWeek(
     }
 
     const cells: GridCell[] = dateStrs.map((dateStr, i) => {
-      const d = weekDates[i];
       const ymdRiyadh = dateStrsRiyadh[i];
       const dayOfWeekRiyadh = getDowRiyadhFromYmd(ymdRiyadh);
       const override = overrideByKey.get(`${emp.empId}_${dateStr}`);
       const absentKey = `${emp.empId}_${dateStr}`;
       const isAbsent = absentSet.has(absentKey);
       const leaveRanges = leaveRangesByEmp.get(emp.empId) ?? [];
-      const onLeave = leaveRanges.some((r) => {
-        const dd = d.getTime();
-        const start = new Date(r.start);
-        start.setUTCHours(0, 0, 0, 0);
-        const end = new Date(r.end);
-        end.setUTCHours(23, 59, 59, 999);
-        return dd >= start.getTime() && dd <= end.getTime();
-      });
+      const onLeave = isOnApprovedLeaveForYmd(leaveRanges, ymdRiyadh);
       const overrideMode = boutiqueId ? dayOverrideByKey.get(`${boutiqueId}_${emp.empId}_${ymdRiyadh}`) : null;
       const isHoliday = boutiqueId ? holidaySet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
       const inSuspension = boutiqueId ? suspensionSet.has(`${boutiqueId}_${ymdRiyadh}`) : false;
@@ -432,7 +481,7 @@ export async function getScheduleGridForWeek(
     finalRows = finalRows.filter((row) => row.team === options.team);
   }
 
-  const counts = computeCountsFromGridRows(finalRows);
+  const counts = computeCountsFromGridRows(finalRows, (_e, _d, s) => s, dayCountContexts);
   for (let i = 0; i < counts.length; i++) {
     counts[i].amCount += guestShiftCountsByDay[i].am;
     counts[i].pmCount += guestShiftCountsByDay[i].pm;

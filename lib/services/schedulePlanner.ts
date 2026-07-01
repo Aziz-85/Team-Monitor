@@ -43,6 +43,8 @@ export type PlanAction = {
   reason: string;
   fairnessScore: number;
   sourceBoutiqueId?: string;
+  /** Segment detail preserved from dynamic generate (not persisted to DB). */
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 export type SchedulePlanOptions = {

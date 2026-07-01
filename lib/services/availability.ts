@@ -48,7 +48,11 @@ export async function availabilityFor(
       endDate: { gte: d },
     },
   });
-  if (leave) return 'LEAVE';
+  if (leave) {
+    const startYmd = toYmdRiyadh(new Date(leave.startDate));
+    const endYmd = toYmdRiyadh(new Date(leave.endDate));
+    if (ymd >= startYmd && ymd <= endYmd) return 'LEAVE';
+  }
 
   if (boutiqueId) {
     const isClosedHoliday = await isBoutiqueClosedHoliday(boutiqueId, ymd);

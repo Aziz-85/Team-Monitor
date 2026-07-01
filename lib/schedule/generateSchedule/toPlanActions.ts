@@ -10,36 +10,28 @@ import type {
   GridShiftProposal,
   ShiftSegment,
 } from './types';
-import { parseTimeToMinutes, periodBounds } from './timeSlots';
+import { segmentsToGridShiftEnum } from '@/lib/schedule/segmentCoverage';
 
-function segmentMidpointMinutes(segment: ShiftSegment): number {
-  const start = parseTimeToMinutes(segment.startTime);
-  let end = parseTimeToMinutes(segment.endTime);
-  if (end <= start) end += 24 * 60;
-  return (start + end) / 2;
-}
-
-/** Map dynamic segments to MORNING | EVENING | SPLIT for the existing grid. */
-export function segmentsToGridShift(
+export function segmentsToGridShiftForBundle(
   segments: ShiftSegment[],
   bundle: DaySlotBundle | undefined
 ): 'MORNING' | 'EVENING' | 'SPLIT' | 'NONE' {
   if (!segments.length) return 'NONE';
-  const periodIndexes = new Set(segments.map((s) => s.periodIndex));
-  if (periodIndexes.size >= 2) return 'SPLIT';
+  if (!bundle) return 'MORNING';
+  return segmentsToGridShiftEnum(
+    segments,
+    bundle.operatingPeriods,
+    bundle.dayOfWeek,
+    bundle.isRamadan
+  );
+}
 
-  const periodCount = bundle?.operatingPeriods.length ?? 1;
-  if (periodCount >= 2) {
-    const idx = segments[0]?.periodIndex ?? 0;
-    return idx === 0 ? 'MORNING' : 'EVENING';
-  }
-
-  const period = bundle?.operatingPeriods[0];
-  if (!period) return 'MORNING';
-  const { start, end } = periodBounds(period);
-  const mid = segmentMidpointMinutes(segments[0]);
-  const periodMid = (start + end) / 2;
-  return mid <= periodMid ? 'MORNING' : 'EVENING';
+/** @deprecated Use segmentsToGridShiftForBundle */
+export function segmentsToGridShift(
+  segments: ShiftSegment[],
+  bundle: DaySlotBundle | undefined
+): 'MORNING' | 'EVENING' | 'SPLIT' | 'NONE' {
+  return segmentsToGridShiftForBundle(segments, bundle);
 }
 
 export function assignmentsToGridProposals(
@@ -53,9 +45,10 @@ export function assignmentsToGridProposals(
   const proposals: GridShiftProposal[] = [];
   for (const a of assignments) {
     if (a.shiftKind === 'Leave' || a.shiftKind === 'Off') continue;
+    if (!a.segments.length) continue;
 
     const bundle = bundleByDate.get(a.date);
-    const gridShift = segmentsToGridShift(a.segments, bundle);
+    const gridShift = segmentsToGridShiftForBundle(a.segments, bundle);
     const cur = currentMap.get(`${a.empId}|${a.date}`);
     const fromShift = cur?.availability === 'WORK' ? cur.shift : 'NONE';
 
@@ -67,7 +60,7 @@ export function assignmentsToGridProposals(
       date: a.date,
       shift: gridShift,
       shiftKind: a.shiftKind,
-      segments: a.segments,
+      segments: a.segments.map((s) => ({ ...s })),
       totalHours: a.totalHours,
       reason: a.reasons.join('; ') || 'Generated schedule',
     });
@@ -77,7 +70,7 @@ export function assignmentsToGridProposals(
 
 export function proposalsToPlanActions(
   proposals: GridShiftProposal[],
-  gridRows: Array<{ empId: string; name: string; cells: Array<{ date: string; effectiveShift: string }> }>,
+  gridRows: Array<{ empId: string; name: string; cells: Array<{ date: string; effectiveShift: string; availability?: string }> }>,
   fairnessScore: number
 ): PlanAction[] {
   const nameByEmp = new Map(gridRows.map((r) => [r.empId, r.name]));
@@ -89,7 +82,7 @@ export function proposalsToPlanActions(
   return proposals.map((p, idx) => {
     const row = gridRows.find((r) => r.empId === p.empId);
     const cell = row?.cells.find((c) => c.date === p.date);
-    const fromShift = cell?.effectiveShift ?? 'NONE';
+    const fromShift = cell?.availability === 'WORK' ? cell.effectiveShift : 'NONE';
     return {
       id: `gen-${p.empId}-${p.date}-${idx}`,
       type: 'SHIFT_CHANGE' as const,
@@ -101,13 +94,14 @@ export function proposalsToPlanActions(
       toShift: p.shift,
       reason: p.reason,
       fairnessScore,
+      segments: p.segments.map((s) => ({ ...s })),
     };
   });
 }
 
 export function generateResultToPlanActions(
   result: GenerateScheduleResult,
-  gridRows: Array<{ empId: string; name: string; cells: Array<{ date: string; effectiveShift: string }> }>
+  gridRows: Array<{ empId: string; name: string; cells: Array<{ date: string; effectiveShift: string; availability?: string }> }>
 ): PlanAction[] {
   return proposalsToPlanActions(result.proposals, gridRows, result.fairnessScore);
 }

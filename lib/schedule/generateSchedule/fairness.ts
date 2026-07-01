@@ -130,6 +130,109 @@ export function buildEmployeeSummaries(
   return Array.from(byEmp.values()).sort((a, b) => b.totalHours - a.totalHours);
 }
 
+export function buildFullWeekAssignments(
+  input: GenerateScheduleInput,
+  working: WorkingDayShift[],
+  bundles: DaySlotBundle[],
+  unavailKind: Map<string, string>
+): EmployeeDayAssignment[] {
+  const workingByKey = new Map(working.map((w) => [`${w.empId}|${w.date}`, w]));
+  const periodCountByDate = new Map(bundles.map((b) => [b.date, b.operatingPeriods.length]));
+  const assignments: EmployeeDayAssignment[] = [];
+  const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
+
+  for (const emp of allEmployees) {
+    for (const day of input.days) {
+      const key = `${emp.empId}|${day.date}`;
+      const kind = unavailKind.get(key);
+
+      if (kind === 'leave') {
+        assignments.push({
+          empId: emp.empId,
+          name: emp.name,
+          date: day.date,
+          isExternalSupport: emp.isExternalSupport,
+          segments: [],
+          shiftKind: 'Leave',
+          totalHours: 0,
+          splitDay: false,
+          reasons: ['Approved leave on file'],
+        });
+        continue;
+      }
+      if (kind === 'weekly_off' || kind === 'holiday') {
+        assignments.push({
+          empId: emp.empId,
+          name: emp.name,
+          date: day.date,
+          isExternalSupport: emp.isExternalSupport,
+          segments: [],
+          shiftKind: 'Off',
+          totalHours: 0,
+          splitDay: false,
+          reasons: [kind === 'weekly_off' ? 'Weekly off' : 'Holiday'],
+        });
+        continue;
+      }
+      if (kind === 'absent') {
+        assignments.push({
+          empId: emp.empId,
+          name: emp.name,
+          date: day.date,
+          isExternalSupport: emp.isExternalSupport,
+          segments: [],
+          shiftKind: 'Off',
+          totalHours: 0,
+          splitDay: false,
+          reasons: ['Absent'],
+        });
+        continue;
+      }
+
+      const w = workingByKey.get(key);
+      if (!w || !w.segments.length) {
+        assignments.push({
+          empId: emp.empId,
+          name: emp.name,
+          date: day.date,
+          isExternalSupport: emp.isExternalSupport,
+          segments: [],
+          shiftKind: 'Off',
+          totalHours: 0,
+          splitDay: false,
+          reasons: ['Not scheduled'],
+        });
+        continue;
+      }
+
+      const periodCount = periodCountByDate.get(day.date) ?? 1;
+      const periodIndexes = new Set(w.segments.map((s) => s.periodIndex));
+      const splitDay = periodIndexes.size >= 2;
+      const totalHours = dayTotalHours(w.segments);
+      let shiftKind: EmployeeDayAssignment['shiftKind'] = 'Off';
+      if (splitDay) shiftKind = 'Split';
+      else if (w.isExternalSupport) shiftKind = 'Support';
+      else if (periodCount > 1 && periodIndexes.has(0) && !periodIndexes.has(1)) shiftKind = 'AM';
+      else if (periodCount > 1 && periodIndexes.has(1)) shiftKind = 'PM';
+      else shiftKind = 'AM';
+
+      assignments.push({
+        empId: w.empId,
+        name: w.name,
+        date: w.date,
+        isExternalSupport: w.isExternalSupport,
+        segments: w.segments,
+        shiftKind,
+        totalHours,
+        splitDay,
+        reasons: w.reasons,
+      });
+    }
+  }
+
+  return assignments;
+}
+
 export function workingShiftsToAssignments(
   working: WorkingDayShift[],
   bundles: DaySlotBundle[],

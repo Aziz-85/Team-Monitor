@@ -141,6 +141,7 @@ export type GenerateScheduleResult = {
 export type DaySlotBundle = {
   date: string;
   dayOfWeek: number;
+  isRamadan: boolean;
   operatingPeriods: OperatingPeriod[];
   slots: TimeSlot[];
 };

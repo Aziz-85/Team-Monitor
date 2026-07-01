@@ -20,17 +20,17 @@ import {
   dayTotalHours,
   extendShiftToCoverSlot,
   mergeAdjacentSegments,
-  segmentFromPeriodEnd,
   segmentFromPeriodStart,
   validateCoverage,
 } from './timeSlots';
 import { weekModeFromDays } from './operatingPeriods';
 import {
   buildEmployeeSummaries,
+  buildFullWeekAssignments,
   calculateFairnessScore,
   countEmployeeWeeklySplitDays,
-  workingShiftsToAssignments,
 } from './fairness';
+import { shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
 import { assignmentsToGridProposals } from './toPlanActions';
 
 type DayState = Map<string, WorkingDayShift>;
@@ -56,31 +56,7 @@ function gridShiftToSegments(
   periods: OperatingPeriod[],
   maxHours: number
 ): ShiftSegment[] {
-  const s = shift.trim().toUpperCase();
-  if (s === 'NONE' || s === 'OFF' || !s) return [];
-  if (s === 'MORNING' || s === 'AM') {
-    if (periods.length >= 2) return [segmentFromPeriodStart(periods[0], 0, maxHours)];
-    return [segmentFromPeriodStart(periods[0], 0, maxHours)];
-  }
-  if (s === 'EVENING' || s === 'PM') {
-    const idx = periods.length >= 2 ? 1 : 0;
-    return [segmentFromPeriodEnd(periods[idx], idx, maxHours)];
-  }
-  if (s === 'SPLIT') {
-    if (periods.length >= 2) {
-      const half = maxHours / 2;
-      return mergeAdjacentSegments([
-        segmentFromPeriodStart(periods[0], 0, half),
-        segmentFromPeriodStart(periods[1], 1, half),
-      ]);
-    }
-    const half = maxHours / 2;
-    return mergeAdjacentSegments([
-      segmentFromPeriodStart(periods[0], 0, half),
-      segmentFromPeriodEnd(periods[0], 0, half),
-    ]);
-  }
-  return [];
+  return shiftToSegmentsForCounting(shift, periods, maxHours);
 }
 
 function isEmployeeAvailable(
@@ -417,7 +393,7 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
     const unavail = applyWeeklyOffToUnavail(input, weeklyOff, baseUnavail);
     const { state, violations } = solveScenario(input, bundles, weeklyOff, unavail);
     const working = Array.from(state.values());
-    const assignments = workingShiftsToAssignments(working, bundles, unavail);
+    const assignments = buildFullWeekAssignments(input, working, bundles, unavail);
     const fairnessBreakdown = calculateFairnessScore(assignments, input, violations.length);
     const proposals = assignmentsToGridProposals(assignments, bundles, input.currentShifts ?? []);
 

@@ -63,6 +63,7 @@ export function buildDaySlotBundles(
   return days.map((day) => ({
     date: day.date,
     dayOfWeek: day.dayOfWeek,
+    isRamadan: day.isRamadan,
     operatingPeriods: day.operatingPeriods,
     slots: buildTimeSlots(day.operatingPeriods, day.date, intervalMinutes),
   }));
