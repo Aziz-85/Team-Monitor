@@ -1401,7 +1401,8 @@
     "assistant": {
       "button": "Schedule assistant",
       "title": "Schedule assistant",
-      "subtitle": "Fair weekly plan for coverage gaps and staffing shortages. Review before applying.",
+      "subtitle": "Sat–Thu: min 2 AM & PM, PM > AM. Friday: PM only. Review before applying.",
+      "policyHint": "Policy: Saturday–Thursday — at least 2 staff per shift (AM and PM), evening count must exceed morning. Friday — evening shift only.",
       "tabPlan": "Proposed plan",
       "tabChat": "Ask AI",
       "aiOff": "optional",

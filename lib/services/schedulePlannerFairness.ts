@@ -4,7 +4,7 @@
 
 import { prisma } from '@/lib/db';
 import type { GridRow } from './scheduleGrid';
-import { FRIDAY_DAY_OF_WEEK } from './shift';
+import { effectiveMinPm as policyMinPm } from '@/lib/schedule/coveragePolicy';
 
 export type FairnessContext = {
   monthlyOverrides: Map<string, number>;
@@ -150,7 +150,7 @@ export function candidateFairnessScore(
   context: FairnessContext,
   weekStats: EmployeeFairnessRow | undefined,
   weights: FairnessWeights,
-  opts?: { isWeeklyOff?: boolean; movingToPm?: boolean }
+  opts?: { isWeeklyOff?: boolean; movingToPm?: boolean; movingToAm?: boolean }
 ): number {
   const monthlyOverrides = context.monthlyOverrides.get(empId) ?? 0;
   const forceWork = context.forceWorkThisMonth.get(empId) ?? 0;
@@ -169,6 +169,9 @@ export function candidateFairnessScore(
   if (opts?.movingToPm) {
     score += pmThisWeek * 0.5;
   }
+  if (opts?.movingToAm) {
+    score += (weekStats?.amDays ?? 0) * 0.5;
+  }
 
   const cell = row.cells[dayIndex];
   if (cell?.availability === 'LEAVE') score += 100;
@@ -178,6 +181,5 @@ export function candidateFairnessScore(
 }
 
 export function effectiveMinPm(dayOfWeek: number, ruleMinPm: number): number {
-  if (dayOfWeek === FRIDAY_DAY_OF_WEEK) return ruleMinPm;
-  return Math.max(ruleMinPm, 2);
+  return policyMinPm(dayOfWeek, ruleMinPm);
 }

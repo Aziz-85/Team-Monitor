@@ -84,11 +84,14 @@ export async function rosterForDate(
       warnings.push(`Friday is PM-only; AM count (${amEmployees.length}) must be 0`);
     }
   } else {
+    if (amEmployees.length < 2) {
+      warnings.push(`AM count (${amEmployees.length}) is below minimum 2`);
+    }
     if (pmEmployees.length < 2) {
       warnings.push(`PM count (${pmEmployees.length}) is below minimum 2`);
     }
-    if (amEmployees.length > pmEmployees.length) {
-      warnings.push(`AM (${amEmployees.length}) > PM (${pmEmployees.length}) - PM must be ≥ AM`);
+    if (pmEmployees.length <= amEmployees.length) {
+      warnings.push(`PM (${pmEmployees.length}) must be greater than AM (${amEmployees.length})`);
     }
   }
 

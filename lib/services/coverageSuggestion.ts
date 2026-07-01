@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { rosterForDate } from './roster';
 import { validateCoverage } from './coverageValidation';
+import { isCoverageCompliant } from '@/lib/schedule/coveragePolicy';
 
 /**
  * Coverage Move Suggestions – ADVISORY ONLY.
@@ -87,18 +88,16 @@ export async function getCoverageSuggestion(
     };
   }
 
-  /** Sat–Thu: AM > PM → suggest move AM → PM; require after move PM ≥ 2 and PM ≥ AM. */
-  const amGtPm = validations.find((v) => v.type === 'AM_GT_PM');
-  if (!amGtPm || amCount <= pmCount) return { suggestion: null, explanation: undefined };
+  /** Sat–Thu: PM ≤ AM → suggest move AM → PM when a move would satisfy policy. */
+  const needsPmAboveAm = validations.some((v) => v.type === 'PM_NOT_ABOVE_AM' || v.type === 'AM_GT_PM');
+  if (!isFriday && (!needsPmAboveAm || amCount === 0)) {
+    return { suggestion: null, explanation: undefined };
+  }
 
-  const effectiveMinPm = 2;
   const afterAm = amCount - 1;
   const afterPm = pmCount + 1;
-  if (afterPm < effectiveMinPm) {
-    return { suggestion: null, explanation: 'Cannot suggest move because PM would fall below minimum (2)' };
-  }
-  if (afterAm > afterPm) {
-    return { suggestion: null, explanation: 'Cannot suggest move because AM would still exceed PM after move' };
+  if (!isCoverageCompliant({ am: afterAm, pm: afterPm }, dayOfWeek)) {
+    return { suggestion: null, explanation: 'Cannot suggest move because coverage would still violate policy' };
   }
 
   if (roster.amEmployees.length === 0) return { suggestion: null, explanation: 'No AM employees to move' };
@@ -120,7 +119,7 @@ export async function getCoverageSuggestion(
       toShift: 'EVENING',
       empId: chosen.empId,
       employeeName: chosen.name,
-      reason: `AM (${amCount}) > PM (${pmCount}). Moving 1 from AM to PM → AM=${afterAm}, PM=${afterPm} (PM ≥ 2).`,
+      reason: `PM (${pmCount}) must exceed AM (${amCount}). Moving 1 from AM to PM → AM=${afterAm}, PM=${afterPm}.`,
       impact: { amBefore: amCount, pmBefore: pmCount, amAfter: afterAm, pmAfter: afterPm },
     },
     explanation: undefined,

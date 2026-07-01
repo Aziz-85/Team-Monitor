@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { rosterForDate } from './roster';
+import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
 
 /**
  * Coverage Validation Engine – VALIDATION + WARNINGS ONLY.
@@ -10,7 +11,7 @@ import { rosterForDate } from './roster';
  * from a second schedule implementation for new features.
  */
 
-export type ValidationResultType = 'MIN_AM' | 'MIN_PM' | 'AM_GT_PM' | 'AM_ON_FRIDAY';
+export type ValidationResultType = 'MIN_AM' | 'MIN_PM' | 'AM_GT_PM' | 'AM_ON_FRIDAY' | 'PM_NOT_ABOVE_AM';
 
 export interface ValidationResult {
   type: ValidationResultType;
@@ -34,16 +35,13 @@ function toDateKey(date: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-const FRIDAY_DAY_OF_WEEK = 5;
 
 export type ValidateCoverageOptions = { boutiqueIds?: string[] };
 
 /**
- * Validates daily coverage for a date using:
- * - Coverage Rules (min AM / min PM per weekday)
- * - Effective Coverage Policy (PM-dominant): PM must be ≥ AM, PM must be at least 2 (Sat–Thu);
- *   Friday is PM-only (effective Min AM = 0). Min AM is informational (not enforced) on all days.
- * Data: base shifts + day overrides + leave (effective availability from roster).
+ * Validates daily coverage using canonical policy:
+ * - Sat–Thu: min 2 AM, min 2 PM, PM > AM
+ * - Friday: PM-only (AM = 0)
  */
 export async function validateCoverage(
   date: Date,
@@ -60,7 +58,6 @@ export async function validateCoverage(
   const amCount = roster.amEmployees.length;
   const pmCount = roster.pmEmployees.length;
   const dayOfWeek = new Date(dateKey + 'T12:00:00Z').getUTCDay();
-  const isFriday = dayOfWeek === FRIDAY_DAY_OF_WEEK;
 
   if (process.env.DEBUG_SCHEDULE_SUGGESTIONS === '1') {
     // eslint-disable-next-line no-console
@@ -69,7 +66,7 @@ export async function validateCoverage(
       boutiqueIds: options.boutiqueIds,
       amCount,
       pmCount,
-      isFriday,
+      dayOfWeek,
     });
   }
 
@@ -78,47 +75,37 @@ export async function validateCoverage(
     select: { minAM: true, minPM: true },
   });
   const minAm = rule?.minAM ?? 0;
-  /** Effective Min PM: Sat–Thu = at least 2; Friday uses rule (PM-only day). */
-  const effectiveMinPm = isFriday ? (rule?.minPM ?? 0) : (rule ? Math.max(rule.minPM ?? 0, 2) : 2);
+  const minPm = rule?.minPM ?? 0;
 
-  const results: ValidationResult[] = [];
+  const policyIssues = evaluateCoverage({ am: amCount, pm: pmCount }, dayOfWeek, minAm, minPm);
 
-  /** Friday: AM not allowed (PM-only). Effective Min AM = 0. */
-  if (isFriday && amCount > 0) {
-    results.push({
-      type: 'AM_ON_FRIDAY',
-      severity: 'warning',
-      message: `Friday is PM-only; AM (${amCount}) must be 0`,
-      amCount,
-      pmCount,
-      minAm: 0,
-      minPm: rule?.minPM ?? 0,
-    });
-  }
+  const typeMap: Record<string, ValidationResultType> = {
+    AM_ON_FRIDAY: 'AM_ON_FRIDAY',
+    AM_BELOW_MIN: 'MIN_AM',
+    PM_BELOW_MIN: 'MIN_PM',
+    PM_NOT_ABOVE_AM: 'PM_NOT_ABOVE_AM',
+  };
 
-  /** Sat–Thu: enforce PM ≥ 2. Min AM is informational only (not enforced). */
-  if (!isFriday && rule && pmCount < effectiveMinPm) {
-    results.push({
-      type: 'MIN_PM',
-      severity: 'warning',
-      message: `PM count (${pmCount}) is below minimum (${effectiveMinPm})`,
-      amCount,
-      pmCount,
-      minAm: minAm,
-      minPm: effectiveMinPm,
-    });
-  }
+  const results: ValidationResult[] = policyIssues.map((issue) => ({
+    type: typeMap[issue.type] ?? 'MIN_PM',
+    severity: 'warning',
+    message: issue.message,
+    amCount,
+    pmCount,
+    minAm: issue.minAm,
+    minPm: issue.minPm,
+  }));
 
-  /** Business rule: PM must be ≥ AM (Sat–Thu). Friday is AM-only so AM > PM is allowed. */
-  if (!isFriday && amCount > pmCount) {
+  /** Legacy alias for dashboards still keying on AM_GT_PM */
+  if (results.some((r) => r.type === 'PM_NOT_ABOVE_AM')) {
     results.push({
       type: 'AM_GT_PM',
       severity: 'warning',
-      message: `AM (${amCount}) > PM (${pmCount})`,
+      message: `AM (${amCount}) ≥ PM (${pmCount}); PM must be greater than AM`,
       amCount,
       pmCount,
-      minAm: minAm,
-      minPm: effectiveMinPm,
+      minAm: results[0]?.minAm ?? minAm,
+      minPm: results[0]?.minPm ?? minPm,
     });
   }
 

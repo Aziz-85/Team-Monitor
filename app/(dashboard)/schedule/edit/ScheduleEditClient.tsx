@@ -27,6 +27,7 @@ import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import type { Role } from '@prisma/client';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
+import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
 import {
   buildScheduleDisplayNames,
   getScheduleDisplayName,
@@ -1004,13 +1005,18 @@ export function ScheduleEditClient({
       const am = dc.amCount ?? 0;
       const pm = dc.pmCount ?? 0;
       const day = days[i];
-      const isFriday = day?.dayOfWeek === 5;
-      const effectiveMinPm = isFriday ? (day?.minPm ?? 0) : Math.max(day?.minPm ?? 0, 2);
+      if (!day) return true;
+      const issues = evaluateCoverage({ am, pm }, day.dayOfWeek, day.minAm ?? 0, day.minPm ?? 0);
+      if (issues.length === 0) return false;
       if (s.type === 'MOVE') {
-        if (isFriday) return am >= 1;
-        return am > pm;
+        return issues.some((x) => x.type === 'AM_ON_FRIDAY' || x.type === 'PM_NOT_ABOVE_AM' || x.type === 'PM_BELOW_MIN');
       }
-      if (s.type === 'REMOVE_COVER') return pm < effectiveMinPm || pm < am;
+      if (s.type === 'ASSIGN') {
+        return issues.some((x) => x.type === 'AM_BELOW_MIN');
+      }
+      if (s.type === 'REMOVE_COVER') {
+        return issues.some((x) => x.type === 'PM_BELOW_MIN');
+      }
       return true;
     });
     if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_DEBUG_SCHEDULE_SUGGESTIONS === '1') {

@@ -140,6 +140,9 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
         <div className="border-b border-border px-5 py-4">
           <h3 className="text-lg font-semibold text-foreground">{t('schedule.assistant.title')}</h3>
           <p className="mt-1 text-sm text-muted">{t('schedule.assistant.subtitle')}</p>
+        <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-900">
+          {t('schedule.assistant.policyHint')}
+        </p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
