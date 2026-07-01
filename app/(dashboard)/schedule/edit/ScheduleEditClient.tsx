@@ -30,6 +30,10 @@ import type { Role } from '@prisma/client';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
 import { buildEditorShiftOptions } from '@/lib/schedule/shiftOptions';
 import {
+  isSplitAssignmentAllowed,
+  shiftCountContribution,
+} from '@/lib/schedule/coveragePolicy';
+import {
   buildScheduleDisplayNames,
   getScheduleDisplayName,
 } from '@/lib/schedule/displayName';
@@ -348,6 +352,17 @@ function lockedCellStatusLabel(availability: string, t: (key: string) => string)
     default:
       return availability;
   }
+}
+
+function countsWithoutEmployee(
+  dayAm: number,
+  dayPm: number,
+  cell: GridCell,
+  employeeShift: string
+): { am: number; pm: number } {
+  if (cell.availability !== 'WORK') return { am: dayAm, pm: dayPm };
+  const c = shiftCountContribution(employeeShift);
+  return { am: dayAm - c.am, pm: dayPm - c.pm };
 }
 
 function buildLockedCellOptions(
@@ -1136,6 +1151,20 @@ export function ScheduleEditClient({
         return;
       }
       const key = editKey(empId, date);
+      const fromShift = pendingEdits.get(key)?.newShift ?? cell.effectiveShift;
+      if (newShift === 'SPLIT' && gridData) {
+        const dayIndex = gridData.days.findIndex((d) => d.date === date);
+        const day = gridData.days[dayIndex];
+        const dc = displayCounts[dayIndex];
+        if (day && dc) {
+          const base = countsWithoutEmployee(dc.amCount, dc.pmCount, cell, fromShift);
+          if (!isSplitAssignmentAllowed(base, fromShift, day.dayOfWeek, day.minAm ?? 0)) {
+            setToast((t('schedule.splitBlockedMinAm') as string) ?? 'Split would leave AM below minimum (2).');
+            setTimeout(() => setToast(null), 6000);
+            return;
+          }
+        }
+      }
       if (newShift === cell.effectiveShift) {
         setPendingEdits((m) => {
           const next = new Map(m);
@@ -1155,7 +1184,7 @@ export function ScheduleEditClient({
         return next;
       });
     },
-    [locale, ramadanRange]
+    [locale, ramadanRange, gridData, displayCounts, pendingEdits, t]
   );
 
   const applyLockedCellChange = useCallback(
@@ -2278,20 +2307,22 @@ export function ScheduleEditClient({
                                     >
                                       <div className="flex flex-col items-center gap-0.5">
                                         {(() => {
-                                          const ramadanDay = ramadanRange ? isDateInRamadanRange(new Date(cell.date + 'T12:00:00Z'), ramadanRange) : false;
-                                          const friday = isFriday(cell.date);
-                                          const options: { value: string; label: string }[] =
-                                            friday && !ramadanDay
-                                              ? [
-                                                  { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
-                                                  { value: 'NONE', label: shiftLabel(t, 'none') },
-                                                ]
-                                              : [
-                                                  { value: 'MORNING', label: shiftLabel(t, 'amShort') },
-                                                  { value: 'EVENING', label: shiftLabel(t, 'pmShort') },
-                                                  { value: 'SPLIT', label: shiftLabel(t, 'splitShift') },
-                                                  { value: 'NONE', label: shiftLabel(t, 'none') },
-                                                ];
+                                          const dayIndex = gridData.days.findIndex((d) => d.date === cell.date);
+                                          const dayMeta = gridData.days[dayIndex];
+                                          const dc = displayCounts[dayIndex];
+                                          const shiftOptions = buildEditorShiftOptions({
+                                            date: cell.date,
+                                            ramadanRange: ramadanRange ?? null,
+                                            t,
+                                            dayCounts: dc
+                                              ? { am: dc.amCount, pm: dc.pmCount }
+                                              : undefined,
+                                            dayOfWeek: dayMeta?.dayOfWeek,
+                                            ruleMinAm: dayMeta?.minAm,
+                                            ruleMinPm: dayMeta?.minPm,
+                                            forceIncludeSplit: draftShift === 'SPLIT',
+                                          });
+                                          const options = [...shiftOptions];
                                           if (isEdited || hasOverride) {
                                             options.push({ value: 'RESET', label: t('schedule.resetToBase') ?? 'Reset to Base' });
                                           }
@@ -2370,10 +2401,19 @@ export function ScheduleEditClient({
                                         typeof g.date === 'string'
                                           ? g.date
                                           : (g.date as Date)?.toISOString?.()?.slice(0, 10) ?? day.date;
+                                      const guestDayIndex = gridData.days.findIndex((d) => d.date === guestDate);
+                                      const guestDc = displayCounts[guestDayIndex];
                                       const shiftOptions = buildEditorShiftOptions({
                                         date: guestDate,
                                         ramadanRange: ramadanRange ?? null,
                                         t,
+                                        dayCounts: guestDc
+                                          ? { am: guestDc.amCount, pm: guestDc.pmCount }
+                                          : undefined,
+                                        dayOfWeek: day.dayOfWeek,
+                                        ruleMinAm: day.minAm,
+                                        ruleMinPm: day.minPm,
+                                        forceIncludeSplit: g.shift === 'SPLIT',
                                       });
                                       return (
                                         <div key={g.id} className="flex w-full flex-col gap-0.5">

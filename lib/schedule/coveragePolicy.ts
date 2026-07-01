@@ -125,3 +125,86 @@ export const COVERAGE_POLICY_SUMMARY = {
 
 /** Max Split assignments the auto-planner may propose per week (use sparingly). */
 export const MAX_SPLIT_ASSIGNMENTS_PER_WEEK = 2;
+
+type ShiftContribution = CoverageCounts;
+
+/** AM/PM contribution for a working shift (NONE/OFF/LEAVE = 0). */
+export function shiftCountContribution(shift: string): ShiftContribution {
+  const s = shift.trim().toUpperCase();
+  if (s === 'AM') return { am: 1, pm: 0 };
+  if (s === 'PM') return { am: 0, pm: 1 };
+  if (s === 'MORNING') return { am: 1, pm: 0 };
+  if (s === 'EVENING') return { am: 0, pm: 1 };
+  if (s === 'SPLIT') return { am: 1, pm: 1 };
+  return { am: 0, pm: 0 };
+}
+
+export function countsAfterShiftChange(
+  counts: CoverageCounts,
+  fromShift: string,
+  toShift: string
+): CoverageCounts {
+  const from = shiftCountContribution(fromShift);
+  const to = shiftCountContribution(toShift);
+  return { am: counts.am - from.am + to.am, pm: counts.pm - from.pm + to.pm };
+}
+
+/** Split must never leave AM below the minimum (red line: min 2 Sat–Thu). */
+export function isSplitAssignmentAllowed(
+  counts: CoverageCounts,
+  fromShift: string,
+  dayOfWeek: number,
+  ruleMinAm = 0
+): boolean {
+  if (isFridayDay(dayOfWeek)) return false;
+  const after = countsAfterShiftChange(counts, fromShift, 'SPLIT');
+  return after.am >= effectiveMinAm(dayOfWeek, ruleMinAm);
+}
+
+/**
+ * Show Split in dropdown only when the day still violates policy and Split could help.
+ * Never offer Split on days that already meet coverage rules.
+ */
+export function shouldOfferSplitOption(
+  counts: CoverageCounts,
+  dayOfWeek: number,
+  ruleMinAm = 0,
+  ruleMinPm = 0
+): boolean {
+  if (isFridayDay(dayOfWeek)) return false;
+  if (isCoverageCompliant(counts, dayOfWeek, ruleMinAm, ruleMinPm)) return false;
+  const minAm = effectiveMinAm(dayOfWeek, ruleMinAm);
+  const minPm = effectiveMinPm(dayOfWeek, ruleMinPm);
+  const { am, pm } = counts;
+  const amToSplitViable = am >= minAm && (pm < minPm || pm <= am);
+  const pmToSplitViable = am < minAm && pm >= minPm && pm > am;
+  return amToSplitViable || pmToSplitViable;
+}
+
+/** Planner: AM→Split only when AM already meets minimum and PM needs +1 without losing AM headcount. */
+export function canProposeMorningToSplit(
+  counts: CoverageCounts,
+  dayOfWeek: number,
+  ruleMinAm = 0,
+  ruleMinPm = 0
+): boolean {
+  if (isFridayDay(dayOfWeek)) return false;
+  if (isCoverageCompliant(counts, dayOfWeek, ruleMinAm, ruleMinPm)) return false;
+  const minAm = effectiveMinAm(dayOfWeek, ruleMinAm);
+  if (counts.am < minAm) return false;
+  const afterPm = counts.pm + 1;
+  return afterPm > counts.am && afterPm >= effectiveMinPm(dayOfWeek, ruleMinPm);
+}
+
+/** Planner: PM→Split adds one AM headcount while keeping PM count (helps AM below minimum). */
+export function canProposeEveningToSplit(
+  counts: CoverageCounts,
+  dayOfWeek: number,
+  ruleMinAm = 0
+): boolean {
+  if (isFridayDay(dayOfWeek)) return false;
+  const minAm = effectiveMinAm(dayOfWeek, ruleMinAm);
+  if (counts.am >= minAm) return false;
+  const afterAm = counts.am + 1;
+  return afterAm >= minAm;
+}
