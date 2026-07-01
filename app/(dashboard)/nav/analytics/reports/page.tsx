@@ -3,12 +3,14 @@ import { getServerTranslations } from '@/lib/i18n/serverTranslate';
 import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
 
 const ROUTES = [
+  { href: '/reports/export-center', key: 'reports.exportCenter' },
   { href: '/executive', key: 'reports.executive' },
   { href: '/executive/monthly', key: 'reports.monthly' },
   { href: '/executive/insights', key: 'reports.insights' },
   { href: '/executive/compare', key: 'reports.compare' },
   { href: '/executive/employees', key: 'reports.employees' },
   { href: '/reports/weekly', key: 'reports.weekly' },
+  { href: '/reports/store', key: 'reports.store' },
   { href: '/targets', key: 'reports.targets' },
   { href: '/admin/targets', key: 'reports.targetsAdmin' },
   { href: '/targets/boutiques', key: 'reports.targetsBoutiques' },

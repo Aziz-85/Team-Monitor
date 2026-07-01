@@ -126,6 +126,7 @@
       "tasks": "Tasks",
       "inventory": "Inventory",
       "analytics": "Analytics",
+      "reports": "Reports",
       "team": "Team Management",
       "system": "System"
     },
@@ -444,6 +445,14 @@
           }
         },
         "reports": {
+          "exportCenter": {
+            "title": "Export Center",
+            "hint": "Export schedule, sales, and tasks to Excel."
+          },
+          "store": {
+            "title": "Store Performance Report",
+            "hint": "Open boutique store performance report."
+          },
           "executive": {
             "title": "Performance Overview",
             "hint": "Open executive overview."
