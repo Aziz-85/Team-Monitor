@@ -176,7 +176,7 @@ const GROUP_REPORTS: NavGroup = {
     item('/targets', 'nav.reports.targetsManagement', ['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/sales/daily', 'nav.reports.dailyLedger', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/reports/weekly', 'nav.reports.weeklyReport', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
-    item('/reports/schedule-export', 'nav.reports.scheduleExport', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER', 'DEMO_VIEWER'], 'CORE'),
+    item('/reports/export-center', 'nav.reports.exportCenter', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER', 'DEMO_VIEWER'], 'CORE'),
     item('/reports/store', 'nav.reports.storePerformance', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/executive/insights', 'nav.reports.insights', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
     item('/performance', 'nav.reports.performanceHub', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),

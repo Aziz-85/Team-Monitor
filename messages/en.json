@@ -686,6 +686,7 @@
       "teamPerformance": "Team performance",
       "weeklyReport": "Weekly report (DB)",
       "scheduleExport": "Schedule Export",
+      "exportCenter": "Export Center",
       "storePerformance": "Store performance report"
     }
   },
@@ -725,6 +726,47 @@
     "matrixVersion": "Matrix version",
     "lastBatch": "Last save batch",
     "revalidate": "Re-run review"
+  },
+  "exportCenter": {
+    "title": "Reports Export Center",
+    "subtitle": "Export schedule, sales, and tasks data to organized Excel workbooks.",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "boutique": "Boutique",
+    "allBoutiques": "All allowed boutiques",
+    "includeSections": "Include in export",
+    "exportButton": "Export to Excel",
+    "exporting": "Exporting…",
+    "exportFailed": "Export failed",
+    "formatHint": "Excel (.xlsx) — sorted by date ascending, full employee names",
+    "categories": {
+      "schedule": "Schedule",
+      "sales": "Sales",
+      "tasks": "Tasks"
+    },
+    "schedule": {
+      "employeeSchedule": "Employee Schedule",
+      "externalCoverage": "External Coverage",
+      "coverageCounts": "Coverage Counts",
+      "audit": "Audit / Changes",
+      "warnings": "Notes / Warnings",
+      "splitShifts": "Split Shifts"
+    },
+    "sales": {
+      "summary": "Sales Summary",
+      "daily": "Daily Sales",
+      "employee": "Employee Sales",
+      "boutique": "Boutique Sales",
+      "discounts": "Discounts",
+      "paymentDetails": "Payment / Source Details"
+    },
+    "tasks": {
+      "summary": "Task Summary",
+      "list": "Task List",
+      "overdue": "Overdue Tasks",
+      "completed": "Completed Tasks",
+      "performance": "Employee Task Performance"
+    }
   },
   "scheduleExport": {
     "title": "Schedule Export Center",

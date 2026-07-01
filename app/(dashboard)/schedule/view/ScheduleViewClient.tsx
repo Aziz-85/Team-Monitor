@@ -781,7 +781,7 @@ export function ScheduleViewClient({
                 />
                 {timeScope === 'week' && (
                   <Link
-                    href={`/reports/schedule-export?weekStart=${encodeURIComponent(weekStart)}`}
+                    href={`/reports/export-center?category=schedule&weekStart=${encodeURIComponent(weekStart)}`}
                     className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                   >
                     {t('nav.export')}

@@ -686,6 +686,7 @@
       "teamPerformance": "أداء الفريق",
       "weeklyReport": "تقرير أسبوعي (قاعدة البيانات)",
       "scheduleExport": "تصدير الجدول",
+      "exportCenter": "مركز التصدير",
       "storePerformance": "تقرير أداء المتجر"
     }
   },
@@ -725,6 +726,47 @@
     "matrixVersion": "إصدار المصفوفة",
     "lastBatch": "آخر دفعة حفظ",
     "revalidate": "إعادة المراجعة"
+  },
+  "exportCenter": {
+    "title": "مركز تصدير التقارير",
+    "subtitle": "تصدير بيانات الجدول والمبيعات والمهام إلى ملفات Excel منظمة.",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "boutique": "البوتيك",
+    "allBoutiques": "جميع البوتيكات المسموحة",
+    "includeSections": "تضمين في التصدير",
+    "exportButton": "تصدير إلى Excel",
+    "exporting": "جاري التصدير…",
+    "exportFailed": "فشل التصدير",
+    "formatHint": "Excel (.xlsx) — مرتب حسب التاريخ تصاعدياً، أسماء الموظفين كاملة",
+    "categories": {
+      "schedule": "الجدول",
+      "sales": "المبيعات",
+      "tasks": "المهام"
+    },
+    "schedule": {
+      "employeeSchedule": "جدول الموظفين",
+      "externalCoverage": "التغطية الخارجية",
+      "coverageCounts": "أعداد التغطية",
+      "audit": "التدقيق / التغييرات",
+      "warnings": "ملاحظات / تحذيرات",
+      "splitShifts": "الورديات المقسمة"
+    },
+    "sales": {
+      "summary": "ملخص المبيعات",
+      "daily": "المبيعات اليومية",
+      "employee": "مبيعات الموظفين",
+      "boutique": "مبيعات البوتيك",
+      "discounts": "الخصومات",
+      "paymentDetails": "تفاصيل الدفع / المصدر"
+    },
+    "tasks": {
+      "summary": "ملخص المهام",
+      "list": "قائمة المهام",
+      "overdue": "المهام المتأخرة",
+      "completed": "المهام المكتملة",
+      "performance": "أداء الموظفين في المهام"
+    }
   },
   "scheduleExport": {
     "title": "مركز تصدير الجدول",
