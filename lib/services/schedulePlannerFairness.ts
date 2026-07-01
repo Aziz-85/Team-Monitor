@@ -48,18 +48,25 @@ export const FAIRNESS_PRESETS: Record<string, { labelKey: string; weights: Fairn
   },
 };
 
-function weekMonthBounds(weekStart: string): { monthStart: string; monthEnd: string } {
+function weekMonthBounds(weekStart: string): {
+  monthStartDate: Date;
+  monthEndDate: Date;
+  monthStartYmd: string;
+  monthEndYmd: string;
+} {
   const d = new Date(weekStart + 'T12:00:00Z');
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth();
-  const monthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  const monthEnd = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  return { monthStart, monthEnd };
+  const monthStartDate = new Date(Date.UTC(y, m, 1));
+  const monthEndDate = new Date(Date.UTC(y, m + 1, 0));
+  const monthStartYmd = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+  const lastDay = monthEndDate.getUTCDate();
+  const monthEndYmd = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { monthStartDate, monthEndDate, monthStartYmd, monthEndYmd };
 }
 
 export async function loadFairnessContext(weekStart: string, empIds: string[]): Promise<FairnessContext> {
-  const { monthStart, monthEnd } = weekMonthBounds(weekStart);
+  const { monthStartDate, monthEndDate, monthStartYmd, monthEndYmd } = weekMonthBounds(weekStart);
   const monthlyOverrides = new Map<string, number>();
   const forceWorkThisMonth = new Map<string, number>();
   const swapOffThisMonth = new Map<string, number>();
@@ -71,13 +78,13 @@ export async function loadFairnessContext(weekStart: string, empIds: string[]): 
   const [overrideCounts, dayOverrides] = await Promise.all([
     prisma.shiftOverride.groupBy({
       by: ['empId'],
-      where: { isActive: true, empId: { in: empIds }, date: { gte: monthStart, lte: monthEnd } },
+      where: { isActive: true, empId: { in: empIds }, date: { gte: monthStartDate, lte: monthEndDate } },
       _count: { id: true },
     }),
     prisma.employeeDayOverride.findMany({
       where: {
         employeeId: { in: empIds },
-        date: { gte: monthStart, lte: monthEnd },
+        date: { gte: monthStartYmd, lte: monthEndYmd },
       },
       select: { employeeId: true, mode: true, reason: true },
     }),
