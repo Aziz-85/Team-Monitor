@@ -1411,6 +1411,7 @@
       "scenario": "Scenario",
       "recommended": "recommended",
       "scenarioBalanced": "Balanced fairness",
+      "scenarioDynamic": "Dynamic schedule (operating periods)",
       "scenarioSpreadLoad": "Spread PM load",
       "scenarioMinOverrides": "Minimize overrides",
       "issuesBefore": "Issues detected",

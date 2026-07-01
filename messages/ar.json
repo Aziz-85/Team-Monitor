@@ -1411,6 +1411,7 @@
       "scenario": "السيناريو",
       "recommended": "موصى به",
       "scenarioBalanced": "عدالة متوازنة",
+      "scenarioDynamic": "جدولة ديناميكية (فترات العمل)",
       "scenarioSpreadLoad": "توزيع عبء PM",
       "scenarioMinOverrides": "تقليل التعديلات",
       "issuesBefore": "مشاكل مكتشفة",

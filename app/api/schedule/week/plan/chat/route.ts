@@ -4,7 +4,8 @@ import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
 import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
 import { loadFairnessContext } from '@/lib/services/schedulePlannerFairness';
-import { buildSchedulePlan, planToAiContext } from '@/lib/services/schedulePlanner';
+import { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
+import { planToAiContext } from '@/lib/services/schedulePlanner';
 import { loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
 import { scheduleAssistantChat } from '@/lib/ai/scheduleAssistantChat';
 import type { Role } from '@prisma/client';
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     loadFairnessContext(weekStart, grid.rows.map((r) => r.empId)),
     loadWeekGuestShifts(weekStart, boutiqueIds),
   ]);
-  const plan = buildSchedulePlan(grid, fairnessContext, { guestShifts });
+  const { plan } = buildSchedulePlanFromGenerate(grid, fairnessContext, { guestShifts });
   const planContext = planToAiContext(plan, body.scenarioId);
 
   const result = await scheduleAssistantChat({

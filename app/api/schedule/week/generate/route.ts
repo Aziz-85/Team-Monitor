@@ -3,9 +3,12 @@ import { getSessionUser, requireRole } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
 import { getScheduleGridForWeek } from '@/lib/services/scheduleGrid';
-import { loadFairnessContext } from '@/lib/services/schedulePlannerFairness';
-import { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
+import { loadFairnessContext, buildEmployeeFairness } from '@/lib/services/schedulePlannerFairness';
 import { loadWeekGuestShifts } from '@/lib/services/schedulePlanGuests';
+import { getRamadanRange } from '@/lib/time/ramadan';
+import { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
+import { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
+import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 import type { Role } from '@prisma/client';
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
@@ -50,17 +53,24 @@ export async function POST(request: NextRequest) {
       loadFairnessContext(weekStart, empIds),
       loadWeekGuestShifts(weekStart, boutiqueIds),
     ]);
-    const { plan, generateResult } = buildSchedulePlanFromGenerate(grid, fairnessContext, { guestShifts });
+    const fairnessRows = buildEmployeeFairness(grid.rows, fairnessContext);
+
+    const input = buildGenerateScheduleInput(grid, {
+      guestShifts,
+      fairnessRows,
+      ramadanRange: getRamadanRange(),
+    });
+    const result = generateSchedule(input);
+    const actions = generateResultToPlanActions(result, grid.rows);
 
     return NextResponse.json({
-      plan,
-      generateResult,
-      aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      result,
+      actions,
       guestShiftCount: guestShifts.length,
     });
   } catch (e) {
-    console.error('[schedule/week/plan]', e);
-    const message = e instanceof Error ? e.message : 'Failed to build schedule plan';
+    console.error('[schedule/week/generate]', e);
+    const message = e instanceof Error ? e.message : 'Failed to generate schedule';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
