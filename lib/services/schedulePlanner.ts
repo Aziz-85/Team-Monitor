@@ -1,6 +1,6 @@
 /**
  * Weekly schedule planner — deterministic, fairness-aware.
- * Policy: Sat–Thu min 2 AM + min 2 PM, PM > AM; Friday PM-only.
+ * Policy: Sat–Thu AM ≥ 2, PM ≥ AM, PM ≥ 2; Friday PM-only. Split up to 2/employee/week.
  */
 
 import type { DayCounts, GridCell, GridDay, GridRow, ScheduleGridResult } from './scheduleGrid';
@@ -10,9 +10,10 @@ import {
   effectiveMinAm,
   effectiveMinPm,
   isFridayDay,
-  MAX_SPLIT_ASSIGNMENTS_PER_WEEK,
+  MAX_SPLIT_SHIFTS_PER_EMPLOYEE_PER_WEEK,
   canProposeMorningToSplit,
   canProposeEveningToSplit,
+  isCoverageCompliant,
   type CoverageViolation,
 } from '@/lib/schedule/coveragePolicy';
 import {
@@ -78,6 +79,34 @@ export type SchedulePlanResult = {
 };
 
 type SimCell = GridCell & { empId: string; name: string; effectiveWeeklyOffDay: number | 'NONE' };
+
+type SplitTracker = Map<string, number>;
+
+function countSplitsInSim(sim: SimCell[][]): SplitTracker {
+  const map: SplitTracker = new Map();
+  for (const row of sim) {
+    for (const cell of row) {
+      if (cell?.availability === 'WORK' && cell.effectiveShift === 'SPLIT') {
+        map.set(cell.empId, (map.get(cell.empId) ?? 0) + 1);
+      }
+    }
+  }
+  return map;
+}
+
+function canEmployeeTakeSplit(tracker: SplitTracker, empId: string): boolean {
+  return (tracker.get(empId) ?? 0) < MAX_SPLIT_SHIFTS_PER_EMPLOYEE_PER_WEEK;
+}
+
+function recordSplit(tracker: SplitTracker, empId: string): void {
+  tracker.set(empId, (tracker.get(empId) ?? 0) + 1);
+}
+
+function sortByFewestSplits(candidates: SimCell[], tracker: SplitTracker): SimCell[] {
+  return [...candidates].sort(
+    (a, b) => (tracker.get(a.empId) ?? 0) - (tracker.get(b.empId) ?? 0)
+  );
+}
 
 function cloneSim(rows: GridRow[]): SimCell[][] {
   return rows.map((row) =>
@@ -303,7 +332,7 @@ function tryMoveAmToPm(
   const moveValid = isFridayDay(day.dayOfWeek)
     ? afterAm >= 0
     : afterAm >= minAm &&
-      afterPm > afterAm &&
+      afterPm >= afterAm &&
       afterPm >= effectiveMinPm(day.dayOfWeek, day.minPm ?? 0);
   const chosen = moveValid ? candidates[0] : undefined;
   if (!chosen) return null;
@@ -394,7 +423,7 @@ function tryMovePmToAm(
   const minPm = effectiveMinPm(day.dayOfWeek, day.minPm ?? 0);
   const afterAm = counts.amCount + 1;
   const afterPm = counts.pmCount - 1;
-  if (afterPm < minPm || afterPm <= afterAm) return null;
+  if (afterPm < minPm || afterPm < afterAm) return null;
   const candidates = rankCandidates(findPmCandidates(sim, dayIndex), rows, dayIndex, context, fairnessRows, weights, {
     movingToAm: true,
   });
@@ -409,7 +438,7 @@ function tryMovePmToAm(
     chosen,
     'EVENING',
     'MORNING',
-    `Move ${chosen.name} PM→AM to reach minimum AM while keeping PM > AM`,
+    `Move ${chosen.name} PM→AM to reach minimum AM while keeping PM ≥ AM`,
     rows,
     context,
     fairnessRows,
@@ -432,7 +461,7 @@ function tryForceWork(
 ): PlanAction | null {
   const counts = recomputeCounts(sim, rows[0]?.cells.length ?? 7)[dayIndex];
   if (shift === 'MORNING' && isFridayDay(day.dayOfWeek)) return null;
-  if (shift === 'MORNING' && counts.amCount + 1 >= counts.pmCount) return null;
+  if (shift === 'MORNING' && !isFridayDay(day.dayOfWeek) && counts.amCount + 1 > counts.pmCount) return null;
   const candidates = rankCandidates(findOffCandidates(sim, dayIndex), rows, dayIndex, context, fairnessRows, weights, {
     isWeeklyOff: true,
     movingToAm: shift === 'MORNING',
@@ -459,18 +488,22 @@ function tryMorningToSplit(
   fairnessRows: EmployeeFairnessRow[],
   weights: FairnessWeights,
   actionIndex: number,
-  splitsUsed: { count: number }
+  splitTracker: SplitTracker
 ): PlanAction | null {
-  if (splitsUsed.count >= MAX_SPLIT_ASSIGNMENTS_PER_WEEK || isFridayDay(day.dayOfWeek)) return null;
+  if (isFridayDay(day.dayOfWeek)) return null;
   const counts = effectiveCounts(sim, days, simGuests)[dayIndex];
   const cover = { am: counts.amCount, pm: counts.pmCount };
   if (!canProposeMorningToSplit(cover, day.dayOfWeek, day.minAm ?? 0, day.minPm ?? 0)) {
     return null;
   }
+  const morningCells = sim
+    .map((row) => row[dayIndex])
+    .filter(
+      (cell): cell is SimCell =>
+        !!cell && cell.availability === 'WORK' && cell.effectiveShift === 'MORNING' && canEmployeeTakeSplit(splitTracker, cell.empId)
+    );
   const candidates = rankCandidates(
-    sim
-      .map((row) => row[dayIndex])
-      .filter((cell): cell is SimCell => !!cell && cell.availability === 'WORK' && cell.effectiveShift === 'MORNING'),
+    sortByFewestSplits(morningCells, splitTracker),
     rows,
     dayIndex,
     context,
@@ -480,7 +513,7 @@ function tryMorningToSplit(
   const chosen = candidates[0];
   if (!chosen) return null;
   applyShiftChange(sim, chosen, 'SPLIT');
-  splitsUsed.count++;
+  recordSplit(splitTracker, chosen.empId);
   return makeAction(
     actionIndex,
     'SHIFT_CHANGE',
@@ -489,7 +522,7 @@ function tryMorningToSplit(
     chosen,
     'MORNING',
     'SPLIT',
-    `Rare Split: ${chosen.name} covers AM+PM (AM already at minimum; adds PM coverage)`,
+    `Split: ${chosen.name} AM→Split (adds PM; max ${MAX_SPLIT_SHIFTS_PER_EMPLOYEE_PER_WEEK}/week per employee)`,
     rows,
     context,
     fairnessRows,
@@ -508,16 +541,20 @@ function tryEveningToSplit(
   fairnessRows: EmployeeFairnessRow[],
   weights: FairnessWeights,
   actionIndex: number,
-  splitsUsed: { count: number }
+  splitTracker: SplitTracker
 ): PlanAction | null {
-  if (splitsUsed.count >= MAX_SPLIT_ASSIGNMENTS_PER_WEEK || isFridayDay(day.dayOfWeek)) return null;
+  if (isFridayDay(day.dayOfWeek)) return null;
   const counts = effectiveCounts(sim, days, simGuests)[dayIndex];
   const cover = { am: counts.amCount, pm: counts.pmCount };
   if (!canProposeEveningToSplit(cover, day.dayOfWeek, day.minAm ?? 0)) return null;
+  const pmCells = sim
+    .map((row) => row[dayIndex])
+    .filter(
+      (cell): cell is SimCell =>
+        !!cell && cell.availability === 'WORK' && cell.effectiveShift === 'EVENING' && canEmployeeTakeSplit(splitTracker, cell.empId)
+    );
   const candidates = rankCandidates(
-    sim
-      .map((row) => row[dayIndex])
-      .filter((cell): cell is SimCell => !!cell && cell.availability === 'WORK' && cell.effectiveShift === 'EVENING'),
+    sortByFewestSplits(pmCells, splitTracker),
     rows,
     dayIndex,
     context,
@@ -527,7 +564,7 @@ function tryEveningToSplit(
   const chosen = candidates[0];
   if (!chosen) return null;
   applyShiftChange(sim, chosen, 'SPLIT');
-  splitsUsed.count++;
+  recordSplit(splitTracker, chosen.empId);
   return makeAction(
     actionIndex,
     'SHIFT_CHANGE',
@@ -536,12 +573,49 @@ function tryEveningToSplit(
     chosen,
     'EVENING',
     'SPLIT',
-    `Rare Split: ${chosen.name} PM→Split to reach minimum AM without losing PM staff`,
+    `Split: ${chosen.name} PM→Split (reach AM ≥ 2; max ${MAX_SPLIT_SHIFTS_PER_EMPLOYEE_PER_WEEK}/week per employee)`,
     rows,
     context,
     fairnessRows,
     weights
   );
+}
+
+/** After policy is met, convert AM→Split where allowed to maximize split usage fairly. */
+function tryExpandSplitUsage(
+  sim: SimCell[][],
+  days: GridDay[],
+  simGuests: GuestShiftInput[],
+  rows: GridRow[],
+  context: FairnessContext,
+  fairnessRows: EmployeeFairnessRow[],
+  weights: FairnessWeights,
+  splitTracker: SplitTracker,
+  actionIndex: number
+): PlanAction | null {
+  for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
+    const day = days[dayIndex];
+    if (isFridayDay(day.dayOfWeek)) continue;
+    const counts = effectiveCounts(sim, days, simGuests)[dayIndex];
+    const cover = { am: counts.amCount, pm: counts.pmCount };
+    if (!isCoverageCompliant(cover, day.dayOfWeek, day.minAm ?? 0, day.minPm ?? 0)) continue;
+    if (!canProposeMorningToSplit(cover, day.dayOfWeek, day.minAm ?? 0, day.minPm ?? 0)) continue;
+    const action = tryMorningToSplit(
+      sim,
+      day,
+      dayIndex,
+      days,
+      simGuests,
+      rows,
+      context,
+      fairnessRows,
+      weights,
+      actionIndex,
+      splitTracker
+    );
+    if (action) return action;
+  }
+  return null;
 }
 
 function guestShiftForIssue(issue: DayIssue, day: GridDay): 'MORNING' | 'EVENING' {
@@ -598,7 +672,7 @@ function tryFixIssue(
   days: GridDay[],
   simGuests: GuestShiftInput[],
   externalCandidates: ExternalCandidate[],
-  splitsUsed: { count: number },
+  splitTracker: SplitTracker,
   rows: GridRow[],
   context: FairnessContext,
   fairnessRows: EmployeeFairnessRow[],
@@ -658,18 +732,6 @@ function tryFixIssue(
     const assigned = tryAssignNoneToPm(sim, day, i, rows, context, fairnessRows, weights, actionIndex);
     if (assigned) return assigned;
 
-    const moved = tryMoveAmToPm(
-      sim,
-      day,
-      i,
-      rows,
-      context,
-      fairnessRows,
-      weights,
-      actionIndex,
-      `PM must exceed AM: move one employee AM→PM`
-    );
-    if (moved) return moved;
     const split = tryMorningToSplit(
       sim,
       day,
@@ -681,9 +743,22 @@ function tryFixIssue(
       fairnessRows,
       weights,
       actionIndex,
-      splitsUsed
+      splitTracker
     );
     if (split) return split;
+
+    const moved = tryMoveAmToPm(
+      sim,
+      day,
+      i,
+      rows,
+      context,
+      fairnessRows,
+      weights,
+      actionIndex,
+      `PM must be ≥ AM: move one employee AM→PM`
+    );
+    if (moved) return moved;
     const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
     if (guest) return guest;
     return tryForceWork(
@@ -696,7 +771,7 @@ function tryFixIssue(
       weights,
       actionIndex,
       'EVENING',
-      `PM must exceed AM: add PM via force work on off day`
+      `PM must be ≥ AM: add PM via force work on off day`
     );
   }
 
@@ -716,7 +791,7 @@ function tryFixIssue(
       fairnessRows,
       weights,
       actionIndex,
-      splitsUsed
+      splitTracker
     );
     if (split) return split;
     const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
@@ -738,6 +813,21 @@ function tryFixIssue(
   if (issue.type === 'PM_BELOW_MIN') {
     const assigned = tryAssignNoneToPm(sim, day, i, rows, context, fairnessRows, weights, actionIndex);
     if (assigned) return assigned;
+
+    const splitPm = tryMorningToSplit(
+      sim,
+      day,
+      i,
+      days,
+      simGuests,
+      rows,
+      context,
+      fairnessRows,
+      weights,
+      actionIndex,
+      splitTracker
+    );
+    if (splitPm) return splitPm;
 
     const rashid = rankCandidates(findRashidPmCandidates(sim, i), rows, i, context, fairnessRows, weights);
     if (rashid.length > 0) {
@@ -772,21 +862,6 @@ function tryFixIssue(
     );
     if (moved) return moved;
 
-    const split = tryMorningToSplit(
-      sim,
-      day,
-      i,
-      days,
-      simGuests,
-      rows,
-      context,
-      fairnessRows,
-      weights,
-      actionIndex,
-      splitsUsed
-    );
-    if (split) return split;
-
     const guest = tryAddExternalGuest(issue, day, i, simGuests, externalCandidates, actionIndex);
     if (guest) return guest;
 
@@ -818,13 +893,13 @@ function buildScenario(
   const sim = cloneSim(grid.rows);
   const simGuests: GuestShiftInput[] = [...(planOptions.guestShifts ?? [])];
   const externalCandidates = planOptions.externalCandidates ?? [];
-  const splitsUsed = { count: 0 };
+  const splitTracker = countSplitsInSim(sim);
   const countsBefore = effectiveCounts(sim, grid.days, simGuests);
   const issuesBefore = detectIssues(countsBefore, grid.days);
   const fairness = buildEmployeeFairness(grid.rows, context);
   const actions: PlanAction[] = [];
   let iterations = 0;
-  const maxIterations = 42;
+  const maxIterations = 56;
 
   while (iterations < maxIterations) {
     const issues = sortIssues(detectIssuesFromSim(sim, grid.days, simGuests));
@@ -837,7 +912,47 @@ function buildScenario(
       grid.days,
       simGuests,
       externalCandidates,
-      splitsUsed,
+      splitTracker,
+      grid.rows,
+      context,
+      fairness,
+      weights,
+      actions.length
+    );
+    if (!action) break;
+    actions.push(action);
+    iterations++;
+  }
+
+  while (iterations < maxIterations) {
+    const expanded = tryExpandSplitUsage(
+      sim,
+      grid.days,
+      simGuests,
+      grid.rows,
+      context,
+      fairness,
+      weights,
+      splitTracker,
+      actions.length
+    );
+    if (!expanded) break;
+    actions.push(expanded);
+    iterations++;
+  }
+
+  while (iterations < maxIterations) {
+    const issues = sortIssues(detectIssuesFromSim(sim, grid.days, simGuests));
+    if (issues.length === 0) break;
+
+    const top = issues[0];
+    const action = tryFixIssue(
+      top,
+      sim,
+      grid.days,
+      simGuests,
+      externalCandidates,
+      splitTracker,
       grid.rows,
       context,
       fairness,
@@ -857,7 +972,7 @@ function buildScenario(
     externalCandidates.length > 0 ? ' External staff may be added when needed.' : '';
   const summary =
     actions.length === 0 && issuesBefore.length === 0
-      ? `Schedule meets policy (min 2/shift Sat–Thu, PM > AM, Friday PM-only).${guestNote}`
+      ? `Schedule meets policy (AM ≥ 2, PM ≥ AM Sat–Thu, Friday PM-only).${guestNote}`
       : actions.length === 0
         ? `Found ${issuesBefore.length} issue(s) but no automatic fix available.${guestNote}`
         : `Proposed ${actions.length} change(s); ${unresolved.length} issue(s) may remain.${guestNote}`;
@@ -905,7 +1020,7 @@ export function planToAiContext(plan: SchedulePlanResult, scenarioId?: string): 
   if (!scenario) return 'No plan available.';
   const lines = [
     `Week: ${plan.weekStart}`,
-    `Policy: Sat–Thu min 2 AM + min 2 PM, PM > AM; Friday PM-only.`,
+    `Policy: Sat–Thu AM ≥ 2, PM ≥ AM, PM ≥ 2; Friday PM-only; Split max ${MAX_SPLIT_SHIFTS_PER_EMPLOYEE_PER_WEEK}/employee/week.`,
     `Scenario: ${scenario.id}`,
     `Summary: ${scenario.summary}`,
     `Issues before: ${scenario.issuesBefore.map((i) => i.message).join('; ') || 'none'}`,

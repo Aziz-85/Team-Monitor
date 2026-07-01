@@ -4,11 +4,23 @@
 
 import { isFriday } from '@/lib/services/shift';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
-import { shouldOfferSplitOption } from '@/lib/schedule/coveragePolicy';
 
 export type ShiftOption = { value: string; label: string };
 
 type LabelFn = (key: string) => string;
+
+const SHIFT_LABEL_FALLBACKS: Record<string, string> = {
+  amShort: 'AM',
+  pmShort: 'PM',
+  splitShift: 'Split Shift',
+  none: 'NONE',
+};
+
+function shiftT(t: LabelFn, key: keyof typeof SHIFT_LABEL_FALLBACKS): string {
+  const fullKey = `schedule.shift.${key}`;
+  const value = t(fullKey);
+  return value && value !== fullKey ? value : SHIFT_LABEL_FALLBACKS[key] ?? key;
+}
 
 export function buildEditorShiftOptions(input: {
   date: string;
@@ -16,21 +28,16 @@ export function buildEditorShiftOptions(input: {
   t: LabelFn;
   includeReset?: boolean;
   resetLabel?: string;
-  /** Day coverage for Split gating (omit to allow Split on non-Friday). */
-  dayCounts?: { am: number; pm: number };
-  dayOfWeek?: number;
-  ruleMinAm?: number;
-  ruleMinPm?: number;
   /** Keep Split visible when cell already has Split (e.g. fix legacy assignment). */
   forceIncludeSplit?: boolean;
 }): ShiftOption[] {
   const { date, ramadanRange, t } = input;
   const ramadanDay = ramadanRange ? isDateInRamadanRange(new Date(date + 'T12:00:00Z'), ramadanRange) : false;
   const friday = isFriday(new Date(date + 'T12:00:00Z'));
-  const am = t('schedule.amShort');
-  const pm = t('schedule.pmShort');
-  const split = t('schedule.splitShift');
-  const none = t('schedule.none');
+  const am = shiftT(t, 'amShort');
+  const pm = shiftT(t, 'pmShort');
+  const split = shiftT(t, 'splitShift');
+  const none = shiftT(t, 'none');
 
   if (friday && !ramadanDay) {
     return [{ value: 'EVENING', label: pm }, { value: 'NONE', label: none }];
@@ -39,22 +46,9 @@ export function buildEditorShiftOptions(input: {
   const options: ShiftOption[] = [
     { value: 'MORNING', label: am },
     { value: 'EVENING', label: pm },
+    { value: 'SPLIT', label: split },
+    { value: 'NONE', label: none },
   ];
-  const showSplit =
-    input.dayCounts != null && input.dayOfWeek != null
-      ? shouldOfferSplitOption(
-          { am: input.dayCounts.am, pm: input.dayCounts.pm },
-          input.dayOfWeek,
-          input.ruleMinAm ?? 0,
-          input.ruleMinPm ?? 0
-        )
-      : true;
-  if (showSplit) {
-    options.push({ value: 'SPLIT', label: split });
-  } else if (input.forceIncludeSplit) {
-    options.splice(2, 0, { value: 'SPLIT', label: split });
-  }
-  options.push({ value: 'NONE', label: none });
   if (input.includeReset && input.resetLabel) {
     options.push({ value: 'RESET', label: input.resetLabel });
   }
@@ -62,8 +56,8 @@ export function buildEditorShiftOptions(input: {
 }
 
 export function guestShiftLabel(shift: string, t: LabelFn): string {
-  if (shift === 'MORNING') return t('schedule.amShort');
-  if (shift === 'EVENING') return t('schedule.pmShort');
-  if (shift === 'SPLIT') return t('schedule.splitShift');
+  if (shift === 'MORNING') return shiftT(t, 'amShort');
+  if (shift === 'EVENING') return shiftT(t, 'pmShort');
+  if (shift === 'SPLIT') return shiftT(t, 'splitShift');
   return shift;
 }

@@ -2307,20 +2307,10 @@ export function ScheduleEditClient({
                                     >
                                       <div className="flex flex-col items-center gap-0.5">
                                         {(() => {
-                                          const dayIndex = gridData.days.findIndex((d) => d.date === cell.date);
-                                          const dayMeta = gridData.days[dayIndex];
-                                          const dc = displayCounts[dayIndex];
                                           const shiftOptions = buildEditorShiftOptions({
                                             date: cell.date,
                                             ramadanRange: ramadanRange ?? null,
                                             t,
-                                            dayCounts: dc
-                                              ? { am: dc.amCount, pm: dc.pmCount }
-                                              : undefined,
-                                            dayOfWeek: dayMeta?.dayOfWeek,
-                                            ruleMinAm: dayMeta?.minAm,
-                                            ruleMinPm: dayMeta?.minPm,
-                                            forceIncludeSplit: draftShift === 'SPLIT',
                                           });
                                           const options = [...shiftOptions];
                                           if (isEdited || hasOverride) {
@@ -2401,19 +2391,10 @@ export function ScheduleEditClient({
                                         typeof g.date === 'string'
                                           ? g.date
                                           : (g.date as Date)?.toISOString?.()?.slice(0, 10) ?? day.date;
-                                      const guestDayIndex = gridData.days.findIndex((d) => d.date === guestDate);
-                                      const guestDc = displayCounts[guestDayIndex];
                                       const shiftOptions = buildEditorShiftOptions({
                                         date: guestDate,
                                         ramadanRange: ramadanRange ?? null,
                                         t,
-                                        dayCounts: guestDc
-                                          ? { am: guestDc.amCount, pm: guestDc.pmCount }
-                                          : undefined,
-                                        dayOfWeek: day.dayOfWeek,
-                                        ruleMinAm: day.minAm,
-                                        ruleMinPm: day.minPm,
-                                        forceIncludeSplit: g.shift === 'SPLIT',
                                       });
                                       return (
                                         <div key={g.id} className="flex w-full flex-col gap-0.5">

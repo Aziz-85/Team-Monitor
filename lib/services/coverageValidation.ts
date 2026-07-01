@@ -40,7 +40,7 @@ export type ValidateCoverageOptions = { boutiqueIds?: string[] };
 
 /**
  * Validates daily coverage using canonical policy:
- * - Sat–Thu: min 2 AM, min 2 PM, PM > AM
+ * - Sat–Thu: min 2 AM, min 2 PM, PM ≥ AM
  * - Friday: PM-only (AM = 0)
  */
 export async function validateCoverage(
@@ -101,7 +101,7 @@ export async function validateCoverage(
     results.push({
       type: 'AM_GT_PM',
       severity: 'warning',
-      message: `AM (${amCount}) ≥ PM (${pmCount}); PM must be greater than AM`,
+      message: `AM (${amCount}) > PM (${pmCount}); PM must be at least AM`,
       amCount,
       pmCount,
       minAm: results[0]?.minAm ?? minAm,

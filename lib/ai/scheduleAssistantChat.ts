@@ -30,8 +30,8 @@ export async function scheduleAssistantChat(input: {
 
   const systemPrompt =
     input.locale === 'ar'
-      ? `أنت مساعد جدولة دوام. القوانين: سبت–خميس أقلّه 2 في كل شفت، PM > AM. الجمعة مساءً فقط. اشرح الخطة بالعربية ولا تخترع قواعد.`
-      : `You are a retail schedule assistant. Rules: Sat–Thu min 2 AM and min 2 PM, PM strictly greater than AM. Friday PM-only. Explain the plan; do not invent rules.`;
+      ? `أنت مساعد جدولة دوام. القوانين: سبت–خميس AM ≥ 2، PM ≥ AM، PM ≥ 2. Split حتى 2 لكل موظف/أسبوع. الجمعة مساءً فقط. اشرح الخطة بالعربية ولا تخترع قواعد.`
+      : `You are a retail schedule assistant. Rules: Sat–Thu AM ≥ 2, PM ≥ AM, PM ≥ 2. Split max 2 per employee per week. Friday PM-only. Explain the plan; do not invent rules.`;
 
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },

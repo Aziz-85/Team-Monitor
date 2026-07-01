@@ -35,13 +35,19 @@ beforeEach(() => {
 });
 
 describe('Effective Coverage Policy (PM ≥ AM, PM ≥ 2; Friday PM-only)', () => {
-  it('Mon AM=1 PM=2 should pass (PM ≥ AM and PM ≥ 2)', async () => {
+  it('Mon AM=1 PM=2 should fail (AM below 2)', async () => {
     const monday = new Date('2026-02-02T12:00:00Z'); // Monday = 1
     mockRosterForDate.mockResolvedValue(roster(1, 2));
     const results = await validateCoverage(monday);
     const types = results.map((r) => r.type);
+    expect(types).toContain('MIN_AM');
     expect(types).not.toContain('AM_GT_PM');
-    expect(types).not.toContain('MIN_PM');
+  });
+
+  it('Mon AM=2 PM=2 should pass (PM ≥ AM and mins met)', async () => {
+    const monday = new Date('2026-02-02T12:00:00Z');
+    mockRosterForDate.mockResolvedValue(roster(2, 2));
+    const results = await validateCoverage(monday);
     expect(results.length).toBe(0);
   });
 

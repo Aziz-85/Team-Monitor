@@ -1402,8 +1402,8 @@
     "assistant": {
       "button": "Schedule assistant",
       "title": "Schedule assistant",
-      "subtitle": "Sat–Thu: min 2 AM & PM, PM > AM. Friday: PM only. Review before applying.",
-      "policyHint": "Policy: Saturday–Thursday — at least 2 staff per shift (AM and PM), evening count must exceed morning. Friday — evening shift only. Split only when coverage is short and AM already has 2+ staff (or PM→Split to reach 2 AM).",
+      "subtitle": "Sat–Thu: AM ≥ 2, PM ≥ AM. Friday: PM only. Split max 2 per employee/week.",
+      "policyHint": "Policy: AM ≥ 2, PM ≥ AM (Sat–Thu), PM ≥ 2. Friday PM-only. Use Split freely (max 2 split days per employee per week).",
       "externalHint": "When internal staff is not enough, the assistant may add external coverage from other boutiques, then balance shifts fairly.",
       "tabPlan": "Proposed plan",
       "tabChat": "Ask AI",

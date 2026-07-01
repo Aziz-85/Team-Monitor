@@ -2,8 +2,8 @@ import {
   canProposeMorningToSplit,
   canProposeEveningToSplit,
   isSplitAssignmentAllowed,
-  shouldOfferSplitOption,
   isCoverageCompliant,
+  evaluateCoverage,
 } from '@/lib/schedule/coveragePolicy';
 
 describe('Split shift policy', () => {
@@ -20,12 +20,16 @@ describe('Split shift policy', () => {
   });
 
   it('allows PM→Split when AM is below minimum', () => {
-    expect(canProposeEveningToSplit({ am: 1, pm: 3 }, sat)).toBe(true);
-    expect(isSplitAssignmentAllowed({ am: 1, pm: 3 }, 'EVENING', sat)).toBe(true);
+    expect(canProposeEveningToSplit({ am: 1, pm: 2 }, sat)).toBe(true);
+    expect(isSplitAssignmentAllowed({ am: 1, pm: 2 }, 'EVENING', sat)).toBe(true);
   });
 
-  it('does not offer Split when day is already compliant', () => {
-    expect(isCoverageCompliant({ am: 2, pm: 3 }, sat)).toBe(true);
-    expect(shouldOfferSplitOption({ am: 2, pm: 3 }, sat)).toBe(false);
+  it('AM=2 PM=2 is compliant (PM ≥ AM)', () => {
+    expect(isCoverageCompliant({ am: 2, pm: 2 }, sat)).toBe(true);
+    expect(evaluateCoverage({ am: 2, pm: 2 }, sat).some((i) => i.type === 'PM_NOT_ABOVE_AM')).toBe(false);
+  });
+
+  it('AM=3 PM=2 fails PM ≥ AM', () => {
+    expect(evaluateCoverage({ am: 3, pm: 2 }, sat).some((i) => i.type === 'PM_NOT_ABOVE_AM')).toBe(true);
   });
 });

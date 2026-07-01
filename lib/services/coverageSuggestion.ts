@@ -119,7 +119,7 @@ export async function getCoverageSuggestion(
       toShift: 'EVENING',
       empId: chosen.empId,
       employeeName: chosen.name,
-      reason: `PM (${pmCount}) must exceed AM (${amCount}). Moving 1 from AM to PM → AM=${afterAm}, PM=${afterPm}.`,
+      reason: `PM (${pmCount}) must be ≥ AM (${amCount}). Moving 1 from AM to PM → AM=${afterAm}, PM=${afterPm}.`,
       impact: { amBefore: amCount, pmBefore: pmCount, amAfter: afterAm, pmAfter: afterPm },
     },
     explanation: undefined,
