@@ -46,6 +46,10 @@ import {
 
 export type GenerateScheduleOptions = {
   perf?: ScheduleEnginePerfCollector;
+  /** Health check completed before solve (API metadata). */
+  preAnalyzed?: boolean;
+  /** Run fill passes even when staffing headcount precheck fails (best-effort partial). */
+  forcePartialSolve?: boolean;
 };
 
 type DayState = Map<string, WorkingDayShift>;
@@ -641,11 +645,14 @@ export function generateSchedule(
     let state: DayState;
     let violations: GenerateScheduleResult['slotViolations'];
 
-    if (isStaffingImpossible(input, bundles, weeklyOff, unavail)) {
+    if (isStaffingImpossible(input, bundles, weeklyOff, unavail) && !options?.forcePartialSolve) {
       ctx.stoppedReason = 'IMPOSSIBLE_STAFFING';
       state = buildPreservedState(input, weeklyOff, unavail);
       violations = validateState(bundles, state, perf);
     } else {
+      if (isStaffingImpossible(input, bundles, weeklyOff, unavail)) {
+        ctx.stoppedReason = 'IMPOSSIBLE_STAFFING';
+      }
       allScenariosImpossible = false;
       ({ state, violations } = solveScenario(input, bundles, weeklyOff, unavail, ctx, perf));
     }

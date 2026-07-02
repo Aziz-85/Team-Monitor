@@ -1,12 +1,17 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel';
+import {
+  ScheduleHealthCheckPanel,
+  type HealthCheckPhase,
+} from '@/components/schedule/ScheduleHealthCheckPanel';
+import type { ConstraintAnalysisResult } from '@/lib/schedule/constraintAnalyzer';
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
 import type {
@@ -19,6 +24,14 @@ import type {
   GenerateScheduleResult,
   SlotViolation,
 } from '@/lib/schedule/generateSchedule/types';
+
+type AnalyzeResponse = {
+  weekStart: string;
+  guestShiftCount: number;
+  analysis: ConstraintAnalysisResult;
+  mainReason: string;
+  recommendedFix: string | null;
+};
 
 type SolveMetrics = ScheduleQualityMetrics & { fairnessScore: number };
 
@@ -126,9 +139,14 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
   const searchParams = useSearchParams();
   const [weekStart, setWeekStart] = useState(() => parseWeekStart(searchParams.get('weekStart')));
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [analyzeData, setAnalyzeData] = useState<AnalyzeResponse | null>(null);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [healthPhase, setHealthPhase] = useState<HealthCheckPhase>('preview');
+  const [feasibleMessage, setFeasibleMessage] = useState<string | null>(null);
   const [solveData, setSolveData] = useState<SolveResponse | null>(null);
 
   const intlLocale = intlLocaleForGregorianCalendar(locale);
@@ -199,44 +217,142 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     };
   }, [solveData]);
 
-  const solve = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setApplyError(null);
-    setSolveData(null);
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 180_000);
+  const fetchAnalysis = useCallback(async (): Promise<AnalyzeResponse | null> => {
+    setAnalyzeError(null);
     try {
-      const res = await fetch('/api/schedule/v3/solve', {
+      const res = await fetch('/api/schedule/v3/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weekStart }),
-        signal: controller.signal,
       });
-      const raw = await res.text();
-      let data: SolveResponse & { error?: string };
-      try {
-        data = parseSolveResponseBody(raw) as SolveResponse & { error?: string };
-      } catch {
-        throw new Error(formatSolveError(res.status, {}, t));
+      const data = (await res.json()) as AnalyzeResponse & { error?: string };
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `Analyze failed (${res.status})`);
       }
-      if (data.error) throw new Error(data.error);
-      if (!res.ok) throw new Error(formatSolveError(res.status, data, t));
-      if (!data.generateResult || !data.metrics) {
-        throw new Error((t('schedule.v3.invalidResponse') as string) || 'Invalid solve response');
+      if (!data.analysis) {
+        throw new Error(
+          (t('schedule.v3.healthCheck.invalidResponse') as string) || 'Invalid analyze response'
+        );
       }
-      setSolveData(data);
+      setAnalyzeData(data);
+      return data;
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 3 minutes.');
-      } else {
-        setError(e instanceof Error ? e.message : 'Solve failed');
-      }
-    } finally {
-      window.clearTimeout(timeoutId);
-      setLoading(false);
+      setAnalyzeError(e instanceof Error ? e.message : 'Analyze failed');
+      setAnalyzeData(null);
+      return null;
     }
   }, [weekStart, t]);
+
+  const runPreviewHealthCheck = useCallback(async () => {
+    setAnalyzing(true);
+    setHealthPhase('preview');
+    setFeasibleMessage(null);
+    await fetchAnalysis();
+    setAnalyzing(false);
+  }, [fetchAnalysis]);
+
+  useEffect(() => {
+    void runPreviewHealthCheck();
+  }, [runPreviewHealthCheck]);
+
+  const runSolveRequest = useCallback(
+    async (opts: { forcePartialSolve?: boolean } = {}) => {
+      setLoading(true);
+      setError(null);
+      setApplyError(null);
+      setHealthPhase('solving');
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 180_000);
+      try {
+        const res = await fetch('/api/schedule/v3/solve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            weekStart,
+            preAnalyzed: true,
+            forcePartialSolve: opts.forcePartialSolve ?? false,
+          }),
+          signal: controller.signal,
+        });
+        const raw = await res.text();
+        let data: SolveResponse & { error?: string };
+        try {
+          data = parseSolveResponseBody(raw) as SolveResponse & { error?: string };
+        } catch {
+          throw new Error(formatSolveError(res.status, {}, t));
+        }
+        if (data.error) throw new Error(data.error);
+        if (!res.ok) throw new Error(formatSolveError(res.status, data, t));
+        if (!data.generateResult || !data.metrics) {
+          throw new Error((t('schedule.v3.invalidResponse') as string) || 'Invalid solve response');
+        }
+        setSolveData(data);
+        setHealthPhase('preview');
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 3 minutes.');
+        } else {
+          setError(e instanceof Error ? e.message : 'Solve failed');
+        }
+        if (analyzeData?.analysis.status === 'NEEDS_SUPPORT') {
+          setHealthPhase('decision');
+        } else if (analyzeData?.analysis.status === 'IMPOSSIBLE') {
+          setHealthPhase('impossible');
+        } else {
+          setHealthPhase('preview');
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+        setLoading(false);
+      }
+    },
+    [weekStart, t, analyzeData]
+  );
+
+  const startSolveFlow = useCallback(async () => {
+    setSolveData(null);
+    setError(null);
+    setApplyError(null);
+    setFeasibleMessage(null);
+    setAnalyzing(true);
+    setHealthPhase('preview');
+    const data = await fetchAnalysis();
+    setAnalyzing(false);
+    if (!data) return;
+
+    if (data.analysis.status === 'FEASIBLE') {
+      setHealthPhase('feasible');
+      setFeasibleMessage(
+        (t('schedule.v3.healthCheck.feasibleMessage') as string) || 'Schedule is feasible.'
+      );
+      await runSolveRequest({});
+      return;
+    }
+
+    if (data.analysis.status === 'NEEDS_SUPPORT') {
+      setHealthPhase('decision');
+      return;
+    }
+
+    setHealthPhase('impossible');
+  }, [fetchAnalysis, runSolveRequest, t]);
+
+  const handleContinueAnyway = useCallback(() => {
+    void runSolveRequest({ forcePartialSolve: true });
+  }, [runSolveRequest]);
+
+  const handleRunBestPossible = useCallback(() => {
+    void runSolveRequest({ forcePartialSolve: true });
+  }, [runSolveRequest]);
+
+  const handleModifyConstraints = useCallback(() => {
+    router.push(`/schedule/edit?weekStart=${encodeURIComponent(weekStart)}`);
+  }, [router, weekStart]);
+
+  const handleCancelDecision = useCallback(() => {
+    setHealthPhase('preview');
+    setFeasibleMessage(null);
+  }, []);
 
   const applyToWeek = useCallback(async () => {
     if (!solveData?.actions.length) return;
@@ -278,7 +394,11 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     setWeekStart(ws);
     syncWeekToUrl(ws);
     setSolveData(null);
+    setAnalyzeData(null);
+    setHealthPhase('preview');
+    setFeasibleMessage(null);
     setError(null);
+    setAnalyzeError(null);
     setApplyError(null);
   };
 
@@ -329,8 +449,8 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         <div className="flex flex-wrap gap-2 ms-auto">
           <button
             type="button"
-            onClick={() => void solve()}
-            disabled={loading || applying}
+            onClick={() => void startSolveFlow()}
+            disabled={loading || applying || analyzing}
             className="h-9 rounded-lg bg-[#0F4C3A] px-4 text-sm font-semibold text-white disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('schedule.v3.solve')}
@@ -353,12 +473,42 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         </div>
       </div>
 
+      {analyzeError && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {analyzeError}
+        </div>
+      )}
+
+      {(analyzeData || analyzing) && (
+        <div className="mb-6">
+          {analyzeData ? (
+            <ScheduleHealthCheckPanel
+              analysis={analyzeData.analysis}
+              mainReason={analyzeData.mainReason}
+              recommendedFix={analyzeData.recommendedFix}
+              phase={loading ? 'solving' : healthPhase}
+              loading={analyzing || loading}
+              feasibleMessage={feasibleMessage}
+              formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
+              weekStart={weekStart}
+              t={t}
+              onContinueAnyway={handleContinueAnyway}
+              onModifyConstraints={handleModifyConstraints}
+              onCancel={handleCancelDecision}
+              onRunBestPossible={handleRunBestPossible}
+            />
+          ) : (
+            <p className="text-sm text-muted">{t('schedule.v3.healthCheck.loading')}</p>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <span>{error}</span>
           <button
             type="button"
-            onClick={() => void solve()}
+            onClick={() => void startSolveFlow()}
             disabled={loading}
             className="shrink-0 text-xs font-medium text-red-800 underline disabled:opacity-50"
           >
@@ -372,13 +522,13 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         </div>
       )}
 
-      {!solveData && !loading && (
+      {!solveData && !loading && !analyzeData && !analyzing && (
         <div className="rounded-xl border border-dashed border-border bg-surface-subtle px-6 py-12 text-center">
-          <p className="text-sm text-muted">{t('schedule.v3.emptyState')}</p>
+          <p className="text-sm text-muted">{t('schedule.v3.healthCheck.emptyState')}</p>
         </div>
       )}
 
-      {loading && (
+      {loading && !analyzeData && (
         <p className="text-sm text-muted">{t('schedule.v3.solving')}</p>
       )}
 
@@ -386,7 +536,7 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         <div className="space-y-6">
           <ScheduleQualityPanel
             metrics={qualityMetrics}
-            fairnessScore={solveData.metrics.fairnessScore}
+            rawFairnessScore={solveData.metrics.fairnessScore}
             t={t}
           />
 

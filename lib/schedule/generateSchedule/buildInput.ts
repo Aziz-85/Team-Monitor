@@ -7,14 +7,17 @@ import type { GuestShiftInput } from '@/lib/services/schedulePlanGuests';
 import type { EmployeeFairnessRow } from '@/lib/services/schedulePlannerFairness';
 import { getRamadanRange } from '@/lib/time/ramadan';
 import { buildWeekOperatingConfigs } from './operatingPeriods';
+import { buildHistoricalStatsFromFairnessRows } from './fairness';
 import {
-  DEFAULT_GENERATE_SETTINGS,
   type EmployeeCandidate,
   type GenerateScheduleInput,
   type Unavailability,
 } from './types';
-import { buildHistoricalStatsFromFairnessRows } from './fairness';
 import type { ScheduleEnginePerfCollector } from '@/lib/schedule/scheduleEnginePerf';
+import {
+  generateSettingsFromPolicy,
+  getSchedulePolicy,
+} from '@/lib/schedule/policyEngine';
 
 export function buildGenerateScheduleInput(
   grid: ScheduleGridResult,
@@ -98,13 +101,17 @@ export function buildGenerateScheduleInput(
     });
   }
 
+  const settings =
+    options.settings ??
+    generateSettingsFromPolicy(getSchedulePolicy({ days, settings: undefined }));
+
   const result: GenerateScheduleInput = {
     weekStart: grid.weekStart,
     days,
     regularEmployees,
     externalSupportEmployees,
     unavailability,
-    settings: options.settings ?? DEFAULT_GENERATE_SETTINGS,
+    settings,
     historicalStats: buildHistoricalStatsFromFairnessRows(options.fairnessRows ?? []),
     currentShifts,
     preserveExisting: options.preserveExisting ?? false,

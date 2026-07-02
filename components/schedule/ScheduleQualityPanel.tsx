@@ -1,10 +1,12 @@
 'use client';
 
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
+import { qualityPercentsFromSolve } from '@/lib/schedule/scheduleQuality';
 
 type Props = {
   metrics: ScheduleQualityMetrics;
-  fairnessScore?: number | null;
+  /** Raw internal fairness score — shown in Technical Details only. */
+  rawFairnessScore?: number | null;
   t: (key: string) => string;
 };
 
@@ -31,10 +33,14 @@ function MetricCard({
   );
 }
 
-export function ScheduleQualityPanel({ metrics, fairnessScore, t }: Props) {
-  const coverageLabel = metrics.coverageValid
-    ? (t('schedule.quality.valid') as string) || 'Valid'
-    : (t('schedule.quality.needsAttention') as string) || 'Needs attention';
+function toneFromPercent(p: number): 'good' | 'warn' | 'neutral' {
+  if (p >= 85) return 'good';
+  if (p >= 60) return 'warn';
+  return 'neutral';
+}
+
+export function ScheduleQualityPanel({ metrics, rawFairnessScore, t }: Props) {
+  const percents = qualityPercentsFromSolve(metrics, rawFairnessScore);
 
   return (
     <div className="mb-4 rounded-xl border border-border bg-surface p-3 shadow-sm">
@@ -43,38 +49,67 @@ export function ScheduleQualityPanel({ metrics, fairnessScore, t }: Props) {
           {(t('schedule.quality.title') as string) || 'Schedule quality'}
         </h3>
         <span className="text-[10px] text-muted">
-          {(t('schedule.quality.subtitle') as string) || 'Engine v3 · 30-min slot validation'}
+          {(t('schedule.quality.subtitle') as string) || 'Engine v3 · post-solve'}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <MetricCard
-          label={(t('schedule.quality.coverage') as string) || 'Coverage'}
-          value={coverageLabel}
-          tone={metrics.coverageValid ? 'good' : 'warn'}
+          label={(t('schedule.v3.healthCheck.scheduleQuality') as string) || 'Schedule Quality'}
+          value={`${percents.scheduleQualityPercent}%`}
+          tone={toneFromPercent(percents.scheduleQualityPercent)}
         />
         <MetricCard
-          label={(t('schedule.quality.slotViolations') as string) || 'Slot violations'}
-          value={String(metrics.slotViolationCount)}
-          tone={metrics.slotViolationCount === 0 ? 'good' : 'warn'}
+          label={(t('schedule.v3.healthCheck.coverageHealth') as string) || 'Coverage Health'}
+          value={`${percents.coverageHealthPercent}%`}
+          tone={toneFromPercent(percents.coverageHealthPercent)}
         />
         <MetricCard
-          label={(t('schedule.quality.splitUsed') as string) || 'Split used'}
-          value={String(metrics.splitCount)}
+          label={(t('schedule.v3.healthCheck.staffAvailability') as string) || 'Staff Availability'}
+          value={`${percents.staffAvailabilityPercent}%`}
+          tone={toneFromPercent(percents.staffAvailabilityPercent)}
         />
         <MetricCard
-          label={(t('schedule.quality.overtime') as string) || 'Overtime'}
-          value={String(metrics.overtimeCount)}
-          tone={metrics.overtimeCount > 0 ? 'warn' : 'neutral'}
+          label={(t('schedule.v3.healthCheck.constraintHealth') as string) || 'Constraint Health'}
+          value={`${percents.constraintHealthPercent}%`}
+          tone={toneFromPercent(percents.constraintHealthPercent)}
         />
         <MetricCard
-          label={(t('schedule.quality.fairness') as string) || 'Fairness score'}
-          value={fairnessScore != null ? fairnessScore.toFixed(1) : '—'}
-        />
-        <MetricCard
-          label={(t('schedule.quality.externalSupport') as string) || 'External support'}
-          value={String(metrics.externalSupportCount)}
+          label={(t('schedule.v3.healthCheck.fairnessHealth') as string) || 'Fairness Health'}
+          value={`${percents.fairnessHealthPercent}%`}
+          tone={toneFromPercent(percents.fairnessHealthPercent)}
         />
       </div>
+      {(rawFairnessScore != null || metrics.slotViolationCount > 0) && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-medium text-muted">
+            {(t('schedule.v3.healthCheck.technicalDetails') as string) || 'Technical Details'}
+          </summary>
+          <dl className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="text-muted">Slot violations</dt>
+              <dd className="font-mono font-semibold">{metrics.slotViolationCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Split days used</dt>
+              <dd className="font-mono font-semibold">{metrics.splitCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Overtime shifts</dt>
+              <dd className="font-mono font-semibold">{metrics.overtimeCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">External support</dt>
+              <dd className="font-mono font-semibold">{metrics.externalSupportCount}</dd>
+            </div>
+            {rawFairnessScore != null && (
+              <div className="col-span-2">
+                <dt className="text-muted">Raw fairness score (internal)</dt>
+                <dd className="font-mono font-semibold">{rawFairnessScore.toFixed(1)}</dd>
+              </div>
+            )}
+          </dl>
+        </details>
+      )}
     </div>
   );
 }

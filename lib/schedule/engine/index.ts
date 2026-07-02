@@ -107,6 +107,38 @@ export type {
 export { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
 export type { GenerateScheduleOptions } from '@/lib/schedule/generateSchedule/engine';
 export { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
+export { loadGenerateScheduleInputForWeek } from '@/lib/schedule/loadScheduleEngineInput';
+export {
+  analyzeScheduleConstraints,
+  mainConstraintReason,
+  topConstraintRecommendation,
+} from '@/lib/schedule/constraintAnalyzer';
+export type {
+  ConstraintAnalysisResult,
+  ConstraintAnalysisStatus,
+  ConstraintIssue,
+  ConstraintRecommendation,
+  ConstraintAnalysisSummary,
+} from '@/lib/schedule/constraintAnalyzer';
+export {
+  computeScheduleHealthKpis,
+  impossibleDaysFromAnalysis,
+} from '@/lib/schedule/scheduleHealthKpis';
+export type { ScheduleHealthKpis, HealthLevel } from '@/lib/schedule/scheduleHealthKpis';
+export {
+  qualityPercentsFromAnalysis,
+  qualityPercentsFromSolve,
+  fairnessHealthFromRawScore,
+} from '@/lib/schedule/scheduleQuality';
+export type { ScheduleQualityPercents } from '@/lib/schedule/scheduleQuality';
+export {
+  getSchedulePolicy,
+  generateSettingsFromPolicy,
+  getDefaultGenerateSettings,
+  operatingPeriodsForPolicy,
+  FRIDAY_DOW as POLICY_FRIDAY_DOW,
+} from '@/lib/schedule/policyEngine';
+export type { SchedulePolicy, SchedulePolicyMode, FridayMode } from '@/lib/schedule/policyEngine';
 export { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 export { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
 

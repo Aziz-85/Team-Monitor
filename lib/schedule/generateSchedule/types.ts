@@ -51,15 +51,9 @@ export type GenerateScheduleSettings = {
   slotIntervalMinutes: number;
 };
 
-export const DEFAULT_GENERATE_SETTINGS: GenerateScheduleSettings = {
-  normalMode: { maxDailyHours: 8 },
-  ramadanMode: { maxDailyHours: 6 },
-  splitShiftAllowed: true,
-  maxSplitDaysPerEmployeePerWeek: 2,
-  weeklyOffDaysPerEmployee: 1,
-  externalSupportEmployeesAllowed: true,
-  slotIntervalMinutes: 30,
-};
+import { getDefaultGenerateSettings } from '@/lib/schedule/policyEngine';
+
+export const DEFAULT_GENERATE_SETTINGS: GenerateScheduleSettings = getDefaultGenerateSettings();
 
 export type DayOperatingConfig = {
   date: string;

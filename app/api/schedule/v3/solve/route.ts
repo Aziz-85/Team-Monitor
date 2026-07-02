@@ -9,6 +9,8 @@ import { getRamadanRange } from '@/lib/time/ramadan';
 import { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
 import { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
 import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
+import { getSchedulePolicy } from '@/lib/schedule/policyEngine';
+import { qualityPercentsFromSolve } from '@/lib/schedule/scheduleQuality';
 import {
   ScheduleEnginePerfCollector,
   isSchedulePerfResponseEnabled,
@@ -72,7 +74,8 @@ function slimActions(actions: PlanAction[]) {
 
 async function computeSolvePayload(
   weekStart: string,
-  boutiqueIds: string[]
+  boutiqueIds: string[],
+  options?: { preAnalyzed?: boolean; forcePartialSolve?: boolean }
 ): Promise<{ payload: Record<string, unknown> }> {
   const perf = new ScheduleEnginePerfCollector();
 
@@ -92,10 +95,16 @@ async function computeSolvePayload(
     ramadanRange,
     perf,
   });
-  const generateResult = generateSchedule(input, { perf });
+  const generateResult = generateSchedule(input, {
+    perf,
+    preAnalyzed: options?.preAnalyzed,
+    forcePartialSolve: options?.forcePartialSolve,
+  });
   const actions = perf.timeSync('planActionsMs', () => generateResultToPlanActions(generateResult, grid.rows));
   const metrics = computeMetrics(generateResult, guestShifts.length);
   const dayOperatingConfigs = input.days;
+  const policy = getSchedulePolicy(input);
+  const qualityPercents = qualityPercentsFromSolve(metrics, generateResult.fairnessScore);
 
   perf.setStat('planActionCount', actions.length);
 
@@ -105,6 +114,8 @@ async function computeSolvePayload(
   const payload: Record<string, unknown> = {
     weekStart: generateResult.weekStart,
     mode: generateResult.mode,
+    policy,
+    qualityPercents,
     generateResult: {
       weekStart: generateResult.weekStart,
       mode: generateResult.mode,
@@ -143,7 +154,11 @@ function migrationHint(message: string): string {
 }
 
 /** Stream newlines while solving so nginx proxy_read_timeout resets (60s default). */
-function streamSolveResponse(weekStart: string, boutiqueIds: string[]): Response {
+function streamSolveResponse(
+  weekStart: string,
+  boutiqueIds: string[],
+  solveOptions?: { preAnalyzed?: boolean; forcePartialSolve?: boolean }
+): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -156,7 +171,7 @@ function streamSolveResponse(weekStart: string, boutiqueIds: string[]): Response
       }, KEEPALIVE_MS);
 
       try {
-        const { payload } = await computeSolvePayload(weekStart, boutiqueIds);
+        const { payload } = await computeSolvePayload(weekStart, boutiqueIds, solveOptions);
         const serializeStarted = performance.now();
         let body: string;
         if (isSchedulePerfResponseEnabled() && payload.timings && typeof payload.timings === 'object') {
@@ -228,7 +243,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No schedule scope' }, { status: 403 });
   }
 
-  let body: { weekStart?: string };
+  let body: { weekStart?: string; preAnalyzed?: boolean; forcePartialSolve?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -240,5 +255,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
 
-  return streamSolveResponse(weekStart, scheduleScope.boutiqueIds);
+  const preAnalyzed = body.preAnalyzed === true;
+  const forcePartialSolve = body.forcePartialSolve === true;
+
+  return streamSolveResponse(weekStart, scheduleScope.boutiqueIds, {
+    preAnalyzed,
+    forcePartialSolve,
+  });
 }
