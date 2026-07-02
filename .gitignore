@@ -50,3 +50,17 @@ next-env.d.ts
 main
 docs/PATCH_CANONICAL_MONEY_DATES.md
 team-monitor-code.zip
+
+# archives / exports / local databases / logs (never commit)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+*.rar
+*.sqlite
+*.sqlite3
+*.db
+*.log
+/dist/

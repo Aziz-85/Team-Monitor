@@ -32,6 +32,11 @@ import {
 } from './fairness';
 import { shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
 import { assignmentsToGridProposals } from './toPlanActions';
+import type { ScheduleEnginePerfCollector } from '@/lib/schedule/scheduleEnginePerf';
+
+export type GenerateScheduleOptions = {
+  perf?: ScheduleEnginePerfCollector;
+};
 
 type DayState = Map<string, WorkingDayShift>;
 
@@ -221,8 +226,10 @@ function solveScenario(
   input: GenerateScheduleInput,
   bundles: DaySlotBundle[],
   weeklyOffOverrides: Map<string, number>,
-  unavail: Map<string, string>
+  unavail: Map<string, string>,
+  perf?: ScheduleEnginePerfCollector
 ): { state: DayState; violations: ReturnType<typeof validateCoverage>['violations'] } {
+  const solveStarted = performance.now();
   const state: DayState = new Map();
   const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
   const historicalLoad = new Map(input.historicalStats.map((h) => [h.empId, h.priorWeekHours]));
@@ -259,6 +266,8 @@ function solveScenario(
         const gaps = uncoveredSlots(bundle, dayShifts);
         if (!gaps.length) break;
 
+        perf?.addStat('constraintIterations', 1);
+
         const { slot } = gaps[0];
         const pool = allowExternal
           ? allEmployees
@@ -293,6 +302,8 @@ function solveScenario(
     fillPass(true, true, true, 'Overtime');
   }
 
+  perf?.mark('solveConstraintsMs', performance.now() - solveStarted);
+
   const byDate = new Map<string, WorkingDayShift[]>();
   Array.from(state.values()).forEach((shift) => {
     const list = byDate.get(shift.date) ?? [];
@@ -300,7 +311,9 @@ function solveScenario(
     byDate.set(shift.date, list);
   });
 
+  const validationStarted = performance.now();
   const { violations } = validateCoverage(bundles, byDate);
+  perf?.mark('coverageValidationMs', performance.now() - validationStarted);
   return { state, violations };
 }
 
@@ -375,10 +388,34 @@ function buildWarnings(
 }
 
 /** Main entry: try multiple weekly-off scenarios and pick lowest fairness score with best coverage. */
-export function generateSchedule(input: GenerateScheduleInput): GenerateScheduleResult {
-  const bundles = buildDaySlotBundles(input.days, input.settings.slotIntervalMinutes);
+export function generateSchedule(
+  input: GenerateScheduleInput,
+  options?: GenerateScheduleOptions
+): GenerateScheduleResult {
+  const perf = options?.perf;
+  const generateStarted = performance.now();
+
+  const bundles = perf
+    ? perf.timeSync('buildTimeSlotsMs', () =>
+        buildDaySlotBundles(input.days, input.settings.slotIntervalMinutes)
+      )
+    : buildDaySlotBundles(input.days, input.settings.slotIntervalMinutes);
+
+  if (perf) {
+    perf.setStat('timeSlotsGenerated', bundles.reduce((sum, b) => sum + b.slots.length, 0));
+    perf.setStat('dayCount', input.days.length);
+    perf.setStat('employeeCount', input.regularEmployees.length);
+    perf.setStat('externalSupportCount', input.externalSupportEmployees.length);
+  }
+
   const baseUnavail = buildUnavailMap(input.unavailability);
-  const variants = generateWeeklyOffVariants(input);
+  const variants = perf
+    ? perf.timeSync('generateCandidatesMs', () => generateWeeklyOffVariants(input))
+    : generateWeeklyOffVariants(input);
+
+  if (perf) {
+    perf.setStat('weeklyOffVariants', variants.length);
+  }
 
   let best: {
     assignments: EmployeeDayAssignment[];
@@ -392,11 +429,14 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
   for (const weeklyOff of variants) {
     scenariosTried++;
     const unavail = applyWeeklyOffToUnavail(input, weeklyOff, baseUnavail);
-    const { state, violations } = solveScenario(input, bundles, weeklyOff, unavail);
+    const { state, violations } = solveScenario(input, bundles, weeklyOff, unavail, perf);
     const working = Array.from(state.values());
+
+    const fairnessStarted = performance.now();
     const assignments = buildFullWeekAssignments(input, working, bundles, unavail);
     const fairnessBreakdown = calculateFairnessScore(assignments, input, violations.length);
     const proposals = assignmentsToGridProposals(assignments, bundles, input.currentShifts ?? []);
+    perf?.mark('fairnessMs', performance.now() - fairnessStarted);
 
     const candidate = {
       assignments,
@@ -421,6 +461,17 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
     ? input.settings.ramadanMode.maxDailyHours
     : input.settings.normalMode.maxDailyHours;
 
+  const summariesStarted = performance.now();
+  const employeeSummaries = buildEmployeeSummaries(result.assignments, maxDaily);
+  perf?.mark('fairnessMs', performance.now() - summariesStarted);
+
+  perf?.mark('generateScheduleMs', performance.now() - generateStarted);
+  if (perf) {
+    perf.setStat('scenariosTried', result.scenariosTried);
+    perf.setStat('assignmentCount', result.assignments.length);
+    perf.setStat('slotViolations', result.violations.length);
+  }
+
   return {
     weekStart: input.weekStart,
     mode,
@@ -430,7 +481,7 @@ export function generateSchedule(input: GenerateScheduleInput): GenerateSchedule
     coverageValid: result.violations.length === 0,
     slotViolations: result.violations,
     fairnessScore: result.fairness,
-    employeeSummaries: buildEmployeeSummaries(result.assignments, maxDaily),
+    employeeSummaries,
     scenariosTried: result.scenariosTried,
   };
 }

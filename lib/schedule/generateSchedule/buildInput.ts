@@ -14,6 +14,7 @@ import {
   type Unavailability,
 } from './types';
 import { buildHistoricalStatsFromFairnessRows } from './fairness';
+import type { ScheduleEnginePerfCollector } from '@/lib/schedule/scheduleEnginePerf';
 
 export function buildGenerateScheduleInput(
   grid: ScheduleGridResult,
@@ -23,11 +24,16 @@ export function buildGenerateScheduleInput(
     settings?: GenerateScheduleInput['settings'];
     ramadanRange?: { start: string; end: string } | null;
     preserveExisting?: boolean;
+    perf?: ScheduleEnginePerfCollector;
   } = {}
 ): GenerateScheduleInput {
+  const perf = options.perf;
+  const t0 = performance.now();
   const weekDates = grid.days.map((d) => d.date);
   const ramadanRange = options.ramadanRange ?? getRamadanRange();
-  const days = buildWeekOperatingConfigs(weekDates, ramadanRange);
+  const days = perf
+    ? perf.timeSync('buildOperatingPeriodsMs', () => buildWeekOperatingConfigs(weekDates, ramadanRange))
+    : buildWeekOperatingConfigs(weekDates, ramadanRange);
 
   const regularEmployees: EmployeeCandidate[] = grid.rows
     .filter((r) => !r.isGuest)
@@ -92,7 +98,7 @@ export function buildGenerateScheduleInput(
     });
   }
 
-  return {
+  const result: GenerateScheduleInput = {
     weekStart: grid.weekStart,
     days,
     regularEmployees,
@@ -103,4 +109,6 @@ export function buildGenerateScheduleInput(
     currentShifts,
     preserveExisting: options.preserveExisting ?? false,
   };
+  perf?.mark('buildInputMs', performance.now() - t0);
+  return result;
 }

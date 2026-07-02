@@ -9,7 +9,11 @@ import { getRamadanRange } from '@/lib/time/ramadan';
 import { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
 import { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
 import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
-import { buildWeekOperatingConfigs } from '@/lib/schedule/generateSchedule/operatingPeriods';
+import {
+  ScheduleEnginePerfCollector,
+  isSchedulePerfResponseEnabled,
+  shouldLogSchedulePerf,
+} from '@/lib/schedule/scheduleEnginePerf';
 import type { Role } from '@prisma/client';
 import type { EmployeeDayAssignment, GenerateScheduleResult } from '@/lib/schedule/generateSchedule/types';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
@@ -66,17 +70,19 @@ function slimActions(actions: PlanAction[]) {
   }));
 }
 
-async function computeSolvePayload(weekStart: string, boutiqueIds: string[]) {
-  const t0 = Date.now();
-  const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
+async function computeSolvePayload(
+  weekStart: string,
+  boutiqueIds: string[]
+): Promise<{ payload: Record<string, unknown> }> {
+  const perf = new ScheduleEnginePerfCollector();
+
+  const grid = await perf.timeAsync('loadGridMs', () => getScheduleGridForWeek(weekStart, { boutiqueIds }));
   const empIds = grid.rows.map((r) => r.empId);
   const ramadanRange = getRamadanRange();
-  const weekDates = grid.days.map((d) => d.date);
-  const dayOperatingConfigs = buildWeekOperatingConfigs(weekDates, ramadanRange);
 
   const [fairnessContext, guestShifts] = await Promise.all([
-    loadFairnessContext(weekStart, empIds),
-    loadWeekGuestShifts(weekStart, boutiqueIds),
+    perf.timeAsync('loadFairnessContextMs', () => loadFairnessContext(weekStart, empIds)),
+    perf.timeAsync('loadGuestShiftsMs', () => loadWeekGuestShifts(weekStart, boutiqueIds)),
   ]);
   const fairnessRows = buildEmployeeFairness(grid.rows, fairnessContext);
 
@@ -84,23 +90,19 @@ async function computeSolvePayload(weekStart: string, boutiqueIds: string[]) {
     guestShifts,
     fairnessRows,
     ramadanRange,
+    perf,
   });
-  const generateResult = generateSchedule(input);
-  const actions = generateResultToPlanActions(generateResult, grid.rows);
+  const generateResult = generateSchedule(input, { perf });
+  const actions = perf.timeSync('planActionsMs', () => generateResultToPlanActions(generateResult, grid.rows));
   const metrics = computeMetrics(generateResult, guestShifts.length);
+  const dayOperatingConfigs = input.days;
 
-  if (process.env.NODE_ENV !== 'test') {
-    console.log('[schedule/v3/solve]', {
-      weekStart,
-      ms: Date.now() - t0,
-      employees: empIds.length,
-      scenariosTried: generateResult.scenariosTried,
-      actions: actions.length,
-      coverageValid: generateResult.coverageValid,
-    });
-  }
+  perf.setStat('planActionCount', actions.length);
 
-  return {
+  const perfSnapshot = perf.finalize();
+  perf.log('[schedule/v3/solve]');
+
+  const payload: Record<string, unknown> = {
     weekStart: generateResult.weekStart,
     mode: generateResult.mode,
     generateResult: {
@@ -120,6 +122,13 @@ async function computeSolvePayload(weekStart: string, boutiqueIds: string[]) {
     guestShiftCount: guestShifts.length,
     scenariosTried: generateResult.scenariosTried,
   };
+
+  if (isSchedulePerfResponseEnabled()) {
+    payload.timings = perfSnapshot.timings;
+    payload.stats = perfSnapshot.stats;
+  }
+
+  return { payload };
 }
 
 function migrationHint(message: string): string {
@@ -143,8 +152,34 @@ function streamSolveResponse(weekStart: string, boutiqueIds: string[]): Response
       }, KEEPALIVE_MS);
 
       try {
-        const payload = await computeSolvePayload(weekStart, boutiqueIds);
-        controller.enqueue(encoder.encode(JSON.stringify(payload)));
+        const { payload } = await computeSolvePayload(weekStart, boutiqueIds);
+        const serializeStarted = performance.now();
+        let body: string;
+        if (isSchedulePerfResponseEnabled() && payload.timings && typeof payload.timings === 'object') {
+          JSON.stringify(payload);
+          const serializationMs = performance.now() - serializeStarted;
+          body = JSON.stringify({
+            ...payload,
+            timings: {
+              ...(payload.timings as Record<string, number>),
+              responseSerializationMs: serializationMs,
+            },
+          });
+        } else {
+          body = JSON.stringify(payload);
+          if (shouldLogSchedulePerf()) {
+            console.log(
+              `[schedule/v3/solve] Response serialization ....... ${(performance.now() - serializeStarted).toFixed(1)} ms`
+            );
+          }
+        }
+        if (shouldLogSchedulePerf() && isSchedulePerfResponseEnabled()) {
+          const parsed = JSON.parse(body) as { timings?: { responseSerializationMs?: number } };
+          console.log(
+            `[schedule/v3/solve] Response serialization ....... ${(parsed.timings?.responseSerializationMs ?? 0).toFixed(1)} ms`
+          );
+        }
+        controller.enqueue(encoder.encode(body));
       } catch (e) {
         console.error('[schedule/v3/solve]', e);
         const message = e instanceof Error ? e.message : 'Failed to solve schedule';

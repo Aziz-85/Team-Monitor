@@ -10,6 +10,10 @@ import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
 import type {
+  ScheduleEnginePerfStats,
+  ScheduleEngineStageTimings,
+} from '@/lib/schedule/scheduleEnginePerf';
+import type {
   DayOperatingConfig,
   EmployeeDayAssignment,
   GenerateScheduleResult,
@@ -27,6 +31,8 @@ type SolveResponse = {
   metrics: SolveMetrics;
   guestShiftCount: number;
   scenariosTried: number;
+  timings?: ScheduleEngineStageTimings;
+  stats?: ScheduleEnginePerfStats;
 };
 
 type Props = {
@@ -475,6 +481,38 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
               ))}
             </div>
           </div>
+
+          {solveData.timings && (
+            <details className="rounded-xl border border-dashed border-border bg-surface-subtle p-4">
+              <summary className="cursor-pointer text-sm font-medium text-foreground">
+                Engine performance (dev)
+              </summary>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-muted">Timings (ms)</p>
+                  <ul className="mt-1 space-y-0.5 font-mono text-xs">
+                    {Object.entries(solveData.timings).map(([key, ms]) => (
+                      <li key={key}>
+                        {key}: {typeof ms === 'number' ? ms.toFixed(1) : ms}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {solveData.stats && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted">Stats</p>
+                    <ul className="mt-1 space-y-0.5 font-mono text-xs">
+                      {Object.entries(solveData.stats).map(([key, val]) => (
+                        <li key={key}>
+                          {key}: {val}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
 
           {solveData.generateResult.warnings.length > 0 && (
             <details className="rounded-xl border border-border bg-surface-subtle p-4">

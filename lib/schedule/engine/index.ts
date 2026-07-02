@@ -91,8 +91,21 @@ export {
   countEmployeeWeeklySplitDays,
 } from '@/lib/schedule/generateSchedule/fairness';
 
+// Performance instrumentation (v3 diagnostics)
+export {
+  ScheduleEnginePerfCollector,
+  isSchedulePerfResponseEnabled,
+  shouldLogSchedulePerf,
+  logScheduleEnginePerf,
+} from '@/lib/schedule/scheduleEnginePerf';
+export type {
+  ScheduleEnginePerfSnapshot,
+  ScheduleEngineStageTimings,
+  ScheduleEnginePerfStats,
+} from '@/lib/schedule/scheduleEnginePerf';
 // Generation layer
 export { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
+export type { GenerateScheduleOptions } from '@/lib/schedule/generateSchedule/engine';
 export { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
 export { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 export { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
