@@ -52,6 +52,7 @@ import {
   buildScheduleDisplayNames,
   getScheduleDisplayName,
 } from '@/lib/schedule/displayName';
+import { appendBoutiqueContextToApiPath } from '@/lib/scope/clientApiUrl';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -508,6 +509,8 @@ export function ScheduleEditClient({
   });
   const [addGuestOpen, setAddGuestOpen] = useState(false);
   const [sourceBoutiques, setSourceBoutiques] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [sourceBoutiquesLoading, setSourceBoutiquesLoading] = useState(false);
+  const [sourceBoutiquesError, setSourceBoutiquesError] = useState<string | null>(null);
   const [selectedSourceBoutiqueId, setSelectedSourceBoutiqueId] = useState('');
   const [guestEmployees, setGuestEmployees] = useState<Array<{ empId: string; name: string; boutiqueName: string }>>([]);
   const [guestLoading, setGuestLoading] = useState(false);
@@ -557,13 +560,37 @@ export function ScheduleEditClient({
   useEffect(() => {
     if (!addGuestOpen) return;
     setGuestError(null);
+    setSourceBoutiquesError(null);
     setGuestEmployees([]);
     setSelectedSourceBoutiqueId('');
-    fetch('/api/schedule/external-coverage/source-boutiques')
-      .then((r) => (r.ok ? r.json() : { boutiques: [] as Array<{ id: string; name: string; code: string }> }))
-      .then((data: { boutiques?: Array<{ id: string; name: string; code: string }> }) => {
+    setSourceBoutiquesLoading(true);
+
+    const url = appendBoutiqueContextToApiPath(
+      '/api/schedule/external-coverage/source-boutiques',
+      searchParams
+    );
+
+    fetch(url, { cache: 'no-store' })
+      .then(async (r) => {
+        const data = (await r.json().catch(() => ({}))) as {
+          boutiques?: Array<{ id: string; name: string; code: string }>;
+          error?: string;
+        };
+        if (!r.ok) {
+          throw new Error(data.error ?? `Failed to load source boutiques (${r.status})`);
+        }
+        return data;
+      })
+      .then((data) => {
         const list = data?.boutiques ?? [];
         setSourceBoutiques(list);
+        if (list.length === 0) {
+          setSourceBoutiquesError(
+            (t('schedule.externalCoverageNoBranches') as string) ??
+              'No other active branches are available for external coverage.'
+          );
+          return;
+        }
         const defaultId =
           list.find((b) => /dhahran/i.test(b.name) || /dhahran/i.test(b.code))?.id ?? list[0]?.id ?? '';
         setSelectedSourceBoutiqueId(defaultId);
@@ -576,43 +603,70 @@ export function ScheduleEditClient({
           reason: '',
         }));
       })
-      .catch(() => setSourceBoutiques([]));
-  }, [addGuestOpen, weekStart, gridData?.days, ramadanRange]);
+      .catch((err: unknown) => {
+        const message =
+          err instanceof Error
+            ? err.message
+            : ((t('schedule.externalCoverageLoadBranchesFailed') as string) ??
+              'Failed to load source branches.');
+        setSourceBoutiques([]);
+        setSourceBoutiquesError(message);
+      })
+      .finally(() => setSourceBoutiquesLoading(false));
+  }, [addGuestOpen, weekStart, gridData?.days, ramadanRange, searchParams, t]);
 
   useEffect(() => {
     if (!addGuestOpen || !selectedSourceBoutiqueId) {
       setGuestEmployees([]);
-      setGuestError(null);
+      if (!selectedSourceBoutiqueId) setGuestError(null);
       return;
     }
     setGuestLoading(true);
     setGuestError(null);
-    fetch(`/api/schedule/external-coverage/employees?sourceBoutiqueId=${encodeURIComponent(selectedSourceBoutiqueId)}`, { cache: 'no-store' })
-      .then((r) => {
+
+    const url = appendBoutiqueContextToApiPath(
+      `/api/schedule/external-coverage/employees?sourceBoutiqueId=${encodeURIComponent(selectedSourceBoutiqueId)}`,
+      searchParams
+    );
+
+    fetch(url, { cache: 'no-store' })
+      .then(async (r) => {
+        const data = (await r.json().catch(() => ({}))) as {
+          employees?: Array<{ empId: string; name: string; boutiqueName?: string }>;
+          error?: string;
+        };
         if (!r.ok) {
-          return r.json().then((body: { error?: string }) => {
-            setGuestError(body?.error ?? `Error ${r.status}`);
-            return { employees: [] as Array<{ empId: string; name: string; boutiqueName?: string }> };
-          });
+          throw new Error(data.error ?? `Failed to load employees (${r.status})`);
         }
-        return r.json().catch(() => ({}));
+        return data;
       })
-      .then((data: { employees?: Array<{ empId: string; name: string; boutiqueName?: string }> }) => {
-        const list = (data?.employees ?? []).map((e) => ({ empId: e.empId, name: e.name, boutiqueName: e.boutiqueName ?? '' }));
+      .then((data) => {
+        const list = (data?.employees ?? []).map((e) => ({
+          empId: e.empId,
+          name: e.name,
+          boutiqueName: e.boutiqueName ?? '',
+        }));
         setGuestEmployees(list);
         const sourceBoutique = sourceBoutiques.find((b) => b.id === selectedSourceBoutiqueId);
-        const isDhahran = sourceBoutique ? /dhahran/i.test(sourceBoutique.name) || /dhahran/i.test(sourceBoutique.code) : false;
+        const isDhahran = sourceBoutique
+          ? /dhahran/i.test(sourceBoutique.name) || /dhahran/i.test(sourceBoutique.code)
+          : false;
         if (list.length <= 2 && isDhahran && typeof console !== 'undefined' && console.warn) {
           console.warn('Low employee count — check local DB seed/import.');
         }
-        setGuestForm((prev) => ({ ...prev, empId: '' }));
+        setGuestForm((prev) => ({ ...prev, empId: list[0]?.empId ?? '' }));
       })
-      .catch(() => {
-        setGuestError('Failed to load employees');
+      .catch((err: unknown) => {
+        setGuestError(
+          err instanceof Error
+            ? err.message
+            : ((t('schedule.externalCoverageLoadEmployeesFailed') as string) ??
+              'Failed to load employees for the selected branch.')
+        );
         setGuestEmployees([]);
       })
       .finally(() => setGuestLoading(false));
-  }, [addGuestOpen, selectedSourceBoutiqueId, sourceBoutiques]);
+  }, [addGuestOpen, selectedSourceBoutiqueId, sourceBoutiques, searchParams, t]);
 
   const weekDates = useMemo(() => {
     const dates: string[] = [];
@@ -2779,20 +2833,25 @@ export function ScheduleEditClient({
             <h4 className="text-lg font-semibold text-foreground">{t('schedule.addExternalCoverage') ?? 'Add External Coverage'}</h4>
             <div className="mt-3 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-foreground">Source boutique</label>
+                  <label className="block text-sm font-medium text-foreground">
+                    {t('schedule.sourceBoutique') ?? 'Source boutique'}
+                  </label>
                   <select
                     value={selectedSourceBoutiqueId}
                     onChange={(e) => setSelectedSourceBoutiqueId(e.target.value)}
                     className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                    disabled={guestSubmitting}
+                    disabled={guestSubmitting || sourceBoutiquesLoading}
                   >
-                    <option value="">—</option>
+                    <option value="">{sourceBoutiquesLoading ? '…' : '—'}</option>
                     {sourceBoutiques.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name} ({b.code})
                       </option>
                     ))}
                   </select>
+                  {sourceBoutiquesError && (
+                    <p className="mt-1 text-xs text-red-600">{sourceBoutiquesError}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">{t('schedule.employee') ?? 'Employee'}</label>
@@ -2813,7 +2872,10 @@ export function ScheduleEditClient({
                     <p className="mt-1 text-xs text-red-600">{guestError}</p>
                   )}
                   {!guestLoading && !guestError && guestEmployees.length === 0 && selectedSourceBoutiqueId && (
-                    <p className="mt-1 text-xs text-muted">No external employees found.</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {(t('schedule.externalCoverageNoEmployees') as string) ??
+                        'No employees found for this branch.'}
+                    </p>
                   )}
                 </div>
                 <div>
