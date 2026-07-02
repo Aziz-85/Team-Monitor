@@ -1451,7 +1451,9 @@
       "changesCount": "{n} تغييرات مقترحة",
       "noAssignments": "لا توجد تعيينات عمل",
       "engineWarnings": "تحذيرات المحرك",
-      "ramadanActive": "وضع رمضان نشط:"
+      "ramadanActive": "وضع رمضان نشط:",
+      "timeout": "انتهت مهلة الطلب بعد دقيقتين. أعد المحاولة أو اطلب من المسؤول رفع nginx proxy_read_timeout.",
+      "gatewayTimeout": "انتهت مهلة البوابة (504). المحرك ما زال يعمل لكن nginx قطع الاتصال. اطلب ضبط proxy_read_timeout إلى 120 ثانية على الأقل لـ /api/schedule/."
     },
     "assistant": {
       "button": "مساعد الجدول",

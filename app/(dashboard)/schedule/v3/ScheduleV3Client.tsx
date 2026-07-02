@@ -53,6 +53,28 @@ function parseWeekStart(value: string | null): string {
   return weekStartSaturday(value);
 }
 
+function weekOverlapsRamadan(
+  weekStart: string,
+  range: { start: string; end: string } | null
+): boolean {
+  if (!range) return false;
+  const weekEnd = addDays(weekStart, 6);
+  return weekStart <= range.end && weekEnd >= range.start;
+}
+
+function formatSolveError(
+  status: number,
+  data: { error?: string },
+  t: (key: string) => string
+): string {
+  if (data.error) return data.error;
+  if (status === 504) return (t('schedule.v3.gatewayTimeout') as string) || 'Gateway timeout (504). The server took too long.';
+  if (status === 502 || status === 503) {
+    return (t('schedule.v3.serverUnavailable') as string) || `Server unavailable (${status}). Try again.`;
+  }
+  return `Failed (${status})`;
+}
+
 function formatPeriods(periods: DayOperatingConfig['operatingPeriods']): string {
   return periods.map((p) => `${p.startTime}–${p.endTime}`).join(', ');
 }
@@ -167,21 +189,29 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     setError(null);
     setApplyError(null);
     setSolveData(null);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 120_000);
     try {
       const res = await fetch('/api/schedule/v3/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weekStart }),
+        signal: controller.signal,
       });
       const data = (await res.json().catch(() => ({}))) as SolveResponse & { error?: string };
-      if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
+      if (!res.ok) throw new Error(formatSolveError(res.status, data, t));
       setSolveData(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Solve failed');
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 2 minutes.');
+      } else {
+        setError(e instanceof Error ? e.message : 'Solve failed');
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, t]);
 
   const applyToWeek = useCallback(async () => {
     if (!solveData?.actions.length) return;
@@ -234,7 +264,7 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
           {(t('schedule.v3.title') as string) || 'Schedule Solver'}
         </h1>
         <p className="mt-1 text-sm text-muted">{t('schedule.v3.subtitle')}</p>
-        {ramadanRange && (
+        {ramadanRange && weekOverlapsRamadan(weekStart, ramadanRange) && (
           <p className="mt-1 text-xs text-sky-700">
             {t('schedule.v3.ramadanActive')} {ramadanRange.start} – {ramadanRange.end}
           </p>
@@ -299,8 +329,16 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => void solve()}
+            disabled={loading}
+            className="shrink-0 text-xs font-medium text-red-800 underline disabled:opacity-50"
+          >
+            {t('common.refresh')}
+          </button>
         </div>
       )}
       {applyError && (

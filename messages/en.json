@@ -1451,7 +1451,9 @@
       "changesCount": "{n} proposed changes",
       "noAssignments": "No working assignments",
       "engineWarnings": "Engine warnings",
-      "ramadanActive": "Ramadan mode active:"
+      "ramadanActive": "Ramadan mode active:",
+      "timeout": "Solve request timed out after 2 minutes. Try again or ask admin to raise nginx proxy_read_timeout.",
+      "gatewayTimeout": "Gateway timeout (504). The engine is still running but nginx cut the connection. Ask admin to set proxy_read_timeout to at least 120s for /api/schedule/."
     },
     "assistant": {
       "button": "Schedule assistant",
