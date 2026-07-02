@@ -18,6 +18,15 @@ import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
 import { ScheduleFullExportButton } from '@/components/schedule/ScheduleFullExportButton';
 import { SwapWeeklyOffModal } from '@/components/schedule/SwapWeeklyOffModal';
 import { ScheduleAssistantModal } from '@/components/schedule/ScheduleAssistantModal';
+import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel';
+import { CompactScheduleWarnings } from '@/components/schedule/CompactScheduleWarnings';
+import { CollapsibleKeyHolders } from '@/components/schedule/CollapsibleKeyHolders';
+import { ScheduleShiftCellHint, ScheduleShiftReadOnlyBadge } from '@/components/schedule/ScheduleShiftCellHint';
+import {
+  buildGroupedWarnings,
+  computeScheduleQualityMetrics,
+  summarizeCoverageWarnings,
+} from '@/lib/schedule/scheduleUiMetrics';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import {
   canLockUnlockDay,
@@ -217,22 +226,6 @@ function shiftToCompactLabel(shift: string, t: (key: string) => string): string 
   if (shift === 'SPLIT') return shiftLabel(t, 'splitShort');
   if (shift === 'COVER_RASHID_AM' || shift === 'COVER_RASHID_PM') return t('schedule.externalCoverage') ?? 'External';
   return 'NONE';
-}
-
-function ShiftCellBadge({ shift, t }: { shift: string; t: (key: string) => string }) {
-  if (shift === 'MORNING') return <>{t('schedule.morning')}</>;
-  if (shift === 'EVENING') return <>{t('schedule.evening')}</>;
-  if (shift === 'SPLIT') {
-    return (
-      <span
-        className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-900"
-        title={shiftLabel(t, 'splitShift')}
-      >
-        {shiftLabel(t, 'splitShort')}
-      </span>
-    );
-  }
-  return null;
 }
 
 function shiftLabel(t: (key: string) => string, key: keyof typeof SHIFT_LABEL_FALLBACKS): string {
@@ -1179,6 +1172,46 @@ export function ScheduleEditClient({
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
 
+  const scheduleQualityMetrics = useMemo(() => {
+    if (!gridData) return null;
+    const rows = gridData.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => ({
+        ...cell,
+        effectiveShift: getDraftShift(row.empId, cell.date, cell.effectiveShift),
+      })),
+    }));
+    return computeScheduleQualityMetrics({
+      rows,
+      timeCoverage: effectiveTimeCoverage,
+      externalSupportCount: externalGuests.length + localPendingGuests.length,
+      dayCountContexts: gridData.dayCountContexts,
+      getEffectiveShift: (cell) => cell.effectiveShift,
+    });
+  }, [gridData, getDraftShift, effectiveTimeCoverage, externalGuests.length, localPendingGuests.length]);
+
+  const groupedWarnings = useMemo(() => {
+    const keyPlanWarnings =
+      keyPlan?.days.flatMap((d) => (d.warnings ?? []).map((w) => ({ date: d.date, code: w.code, message: w.message }))) ?? [];
+    return buildGroupedWarnings({
+      validationsByDay,
+      keyPlanWarnings,
+      integrityWarnings: gridData?.integrityWarnings,
+    });
+  }, [validationsByDay, keyPlan, gridData?.integrityWarnings]);
+
+  const coverageSummaries = useMemo(
+    () =>
+      summarizeCoverageWarnings(
+        validationsByDay.map(({ date, validations }) => ({
+          date,
+          validations,
+          dayOfWeek: gridData?.days.find((d) => d.date === date)?.dayOfWeek,
+        }))
+      ),
+    [validationsByDay, gridData?.days]
+  );
+
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
       if (cell.availability === 'LEAVE') return;
@@ -1986,179 +2019,65 @@ export function ScheduleEditClient({
           </div>
         )}
 
-        {tab === 'week' && gridData?.integrityWarnings && gridData.integrityWarnings.length > 0 && (
-          <div className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
-            <span className="font-medium">{t('schedule.fridayPmOnly')}</span>
-            <span className="ms-1">— {gridData.integrityWarnings.join('; ')}</span>
-          </div>
-        )}
-
-        {tab === 'week' && gridData && (
-          <div className="mb-4 rounded border border-border bg-surface-subtle px-3 py-2">
-            <div className="mb-2 flex flex-wrap items-center gap-3">
-              <span className="text-sm font-medium text-foreground">
-                {t('schedule.keys.keyStatus') ?? 'Key status'}: Key #1 → {keyPlan?.currentHolders?.key1HolderName ?? keyPlan?.currentHolders?.key1HolderEmployeeId ?? '—'}, Key #2 → {keyPlan?.currentHolders?.key2HolderName ?? keyPlan?.currentHolders?.key2HolderEmployeeId ?? '—'}
-              </span>
-              {keyPlanLoading && <span className="text-xs text-muted">{t('common.loading') ?? 'Loading…'}</span>}
-              {(initialRole === 'ASSISTANT_MANAGER' || initialRole === 'MANAGER' || initialRole === 'ADMIN' || initialRole === 'SUPER_ADMIN') && (
-                <button
-                  type="button"
-                  onClick={() => setHandoverDialogOpen(true)}
-                  className="rounded border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle"
-                >
-                  {t('schedule.keys.logHandover') ?? 'Log handover'}
-                </button>
-              )}
-            </div>
-            {keyPlan && keyPlan.days.length > 0 && (
-              <div className="overflow-x-auto">
-                {(() => {
-                  const allWarnings = keyPlan.days.flatMap((d) => (d.warnings ?? []).map((w) => ({ ...w, dayDate: d.date })));
-                  const hasWarnings = allWarnings.length > 0;
-                  return hasWarnings ? (
-                    <div className="mb-2 flex flex-wrap items-center gap-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                      <span className="font-medium">Warnings:</span>
-                      {allWarnings.slice(0, 5).map((w, i) => (
-                        <span key={`${w.dayDate}-${w.code}-${i}`} title={w.message}>{w.message}</span>
-                      ))}
-                      {allWarnings.length > 5 && <span className="text-muted">+{allWarnings.length - 5} more</span>}
-                    </div>
-                  ) : null;
-                })()}
-                <table className="w-full min-w-[600px] text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="py-1 pe-2 text-start font-medium text-muted">{t('schedule.day') ?? 'Day'}</th>
-                      {keyPlan.days.map((d) => {
-                        const dayWarnings = d.warnings ?? [];
-                        const hasDayWarnings = dayWarnings.length > 0;
-                        return (
-                          <th key={d.date} className="py-1 px-1 text-center font-medium text-muted">
-                            <span className="inline-flex items-center gap-0.5">
-                              {getDayShort(d.date, locale)} {formatDDMM(d.date)}
-                              {hasDayWarnings && (
-                                <span title={dayWarnings.map((w) => w.message).join(' • ')} className="text-amber-600 dark:text-amber-400" aria-label="Warnings">⚠</span>
-                              )}
-                            </span>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-border">
-                      <td className="py-1 pe-2 text-muted">{t('schedule.keys.amHolder') ?? 'AM holder'}</td>
-                      {keyPlan.days.map((day) => {
-                        const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
-                        const options = day.amEligible ?? [];
-                        const savedAm = day.amHolderEmpId;
-                        const suggestedAm = day.suggestedAmHolderEmpId ?? null;
-                        const isSuggested = !savedAm && suggestedAm != null && local.amHolderEmpId === suggestedAm;
-                        const isManual = !savedAm && local.amHolderEmpId != null && local.amHolderEmpId !== suggestedAm;
-                        return (
-                          <td key={day.date} className="py-1 px-1">
-                            <select
-                              value={local.amHolderEmpId ?? ''}
-                              onChange={(e) => {
-                                const v = e.target.value || null;
-                                setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, amHolderEmpId: v } : x)));
-                                setKeyPlanDirty(true);
-                              }}
-                              className="w-full rounded border border-border bg-surface px-1 py-0.5 text-xs"
-                            >
-                              <option value="">—</option>
-                              {options.map((o) => (
-                                <option key={o.empId} value={o.empId}>{o.name}</option>
-                              ))}
-                            </select>
-                            {(isSuggested || isManual) && (
-                              <span className="mt-0.5 block text-[10px] text-muted">
-                                {isSuggested ? 'Suggested' : 'Manual'}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    <tr>
-                      <td className="py-1 pe-2 text-muted">{t('schedule.keys.pmHolder') ?? 'PM holder'}</td>
-                      {keyPlan.days.map((day) => {
-                        const local = keyPlanLocal.find((x) => x.date === day.date) ?? day;
-                        const options = day.pmEligible ?? [];
-                        const savedPm = day.pmHolderEmpId;
-                        const suggestedPm = day.suggestedPmHolderEmpId ?? null;
-                        const isSuggested = !savedPm && suggestedPm != null && local.pmHolderEmpId === suggestedPm;
-                        const isManual = !savedPm && local.pmHolderEmpId != null && local.pmHolderEmpId !== suggestedPm;
-                        return (
-                          <td key={day.date} className="py-1 px-1">
-                            <select
-                              value={local.pmHolderEmpId ?? ''}
-                              onChange={(e) => {
-                                const v = e.target.value || null;
-                                setKeyPlanLocal((prev) => prev.map((x) => (x.date === day.date ? { ...x, pmHolderEmpId: v } : x)));
-                                setKeyPlanDirty(true);
-                              }}
-                              className="w-full rounded border border-border bg-surface px-1 py-0.5 text-xs"
-                            >
-                              <option value="">—</option>
-                              {options.map((o) => (
-                                <option key={o.empId} value={o.empId}>{o.name}</option>
-                              ))}
-                            </select>
-                            {(isSuggested || isManual) && (
-                              <span className="mt-0.5 block text-[10px] text-muted">
-                                {isSuggested ? 'Suggested' : 'Manual'}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </tbody>
-                </table>
-                {keyPlanDirty && (initialRole === 'ASSISTANT_MANAGER' || initialRole === 'MANAGER' || initialRole === 'ADMIN' || initialRole === 'SUPER_ADMIN') && (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const res = await fetch('/api/keys/week', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            weekStart: keyPlan.weekStart,
-                            assignments: keyPlanLocal.map((d) => ({ date: d.date, amHolderEmpId: d.amHolderEmpId, pmHolderEmpId: d.pmHolderEmpId })),
-                          }),
-                        });
-                        const data = await res.json().catch(() => ({}));
-                        if (res.ok) {
-                          setKeyPlanDirty(false);
-                          fetchKeyPlan();
-                          setToast(t('schedule.keys.saved') ?? 'Key plan saved');
-                          setTimeout(() => setToast(null), 3000);
-                        } else {
-                          const msg = data.code === 'KEY_CONTINUITY' && Array.isArray(data.errors)
-                            ? data.errors.map((e: { message?: string }) => e.message).filter(Boolean).join(' · ') || data.error
-                            : (data.error as string) ?? 'Key plan validation failed';
-                          setToast(msg);
-                          setTimeout(() => setToast(null), 6000);
-                        }
-                      }}
-                      className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
-                    >
-                      {t('schedule.keys.saveKeyPlan') ?? 'Save key plan'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setKeyPlanLocal(keyPlan.days.map((d) => ({ ...d, amHolderEmpId: d.amHolderEmpId ?? d.suggestedAmHolderEmpId ?? null, pmHolderEmpId: d.pmHolderEmpId ?? d.suggestedPmHolderEmpId ?? null }))); setKeyPlanDirty(false); }}
-                      className="rounded border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface-subtle"
-                    >
-                      {t('common.cancel') ?? 'Cancel'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+        {tab === 'week' && gridData && keyPlan && keyPlan.days.length > 0 && (
+          <CollapsibleKeyHolders
+            keyPlan={keyPlan}
+            keyPlanLocal={keyPlanLocal}
+            keyPlanDirty={keyPlanDirty}
+            keyPlanLoading={keyPlanLoading}
+            canEdit={
+              initialRole === 'ASSISTANT_MANAGER' ||
+              initialRole === 'MANAGER' ||
+              initialRole === 'ADMIN' ||
+              initialRole === 'SUPER_ADMIN'
+            }
+            onLogHandover={() => setHandoverDialogOpen(true)}
+            onLocalChange={(date, field, value) => {
+              setKeyPlanLocal((prev) => prev.map((x) => (x.date === date ? { ...x, [field]: value } : x)));
+              setKeyPlanDirty(true);
+            }}
+            onSave={async () => {
+              const res = await fetch('/api/keys/week', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  weekStart: keyPlan.weekStart,
+                  assignments: keyPlanLocal.map((d) => ({
+                    date: d.date,
+                    amHolderEmpId: d.amHolderEmpId,
+                    pmHolderEmpId: d.pmHolderEmpId,
+                  })),
+                }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (res.ok) {
+                setKeyPlanDirty(false);
+                fetchKeyPlan();
+                setToast(t('schedule.keys.saved') ?? 'Key plan saved');
+                setTimeout(() => setToast(null), 3000);
+              } else {
+                const msg =
+                  data.code === 'KEY_CONTINUITY' && Array.isArray(data.errors)
+                    ? data.errors.map((e: { message?: string }) => e.message).filter(Boolean).join(' · ') || data.error
+                    : (data.error as string) ?? 'Key plan validation failed';
+                setToast(msg);
+                setTimeout(() => setToast(null), 6000);
+              }
+            }}
+            onCancel={() => {
+              setKeyPlanLocal(
+                keyPlan.days.map((d) => ({
+                  ...d,
+                  amHolderEmpId: d.amHolderEmpId ?? d.suggestedAmHolderEmpId ?? null,
+                  pmHolderEmpId: d.pmHolderEmpId ?? d.suggestedPmHolderEmpId ?? null,
+                }))
+              );
+              setKeyPlanDirty(false);
+            }}
+            formatDayShort={(date) => getDayShort(date, locale)}
+            formatDate={formatDDMM}
+            t={t}
+          />
         )}
 
         {tab === 'week' && gridData && (
@@ -2204,16 +2123,16 @@ export function ScheduleEditClient({
 
         {tab === 'week' && gridData && (
         <div className="flex min-w-0 flex-col gap-4">
+            {editorView === 'grid' && scheduleQualityMetrics && (
+              <ScheduleQualityPanel metrics={scheduleQualityMetrics} t={t} />
+            )}
             {editorView === 'grid' ? (
               <div className="min-w-0 flex-1">
-                <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
-                  <span className="font-medium text-muted">{t('schedule.coverage') ?? 'Shifts'}:</span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-sky-800">{t('schedule.morning')}</span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 font-medium text-amber-900">{t('schedule.evening')}</span>
-                  <span className="ms-2 font-medium text-muted">{t('governance.weekStatus') ?? 'Status'}:</span>
-                  <span className="rounded-full border border-border bg-surface-subtle px-2 py-0.5 font-medium text-foreground">{t('governance.draft')}</span>
-                  <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900">{t('governance.approved')}</span>
-                  <span className="rounded-full border border-red-200 bg-red-100 px-2 py-0.5 font-medium text-red-900">🔒 {t('governance.locked')}</span>
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] text-muted">
+                  <span className="font-medium">{t('schedule.coverage') ?? 'Shifts'}:</span>
+                  <span className="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">AM</span>
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">PM</span>
+                  <span className="rounded bg-violet-100 px-1.5 py-0.5 font-semibold text-violet-900">Split</span>
                 </div>
                 <div className="max-w-full overflow-hidden">
                   <LuxuryTable noScroll>
@@ -2342,37 +2261,41 @@ export function ScheduleEditClient({
                                     )
                                   ) : canEdit && !lockedDaySet.has(cell.date) ? (
                                     <div
-                                      className="relative flex h-9 items-center justify-center px-1"
+                                      className="relative flex min-h-9 flex-col items-center justify-center gap-0.5 px-1 py-0.5"
                                       title={isFriday(cell.date) ? t('schedule.fridayPmOnly') : undefined}
                                     >
-                                      <div className="flex flex-col items-center gap-0.5">
-                                        {(() => {
-                                          const shiftOptions = buildEditorShiftOptions({
-                                            date: cell.date,
-                                            ramadanRange: ramadanRange ?? null,
-                                            t,
-                                          });
-                                          const options = [...shiftOptions];
-                                          if (isEdited || hasOverride) {
-                                            options.push({ value: 'RESET', label: t('schedule.resetToBase') ?? 'Reset to Base' });
-                                          }
-                                          return (
-                                            <ScheduleCellSelect
-                                              compact
-                                              value={draftShift}
-                                              options={options}
-                                              onChange={(val) => {
-                                                if (val === 'RESET') {
-                                                  clearPendingEdit(row.empId, cell.date);
-                                                  return;
-                                                }
-                                                addPendingEdit(row.empId, cell.date, val as EditableShift, row, cell);
-                                              }}
-                                              className="max-w-[84px] text-center"
-                                            />
-                                          );
-                                        })()}
-                                      </div>
+                                      {(() => {
+                                        const shiftOptions = buildEditorShiftOptions({
+                                          date: cell.date,
+                                          ramadanRange: ramadanRange ?? null,
+                                          t,
+                                        });
+                                        const options = [...shiftOptions];
+                                        if (isEdited || hasOverride) {
+                                          options.push({ value: 'RESET', label: t('schedule.resetToBase') ?? 'Reset to Base' });
+                                        }
+                                        return (
+                                          <ScheduleCellSelect
+                                            compact
+                                            value={draftShift}
+                                            options={options}
+                                            onChange={(val) => {
+                                              if (val === 'RESET') {
+                                                clearPendingEdit(row.empId, cell.date);
+                                                return;
+                                              }
+                                              addPendingEdit(row.empId, cell.date, val as EditableShift, row, cell);
+                                            }}
+                                            className="max-w-[84px] text-center"
+                                          />
+                                        );
+                                      })()}
+                                      <ScheduleShiftCellHint
+                                        availability={cell.availability}
+                                        shift={draftShift}
+                                        segments={cell.segments}
+                                        t={t}
+                                      />
                                     </div>
                                   ) : (
                                     <div
@@ -2398,7 +2321,7 @@ export function ScheduleEditClient({
                                       {draftShift === 'MORNING' ||
                                       draftShift === 'EVENING' ||
                                       draftShift === 'SPLIT' ? (
-                                        <ShiftCellBadge shift={draftShift} t={t} />
+                                        <ScheduleShiftReadOnlyBadge shift={draftShift} segments={cell.segments} t={t} />
                                       ) : null}
                                     </div>
                                   )}
@@ -2680,47 +2603,14 @@ export function ScheduleEditClient({
             </div>
 
             {canEdit && (
-              <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
-                <h3 className="mb-2 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
-                <p className="mb-3 text-xs text-muted">
-                  {(t('schedule.daysNeedingAttention') as string)?.replace?.(
-                    '{n}',
-                    String(daysNeedingAttention)
-                  ) ?? `Days needing attention: ${daysNeedingAttention}`}
-                </p>
-                <ul className="space-y-2">
-                  {validationsByDay.map(({ date, validations }) =>
-                    validations.length > 0 ? (
-                      <li key={date}>
-                        <button
-                          type="button"
-                          onClick={() => focusDay(date)}
-                          className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-start text-sm text-amber-900 hover:bg-amber-100"
-                        >
-                          {formatDDMM(date)} {getDayName(date, locale)}
-                          <div className="mt-0.5 flex flex-wrap gap-1">
-                            {validations.map((v) => (
-                              <span
-                                key={v.type}
-                                className={`inline rounded px-1.5 py-0.5 text-xs ${
-                                  v.type === 'RASHID_OVERFLOW'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-amber-200 text-amber-900'
-                                }`}
-                              >
-                                {v.message}
-                              </span>
-                            ))}
-                          </div>
-                        </button>
-                      </li>
-                    ) : null
-                  )}
-                </ul>
-                {daysNeedingAttention === 0 && (
-                  <p className="text-sm text-muted">{t('coverage.noWarnings')}</p>
-                )}
-              </div>
+              <CompactScheduleWarnings
+                grouped={groupedWarnings}
+                coverageSummaries={coverageSummaries}
+                daysNeedingAttention={daysNeedingAttention}
+                formatDate={formatDDMM}
+                onFocusDay={focusDay}
+                t={t}
+              />
             )}
           </div>
         )}
