@@ -94,6 +94,7 @@
     "schedule": "Schedule",
     "scheduleView": "Schedule (View)",
     "scheduleEditor": "Schedule Editor",
+    "scheduleSolver": "Schedule Solver",
     "scheduleEditorDay": "Schedule (day editor)",
     "scheduleAudit": "Schedule Audit",
     "approvals": "Approvals",
@@ -296,6 +297,10 @@
           "edit": {
             "title": "Schedule Editor",
             "hint": "Open weekly schedule editor."
+          },
+          "solver": {
+            "title": "Schedule Solver",
+            "hint": "Test Schedule Engine v3 output without legacy UI."
           },
           "dayEditor": {
             "title": "Edit Day",
@@ -1428,6 +1433,25 @@
       "reasonPlaceholder": "Optional reason",
       "apply": "Apply swap",
       "success": "Weekly off swapped for this week. Assign a shift on the former off day if needed."
+    },
+    "v3": {
+      "title": "Schedule Solver",
+      "subtitle": "Engine v3 output only — operating periods, time slots, and segments. No legacy AM/PM holder UI.",
+      "solve": "Solve Schedule",
+      "apply": "Apply to Current Week",
+      "applyReason": "Schedule Engine v3 solve",
+      "applyBlocked": "Cannot apply — slot coverage is invalid. Fix violations or adjust manually.",
+      "emptyState": "Select a week and click Solve Schedule to run Engine v3.",
+      "solving": "Running Engine v3…",
+      "operatingPeriods": "Operating periods",
+      "mode": "Mode",
+      "scenariosTried": "Scenarios tried",
+      "slotViolations": "Slot violations by day",
+      "scheduleByDay": "Schedule by day",
+      "changesCount": "{n} proposed changes",
+      "noAssignments": "No working assignments",
+      "engineWarnings": "Engine warnings",
+      "ramadanActive": "Ramadan mode active:"
     },
     "assistant": {
       "button": "Schedule assistant",
