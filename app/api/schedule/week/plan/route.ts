@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const boutiqueIds = scheduleScope.boutiqueIds;
+    const t0 = Date.now();
     const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
     const empIds = grid.rows.map((r) => r.empId);
     const [fairnessContext, guestShifts] = await Promise.all([
@@ -52,15 +53,30 @@ export async function POST(request: NextRequest) {
     ]);
     const { plan, generateResult } = buildSchedulePlanFromGenerate(grid, fairnessContext, { guestShifts });
 
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('[schedule/week/plan]', {
+        weekStart,
+        ms: Date.now() - t0,
+        employees: empIds.length,
+        actions: plan.scenarios[0]?.actions.length ?? 0,
+        coverageValid: generateResult.coverageValid,
+      });
+    }
+
     return NextResponse.json({
       plan,
-      generateResult,
+      coverageValid: generateResult.coverageValid,
+      slotViolationCount: generateResult.slotViolations.length,
       aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
       guestShiftCount: guestShifts.length,
     });
   } catch (e) {
     console.error('[schedule/week/plan]', e);
     const message = e instanceof Error ? e.message : 'Failed to build schedule plan';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const hint =
+      message.includes('ShiftOverrideSegment') || message.includes('does not exist')
+        ? ' Database migration may be pending — run: npx prisma migrate deploy'
+        : '';
+    return NextResponse.json({ error: message + hint }, { status: 500 });
   }
 }

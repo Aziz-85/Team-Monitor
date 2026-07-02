@@ -33,7 +33,7 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<SchedulePlanResult | null>(null);
-  const [scenarioId, setScenarioId] = useState<string>('balanced');
+  const [scenarioId, setScenarioId] = useState<string>('dynamic');
   const [aiConfigured, setAiConfigured] = useState(false);
   const [reason, setReason] = useState('');
   const [chatInput, setChatInput] = useState('');
@@ -54,11 +54,15 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     setLoading(true);
     setError(null);
     setPlan(null);
+    setApplyViolations([]);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
       const res = await fetch('/api/schedule/week/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weekStart }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
       if (seq !== fetchSeq.current) return;
@@ -66,12 +70,17 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
       if (!data.plan) throw new Error(t('schedule.assistant.loadFailed') as string);
       setPlan(data.plan as SchedulePlanResult);
       setAiConfigured(Boolean(data.aiConfigured));
-      setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'balanced');
+      setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'dynamic');
     } catch (e) {
       if (seq !== fetchSeq.current) return;
       setPlan(null);
-      setError(e instanceof Error ? e.message : (t('schedule.assistant.loadFailed') as string));
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setError((t('schedule.assistant.timeout') as string) || 'Plan request timed out. Try again.');
+      } else {
+        setError(e instanceof Error ? e.message : (t('schedule.assistant.loadFailed') as string));
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       if (seq === fetchSeq.current) setLoading(false);
     }
   }, [weekStart, t]);
@@ -80,6 +89,7 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     if (!open) return;
     setTab('plan');
     setChatHistory([]);
+    setApplyViolations([]);
     setReason((t('schedule.assistant.defaultReason') as string) || 'Schedule assistant plan');
     void fetchPlan();
   }, [open, weekStart, fetchPlan, t]);

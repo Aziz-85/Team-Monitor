@@ -31,18 +31,47 @@ function weekRange(weekStart: string): { first: Date; last: Date } {
   return { first, last };
 }
 
+function isSplitEnumError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('SPLIT') || msg.includes('invalid input value for enum');
+}
+
+/** Guest working shifts — retries without SPLIT when DB enum migration is missing. */
+export async function findGuestWorkingOverrides<T extends { select: object }>(
+  args: T & { where: object }
+): Promise<Array<Record<string, unknown>>> {
+  try {
+    return (await prisma.shiftOverride.findMany({
+      ...args,
+      where: {
+        ...(args.where as object),
+        overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
+      },
+    })) as Array<Record<string, unknown>>;
+  } catch (err) {
+    if (!isSplitEnumError(err)) throw err;
+    console.warn('[schedulePlanGuests] SPLIT enum unavailable; querying MORNING/EVENING only');
+    return (await prisma.shiftOverride.findMany({
+      ...args,
+      where: {
+        ...(args.where as object),
+        overrideShift: { in: ['MORNING', 'EVENING'] },
+      },
+    })) as Array<Record<string, unknown>>;
+  }
+}
+
 export async function loadWeekGuestShifts(
   weekStart: string,
   hostBoutiqueIds: string[]
 ): Promise<GuestShiftInput[]> {
   if (!hostBoutiqueIds.length) return [];
   const { first, last } = weekRange(weekStart);
-  const overrides = await prisma.shiftOverride.findMany({
+  const overrides = await findGuestWorkingOverrides({
     where: {
       boutiqueId: { in: hostBoutiqueIds },
       date: { gte: first, lte: last },
       isActive: true,
-      overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
       employee: {
         boutiqueId: { notIn: hostBoutiqueIds },
         active: true,
@@ -59,14 +88,24 @@ export async function loadWeekGuestShifts(
     orderBy: [{ date: 'asc' }, { empId: 'asc' }],
   });
 
-  return overrides.map((o) => ({
-    id: o.id,
-    empId: o.empId,
-    employeeName: o.employee.name,
-    date: o.date.toISOString().slice(0, 10),
-    shift: o.overrideShift,
-    sourceBoutiqueId: o.sourceBoutiqueId ?? o.employee.boutiqueId,
-  }));
+  return overrides.map((o) => {
+    const row = o as {
+      id: string;
+      empId: string;
+      date: Date;
+      overrideShift: string;
+      sourceBoutiqueId: string | null;
+      employee: { name: string; boutiqueId: string };
+    };
+    return {
+      id: row.id,
+      empId: row.empId,
+      employeeName: row.employee.name,
+      date: row.date.toISOString().slice(0, 10),
+      shift: row.overrideShift,
+      sourceBoutiqueId: row.sourceBoutiqueId ?? row.employee.boutiqueId,
+    };
+  });
 }
 
 export async function loadExternalCandidates(hostBoutiqueIds: string[]): Promise<ExternalCandidate[]> {

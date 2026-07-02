@@ -26,6 +26,7 @@ import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { toRiyadhDateString } from '@/lib/time';
 import { validateTimeCoverageForGrid } from '@/lib/schedule/timeCoverageValidation';
 import { loadSegmentsByOverrideIds } from '@/lib/schedule/shiftOverrideSegments';
+import { findGuestWorkingOverrides } from '@/lib/services/schedulePlanGuests';
 
 export type DayCountContext = {
   date: string;
@@ -270,12 +271,11 @@ export async function getScheduleGridForWeek(
   const guestShiftCountsByDay = dateStrs.map(() => ({ am: 0, pm: 0 }));
   const guestWorkingByDate = new Map<string, import('@/lib/schedule/generateSchedule/types').WorkingDayShift[]>();
   if (boutiqueIds.length > 0 && !options.empId) {
-    const guestOverrides = await prisma.shiftOverride.findMany({
+    const guestOverridesRaw = await findGuestWorkingOverrides({
       where: {
         boutiqueId: { in: boutiqueIds },
         date: { gte: firstDate, lte: lastDate },
         isActive: true,
-        overrideShift: { in: ['MORNING', 'EVENING', 'SPLIT'] },
         employee: {
           boutiqueId: { notIn: boutiqueIds },
           active: true,
@@ -283,6 +283,13 @@ export async function getScheduleGridForWeek(
       },
       select: { id: true, date: true, overrideShift: true, empId: true, employee: { select: { name: true } } },
     });
+    const guestOverrides = guestOverridesRaw as Array<{
+      id: string;
+      date: Date;
+      overrideShift: string;
+      empId: string;
+      employee: { name: string };
+    }>;
     const guestSegmentMap = await loadSegmentsByOverrideIds(guestOverrides.map((g) => g.id));
     for (const o of guestOverrides) {
       const dateStr = o.date.toISOString().slice(0, 10);
