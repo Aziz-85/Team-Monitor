@@ -43,10 +43,11 @@ describe('segmentCoverage counting', () => {
     expect(contrib.pm).toBe(true);
   });
 
-  it('SPLIT enum on normal weekday counts AM and PM from reconstructed segments', () => {
+  it('SPLIT enum without saved segments counts AM and PM from label, not synthetic blocks', () => {
     const periods = operatingPeriodsForDay(6, false);
     const contrib = shiftAmPmContribution('SPLIT', periods, 6, false);
     expect(contrib.am).toBe(true);
     expect(contrib.pm).toBe(true);
+    expect(shiftToSegmentsForCounting('SPLIT', periods, 8)).toEqual([]);
   });
 });

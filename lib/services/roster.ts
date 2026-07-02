@@ -1,4 +1,7 @@
 import { getScheduleGridForWeek } from './scheduleGrid';
+import { shiftAmPmContribution } from '@/lib/schedule/segmentCoverage';
+import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 
 export type RosterEmployee = { empId: string; name: string };
 export type RosterWarnings = string[];
@@ -9,15 +12,18 @@ export interface RosterForDateResult {
   offEmployees: RosterEmployee[];
   leaveEmployees: RosterEmployee[];
   warnings: RosterWarnings;
+  /** Engine slot validation for this date (read from grid.timeCoverage — never recomputed here). */
+  slotViolations?: SlotViolation[];
 }
 
 export type RosterForDateOptions = { boutiqueIds?: string[] };
 
 /**
- * Roster for a date using the same shift resolution logic as the Schedule grid.
- * Single source of truth: **getScheduleGridForWeek** (availability, overrides, team parity, Friday PM-only).
+ * Roster for a date read from the Schedule Engine grid output.
+ * Single source of truth: **getScheduleGridForWeek** (availability, overrides, segments, slot coverage).
+ * AM/PM membership is the engine's segment projection (shiftAmPmContribution) — not a shift-enum switch.
  *
- * **Do not** reimplement shift/override resolution elsewhere for business rules — extend `scheduleGrid.ts` instead.
+ * **Do not** reimplement shift/override/coverage resolution elsewhere — extend the engine instead.
  */
 export async function rosterForDate(
   date: Date,
@@ -33,6 +39,7 @@ export async function rosterForDate(
     return emptyRoster();
   }
 
+  const ctx = grid.dayCountContexts[dayIndex];
   const amEmployees: RosterEmployee[] = [];
   const pmEmployees: RosterEmployee[] = [];
   const offEmployees: RosterEmployee[] = [];
@@ -52,13 +59,18 @@ export async function rosterForDate(
       offEmployees.push(emp);
       continue;
     }
-    if (cell.availability === 'WORK') {
-      if (cell.effectiveShift === 'MORNING') amEmployees.push(emp);
-      else if (cell.effectiveShift === 'EVENING') pmEmployees.push(emp);
-      else if (cell.effectiveShift === 'SPLIT') {
-        amEmployees.push(emp);
-        pmEmployees.push(emp);
-      } else offEmployees.push(emp);
+    if (cell.availability === 'WORK' && ctx) {
+      const { am, pm } = shiftAmPmContribution(
+        cell.effectiveShift,
+        ctx.operatingPeriods,
+        ctx.dayOfWeek,
+        ctx.isRamadan,
+        ctx.maxDailyHours,
+        cell.segments
+      );
+      if (am) amEmployees.push(emp);
+      if (pm) pmEmployees.push(emp);
+      if (!am && !pm) offEmployees.push(emp);
     } else {
       offEmployees.push(emp);
     }
@@ -76,24 +88,15 @@ export async function rosterForDate(
     });
   }
 
-  const warnings: RosterWarnings = [];
-  const dayOfWeek = d.getUTCDay();
-  const isFriday = dayOfWeek === 5;
-  if (isFriday) {
-    if (amEmployees.length > 0) {
-      warnings.push(`Friday is PM-only; AM count (${amEmployees.length}) must be 0`);
-    }
-  } else {
-    if (amEmployees.length < 2) {
-      warnings.push(`AM count (${amEmployees.length}) is below minimum 2`);
-    }
-    if (pmEmployees.length < 2) {
-      warnings.push(`PM count (${pmEmployees.length}) is below minimum 2`);
-    }
-    if (pmEmployees.length <= amEmployees.length) {
-      warnings.push(`PM (${pmEmployees.length}) must be greater than AM (${amEmployees.length})`);
-    }
-  }
+  const day = grid.days[dayIndex];
+  const warnings: RosterWarnings = evaluateCoverage(
+    { am: amEmployees.length, pm: pmEmployees.length },
+    day.dayOfWeek,
+    day.minAm ?? 0,
+    day.minPm ?? 0
+  ).map((i) => i.message);
+
+  const slotViolations = grid.timeCoverage.violations.filter((v) => v.date === dateStr);
 
   return {
     amEmployees,
@@ -101,6 +104,7 @@ export async function rosterForDate(
     offEmployees,
     leaveEmployees,
     warnings,
+    slotViolations,
   };
 }
 
@@ -117,5 +121,6 @@ function emptyRoster(): RosterForDateResult {
     offEmployees: [],
     leaveEmployees: [],
     warnings: [],
+    slotViolations: [],
   };
 }

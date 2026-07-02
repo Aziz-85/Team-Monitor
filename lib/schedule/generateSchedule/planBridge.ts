@@ -39,7 +39,11 @@ function simulateCountsAfterActions(
     cells: row.cells.map((cell) => {
       const action = actionByKey.get(`${row.empId}|${cell.date}`);
       if (!action || cell.availability !== 'WORK') return cell;
-      return { ...cell, effectiveShift: action.toShift as typeof cell.effectiveShift };
+      return {
+        ...cell,
+        effectiveShift: action.toShift as typeof cell.effectiveShift,
+        segments: action.segments ?? cell.segments,
+      };
     }),
   }));
 

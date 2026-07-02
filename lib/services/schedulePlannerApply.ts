@@ -1,5 +1,10 @@
 /**
  * Apply a schedule assistant plan (batch shift changes + force work).
+ *
+ * Engine v3 gate: before persisting, the resulting week is validated against the
+ * engine's 30-minute slot coverage (validateTimeCoverageForGrid). Apply is rejected
+ * with COVERAGE_INVALID + slotViolations unless the caller explicitly forces it.
+ * The audit entry records the engine validation output — it is never recomputed.
  */
 
 import { prisma } from '@/lib/db';
@@ -8,15 +13,48 @@ import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/schedu
 import { clearCoverageValidationCache } from './coverageValidation';
 import { logAudit } from '@/lib/audit';
 import type { PlanAction } from './schedulePlanner';
+import type { ScheduleGridResult } from './scheduleGrid';
+import { validateTimeCoverageForGrid, type TimeCoverageResult } from '@/lib/schedule/timeCoverageValidation';
+import type { SlotViolation, WorkingDayShift } from '@/lib/schedule/generateSchedule/types';
 
 export class ApplySchedulePlanError extends Error {
   constructor(
-    public code: 'LOCKED' | 'PARTIAL' | 'EMPTY',
-    message: string
+    public code: 'LOCKED' | 'PARTIAL' | 'EMPTY' | 'COVERAGE_INVALID',
+    message: string,
+    public slotViolations: SlotViolation[] = []
   ) {
     super(message);
     this.name = 'ApplySchedulePlanError';
   }
+}
+
+/** Simulate plan actions on the grid and run the engine slot validation. */
+export function validatePlanCoverage(
+  grid: ScheduleGridResult,
+  actions: PlanAction[]
+): TimeCoverageResult {
+  const actionByKey = new Map(actions.map((a) => [`${a.empId}|${a.date}`, a]));
+  const simulatedRows = grid.rows.map((row) => ({
+    ...row,
+    cells: row.cells.map((cell) => {
+      const action = actionByKey.get(`${row.empId}|${cell.date}`);
+      if (!action || cell.availability !== 'WORK') return cell;
+      return {
+        ...cell,
+        effectiveShift: action.toShift as typeof cell.effectiveShift,
+        segments: action.segments ?? undefined,
+      };
+    }),
+  }));
+
+  const extrasByDate = new Map<string, WorkingDayShift[]>();
+  for (const g of grid.externalCoverageShifts ?? []) {
+    const list = extrasByDate.get(g.date) ?? [];
+    list.push(g);
+    extrasByDate.set(g.date, list);
+  }
+
+  return validateTimeCoverageForGrid(simulatedRows, grid.dayCountContexts, extrasByDate);
 }
 
 export async function applySchedulePlanActions(input: {
@@ -24,10 +62,12 @@ export async function applySchedulePlanActions(input: {
   actorUserId: string;
   reason: string;
   actions: PlanAction[];
-  /** Original grid cells for overrideId lookup */
-  gridRows: Array<{ empId: string; cells: Array<{ date: string; effectiveShift: string; overrideId: string | null }> }>;
-}): Promise<{ appliedShifts: number; appliedForceWork: number; appliedGuests: number; skipped: number; errors: string[] }> {
-  const { boutiqueId, actorUserId, reason, actions, gridRows } = input;
+  /** Full engine grid output for the week (simulation + overrideId lookup). */
+  grid: ScheduleGridResult;
+  /** Apply even when slot coverage is invalid (explicit user confirmation required). */
+  force?: boolean;
+}): Promise<{ appliedShifts: number; appliedForceWork: number; appliedGuests: number; skipped: number; errors: string[]; coverage: TimeCoverageResult }> {
+  const { boutiqueId, actorUserId, reason, actions, grid, force = false } = input;
   if (actions.length === 0) {
     throw new ApplySchedulePlanError('EMPTY', 'No actions to apply');
   }
@@ -42,8 +82,18 @@ export async function applySchedulePlanActions(input: {
     throw e;
   }
 
+  // Engine v3 validation gate: CoverageValid must be true before Apply.
+  const coverage = validatePlanCoverage(grid, actions);
+  if (!coverage.valid && !force) {
+    throw new ApplySchedulePlanError(
+      'COVERAGE_INVALID',
+      `Plan leaves ${coverage.violations.length} time slot(s) below minimum coverage`,
+      coverage.violations
+    );
+  }
+
   const cellLookup = new Map<string, { effectiveShift: string; overrideId: string | null }>();
-  for (const row of gridRows) {
+  for (const row of grid.rows) {
     for (const cell of row.cells) {
       cellLookup.set(`${row.empId}|${cell.date}`, {
         effectiveShift: cell.effectiveShift,
@@ -81,6 +131,7 @@ export async function applySchedulePlanActions(input: {
         newShift: action.toShift,
         originalEffectiveShift: cell?.effectiveShift ?? action.fromShift,
         overrideId: cell?.overrideId ?? null,
+        segments: action.segments,
       });
     }
   }
@@ -122,13 +173,23 @@ export async function applySchedulePlanActions(input: {
 
   clearCoverageValidationCache();
 
+  // Audit reads the engine validation output computed above — no second calculation.
   await logAudit(
     actorUserId,
     'SCHEDULE_PLAN_APPLY',
     'SchedulePlan',
     `${boutiqueId}:${dates[0]}`,
     null,
-    JSON.stringify({ appliedShifts, appliedForceWork, appliedGuests: 0, actionCount: actions.length }),
+    JSON.stringify({
+      appliedShifts,
+      appliedForceWork,
+      appliedGuests: 0,
+      actionCount: actions.length,
+      coverageValid: coverage.valid,
+      slotViolationCount: coverage.violations.length,
+      slotViolations: coverage.violations.slice(0, 20),
+      forced: force && !coverage.valid,
+    }),
     reason,
     { module: 'SCHEDULE', weekStart: dates[0] }
   );
@@ -139,5 +200,6 @@ export async function applySchedulePlanActions(input: {
     appliedGuests: 0,
     skipped: errors.length,
     errors,
+    coverage,
   };
 }

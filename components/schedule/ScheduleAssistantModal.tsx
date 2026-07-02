@@ -39,6 +39,9 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatLine[]>([]);
+  const [applyViolations, setApplyViolations] = useState<
+    Array<{ date: string; startTime: string; endTime: string; coverage: number; minCoverage: number }>
+  >([]);
   const fetchSeq = useRef(0);
 
   const scenario: SchedulePlanScenario | null = useMemo(() => {
@@ -81,10 +84,11 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     void fetchPlan();
   }, [open, weekStart, fetchPlan, t]);
 
-  const applyPlan = useCallback(async () => {
+  const applyPlan = useCallback(async (force = false) => {
     if (!scenario || scenario.actions.length === 0) return;
     setApplying(true);
     setError(null);
+    if (!force) setApplyViolations([]);
     try {
       const res = await fetch('/api/schedule/week/plan/apply', {
         method: 'POST',
@@ -93,10 +97,17 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
           weekStart,
           reason: reason.trim() || 'Schedule assistant plan',
           actions: scenario.actions,
+          force,
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data.error as string) || `Failed (${res.status})`);
+      if (!res.ok) {
+        if (data.code === 'COVERAGE_INVALID' && Array.isArray(data.slotViolations)) {
+          setApplyViolations(data.slotViolations);
+        }
+        throw new Error((data.error as string) || `Failed (${res.status})`);
+      }
+      setApplyViolations([]);
       onApplied();
       onClose();
     } catch (e) {
@@ -295,6 +306,30 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                       </table>
                     </div>
                   </div>
+
+                  {applyViolations.length > 0 && (
+                    <div className="rounded-lg border border-red-300 bg-red-50 p-3">
+                      <p className="text-xs font-semibold text-red-900">
+                        {(t('schedule.assistant.coverageBlocked') as string) ||
+                          'Apply blocked: time slots below minimum coverage'}
+                      </p>
+                      <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-xs text-red-900">
+                        {applyViolations.map((v, i) => (
+                          <li key={`${v.date}-${v.startTime}-${i}`}>
+                            • {v.date} {v.startTime}–{v.endTime}: {v.coverage}/{v.minCoverage}
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => void applyPlan(true)}
+                        disabled={applying}
+                        className="mt-2 rounded border border-red-400 bg-white px-3 py-1 text-xs font-medium text-red-700 disabled:opacity-50"
+                      >
+                        {(t('schedule.assistant.applyAnyway') as string) || 'Apply anyway'}
+                      </button>
+                    </div>
+                  )}
 
                   {scenario.actions.length > 0 && (
                     <label className="block">

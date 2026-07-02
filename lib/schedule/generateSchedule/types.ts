@@ -94,8 +94,10 @@ export type GenerateScheduleInput = {
   unavailability: Unavailability[];
   settings: GenerateScheduleSettings;
   historicalStats: HistoricalEmployeeStats[];
-  /** Existing grid shifts — generator proposes changes only where needed. */
+  /** Existing grid shifts — used when preserveExisting is true. */
   currentShifts?: Array<{ empId: string; date: string; shift: string; availability: string }>;
+  /** When false (default for Generate Schedule), build fresh from scratch. */
+  preserveExisting?: boolean;
 };
 
 export type SlotViolation = {

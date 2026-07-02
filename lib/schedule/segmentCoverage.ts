@@ -9,7 +9,6 @@ import {
   periodBounds,
   segmentFromPeriodEnd,
   segmentFromPeriodStart,
-  mergeAdjacentSegments,
 } from '@/lib/schedule/generateSchedule/timeSlots';
 import { FRIDAY_DOW } from '@/lib/schedule/generateSchedule/operatingPeriods';
 import type { ShiftCountBucket } from '@/lib/schedule/shiftRules';
@@ -45,21 +44,8 @@ export function shiftToSegmentsForCounting(
     const idx = periods.length >= 2 ? 1 : 0;
     return [segmentFromPeriodEnd(periods[idx], idx, maxDailyHours)];
   }
-  if (s === 'SPLIT') {
-    if (periods.length >= 2) {
-      const half = maxDailyHours / 2;
-      return mergeAdjacentSegments([
-        segmentFromPeriodStart(periods[0], 0, half),
-        segmentFromPeriodStart(periods[1], 1, half),
-      ]);
-    }
-    if (!periods.length) return [];
-    const half = maxDailyHours / 2;
-    return mergeAdjacentSegments([
-      segmentFromPeriodStart(periods[0], 0, half),
-      segmentFromPeriodEnd(periods[0], 0, half),
-    ]);
-  }
+  // SPLIT without saved segments: no synthetic time blocks (avoids fixed 09:30–13:30 + 18:30–22:30 gap).
+  if (s === 'SPLIT') return [];
   return [];
 }
 
@@ -129,10 +115,11 @@ export function shiftAmPmContribution(
 ): AmPmContribution {
   const s = normalizeShiftToken(shift);
   if (s === 'COVER_RASHID_AM' || s === 'COVER_RASHID_PM') return { am: false, pm: false };
-  const segments =
-    explicitSegments && explicitSegments.length > 0
-      ? explicitSegments
-      : shiftToSegmentsForCounting(shift, periods, maxDailyHours);
+  if (explicitSegments && explicitSegments.length > 0) {
+    return segmentsAmPmContribution(explicitSegments, periods, dayOfWeek, isRamadan);
+  }
+  if (s === 'SPLIT') return { am: true, pm: true };
+  const segments = shiftToSegmentsForCounting(shift, periods, maxDailyHours);
   return segmentsAmPmContribution(segments, periods, dayOfWeek, isRamadan);
 }
 

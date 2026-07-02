@@ -168,7 +168,7 @@ function pickEmployeeForSlot(
     const existing = state.get(key);
     const currentSegments = existing?.segments ?? [];
 
-    const extended = extendShiftToCoverSlot(currentSegments, slot, period, maxDaily);
+    const extended = extendShiftToCoverSlot(currentSegments, slot, period, maxDaily, allowOvertime);
     if (extended) {
       const indexes = new Set(extended.map((s) => s.periodIndex));
       const wouldSplit = indexes.size >= 2;
@@ -200,7 +200,7 @@ function pickEmployeeForSlot(
 
     const otherPeriod = bundle.operatingPeriods[otherPeriodIdx];
     const otherSeg = segmentFromPeriodStart(otherPeriod, otherPeriodIdx, maxDaily / 2);
-    const slotSeg = extendShiftToCoverSlot([], slot, period, maxDaily / 2);
+    const slotSeg = extendShiftToCoverSlot([], slot, period, maxDaily / 2, allowOvertime);
     if (!slotSeg) continue;
     const combined = mergeAdjacentSegments([...slotSeg, otherSeg]);
     if (dayTotalHours(combined) > maxDaily && !allowOvertime) continue;
@@ -237,11 +237,13 @@ function solveScenario(
     for (const emp of allEmployees) {
       if (!isEmployeeAvailable(emp, day.date, day.dayOfWeek, weeklyOffOverrides, unavail)) continue;
 
-      const current = input.currentShifts?.find((s) => s.empId === emp.empId && s.date === day.date);
-      if (current && current.availability === 'WORK' && current.shift !== 'NONE') {
-        const segments = gridShiftToSegments(current.shift, day.operatingPeriods, maxDaily);
-        if (segments.length) {
-          upsertShift(state, emp, day.date, segments, 'Preserved from current schedule');
+      if (input.preserveExisting) {
+        const current = input.currentShifts?.find((s) => s.empId === emp.empId && s.date === day.date);
+        if (current && current.availability === 'WORK' && current.shift !== 'NONE') {
+          const segments = gridShiftToSegments(current.shift, day.operatingPeriods, maxDaily);
+          if (segments.length) {
+            upsertShift(state, emp, day.date, segments, 'Preserved from current schedule');
+          }
         }
       }
     }

@@ -11,6 +11,12 @@ import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
+import {
+  formatSlotViolationMessage,
+  groupSlotViolationsByDate,
+} from '@/lib/schedule/timeCoverageValidation';
+import type { DayCountContext } from '@/lib/services/scheduleGrid';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { buildCoverageByDay } from '@/lib/schedule/coverageItems';
@@ -158,6 +164,7 @@ type GridCell = {
   effectiveShift: string;
   overrideId: string | null;
   baseShift: string;
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 type GridRow = { empId: string; name: string; nameAr?: string | null; team: string; cells: GridCell[] };
@@ -175,6 +182,8 @@ type GridData = {
     rashidPmCount?: number;
   }>;
   integrityWarnings?: string[];
+  dayCountContexts?: DayCountContext[];
+  timeCoverage?: { valid: boolean; violations: SlotViolation[] };
 };
 
 type ValidationResult = { type: string; message: string };
@@ -512,21 +521,28 @@ export function ScheduleViewClient({
   }, []);
 
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> =>
-      gridData?.days.map((day, i) => {
-        const count = gridData.counts[i];
-        const am = count?.amCount ?? 0;
-        const pm = count?.pmCount ?? 0;
-        const minAm = day.minAm ?? 2;
-        const minPm = day.minPm ?? 0;
-        const isFriday = day.dayOfWeek === 5;
-        const validations: ValidationResult[] = [];
-        const effectiveMinAm = !isFriday ? Math.max(minAm ?? 2, 2) : 0;
-        if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: t('schedule.warningRashidOverflow') });
-        if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: t('schedule.minAmTwo') });
-        if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: t('schedule.warningMinPm') });
-        return { date: day.date, validations };
-      }) ?? [],
+    (): Array<{ date: string; validations: ValidationResult[] }> => {
+      const slotByDate = groupSlotViolationsByDate(gridData?.timeCoverage?.violations ?? []);
+      return (
+        gridData?.days.map((day, i) => {
+          const count = gridData.counts[i];
+          const am = count?.amCount ?? 0;
+          const pm = count?.pmCount ?? 0;
+          const minAm = day.minAm ?? 2;
+          const minPm = day.minPm ?? 0;
+          const isFriday = day.dayOfWeek === 5;
+          const validations: ValidationResult[] = [];
+          for (const v of slotByDate.get(day.date) ?? []) {
+            validations.push({ type: 'SLOT_COVERAGE', message: formatSlotViolationMessage(v) });
+          }
+          const effectiveMinAm = !isFriday ? Math.max(minAm ?? 2, 2) : 0;
+          if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: t('schedule.warningRashidOverflow') });
+          if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: t('schedule.minAmTwo') });
+          if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: t('schedule.warningMinPm') });
+          return { date: day.date, validations };
+        }) ?? []
+      );
+    },
     [gridData, t]
   );
 

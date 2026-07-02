@@ -1,6 +1,10 @@
 /**
- * Canonical schedule coverage policy (Sat–Thu vs Friday).
- * Single source for validation, suggestions, and the schedule assistant planner.
+ * AM/PM bucket policy (Sat–Thu vs Friday) — legacy dashboard warnings layer.
+ *
+ * Engine v3: this is NOT the coverage engine. Real coverage validation is per
+ * 30-minute time slot from saved segments (lib/schedule/engine). This module only
+ * maps engine-derived AM/PM projections onto human-readable bucket warnings and
+ * powers advisory editor checks. Do not use it to decide schedule validity.
  */
 
 import { FRIDAY_DAY_OF_WEEK } from '@/lib/services/shift';

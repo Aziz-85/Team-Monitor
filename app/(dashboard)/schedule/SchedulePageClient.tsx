@@ -5,7 +5,13 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { ScheduleExcelViewClient } from '@/app/(dashboard)/schedule/excel/ScheduleExcelViewClient';
 import { useT } from '@/lib/i18n/useT';
-import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
+import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
+import {
+  formatSlotViolationMessage,
+  groupSlotViolationsByDate,
+  validateTimeCoverageForGrid,
+} from '@/lib/schedule/timeCoverageValidation';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { buildScheduleDisplayNames, getScheduleDisplayName, type ScheduleNameSlot } from '@/lib/schedule/displayName';
 import { getWeekStartSaturday } from '@/lib/utils/week';
@@ -82,6 +88,7 @@ type GridCell = {
   effectiveShift: string;
   overrideId: string | null;
   baseShift: string;
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 type GridRow = { empId: string; name: string; cells: GridCell[] };
@@ -93,6 +100,8 @@ type GridData = {
   days: GridDay[];
   rows: GridRow[];
   counts: Array<{ amCount: number; pmCount: number }>;
+  dayCountContexts?: DayCountContext[];
+  timeCoverage?: { valid: boolean; violations: SlotViolation[] };
 };
 
 type MonthData = {
@@ -215,23 +224,54 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
 
   const draftCounts = useMemo((): Array<{ amCount: number; pmCount: number }> => {
     if (!gridData?.rows.length) return [];
-    const dayCounts = computeCountsFromGridRows(gridData.rows, getDraftShift);
+    const dayCounts = computeCountsFromGridRows(
+      gridData.rows,
+      getDraftShift,
+      gridData.dayCountContexts
+    );
     return dayCounts.map((c) => ({ amCount: c.amCount, pmCount: c.pmCount }));
   }, [gridData, getDraftShift]);
 
+  const effectiveTimeCoverage = useMemo(() => {
+    if (!gridData?.dayCountContexts?.length) {
+      return gridData?.timeCoverage ?? { valid: true, violations: [] };
+    }
+    if (!pendingEdits.size) return gridData.timeCoverage ?? { valid: true, violations: [] };
+    const rows = gridData.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => ({
+        ...cell,
+        effectiveShift: getDraftShift(row.empId, cell.date, cell.effectiveShift),
+      })),
+    }));
+    return validateTimeCoverageForGrid(rows as ServerGridRow[], gridData.dayCountContexts);
+  }, [gridData, pendingEdits.size, getDraftShift]);
+
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> =>
-      gridData?.days.map((day, i) => {
-        const count = draftCounts[i] ?? gridData.counts[i];
-        const am = count?.amCount ?? 0;
-        const pm = count?.pmCount ?? 0;
-        const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
-        const validations: ValidationResult[] = [];
-        if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
-        if (effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: `AM (${am}) < ${effectiveMinAm}`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
-        return { date: day.date, validations };
-      }) ?? [],
-    [gridData, draftCounts]
+    (): Array<{ date: string; validations: ValidationResult[] }> => {
+      const slotByDate = groupSlotViolationsByDate(effectiveTimeCoverage.violations);
+      return (
+        gridData?.days.map((day, i) => {
+          const count = draftCounts[i] ?? gridData.counts[i];
+          const am = count?.amCount ?? 0;
+          const pm = count?.pmCount ?? 0;
+          const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
+          const validations: ValidationResult[] = [];
+          for (const v of slotByDate.get(day.date) ?? []) {
+            validations.push({
+              type: 'SLOT_COVERAGE',
+              message: formatSlotViolationMessage(v),
+              amCount: am,
+              pmCount: pm,
+            });
+          }
+          if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
+          if (effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: `AM (${am}) < ${effectiveMinAm}`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
+          return { date: day.date, validations };
+        }) ?? []
+      );
+    },
+    [gridData, draftCounts, effectiveTimeCoverage.violations]
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
 

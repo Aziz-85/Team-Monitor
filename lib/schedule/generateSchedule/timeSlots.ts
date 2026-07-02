@@ -192,43 +192,71 @@ export function segmentFromPeriodEnd(
   };
 }
 
-/** Extend or add segment to cover a slot (same period, respects max daily hours). */
+/** Extend or add segment to cover a slot (supports non-contiguous segments in same period). */
 export function extendShiftToCoverSlot(
   segments: ShiftSegment[],
   slot: TimeSlot,
   period: OperatingPeriod,
-  maxDailyHours: number
+  maxDailyHours: number,
+  allowOvertime = false
 ): ShiftSegment[] | null {
   const slotStart = parseTimeToMinutes(slot.startTime);
   let slotEnd = parseTimeToMinutes(slot.endTime);
   if (slotEnd <= slotStart) slotEnd += 24 * 60;
 
-  const existing = segments.find((s) => s.periodIndex === slot.periodIndex);
-  if (existing) {
-    const { start, end } = segmentRangeMinutes(existing);
-    const newStart = Math.min(start, slotStart);
-    const newEnd = Math.max(end, slotEnd);
-    if ((newEnd - newStart) / 60 > maxDailyHours) return null;
-    const updated = segments.filter((s) => s.periodIndex !== slot.periodIndex);
-    updated.push({
-      periodIndex: slot.periodIndex,
-      startTime: formatMinutesAsTime(newStart),
-      endTime: formatMinutesAsTime(newEnd),
+  const samePeriod = segments.filter((s) => s.periodIndex === slot.periodIndex);
+  const otherPeriods = segments.filter((s) => s.periodIndex !== slot.periodIndex);
+
+  if (samePeriod.length) {
+    const covering = samePeriod.find((seg) => {
+      const { start, end } = segmentRangeMinutes(seg);
+      return start <= slotStart && end >= slotEnd;
     });
-    return mergeAdjacentSegments(updated);
+    if (covering) return segments;
+
+    const adjacent = samePeriod.find((seg) => {
+      const { start, end } = segmentRangeMinutes(seg);
+      return !(slotEnd <= start || slotStart >= end);
+    });
+
+    if (adjacent) {
+      const { start, end } = segmentRangeMinutes(adjacent);
+      const newStart = Math.min(start, slotStart);
+      const newEnd = Math.max(end, slotEnd);
+      const updatedSeg: ShiftSegment = {
+        periodIndex: slot.periodIndex,
+        startTime: formatMinutesAsTime(newStart),
+        endTime: formatMinutesAsTime(newEnd),
+      };
+      const combined = [...otherPeriods, ...samePeriod.filter((s) => s !== adjacent), updatedSeg];
+      const hours = dayTotalHours(combined);
+      if (hours > maxDailyHours && !allowOvertime) return null;
+      return mergeAdjacentSegments(combined);
+    }
+
+    const newSeg: ShiftSegment = {
+      periodIndex: slot.periodIndex,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    };
+    const combined = [...segments, newSeg];
+    const hours = dayTotalHours(combined);
+    if (hours > maxDailyHours && !allowOvertime) return null;
+    return mergeAdjacentSegments(combined);
   }
 
   const { start: pStart, end: pEnd } = periodBounds(period);
   const segStart = Math.max(pStart, slotStart);
   const segEnd = Math.min(pEnd, segStart + maxDailyHours * 60);
   if (segEnd <= segStart) return null;
-  if (segEnd < slotEnd) return null;
-  return mergeAdjacentSegments([
-    ...segments,
-    {
-      periodIndex: slot.periodIndex,
-      startTime: formatMinutesAsTime(segStart),
-      endTime: formatMinutesAsTime(segEnd),
-    },
-  ]);
+  if (segEnd < slotEnd && !allowOvertime) return null;
+  const newSeg: ShiftSegment = {
+    periodIndex: slot.periodIndex,
+    startTime: formatMinutesAsTime(segStart),
+    endTime: formatMinutesAsTime(Math.max(segEnd, slotEnd)),
+  };
+  const combined = [...segments, newSeg];
+  const hours = dayTotalHours(combined);
+  if (hours > maxDailyHours && !allowOvertime) return null;
+  return mergeAdjacentSegments(combined);
 }

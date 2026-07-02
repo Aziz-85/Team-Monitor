@@ -40,6 +40,11 @@ export function isOverrideShiftForbiddenOnDate(date: Date, shift: string): boole
   return isAmShiftForbiddenOnDate(date, s as 'MORNING' | 'COVER_RASHID_AM');
 }
 
+/**
+ * @deprecated Engine v3: legacy enum-bucket counter. Kept only as a fallback for callers
+ * without DayCountContext. All server paths must pass dayCountContexts so counts derive
+ * from segments (lib/schedule/segmentCoverage.ts).
+ */
 export function incrementCountsForWorkingShift(counts: ShiftCountBucket, shift: string): void {
   const s = normalizeShiftToken(shift);
   if (s === 'MORNING') counts.amCount++;

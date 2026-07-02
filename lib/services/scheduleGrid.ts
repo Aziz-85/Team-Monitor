@@ -15,7 +15,7 @@ import { isRamadan } from '@/lib/time/ramadan';
 import { getWeekIndexInYear, FRIDAY_DAY_OF_WEEK } from './shift';
 import type { ShiftType } from './shift';
 import { incrementCountsForWorkingShift } from '@/lib/schedule/shiftRules';
-import { incrementCountsFromShiftCoverage, shiftAmPmContribution } from '@/lib/schedule/segmentCoverage';
+import { incrementCountsFromShiftCoverage, shiftAmPmContribution, shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
 import { buildWeekOperatingConfigs } from '@/lib/schedule/generateSchedule/operatingPeriods';
 import { getRamadanRange } from '@/lib/time/ramadan';
 import type { OperatingPeriod } from '@/lib/schedule/generateSchedule/types';
@@ -24,6 +24,8 @@ import { getEmployeeTeamsForDateRange } from './employeeTeam';
 import { buildEmployeeWhereForOperational, employeeOrderByStable } from '@/lib/employee/employeeQuery';
 import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { toRiyadhDateString } from '@/lib/time';
+import { validateTimeCoverageForGrid } from '@/lib/schedule/timeCoverageValidation';
+import { loadSegmentsByOverrideIds } from '@/lib/schedule/shiftOverrideSegments';
 
 export type DayCountContext = {
   date: string;
@@ -63,6 +65,8 @@ export type GridCell = {
   effectiveShift: ShiftType;
   overrideId: string | null;
   baseShift: ShiftType;
+  /** Saved time segments when override has ShiftOverrideSegment rows. */
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 export type GridRow = {
@@ -100,7 +104,11 @@ export type DayCounts = {
  * Used by grid builder and by unit tests to prevent regression.
  */
 export function computeDayCountsFromCells(
-  cells: Array<{ availability: string; effectiveShift: string }>,
+  cells: Array<{
+    availability: string;
+    effectiveShift: string;
+    segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
+  }>,
   dayContext?: DayCountContext
 ): DayCounts {
   const counts: DayCounts = { amCount: 0, pmCount: 0, rashidAmCount: 0, rashidPmCount: 0 };
@@ -113,7 +121,8 @@ export function computeDayCountsFromCells(
         dayContext.operatingPeriods,
         dayContext.dayOfWeek,
         dayContext.isRamadan,
-        dayContext.maxDailyHours
+        dayContext.maxDailyHours,
+        cell.segments
       );
     } else {
       incrementCountsForWorkingShift(counts, cell.effectiveShift);
@@ -128,9 +137,22 @@ export function computeDayCountsFromCells(
  * getEffectiveShift(empId, date, serverEffectiveShift) => effective shift for that cell (e.g. draft or server).
  */
 export function computeCountsFromGridRows(
-  rows: Array<{ empId: string; cells: Array<{ date: string; availability: string; effectiveShift: string }> }>,
+  rows: Array<{
+    empId: string;
+    cells: Array<{
+      date: string;
+      availability: string;
+      effectiveShift: string;
+      segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
+    }>;
+  }>,
   getEffectiveShift: (empId: string, date: string, serverShift: string) => string = (_e, _d, s) => s,
-  dayContexts?: DayCountContext[]
+  dayContexts?: DayCountContext[],
+  getEffectiveSegments?: (
+    empId: string,
+    date: string,
+    serverSegments: GridCell['segments']
+  ) => GridCell['segments']
 ): DayCounts[] {
   const dayCount = rows[0]?.cells.length ?? 0;
   const counts: DayCounts[] = Array.from({ length: dayCount }, () => ({
@@ -145,6 +167,9 @@ export function computeCountsFromGridRows(
       const shift = getEffectiveShift(row.empId, cell.date, cell.effectiveShift);
       if (cell.availability !== 'WORK') continue;
       const ctx = dayContexts?.[i];
+      const segments = getEffectiveSegments
+        ? getEffectiveSegments(row.empId, cell.date, cell.segments)
+        : cell.segments;
       if (ctx) {
         incrementCountsFromShiftCoverage(
           counts[i],
@@ -152,7 +177,8 @@ export function computeCountsFromGridRows(
           ctx.operatingPeriods,
           ctx.dayOfWeek,
           ctx.isRamadan,
-          ctx.maxDailyHours
+          ctx.maxDailyHours,
+          segments
         );
       } else {
         incrementCountsForWorkingShift(counts[i], shift);
@@ -168,6 +194,12 @@ export type ScheduleGridResult = {
   rows: GridRow[];
   /** For each day index. Single source of truth: derived from same rows/cells as view. */
   counts: DayCounts[];
+  /** Operating periods per day for segment-based counting and slot validation. */
+  dayCountContexts: DayCountContext[];
+  /** 30-minute slot coverage from saved segments. */
+  timeCoverage: { valid: boolean; violations: import('@/lib/schedule/generateSchedule/types').SlotViolation[] };
+  /** External (guest) coverage as engine working shifts — reused by Apply-time validation. */
+  externalCoverageShifts: import('@/lib/schedule/generateSchedule/types').WorkingDayShift[];
   /** Data integrity: e.g. "Friday AM present" when override data is invalid (read-only indicator). */
   integrityWarnings?: string[];
 };
@@ -236,6 +268,7 @@ export async function getScheduleGridForWeek(
 
   // Guest shifts (other-boutique employees at host): used only for day counts, not roster rows
   const guestShiftCountsByDay = dateStrs.map(() => ({ am: 0, pm: 0 }));
+  const guestWorkingByDate = new Map<string, import('@/lib/schedule/generateSchedule/types').WorkingDayShift[]>();
   if (boutiqueIds.length > 0 && !options.empId) {
     const guestOverrides = await prisma.shiftOverride.findMany({
       where: {
@@ -248,22 +281,41 @@ export async function getScheduleGridForWeek(
           active: true,
         },
       },
-      select: { date: true, overrideShift: true },
+      select: { id: true, date: true, overrideShift: true, empId: true, employee: { select: { name: true } } },
     });
+    const guestSegmentMap = await loadSegmentsByOverrideIds(guestOverrides.map((g) => g.id));
     for (const o of guestOverrides) {
       const dateStr = o.date.toISOString().slice(0, 10);
       const i = dateStrs.indexOf(dateStr);
       if (i >= 0) {
         const ctx = dayCountContexts[i];
+        const saved = guestSegmentMap.get(o.id);
         const contrib = shiftAmPmContribution(
           o.overrideShift,
           ctx.operatingPeriods,
           ctx.dayOfWeek,
           ctx.isRamadan,
-          ctx.maxDailyHours
+          ctx.maxDailyHours,
+          saved
         );
         if (contrib.am) guestShiftCountsByDay[i].am += 1;
         if (contrib.pm) guestShiftCountsByDay[i].pm += 1;
+
+        const segments =
+          saved ??
+          shiftToSegmentsForCounting(o.overrideShift, ctx.operatingPeriods, ctx.maxDailyHours);
+        if (segments.length) {
+          const list = guestWorkingByDate.get(dateStr) ?? [];
+          list.push({
+            empId: o.empId,
+            name: o.employee.name,
+            date: dateStr,
+            isExternalSupport: true,
+            segments,
+            reasons: ['External coverage'],
+          });
+          guestWorkingByDate.set(dateStr, list);
+        }
       }
     }
   }
@@ -288,6 +340,9 @@ export async function getScheduleGridForWeek(
       days,
       rows: [],
       counts: days.map(() => ({ amCount: 0, pmCount: 0, rashidAmCount: 0, rashidPmCount: 0 })),
+      dayCountContexts,
+      timeCoverage: validateTimeCoverageForGrid([], dayCountContexts),
+      externalCoverageShifts: [],
     };
   }
 
@@ -321,6 +376,8 @@ export async function getScheduleGridForWeek(
     const key = `${o.empId}_${o.date.toISOString().slice(0, 10)}`;
     overrideByKey.set(key, { id: o.id, overrideShift: o.overrideShift });
   }
+
+  const segmentMap = await loadSegmentsByOverrideIds(overrides.map((o) => o.id));
 
   const leaveRangesByEmp = new Map<string, Array<{ start: Date; end: Date }>>();
   for (const l of leaves) {
@@ -462,6 +519,7 @@ export async function getScheduleGridForWeek(
         effectiveShift,
         overrideId: override?.id ?? null,
         baseShift,
+        segments: override?.id ? segmentMap.get(override.id) : undefined,
       };
     });
 
@@ -515,11 +573,17 @@ export async function getScheduleGridForWeek(
     }
   }
 
+  const timeCoverage = validateTimeCoverageForGrid(finalRows, dayCountContexts, guestWorkingByDate);
+  const externalCoverageShifts = Array.from(guestWorkingByDate.values()).flat();
+
   return {
     weekStart: dateStrs[0],
     days,
     rows: finalRows,
     counts,
+    dayCountContexts,
+    timeCoverage,
+    externalCoverageShifts,
     integrityWarnings: integrityWarnings.length > 0 ? integrityWarnings : undefined,
   };
 }

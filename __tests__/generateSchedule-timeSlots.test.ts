@@ -4,6 +4,7 @@ import {
   validateCoverage,
   buildDaySlotBundles,
   segmentFromPeriodStart,
+  extendShiftToCoverSlot,
 } from '@/lib/schedule/generateSchedule/timeSlots';
 import { operatingPeriodsForDay, FRIDAY_DOW } from '@/lib/schedule/generateSchedule/operatingPeriods';
 import { countEmployeeWeeklySplitDays } from '@/lib/schedule/generateSchedule/fairness';
@@ -66,6 +67,23 @@ describe('validateCoverage', () => {
     expect(valid).toBe(false);
     expect(violations.length).toBeGreaterThan(0);
     expect(violations[0].minCoverage).toBe(2);
+  });
+});
+
+describe('extendShiftToCoverSlot', () => {
+  it('adds non-contiguous segment in same operating period when gap exists', () => {
+    const periods = operatingPeriodsForDay(6, false);
+    const period = periods[0];
+    const slots = buildTimeSlots(periods, '2026-06-20', 30);
+    const eveningSlot = slots.find((s) => s.startTime === '17:30') ?? slots[slots.length - 1];
+
+    const morningBlock = segmentFromPeriodStart(period, 0, 5);
+    const extended = extendShiftToCoverSlot([morningBlock], eveningSlot, period, 8, true);
+    expect(extended).not.toBeNull();
+    const samePeriod = extended!.filter((s) => s.periodIndex === 0);
+    expect(samePeriod.length).toBe(2);
+    expect(samePeriod.some((s) => s.startTime === '09:30' && s.endTime === '14:30')).toBe(true);
+    expect(samePeriod.some((s) => s.startTime === '17:30')).toBe(true);
   });
 });
 

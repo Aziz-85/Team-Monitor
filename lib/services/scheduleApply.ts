@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
 import { EDITOR_OVERRIDE_SHIFTS, isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
+import { replaceOverrideSegments } from '@/lib/schedule/shiftOverrideSegments';
 import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/scheduleLockGuard';
 import { getWeekStart } from '@/lib/services/scheduleLock';
 import { toYmdRiyadh, ensureForceWorkAndCompCredit, getEffectiveWeeklyOffDay, getDowRiyadhFromYmd } from '@/lib/schedule/dayOverride';
@@ -97,6 +98,7 @@ export type ChangeItem = {
   newShift: string;
   originalEffectiveShift: string;
   overrideId: string | null;
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 export type GridSavePayload = {
@@ -150,7 +152,7 @@ export async function applyScheduleGridSave(
   const skipped: Array<{ empId: string; date: string; reason: string }> = [];
 
   for (const edit of changes) {
-    const { empId, date, newShift, originalEffectiveShift, overrideId } = edit;
+    const { empId, date, newShift, originalEffectiveShift, overrideId, segments } = edit;
     if (!empId || !date) continue;
     const shift = String(newShift).toUpperCase();
     if (!ALLOWED_SHIFTS.includes(shift as (typeof ALLOWED_SHIFTS)[number])) continue;
@@ -169,6 +171,7 @@ export async function applyScheduleGridSave(
           where: { id: overrideId },
           data: { isActive: false },
         });
+        await replaceOverrideSegments(overrideId, null);
         applied++;
       } else if (overrideId) {
         await prisma.shiftOverride.update({
@@ -178,6 +181,7 @@ export async function applyScheduleGridSave(
             reason,
           },
         });
+        await replaceOverrideSegments(overrideId, segments);
         applied++;
         if ((shift === 'MORNING' || shift === 'EVENING' || shift === 'SPLIT') && overrideBoutiqueId) {
           const ymdRiyadh = toYmdRiyadh(dateObj);
@@ -193,7 +197,7 @@ export async function applyScheduleGridSave(
           }
         }
       } else {
-        await prisma.shiftOverride.upsert({
+        const created = await prisma.shiftOverride.upsert({
           where: { empId_date: { empId, date: dateObj } },
           create: {
             empId,
@@ -210,6 +214,7 @@ export async function applyScheduleGridSave(
             isActive: true,
           },
         });
+        await replaceOverrideSegments(created.id, segments);
         applied++;
         if ((shift === 'MORNING' || shift === 'EVENING' || shift === 'SPLIT') && overrideBoutiqueId) {
           const ymdRiyadh = toYmdRiyadh(dateObj);
@@ -232,13 +237,35 @@ export async function applyScheduleGridSave(
 
   clearCoverageValidationCache();
   const weekStart = uniqueDates.length > 0 ? getWeekStart(new Date(uniqueDates[0] + 'T00:00:00Z')) : null;
+
+  // Audit reads the engine's validation output (grid.timeCoverage) — no separate calculation.
+  let coverageSnapshot: { valid: boolean; violationCount: number } | null = null;
+  if (weekStart && options.boutiqueIds?.length) {
+    try {
+      const { getScheduleGridForWeek } = await import('./scheduleGrid');
+      const gridAfter = await getScheduleGridForWeek(weekStart, { boutiqueIds: options.boutiqueIds });
+      coverageSnapshot = {
+        valid: gridAfter.timeCoverage.valid,
+        violationCount: gridAfter.timeCoverage.violations.length,
+      };
+    } catch {
+      // audit snapshot is best-effort; save already succeeded
+    }
+  }
+
   await logAudit(
     actorUserId,
     'WEEK_SAVE',
     'ScheduleGrid',
     weekStart ?? '',
     null,
-    JSON.stringify({ reason, changesCount: changes.length, applied, dates: uniqueDates }),
+    JSON.stringify({
+      reason,
+      changesCount: changes.length,
+      applied,
+      dates: uniqueDates,
+      ...(coverageSnapshot ? { coverage: coverageSnapshot } : {}),
+    }),
     reason,
     { module: 'SCHEDULE', weekStart: weekStart ?? undefined }
   );

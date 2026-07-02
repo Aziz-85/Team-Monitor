@@ -1,17 +1,25 @@
 import { prisma } from '@/lib/db';
 import { rosterForDate } from './roster';
 import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
+import { formatSlotViolationMessage } from '@/lib/schedule/timeCoverageValidation';
 
 /**
- * Coverage Validation Engine – VALIDATION + WARNINGS ONLY.
+ * Coverage Validation — VALIDATION + WARNINGS ONLY. Reads Schedule Engine output.
  * Does NOT modify base schedules, coverage rules, or auto-adjust shifts.
- * Computed on the fly; not persisted to DB.
  *
- * **Canonical input:** uses **rosterForDate** → **getScheduleGridForWeek** counts. Do not fork AM/PM counts
- * from a second schedule implementation for new features.
+ * Engine v3: counts and slot violations come from rosterForDate → getScheduleGridForWeek
+ * (segment-aware engine projection). This module maps them onto legacy ValidationResult
+ * types for dashboards, plus SLOT_COVERAGE entries from the engine's 30-minute slot check.
+ * It never computes coverage itself.
  */
 
-export type ValidationResultType = 'MIN_AM' | 'MIN_PM' | 'AM_GT_PM' | 'AM_ON_FRIDAY' | 'PM_NOT_ABOVE_AM';
+export type ValidationResultType =
+  | 'MIN_AM'
+  | 'MIN_PM'
+  | 'AM_GT_PM'
+  | 'AM_ON_FRIDAY'
+  | 'PM_NOT_ABOVE_AM'
+  | 'SLOT_COVERAGE';
 
 export interface ValidationResult {
   type: ValidationResultType;
@@ -39,9 +47,9 @@ function toDateKey(date: Date): string {
 export type ValidateCoverageOptions = { boutiqueIds?: string[] };
 
 /**
- * Validates daily coverage using canonical policy:
- * - Sat–Thu: min 2 AM, min 2 PM, PM ≥ AM
- * - Friday: PM-only (AM = 0)
+ * Validates daily coverage from engine output:
+ * - AM/PM bucket policy (legacy dashboard types) using segment-derived counts
+ * - 30-minute slot coverage (SLOT_COVERAGE) read from grid.timeCoverage
  */
 export async function validateCoverage(
   date: Date,
@@ -106,6 +114,19 @@ export async function validateCoverage(
       pmCount,
       minAm: results[0]?.minAm ?? minAm,
       minPm: results[0]?.minPm ?? minPm,
+    });
+  }
+
+  /** Engine slot validation — read directly, never recomputed. */
+  for (const v of roster.slotViolations ?? []) {
+    results.push({
+      type: 'SLOT_COVERAGE',
+      severity: 'warning',
+      message: formatSlotViolationMessage(v),
+      amCount,
+      pmCount,
+      minAm,
+      minPm,
     });
   }
 

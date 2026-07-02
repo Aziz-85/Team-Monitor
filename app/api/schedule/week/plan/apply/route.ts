@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No schedule scope' }, { status: 403 });
   }
 
-  let body: { weekStart?: string; reason?: string; actions?: PlanAction[] };
+  let body: { weekStart?: string; reason?: string; actions?: PlanAction[]; force?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
   const weekStart = typeof body.weekStart === 'string' ? body.weekStart.trim().slice(0, 10) : '';
   const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
   const actions = Array.isArray(body.actions) ? body.actions : [];
+  const force = body.force === true;
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
     return NextResponse.json({ error: 'weekStart required' }, { status: 400 });
@@ -61,20 +62,21 @@ export async function POST(request: NextRequest) {
       actorUserId: user.id,
       reason,
       actions,
-      gridRows: grid.rows.map((r) => ({
-        empId: r.empId,
-        cells: r.cells.map((c) => ({
-          date: c.date,
-          effectiveShift: c.effectiveShift,
-          overrideId: c.overrideId,
-        })),
-      })),
+      grid,
+      force,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     if (e instanceof ApplySchedulePlanError) {
-      const status = e.code === 'LOCKED' ? 423 : 400;
-      return NextResponse.json({ error: e.message, code: e.code }, { status });
+      const status = e.code === 'LOCKED' ? 423 : e.code === 'COVERAGE_INVALID' ? 422 : 400;
+      return NextResponse.json(
+        {
+          error: e.message,
+          code: e.code,
+          slotViolations: e.slotViolations,
+        },
+        { status }
+      );
     }
     throw e;
   }

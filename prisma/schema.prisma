@@ -650,9 +650,22 @@ model ShiftOverride {
   createdAt         DateTime     @default(now())
   employee          Employee     @relation(fields: [empId], references: [empId], onDelete: Cascade)
   createdByUser     User         @relation(fields: [createdByUserId], references: [id])
+  segments          ShiftOverrideSegment[]
   @@unique([empId, date])
   @@index([boutiqueId])
   @@index([sourceBoutiqueId])
+}
+
+model ShiftOverrideSegment {
+  id              String        @id @default(cuid())
+  shiftOverrideId String
+  periodIndex     Int
+  startTime       String
+  endTime         String
+  sortOrder       Int           @default(0)
+  shiftOverride   ShiftOverride @relation(fields: [shiftOverrideId], references: [id], onDelete: Cascade)
+
+  @@index([shiftOverrideId])
 }
 
 model CoverageRule {

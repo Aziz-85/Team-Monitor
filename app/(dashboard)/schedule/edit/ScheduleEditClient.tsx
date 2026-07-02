@@ -5,7 +5,13 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
-import { computeCountsFromGridRows } from '@/lib/services/scheduleGrid';
+import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
+import {
+  formatSlotViolationMessage,
+  groupSlotViolationsByDate,
+  validateTimeCoverageForGrid,
+} from '@/lib/schedule/timeCoverageValidation';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditExcelViewClient';
 import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditMonthExcelViewClient';
 import { ScheduleCellSelect } from '@/components/schedule/ScheduleCellSelect';
@@ -243,6 +249,7 @@ type GridCell = {
   effectiveShift: string;
   overrideId: string | null;
   baseShift: string;
+  segments?: Array<{ startTime: string; endTime: string; periodIndex: number }>;
 };
 
 type GridRow = {
@@ -275,6 +282,8 @@ type GridData = {
   counts: Array<{ amCount: number; pmCount: number; rashidAmCount?: number; rashidPmCount?: number }>;
   integrityWarnings?: string[];
   suggestions?: ScheduleSuggestion[];
+  dayCountContexts?: DayCountContext[];
+  timeCoverage?: { valid: boolean; violations: SlotViolation[] };
   /** Admin only: comp day balance per empId */
   compBalanceByEmpId?: Record<string, number>;
 };
@@ -991,8 +1000,27 @@ export function ScheduleEditClient({
 
   const draftCounts = useMemo(() => {
     if (!gridData?.rows.length) return [];
-    return computeCountsFromGridRows(gridData.rows, getDraftShift);
+    return computeCountsFromGridRows(
+      gridData.rows,
+      getDraftShift,
+      gridData.dayCountContexts
+    );
   }, [gridData, getDraftShift]);
+
+  const effectiveTimeCoverage = useMemo(() => {
+    if (!gridData?.dayCountContexts?.length) {
+      return gridData?.timeCoverage ?? { valid: true, violations: [] };
+    }
+    if (!pendingEdits.size) return gridData.timeCoverage ?? { valid: true, violations: [] };
+    const rows = gridData.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => ({
+        ...cell,
+        effectiveShift: getDraftShift(row.empId, cell.date, cell.effectiveShift),
+      })),
+    }));
+    return validateTimeCoverageForGrid(rows as ServerGridRow[], gridData.dayCountContexts);
+  }, [gridData, pendingEdits.size, getDraftShift]);
 
   /** Per-day guest (external coverage) counts so AM/PM columns include coverage from another branch. */
   const guestCountsByDay = useMemo(() => {
@@ -1121,21 +1149,33 @@ export function ScheduleEditClient({
   }, [searchParams]);
 
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> =>
-      gridData?.days.map((day, i) => {
-        const count = displayCounts[i] ?? gridData.counts[i];
-        const am = count?.amCount ?? 0;
-        const pm = count?.pmCount ?? 0;
-        const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
-        const minPm = day.minPm ?? 0;
-        const isFriday = day.dayOfWeek === 5;
-        const validations: ValidationResult[] = [];
-        if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: (t('schedule.warningRashidOverflow') as string) || `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
-        if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: (t('schedule.minAmTwo') as string) || `AM must be at least ${effectiveMinAm} (${am} present)`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
-        if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
-        return { date: day.date, validations };
-      }) ?? [],
-    [gridData, displayCounts, t]
+    (): Array<{ date: string; validations: ValidationResult[] }> => {
+      const slotByDate = groupSlotViolationsByDate(effectiveTimeCoverage.violations);
+      return (
+        gridData?.days.map((day, i) => {
+          const count = displayCounts[i] ?? gridData.counts[i];
+          const am = count?.amCount ?? 0;
+          const pm = count?.pmCount ?? 0;
+          const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
+          const minPm = day.minPm ?? 0;
+          const isFriday = day.dayOfWeek === 5;
+          const validations: ValidationResult[] = [];
+          for (const v of slotByDate.get(day.date) ?? []) {
+            validations.push({
+              type: 'SLOT_COVERAGE',
+              message: formatSlotViolationMessage(v),
+              amCount: am,
+              pmCount: pm,
+            });
+          }
+          if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: (t('schedule.warningRashidOverflow') as string) || `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
+          if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: (t('schedule.minAmTwo') as string) || `AM must be at least ${effectiveMinAm} (${am} present)`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
+          if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
+          return { date: day.date, validations };
+        }) ?? []
+      );
+    },
+    [gridData, displayCounts, effectiveTimeCoverage.violations, t]
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
 

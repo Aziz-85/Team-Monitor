@@ -22,6 +22,7 @@ export function buildGenerateScheduleInput(
     fairnessRows?: EmployeeFairnessRow[];
     settings?: GenerateScheduleInput['settings'];
     ramadanRange?: { start: string; end: string } | null;
+    preserveExisting?: boolean;
   } = {}
 ): GenerateScheduleInput {
   const weekDates = grid.days.map((d) => d.date);
@@ -100,5 +101,6 @@ export function buildGenerateScheduleInput(
     settings: options.settings ?? DEFAULT_GENERATE_SETTINGS,
     historicalStats: buildHistoricalStatsFromFairnessRows(options.fairnessRows ?? []),
     currentShifts,
+    preserveExisting: options.preserveExisting ?? false,
   };
 }
