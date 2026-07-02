@@ -2,6 +2,10 @@
  * Dynamic schedule generation — operating periods, time slots, fairness.
  */
 
+import type { SolverStatus, StoppedReason } from './solverLimits';
+
+export type { SolverStatus, StoppedReason } from './solverLimits';
+
 export type OperatingPeriod = {
   startTime: string;
   endTime: string;
@@ -138,6 +142,10 @@ export type GenerateScheduleResult = {
   fairnessScore: number;
   employeeSummaries: EmployeeWeekSummary[];
   scenariosTried: number;
+  solverStatus: SolverStatus;
+  stoppedReason: StoppedReason | null;
+  iterationsByDay: Record<string, number>;
+  iterationsByScenario: number[];
 };
 
 export type DaySlotBundle = {

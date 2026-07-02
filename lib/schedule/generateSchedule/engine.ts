@@ -11,6 +11,9 @@ import type {
   GridShiftProposal,
   OperatingPeriod,
   ShiftSegment,
+  StoppedReason,
+  SolverStatus,
+  TimeSlot,
   Unavailability,
   WorkingDayShift,
 } from './types';
@@ -33,12 +36,45 @@ import {
 import { shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
 import { assignmentsToGridProposals } from './toPlanActions';
 import type { ScheduleEnginePerfCollector } from '@/lib/schedule/scheduleEnginePerf';
+import {
+  FAIRNESS_ACCEPTABLE_THRESHOLD,
+  MAX_ITERATIONS_PER_DAY,
+  MAX_SCENARIOS,
+  MAX_SOLVE_MS,
+  MAX_TOTAL_ITERATIONS,
+} from './solverLimits';
 
 export type GenerateScheduleOptions = {
   perf?: ScheduleEnginePerfCollector;
 };
 
 type DayState = Map<string, WorkingDayShift>;
+
+type SolverContext = {
+  solveStartedAt: number;
+  totalIterations: number;
+  stoppedReason: StoppedReason | null;
+  iterationsByDay: Record<string, number>;
+  iterationsByScenario: number[];
+  scenarioIndex: number;
+};
+
+function createSolverContext(): SolverContext {
+  return {
+    solveStartedAt: performance.now(),
+    totalIterations: 0,
+    stoppedReason: null,
+    iterationsByDay: {},
+    iterationsByScenario: [],
+    scenarioIndex: 0,
+  };
+}
+
+function variantKey(v: Map<string, number>): string {
+  return Array.from(v.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .join('|');
+}
 
 function unavailKey(empId: string, date: string): string {
   return `${empId}|${date}`;
@@ -130,20 +166,90 @@ function upsertShift(
   }
 }
 
-function uncoveredSlots(bundle: DaySlotBundle, dayShifts: WorkingDayShift[]) {
-  return bundle.slots
-    .map((slot) => ({
-      slot,
-      coverage: calculateCoverageForSlot(dayShifts, slot),
-      deficit: slot.minCoverage - calculateCoverageForSlot(dayShifts, slot),
-    }))
-    .filter((x) => x.deficit > 0)
-    .sort((a, b) => b.deficit - a.deficit || a.coverage - b.coverage);
+function activePeriodIndices(bundle: DaySlotBundle, dayShifts: WorkingDayShift[]): Set<number> {
+  const active = new Set<number>();
+  for (const slot of bundle.slots) {
+    if (calculateCoverageForSlot(dayShifts, slot) < slot.minCoverage) {
+      active.add(slot.periodIndex);
+    }
+  }
+  return active;
+}
+
+function worstUncoveredSlotInPeriods(
+  bundle: DaySlotBundle,
+  dayShifts: WorkingDayShift[],
+  periodIndices: Set<number>
+): { slot: TimeSlot; deficit: number } | null {
+  let worst: { slot: TimeSlot; deficit: number; coverage: number } | null = null;
+  for (const slot of bundle.slots) {
+    if (!periodIndices.has(slot.periodIndex)) continue;
+    const coverage = calculateCoverageForSlot(dayShifts, slot);
+    const deficit = slot.minCoverage - coverage;
+    if (deficit <= 0) continue;
+    if (!worst || deficit > worst.deficit || (deficit === worst.deficit && coverage < worst.coverage)) {
+      worst = { slot, deficit, coverage };
+    }
+  }
+  return worst ? { slot: worst.slot, deficit: worst.deficit } : null;
+}
+
+function computeFillSignature(
+  date: string,
+  bundle: DaySlotBundle,
+  dayShifts: WorkingDayShift[]
+): string {
+  let uncoveredCount = 0;
+  let coverageSum = 0;
+  for (const slot of bundle.slots) {
+    const coverage = calculateCoverageForSlot(dayShifts, slot);
+    coverageSum += coverage;
+    if (coverage < slot.minCoverage) uncoveredCount++;
+  }
+  return `${date}|${uncoveredCount}|${coverageSum}|${dayShifts.length}`;
+}
+
+function isStaffingImpossible(
+  input: GenerateScheduleInput,
+  bundles: DaySlotBundle[],
+  weeklyOff: Map<string, number>,
+  unavail: Map<string, string>
+): boolean {
+  const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
+  for (const bundle of bundles) {
+    let available = 0;
+    for (const emp of allEmployees) {
+      if (isEmployeeAvailable(emp, bundle.date, bundle.dayOfWeek, weeklyOff, unavail)) {
+        available++;
+      }
+    }
+    const peakMin = bundle.slots.reduce((max, slot) => Math.max(max, slot.minCoverage), 0);
+    if (available < peakMin) return true;
+  }
+  return false;
+}
+
+function budgetExceeded(ctx: SolverContext): boolean {
+  if (performance.now() - ctx.solveStartedAt >= MAX_SOLVE_MS) {
+    ctx.stoppedReason = 'SOLVE_TIMEOUT';
+    return true;
+  }
+  if (ctx.totalIterations >= MAX_TOTAL_ITERATIONS) {
+    ctx.stoppedReason = 'MAX_ITERATIONS';
+    return true;
+  }
+  return false;
+}
+
+function recordIteration(ctx: SolverContext, date: string, perf?: ScheduleEnginePerfCollector): void {
+  ctx.totalIterations++;
+  ctx.iterationsByDay[date] = (ctx.iterationsByDay[date] ?? 0) + 1;
+  perf?.addStat('constraintIterations', 1);
 }
 
 function pickEmployeeForSlot(
   candidates: EmployeeCandidate[],
-  slot: import('./types').TimeSlot,
+  slot: TimeSlot,
   bundle: DaySlotBundle,
   state: DayState,
   weeklyOff: Map<string, number>,
@@ -222,11 +328,67 @@ function pickEmployeeForSlot(
   return scored[0] ?? null;
 }
 
+function preserveExistingForDay(
+  input: GenerateScheduleInput,
+  state: DayState,
+  day: GenerateScheduleInput['days'][number],
+  weeklyOffOverrides: Map<string, number>,
+  unavail: Map<string, string>,
+  allEmployees: EmployeeCandidate[]
+): void {
+  const maxDaily = maxDailyHoursForDay(day.isRamadan, input);
+
+  for (const emp of allEmployees) {
+    if (!isEmployeeAvailable(emp, day.date, day.dayOfWeek, weeklyOffOverrides, unavail)) continue;
+
+    if (input.preserveExisting) {
+      const current = input.currentShifts?.find((s) => s.empId === emp.empId && s.date === day.date);
+      if (current && current.availability === 'WORK' && current.shift !== 'NONE') {
+        const segments = gridShiftToSegments(current.shift, day.operatingPeriods, maxDaily);
+        if (segments.length) {
+          upsertShift(state, emp, day.date, segments, 'Preserved from current schedule');
+        }
+      }
+    }
+  }
+}
+
+function buildPreservedState(
+  input: GenerateScheduleInput,
+  weeklyOffOverrides: Map<string, number>,
+  unavail: Map<string, string>
+): DayState {
+  const state: DayState = new Map();
+  const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
+  for (const day of input.days) {
+    preserveExistingForDay(input, state, day, weeklyOffOverrides, unavail, allEmployees);
+  }
+  return state;
+}
+
+function validateState(
+  bundles: DaySlotBundle[],
+  state: DayState,
+  perf?: ScheduleEnginePerfCollector
+): ReturnType<typeof validateCoverage>['violations'] {
+  const byDate = new Map<string, WorkingDayShift[]>();
+  Array.from(state.values()).forEach((shift) => {
+    const list = byDate.get(shift.date) ?? [];
+    list.push(shift);
+    byDate.set(shift.date, list);
+  });
+  const validationStarted = performance.now();
+  const { violations } = validateCoverage(bundles, byDate);
+  perf?.mark('coverageValidationMs', performance.now() - validationStarted);
+  return violations;
+}
+
 function solveScenario(
   input: GenerateScheduleInput,
   bundles: DaySlotBundle[],
   weeklyOffOverrides: Map<string, number>,
   unavail: Map<string, string>,
+  ctx: SolverContext,
   perf?: ScheduleEnginePerfCollector
 ): { state: DayState; violations: ReturnType<typeof validateCoverage>['violations'] } {
   const solveStarted = performance.now();
@@ -235,24 +397,16 @@ function solveScenario(
   const historicalLoad = new Map(input.historicalStats.map((h) => [h.empId, h.priorWeekHours]));
 
   for (const day of input.days) {
+    if (budgetExceeded(ctx)) break;
+
     const bundle = bundles.find((b) => b.date === day.date);
     if (!bundle || bundle.slots.length === 0) continue;
 
     const maxDaily = maxDailyHoursForDay(day.isRamadan, input);
+    preserveExistingForDay(input, state, day, weeklyOffOverrides, unavail, allEmployees);
 
-    for (const emp of allEmployees) {
-      if (!isEmployeeAvailable(emp, day.date, day.dayOfWeek, weeklyOffOverrides, unavail)) continue;
-
-      if (input.preserveExisting) {
-        const current = input.currentShifts?.find((s) => s.empId === emp.empId && s.date === day.date);
-        if (current && current.availability === 'WORK' && current.shift !== 'NONE') {
-          const segments = gridShiftToSegments(current.shift, day.operatingPeriods, maxDaily);
-          if (segments.length) {
-            upsertShift(state, emp, day.date, segments, 'Preserved from current schedule');
-          }
-        }
-      }
-    }
+    let dayIterations = 0;
+    const progressSeen = new Set<string>();
 
     const fillPass = (
       allowExternal: boolean,
@@ -260,22 +414,40 @@ function solveScenario(
       allowOvertime: boolean,
       reasonPrefix: string
     ) => {
-      let guard = 0;
-      while (guard++ < 500) {
+      let activePeriods = activePeriodIndices(bundle, getDayShifts(state, day.date));
+
+      while (dayIterations < MAX_ITERATIONS_PER_DAY) {
+        if (budgetExceeded(ctx)) return;
+
         const dayShifts = getDayShifts(state, day.date);
-        const gaps = uncoveredSlots(bundle, dayShifts);
-        if (!gaps.length) break;
+        if (!activePeriods.size) {
+          activePeriods = activePeriodIndices(bundle, dayShifts);
+        }
+        if (!activePeriods.size) break;
 
-        perf?.addStat('constraintIterations', 1);
+        const worst = worstUncoveredSlotInPeriods(bundle, dayShifts, activePeriods);
+        if (!worst) {
+          activePeriods.clear();
+          continue;
+        }
 
-        const { slot } = gaps[0];
+        const signature = computeFillSignature(day.date, bundle, dayShifts);
+        if (progressSeen.has(signature)) {
+          ctx.stoppedReason = 'NO_PROGRESS';
+          return;
+        }
+        progressSeen.add(signature);
+
+        recordIteration(ctx, day.date, perf);
+        dayIterations++;
+
         const pool = allowExternal
           ? allEmployees
           : input.regularEmployees.filter((e) => !e.isExternalSupport);
 
         const pick = pickEmployeeForSlot(
           pool,
-          slot,
+          worst.slot,
           bundle,
           state,
           weeklyOffOverrides,
@@ -289,63 +461,62 @@ function solveScenario(
         );
 
         if (!pick) break;
+
         upsertShift(state, pick.emp, day.date, pick.segments, `${reasonPrefix}: ${pick.reason}`);
+        activePeriods = activePeriodIndices(bundle, getDayShifts(state, day.date));
+      }
+
+      if (dayIterations >= MAX_ITERATIONS_PER_DAY && activePeriodIndices(bundle, getDayShifts(state, day.date)).size) {
+        ctx.stoppedReason = 'MAX_ITERATIONS_PER_DAY';
       }
     };
 
     fillPass(false, false, false, 'Regular coverage');
+    if (budgetExceeded(ctx)) break;
     fillPass(false, true, false, 'Split coverage');
+    if (budgetExceeded(ctx)) break;
     if (input.settings.externalSupportEmployeesAllowed) {
       fillPass(true, false, false, 'External support');
+      if (budgetExceeded(ctx)) break;
       fillPass(true, true, false, 'External + split');
+      if (budgetExceeded(ctx)) break;
     }
     fillPass(true, true, true, 'Overtime');
   }
 
   perf?.mark('solveConstraintsMs', performance.now() - solveStarted);
-
-  const byDate = new Map<string, WorkingDayShift[]>();
-  Array.from(state.values()).forEach((shift) => {
-    const list = byDate.get(shift.date) ?? [];
-    list.push(shift);
-    byDate.set(shift.date, list);
-  });
-
-  const validationStarted = performance.now();
-  const { violations } = validateCoverage(bundles, byDate);
-  perf?.mark('coverageValidationMs', performance.now() - validationStarted);
+  const violations = validateState(bundles, state, perf);
   return { state, violations };
 }
 
-function generateWeeklyOffVariants(input: GenerateScheduleInput): Map<string, number>[] {
-  const variants: Map<string, number>[] = [];
+function generateWeeklyOffVariants(input: GenerateScheduleInput, maxVariants: number): Map<string, number>[] {
   const base = new Map<string, number>();
-
   for (const emp of input.regularEmployees) {
     if (emp.weeklyOffDay !== 'NONE') base.set(emp.empId, emp.weeklyOffDay);
   }
-  variants.push(new Map(base));
+
+  const variants: Map<string, number>[] = [new Map(base)];
+  const seen = new Set<string>([variantKey(base)]);
 
   const dowSet = new Set(input.days.map((d) => d.dayOfWeek));
   const dows = Array.from(dowSet).sort((a, b) => a - b);
 
   for (const emp of input.regularEmployees) {
-    for (const dow of dows) {
-      const variant = new Map(base);
-      variant.set(emp.empId, dow);
-      variants.push(variant);
-    }
+    if (variants.length >= maxVariants) break;
+
+    const current = base.get(emp.empId);
+    const altDows = dows.filter((dow) => dow !== current);
+    if (altDows.length === 0) continue;
+
+    const variant = new Map(base);
+    variant.set(emp.empId, altDows[0]);
+    const key = variantKey(variant);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    variants.push(variant);
   }
 
-  const seen = new Set<string>();
-  return variants.filter((v) => {
-    const key = Array.from(v.entries())
-      .sort()
-      .join('|');
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, 24);
+  return variants.slice(0, maxVariants);
 }
 
 function applyWeeklyOffToUnavail(
@@ -367,9 +538,17 @@ function applyWeeklyOffToUnavail(
 
 function buildWarnings(
   violations: GenerateScheduleResult['slotViolations'],
-  assignments: EmployeeDayAssignment[]
+  assignments: EmployeeDayAssignment[],
+  solverStatus: SolverStatus
 ): string[] {
   const warnings: string[] = [];
+  if (solverStatus === 'IMPOSSIBLE') {
+    warnings.push('Staffing is insufficient to meet minimum coverage on at least one day.');
+  } else if (solverStatus === 'PARTIAL_TIMEOUT') {
+    warnings.push('Solver stopped early due to time limit; coverage may be incomplete.');
+  } else if (solverStatus === 'PARTIAL_ITERATION_LIMIT') {
+    warnings.push('Solver stopped early due to iteration limit; coverage may be incomplete.');
+  }
   if (violations.length) {
     const byDate = new Map<string, number>();
     for (const v of violations) {
@@ -387,6 +566,26 @@ function buildWarnings(
   return warnings;
 }
 
+function resolveSolverStatus(
+  violationCount: number,
+  ctx: SolverContext,
+  allScenariosImpossible: boolean
+): SolverStatus {
+  if (allScenariosImpossible) return 'IMPOSSIBLE';
+  if (violationCount === 0) {
+    if (ctx.stoppedReason === 'SOLVE_TIMEOUT') return 'PARTIAL_TIMEOUT';
+    return 'COMPLETE';
+  }
+  if (ctx.stoppedReason === 'SOLVE_TIMEOUT') return 'PARTIAL_TIMEOUT';
+  if (
+    ctx.stoppedReason === 'IMPOSSIBLE_STAFFING' ||
+    ctx.stoppedReason === 'NO_PROGRESS'
+  ) {
+    return 'IMPOSSIBLE';
+  }
+  return 'PARTIAL_ITERATION_LIMIT';
+}
+
 /** Main entry: try multiple weekly-off scenarios and pick lowest fairness score with best coverage. */
 export function generateSchedule(
   input: GenerateScheduleInput,
@@ -394,6 +593,7 @@ export function generateSchedule(
 ): GenerateScheduleResult {
   const perf = options?.perf;
   const generateStarted = performance.now();
+  const ctx = createSolverContext();
 
   const bundles = perf
     ? perf.timeSync('buildTimeSlotsMs', () =>
@@ -410,8 +610,8 @@ export function generateSchedule(
 
   const baseUnavail = buildUnavailMap(input.unavailability);
   const variants = perf
-    ? perf.timeSync('generateCandidatesMs', () => generateWeeklyOffVariants(input))
-    : generateWeeklyOffVariants(input);
+    ? perf.timeSync('generateCandidatesMs', () => generateWeeklyOffVariants(input, MAX_SCENARIOS))
+    : generateWeeklyOffVariants(input, MAX_SCENARIOS);
 
   if (perf) {
     perf.setStat('weeklyOffVariants', variants.length);
@@ -421,17 +621,38 @@ export function generateSchedule(
     assignments: EmployeeDayAssignment[];
     violations: GenerateScheduleResult['slotViolations'];
     fairness: number;
-    scenariosTried: number;
     proposals: GridShiftProposal[];
   } | null = null;
 
   let scenariosTried = 0;
+  let allScenariosImpossible = variants.length > 0;
   for (const weeklyOff of variants) {
-    scenariosTried++;
-    const unavail = applyWeeklyOffToUnavail(input, weeklyOff, baseUnavail);
-    const { state, violations } = solveScenario(input, bundles, weeklyOff, unavail, perf);
-    const working = Array.from(state.values());
+    if (scenariosTried >= MAX_SCENARIOS || budgetExceeded(ctx)) {
+      if (scenariosTried >= MAX_SCENARIOS) ctx.stoppedReason = 'MAX_SCENARIOS';
+      break;
+    }
 
+    scenariosTried++;
+    ctx.scenarioIndex = scenariosTried - 1;
+    const scenarioStartIterations = ctx.totalIterations;
+
+    const unavail = applyWeeklyOffToUnavail(input, weeklyOff, baseUnavail);
+
+    let state: DayState;
+    let violations: GenerateScheduleResult['slotViolations'];
+
+    if (isStaffingImpossible(input, bundles, weeklyOff, unavail)) {
+      ctx.stoppedReason = 'IMPOSSIBLE_STAFFING';
+      state = buildPreservedState(input, weeklyOff, unavail);
+      violations = validateState(bundles, state, perf);
+    } else {
+      allScenariosImpossible = false;
+      ({ state, violations } = solveScenario(input, bundles, weeklyOff, unavail, ctx, perf));
+    }
+
+    ctx.iterationsByScenario.push(ctx.totalIterations - scenarioStartIterations);
+
+    const working = Array.from(state.values());
     const fairnessStarted = performance.now();
     const assignments = buildFullWeekAssignments(input, working, bundles, unavail);
     const fairnessBreakdown = calculateFairnessScore(assignments, input, violations.length);
@@ -442,7 +663,6 @@ export function generateSchedule(
       assignments,
       violations,
       fairness: fairnessBreakdown.score,
-      scenariosTried,
       proposals,
     };
 
@@ -453,6 +673,20 @@ export function generateSchedule(
     ) {
       best = candidate;
     }
+
+    if (violations.length === 0) {
+      ctx.stoppedReason = 'COVERAGE_COMPLETE';
+      if (fairnessBreakdown.score <= FAIRNESS_ACCEPTABLE_THRESHOLD) {
+        ctx.stoppedReason = 'FAIRNESS_ACCEPTABLE';
+        break;
+      }
+    }
+
+    if (budgetExceeded(ctx)) break;
+  }
+
+  if (!ctx.stoppedReason && scenariosTried >= variants.length) {
+    ctx.stoppedReason = 'VARIANTS_EXHAUSTED';
   }
 
   const result = best!;
@@ -465,11 +699,17 @@ export function generateSchedule(
   const employeeSummaries = buildEmployeeSummaries(result.assignments, maxDaily);
   perf?.mark('fairnessMs', performance.now() - summariesStarted);
 
+  const solverStatus = resolveSolverStatus(result.violations.length, ctx, allScenariosImpossible);
+
   perf?.mark('generateScheduleMs', performance.now() - generateStarted);
   if (perf) {
-    perf.setStat('scenariosTried', result.scenariosTried);
+    perf.setStat('scenariosTried', scenariosTried);
     perf.setStat('assignmentCount', result.assignments.length);
     perf.setStat('slotViolations', result.violations.length);
+    perf.setStat('solverStatus', solverStatus);
+    perf.setStat('stoppedReason', ctx.stoppedReason);
+    perf.setStat('iterationsByDay', { ...ctx.iterationsByDay });
+    perf.setStat('iterationsByScenario', [...ctx.iterationsByScenario]);
   }
 
   return {
@@ -477,12 +717,16 @@ export function generateSchedule(
     mode,
     assignments: result.assignments,
     proposals: result.proposals,
-    warnings: buildWarnings(result.violations, result.assignments),
+    warnings: buildWarnings(result.violations, result.assignments, solverStatus),
     coverageValid: result.violations.length === 0,
     slotViolations: result.violations,
     fairnessScore: result.fairness,
     employeeSummaries,
-    scenariosTried: result.scenariosTried,
+    scenariosTried,
+    solverStatus,
+    stoppedReason: ctx.stoppedReason,
+    iterationsByDay: { ...ctx.iterationsByDay },
+    iterationsByScenario: [...ctx.iterationsByScenario],
   };
 }
 

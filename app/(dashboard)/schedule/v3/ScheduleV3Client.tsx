@@ -504,7 +504,10 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
                     <ul className="mt-1 space-y-0.5 font-mono text-xs">
                       {Object.entries(solveData.stats).map(([key, val]) => (
                         <li key={key}>
-                          {key}: {val}
+                          {key}:{' '}
+                          {typeof val === 'object' && val !== null
+                            ? JSON.stringify(val)
+                            : String(val ?? '—')}
                         </li>
                       ))}
                     </ul>

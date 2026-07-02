@@ -32,6 +32,10 @@ export type ScheduleEnginePerfStats = {
   constraintIterations: number;
   slotViolations: number;
   planActionCount: number;
+  solverStatus: string | null;
+  stoppedReason: string | null;
+  iterationsByDay: Record<string, number>;
+  iterationsByScenario: number[];
 };
 
 export type ScheduleEnginePerfSnapshot = {
@@ -89,6 +93,10 @@ function emptyStats(): ScheduleEnginePerfStats {
     constraintIterations: 0,
     slotViolations: 0,
     planActionCount: 0,
+    solverStatus: null,
+    stoppedReason: null,
+    iterationsByDay: {},
+    iterationsByScenario: [],
   };
 }
 
@@ -172,6 +180,21 @@ export class ScheduleEnginePerfCollector {
     lines.push(`Constraint iterations ..... ${snap.stats.constraintIterations}`);
     lines.push(`Slot violations ........... ${snap.stats.slotViolations}`);
     lines.push(`Plan actions .............. ${snap.stats.planActionCount}`);
+    if (snap.stats.solverStatus) {
+      lines.push(`Solver status ............. ${snap.stats.solverStatus}`);
+    }
+    if (snap.stats.stoppedReason) {
+      lines.push(`Stopped reason ............ ${snap.stats.stoppedReason}`);
+    }
+    const dayIterKeys = Object.keys(snap.stats.iterationsByDay);
+    if (dayIterKeys.length) {
+      lines.push(
+        `Iterations by day ......... ${dayIterKeys.map((d) => `${d}:${snap.stats.iterationsByDay[d]}`).join(', ')}`
+      );
+    }
+    if (snap.stats.iterationsByScenario.length) {
+      lines.push(`Iterations by scenario .... ${snap.stats.iterationsByScenario.join(', ')}`);
+    }
     return lines;
   }
 
