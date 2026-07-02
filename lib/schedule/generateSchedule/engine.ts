@@ -183,7 +183,6 @@ function pickEmployeeForSlot(
       let score = weekH * 2 + hist * 0.3;
       if (wouldSplit) score += 50 + (splitCounts.get(emp.empId) ?? 0) * 10;
       if (hours > maxDaily) score += 100;
-      if (emp.isExternalSupport) score += 30;
       scored.push({
         emp,
         segments: extended,
