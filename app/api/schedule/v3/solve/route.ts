@@ -14,15 +14,13 @@ import type { Role } from '@prisma/client';
 import type { EmployeeDayAssignment, GenerateScheduleResult } from '@/lib/schedule/generateSchedule/types';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
 
-/** Allow long solves on self-hosted nginx (still needs proxy_read_timeout ≥ 120s). */
-export const maxDuration = 120;
+/** Long solves on VPS; keepalive stream avoids nginx 504 when proxy_read_timeout is 60s. */
+export const maxDuration = 300;
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+const KEEPALIVE_MS = 10_000;
 
-function computeMetrics(
-  result: GenerateScheduleResult,
-  guestShiftCount: number
-) {
+function computeMetrics(result: GenerateScheduleResult, guestShiftCount: number) {
   const splitCount = result.assignments.filter((a) => a.splitDay).length;
   const overtimeCount = result.employeeSummaries.filter((s) => s.overtimeHours > 0).length;
   const externalSupportCount =
@@ -40,7 +38,6 @@ function computeMetrics(
   };
 }
 
-/** Strip engine-only fields to keep JSON small and fast over slow VPS links. */
 function slimAssignments(assignments: EmployeeDayAssignment[]) {
   return assignments.map((a) => ({
     empId: a.empId,
@@ -67,6 +64,109 @@ function slimActions(actions: PlanAction[]) {
     reason: a.reason,
     segments: a.segments,
   }));
+}
+
+async function computeSolvePayload(weekStart: string, boutiqueIds: string[]) {
+  const t0 = Date.now();
+  const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
+  const empIds = grid.rows.map((r) => r.empId);
+  const ramadanRange = getRamadanRange();
+  const weekDates = grid.days.map((d) => d.date);
+  const dayOperatingConfigs = buildWeekOperatingConfigs(weekDates, ramadanRange);
+
+  const [fairnessContext, guestShifts] = await Promise.all([
+    loadFairnessContext(weekStart, empIds),
+    loadWeekGuestShifts(weekStart, boutiqueIds),
+  ]);
+  const fairnessRows = buildEmployeeFairness(grid.rows, fairnessContext);
+
+  const input = buildGenerateScheduleInput(grid, {
+    guestShifts,
+    fairnessRows,
+    ramadanRange,
+  });
+  const generateResult = generateSchedule(input);
+  const actions = generateResultToPlanActions(generateResult, grid.rows);
+  const metrics = computeMetrics(generateResult, guestShifts.length);
+
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('[schedule/v3/solve]', {
+      weekStart,
+      ms: Date.now() - t0,
+      employees: empIds.length,
+      scenariosTried: generateResult.scenariosTried,
+      actions: actions.length,
+      coverageValid: generateResult.coverageValid,
+    });
+  }
+
+  return {
+    weekStart: generateResult.weekStart,
+    mode: generateResult.mode,
+    generateResult: {
+      weekStart: generateResult.weekStart,
+      mode: generateResult.mode,
+      assignments: slimAssignments(generateResult.assignments),
+      warnings: generateResult.warnings,
+      coverageValid: generateResult.coverageValid,
+      slotViolations: generateResult.slotViolations,
+      fairnessScore: generateResult.fairnessScore,
+      employeeSummaries: generateResult.employeeSummaries,
+      scenariosTried: generateResult.scenariosTried,
+    },
+    actions: slimActions(actions),
+    dayOperatingConfigs,
+    metrics,
+    guestShiftCount: guestShifts.length,
+    scenariosTried: generateResult.scenariosTried,
+  };
+}
+
+function migrationHint(message: string): string {
+  if (message.includes('ShiftOverrideSegment') || message.includes('does not exist')) {
+    return ' Database migration may be pending — run: npx prisma migrate deploy';
+  }
+  return '';
+}
+
+/** Stream newlines while solving so nginx proxy_read_timeout resets (60s default). */
+function streamSolveResponse(weekStart: string, boutiqueIds: string[]): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const heartbeat = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode('\n'));
+        } catch {
+          clearInterval(heartbeat);
+        }
+      }, KEEPALIVE_MS);
+
+      try {
+        const payload = await computeSolvePayload(weekStart, boutiqueIds);
+        controller.enqueue(encoder.encode(JSON.stringify(payload)));
+      } catch (e) {
+        console.error('[schedule/v3/solve]', e);
+        const message = e instanceof Error ? e.message : 'Failed to solve schedule';
+        controller.enqueue(
+          encoder.encode(JSON.stringify({ error: message + migrationHint(message) }))
+        );
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      /** Disable nginx response buffering so keepalive bytes reach the client/proxy. */
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -101,68 +201,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
 
-  const t0 = Date.now();
-  try {
-    const boutiqueIds = scheduleScope.boutiqueIds;
-    const grid = await getScheduleGridForWeek(weekStart, { boutiqueIds });
-    const empIds = grid.rows.map((r) => r.empId);
-    const ramadanRange = getRamadanRange();
-    const weekDates = grid.days.map((d) => d.date);
-    const dayOperatingConfigs = buildWeekOperatingConfigs(weekDates, ramadanRange);
-
-    const [fairnessContext, guestShifts] = await Promise.all([
-      loadFairnessContext(weekStart, empIds),
-      loadWeekGuestShifts(weekStart, boutiqueIds),
-    ]);
-    const fairnessRows = buildEmployeeFairness(grid.rows, fairnessContext);
-
-    const input = buildGenerateScheduleInput(grid, {
-      guestShifts,
-      fairnessRows,
-      ramadanRange,
-    });
-    const generateResult = generateSchedule(input);
-    const actions = generateResultToPlanActions(generateResult, grid.rows);
-    const metrics = computeMetrics(generateResult, guestShifts.length);
-
-    if (process.env.NODE_ENV !== 'test') {
-      console.log('[schedule/v3/solve]', {
-        weekStart,
-        ms: Date.now() - t0,
-        employees: empIds.length,
-        scenariosTried: generateResult.scenariosTried,
-        actions: actions.length,
-        coverageValid: generateResult.coverageValid,
-      });
-    }
-
-    return NextResponse.json({
-      weekStart: generateResult.weekStart,
-      mode: generateResult.mode,
-      generateResult: {
-        weekStart: generateResult.weekStart,
-        mode: generateResult.mode,
-        assignments: slimAssignments(generateResult.assignments),
-        warnings: generateResult.warnings,
-        coverageValid: generateResult.coverageValid,
-        slotViolations: generateResult.slotViolations,
-        fairnessScore: generateResult.fairnessScore,
-        employeeSummaries: generateResult.employeeSummaries,
-        scenariosTried: generateResult.scenariosTried,
-      },
-      actions: slimActions(actions),
-      dayOperatingConfigs,
-      metrics,
-      guestShiftCount: guestShifts.length,
-      scenariosTried: generateResult.scenariosTried,
-    });
-  } catch (e) {
-    console.error('[schedule/v3/solve]', e);
-    const message = e instanceof Error ? e.message : 'Failed to solve schedule';
-    const hint =
-      message.includes('ShiftOverrideSegment') || message.includes('does not exist')
-        ? ' Database migration may be pending — run: npx prisma migrate deploy'
-        : '';
-    return NextResponse.json({ error: message + hint }, { status: 500 });
-  }
+  return streamSolveResponse(weekStart, scheduleScope.boutiqueIds);
 }

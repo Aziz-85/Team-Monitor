@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       plan,
       coverageValid: generateResult.coverageValid,
       slotViolationCount: generateResult.slotViolations.length,
+      fairnessScore: generateResult.fairnessScore,
       aiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
       guestShiftCount: guestShifts.length,
     });

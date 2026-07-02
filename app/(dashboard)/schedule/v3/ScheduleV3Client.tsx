@@ -75,6 +75,15 @@ function formatSolveError(
   return `Failed (${status})`;
 }
 
+/** Parse JSON from a keepalive stream (leading newlines before the payload). */
+function parseSolveResponseBody(raw: string): { error?: string } & Partial<SolveResponse> {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error('Empty response');
+  const jsonStart = trimmed.indexOf('{');
+  const jsonText = jsonStart >= 0 ? trimmed.slice(jsonStart) : trimmed;
+  return JSON.parse(jsonText) as { error?: string } & Partial<SolveResponse>;
+}
+
 function formatPeriods(periods: DayOperatingConfig['operatingPeriods']): string {
   return periods.map((p) => `${p.startTime}–${p.endTime}`).join(', ');
 }
@@ -190,7 +199,7 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     setApplyError(null);
     setSolveData(null);
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 120_000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 180_000);
     try {
       const res = await fetch('/api/schedule/v3/solve', {
         method: 'POST',
@@ -198,12 +207,22 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         body: JSON.stringify({ weekStart }),
         signal: controller.signal,
       });
-      const data = (await res.json().catch(() => ({}))) as SolveResponse & { error?: string };
+      const raw = await res.text();
+      let data: SolveResponse & { error?: string };
+      try {
+        data = parseSolveResponseBody(raw) as SolveResponse & { error?: string };
+      } catch {
+        throw new Error(formatSolveError(res.status, {}, t));
+      }
+      if (data.error) throw new Error(data.error);
       if (!res.ok) throw new Error(formatSolveError(res.status, data, t));
+      if (!data.generateResult || !data.metrics) {
+        throw new Error((t('schedule.v3.invalidResponse') as string) || 'Invalid solve response');
+      }
       setSolveData(data);
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') {
-        setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 2 minutes.');
+        setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 3 minutes.');
       } else {
         setError(e instanceof Error ? e.message : 'Solve failed');
       }

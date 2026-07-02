@@ -41,10 +41,7 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<SchedulePlanResult | null>(null);
-<<<<<<< HEAD
-=======
   const [planMeta, setPlanMeta] = useState<PlanMeta | null>(null);
->>>>>>> schedule-v3-policy-alignment
   const [scenarioId, setScenarioId] = useState<string>('dynamic');
   const [aiConfigured, setAiConfigured] = useState(false);
   const [reason, setReason] = useState('');
@@ -66,11 +63,8 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     setLoading(true);
     setError(null);
     setPlan(null);
-<<<<<<< HEAD
-    setApplyViolations([]);
-=======
     setPlanMeta(null);
->>>>>>> schedule-v3-policy-alignment
+    setApplyViolations([]);
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
@@ -87,36 +81,21 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
 
       const loadedPlan = data.plan as SchedulePlanResult;
       const actions = loadedPlan.scenarios[0]?.actions ?? [];
-      const gen = data.generateResult as
-        | {
-            coverageValid?: boolean;
-            slotViolations?: unknown[];
-            fairnessScore?: number;
-            warnings?: string[];
-          }
-        | undefined;
 
       setPlan(loadedPlan);
       setPlanMeta({
-        coverageValid: gen?.coverageValid ?? loadedPlan.scenarios[0]?.unresolved.length === 0,
-        slotViolationCount: gen?.slotViolations?.length ?? loadedPlan.scenarios[0]?.unresolved.length ?? 0,
-        fairnessScore: gen?.fairnessScore ?? 0,
+        coverageValid: Boolean(data.coverageValid),
+        slotViolationCount: Number(data.slotViolationCount ?? loadedPlan.scenarios[0]?.unresolved.length ?? 0),
+        fairnessScore: Number(data.fairnessScore ?? 0),
         splitDaysProposed: actions.filter((a: PlanAction) => a.toShift === 'SPLIT').length,
-        warnings: gen?.warnings ?? [],
+        warnings: [],
       });
       setAiConfigured(Boolean(data.aiConfigured));
-<<<<<<< HEAD
-      setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'dynamic');
-    } catch (e) {
-      if (seq !== fetchSeq.current) return;
-      setPlan(null);
-=======
       setScenarioId(loadedPlan.recommendedScenarioId ?? 'dynamic');
     } catch (e) {
       if (seq !== fetchSeq.current) return;
       setPlan(null);
       setPlanMeta(null);
->>>>>>> schedule-v3-policy-alignment
       if (e instanceof DOMException && e.name === 'AbortError') {
         setError((t('schedule.assistant.timeout') as string) || 'Plan request timed out. Try again.');
       } else {
