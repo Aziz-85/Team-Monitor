@@ -49,3 +49,4 @@ next-env.d.ts
 *.bak*
 main
 docs/PATCH_CANONICAL_MONEY_DATES.md
+team-monitor-code.zip

@@ -6,6 +6,14 @@ import type { PlanAction, SchedulePlanResult, SchedulePlanScenario } from '@/lib
 
 type ChatLine = { role: 'user' | 'assistant'; content: string };
 
+type PlanMeta = {
+  coverageValid: boolean;
+  slotViolationCount: number;
+  fairnessScore: number;
+  splitDaysProposed: number;
+  warnings: string[];
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -33,6 +41,10 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<SchedulePlanResult | null>(null);
+<<<<<<< HEAD
+=======
+  const [planMeta, setPlanMeta] = useState<PlanMeta | null>(null);
+>>>>>>> schedule-v3-policy-alignment
   const [scenarioId, setScenarioId] = useState<string>('dynamic');
   const [aiConfigured, setAiConfigured] = useState(false);
   const [reason, setReason] = useState('');
@@ -54,7 +66,11 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     setLoading(true);
     setError(null);
     setPlan(null);
+<<<<<<< HEAD
     setApplyViolations([]);
+=======
+    setPlanMeta(null);
+>>>>>>> schedule-v3-policy-alignment
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
@@ -68,12 +84,39 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
       if (seq !== fetchSeq.current) return;
       if (!res.ok) throw new Error((data.error as string) || `Failed (${res.status})`);
       if (!data.plan) throw new Error(t('schedule.assistant.loadFailed') as string);
-      setPlan(data.plan as SchedulePlanResult);
+
+      const loadedPlan = data.plan as SchedulePlanResult;
+      const actions = loadedPlan.scenarios[0]?.actions ?? [];
+      const gen = data.generateResult as
+        | {
+            coverageValid?: boolean;
+            slotViolations?: unknown[];
+            fairnessScore?: number;
+            warnings?: string[];
+          }
+        | undefined;
+
+      setPlan(loadedPlan);
+      setPlanMeta({
+        coverageValid: gen?.coverageValid ?? loadedPlan.scenarios[0]?.unresolved.length === 0,
+        slotViolationCount: gen?.slotViolations?.length ?? loadedPlan.scenarios[0]?.unresolved.length ?? 0,
+        fairnessScore: gen?.fairnessScore ?? 0,
+        splitDaysProposed: actions.filter((a: PlanAction) => a.toShift === 'SPLIT').length,
+        warnings: gen?.warnings ?? [],
+      });
       setAiConfigured(Boolean(data.aiConfigured));
+<<<<<<< HEAD
       setScenarioId((data.plan as SchedulePlanResult).recommendedScenarioId ?? 'dynamic');
     } catch (e) {
       if (seq !== fetchSeq.current) return;
       setPlan(null);
+=======
+      setScenarioId(loadedPlan.recommendedScenarioId ?? 'dynamic');
+    } catch (e) {
+      if (seq !== fetchSeq.current) return;
+      setPlan(null);
+      setPlanMeta(null);
+>>>>>>> schedule-v3-policy-alignment
       if (e instanceof DOMException && e.name === 'AbortError') {
         setError((t('schedule.assistant.timeout') as string) || 'Plan request timed out. Try again.');
       } else {
@@ -166,14 +209,14 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
       <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !applying && onClose()} />
       <div className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface shadow-lg">
         <div className="border-b border-border px-5 py-4">
-          <h3 className="text-lg font-semibold text-foreground">{t('schedule.assistant.title')}</h3>
-          <p className="mt-1 text-sm text-muted">{t('schedule.assistant.subtitle')}</p>
-        <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-900">
-          {t('schedule.assistant.policyHint')}
-        </p>
-        <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">
-          {t('schedule.assistant.externalHint')}
-        </p>
+          <h3 className="text-lg font-semibold text-foreground">
+            {(t('schedule.assistant.titleV3') as string) || 'Solve Schedule'}
+          </h3>
+          <p className="mt-1 text-sm text-muted">{t('schedule.assistant.subtitleV3')}</p>
+          <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">
+            {t('schedule.assistant.slotValidationHint')}
+          </p>
+          <p className="mt-2 text-xs text-muted">{t('schedule.assistant.externalHint')}</p>
           <div className="mt-3 flex gap-2">
             <button
               type="button"
@@ -217,9 +260,36 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
           {tab === 'plan' && (
             <>
               {loading ? (
-                <p className="text-sm text-muted">{t('common.loading')}</p>
+                <p className="text-sm text-muted">{t('schedule.assistant.generating') ?? t('common.loading')}</p>
               ) : scenario ? (
                 <div className="space-y-4">
+                  {planMeta && (
+                    <div className="rounded-lg border border-border bg-surface-subtle p-3">
+                      <p className="text-xs font-semibold text-foreground">{t('schedule.assistant.planResult')}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <div>
+                          <div className="text-muted">{t('schedule.assistant.coverageValid')}</div>
+                          <div className={planMeta.coverageValid ? 'font-semibold text-emerald-700' : 'font-semibold text-amber-700'}>
+                            {planMeta.coverageValid ? t('common.yes') ?? 'Yes' : t('common.no') ?? 'No'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted">{t('schedule.assistant.slotViolations')}</div>
+                          <div className="font-semibold">{planMeta.slotViolationCount}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted">{t('schedule.assistant.splitProposed')}</div>
+                          <div className="font-semibold">{planMeta.splitDaysProposed}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted">{t('schedule.assistant.fairnessScore')}</div>
+                          <div className="font-semibold">{planMeta.fairnessScore.toFixed(1)}</div>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-muted">{scenario.summary}</p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-xs font-medium text-muted">{t('schedule.assistant.scenario')}</label>
                     <select
@@ -236,19 +306,7 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                         </option>
                       ))}
                     </select>
-                    <p className="mt-2 text-sm text-foreground">{scenario.summary}</p>
                   </div>
-
-                  {scenario.issuesBefore.length > 0 && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
-                      <p className="text-xs font-semibold text-amber-900">{t('schedule.assistant.issuesBefore')}</p>
-                      <ul className="mt-1 space-y-1 text-xs text-amber-900">
-                        {scenario.issuesBefore.map((issue) => (
-                          <li key={`${issue.date}-${issue.type}`}>• {issue.message}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
 
                   {scenario.actions.length > 0 ? (
                     <div>
@@ -258,71 +316,37 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                           <li key={a.id} className="rounded border border-border bg-surface-subtle px-3 py-2 text-xs">
                             <span className="font-medium">{a.date}</span> — {a.employeeName}:{' '}
                             {shiftLabel(a.fromShift, a.toShift)}
-                            <span className="ms-1 rounded bg-surface px-1 py-0.5 text-[10px] uppercase">{a.type}</span>
+                            {a.toShift === 'SPLIT' && a.segments?.length ? (
+                              <span className="ms-1 text-muted">
+                                ({a.segments.map((s) => `${s.startTime}–${s.endTime}`).join(' / ')})
+                              </span>
+                            ) : null}
                             <p className="mt-1 text-muted">{a.reason}</p>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted">{t('schedule.assistant.noActions')}</p>
-                      {scenario.issuesBefore.length > 0 && (
-                        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                          {t('schedule.assistant.noFixHint')}
-                        </p>
-                      )}
-                    </div>
+                    <p className="text-sm text-muted">{t('schedule.assistant.noActions')}</p>
                   )}
 
                   {scenario.unresolved.length > 0 && (
-                    <div className="rounded-lg border border-red-200 bg-red-50/80 p-3">
-                      <p className="text-xs font-semibold text-red-900">{t('schedule.assistant.unresolved')}</p>
-                      <ul className="mt-1 space-y-1 text-xs text-red-900">
-                        {scenario.unresolved.map((issue) => (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+                      <p className="text-xs font-semibold text-amber-900">{t('schedule.assistant.unresolved')}</p>
+                      <ul className="mt-1 max-h-24 space-y-1 overflow-y-auto text-xs text-amber-900">
+                        {scenario.unresolved.slice(0, 5).map((issue) => (
                           <li key={`u-${issue.date}-${issue.type}`}>• {issue.message}</li>
                         ))}
+                        {scenario.unresolved.length > 5 && (
+                          <li className="text-muted">+{scenario.unresolved.length - 5} more</li>
+                        )}
                       </ul>
                     </div>
                   )}
 
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">{t('schedule.assistant.fairness')}</p>
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-left text-muted">
-                            <th className="py-1">{t('schedule.assistant.employee')}</th>
-                            <th className="py-1">AM</th>
-                            <th className="py-1">PM</th>
-                            <th className="py-1">{t('schedule.assistant.overrides')}</th>
-                            <th className="py-1">{t('schedule.assistant.load')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...scenario.fairness]
-                            .sort((a, b) => b.loadScore - a.loadScore)
-                            .slice(0, 8)
-                            .map((f) => (
-                              <tr key={f.empId} className="border-t border-border">
-                                <td className="py-1 font-medium">{f.name}</td>
-                                <td className="py-1">{f.amDays}</td>
-                                <td className="py-1">{f.pmDays}</td>
-                                <td className="py-1">{f.monthlyOverrides}</td>
-                                <td className="py-1">{f.loadScore.toFixed(1)}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
                   {applyViolations.length > 0 && (
                     <div className="rounded-lg border border-red-300 bg-red-50 p-3">
-                      <p className="text-xs font-semibold text-red-900">
-                        {(t('schedule.assistant.coverageBlocked') as string) ||
-                          'Apply blocked: time slots below minimum coverage'}
-                      </p>
+                      <p className="text-xs font-semibold text-red-900">{t('schedule.assistant.coverageBlocked')}</p>
                       <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-xs text-red-900">
                         {applyViolations.map((v, i) => (
                           <li key={`${v.date}-${v.startTime}-${i}`}>
@@ -336,7 +360,7 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                         disabled={applying}
                         className="mt-2 rounded border border-red-400 bg-white px-3 py-1 text-xs font-medium text-red-700 disabled:opacity-50"
                       >
-                        {(t('schedule.assistant.applyAnyway') as string) || 'Apply anyway'}
+                        {t('schedule.assistant.applyAnyway')}
                       </button>
                     </div>
                   )}
