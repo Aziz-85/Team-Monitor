@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser, requireRole } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
-import {
-  analyzeScheduleConstraints,
-  mainConstraintReason,
-  topConstraintRecommendation,
-} from '@/lib/schedule/constraintAnalyzer';
 import { loadGenerateScheduleInputForWeek } from '@/lib/schedule/loadScheduleEngineInput';
-import { getSchedulePolicy } from '@/lib/schedule/policyEngine';
-import { qualityPercentsFromAnalysis } from '@/lib/schedule/scheduleQuality';
-import { topSmartRecommendations } from '@/lib/schedule/recommendationEngine';
-import { planWeeklyResources } from '@/lib/schedule/resourcePlanner';
+import {
+  simulateScheduleScenarios,
+  DEFAULT_MAX_SCENARIOS,
+  DEFAULT_MAX_SCENARIO_SOLVE_MS,
+  HARD_MAX_SOLVES,
+} from '@/lib/schedule/scenarioSimulator';
 import type { Role } from '@prisma/client';
+
+/** Scenario simulation runs several solves; allow generous headroom on VPS. */
+export const maxDuration = 120;
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No schedule scope' }, { status: 403 });
   }
 
-  let body: { weekStart?: string };
+  let body: { weekStart?: string; maxScenarios?: number };
   try {
     body = await request.json();
   } catch {
@@ -55,34 +55,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
 
+  const maxScenarios =
+    typeof body.maxScenarios === 'number' && Number.isFinite(body.maxScenarios)
+      ? Math.max(1, Math.min(Math.floor(body.maxScenarios), DEFAULT_MAX_SCENARIOS + 3))
+      : DEFAULT_MAX_SCENARIOS;
+
   try {
-    const { input, weekStart: resolvedWeek, guestShiftCount } = await loadGenerateScheduleInputForWeek(
+    const { input, weekStart: resolvedWeek } = await loadGenerateScheduleInputForWeek(
       weekStart,
       scheduleScope.boutiqueIds
     );
-    const analysis = analyzeScheduleConstraints(input);
-    const policy = getSchedulePolicy(input);
-    const qualityPercents = qualityPercentsFromAnalysis(analysis);
-    const workforcePlan = planWeeklyResources(input);
-    const smartRecommendations =
-      analysis.status === 'FEASIBLE'
-        ? []
-        : topSmartRecommendations({ input, analysis }, 3);
+
+    const output = simulateScheduleScenarios(input, {
+      maxScenarios,
+      maxScenarioSolveMs: DEFAULT_MAX_SCENARIO_SOLVE_MS,
+      maxSolves: HARD_MAX_SOLVES,
+      forcePartialSolve: true,
+    });
 
     return NextResponse.json({
       weekStart: resolvedWeek,
-      guestShiftCount,
-      analysis,
-      policy,
-      qualityPercents,
-      workforcePlan,
-      smartRecommendations,
-      mainReason: mainConstraintReason(analysis),
-      recommendedFix: topConstraintRecommendation(analysis),
+      bestScenarioId: output.bestScenarioId,
+      scenarios: output.scenarios,
+      summary: output.summary,
+      generatedAt: new Date().toISOString(),
+      performance: output.performance,
     });
   } catch (e) {
-    console.error('[schedule/v3/analyze]', e);
-    const message = e instanceof Error ? e.message : 'Failed to analyze schedule constraints';
+    console.error('[schedule/v3/scenarios]', e);
+    const message = e instanceof Error ? e.message : 'Failed to simulate scenarios';
     return NextResponse.json({ error: message + migrationHint(message) }, { status: 500 });
   }
 }

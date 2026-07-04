@@ -13,6 +13,13 @@ import {
 } from '@/components/schedule/ScheduleHealthCheckPanel';
 import { SmartRecommendationsPanel } from '@/components/schedule/SmartRecommendationsPanel';
 import type { SmartRecommendation } from '@/lib/schedule/recommendationEngine';
+import { WorkforcePlanningPanel } from '@/components/schedule/WorkforcePlanningPanel';
+import type { WorkforcePlan } from '@/lib/schedule/resourcePlanner';
+import { ScenarioSimulatorPanel } from '@/components/schedule/ScenarioSimulatorPanel';
+import type {
+  SimulatedScenario,
+  ScenarioSimulationSummary,
+} from '@/lib/schedule/scenarioSimulator';
 import type { ConstraintAnalysisResult } from '@/lib/schedule/constraintAnalyzer';
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
@@ -34,9 +41,19 @@ type AnalyzeResponse = {
   mainReason: string;
   recommendedFix: string | null;
   smartRecommendations?: SmartRecommendation[];
+  workforcePlan?: WorkforcePlan;
 };
 
 type SolveMetrics = ScheduleQualityMetrics & { fairnessScore: number };
+
+type ScenariosResponse = {
+  weekStart: string;
+  bestScenarioId: string;
+  scenarios: SimulatedScenario[];
+  summary: ScenarioSimulationSummary;
+  generatedAt: string;
+  performance: { scenariosGenerated: number; solves: number; totalMs: number; capped: boolean };
+};
 
 type SolveResponse = {
   weekStart: string;
@@ -152,6 +169,9 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
   const [healthPhase, setHealthPhase] = useState<HealthCheckPhase>('preview');
   const [feasibleMessage, setFeasibleMessage] = useState<string | null>(null);
   const [solveData, setSolveData] = useState<SolveResponse | null>(null);
+  const [scenarioData, setScenarioData] = useState<ScenariosResponse | null>(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
 
   const intlLocale = intlLocaleForGregorianCalendar(locale);
 
@@ -258,6 +278,43 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
       return null;
     }
   }, [weekStart, t]);
+
+  const generateScenarios = useCallback(async () => {
+    setScenarioLoading(true);
+    setScenarioError(null);
+    try {
+      const res = await fetch('/api/schedule/v3/scenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekStart }),
+      });
+      const data = (await res.json()) as ScenariosResponse & { error?: string };
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `Scenario simulation failed (${res.status})`);
+      }
+      setScenarioData(data);
+    } catch (e) {
+      setScenarioError(e instanceof Error ? e.message : 'Scenario simulation failed');
+      setScenarioData(null);
+    } finally {
+      setScenarioLoading(false);
+    }
+  }, [weekStart]);
+
+  const applyScenario = useCallback(
+    (scenario: SimulatedScenario) => {
+      if (!scenario.simulationResult.coverageValid) {
+        const proceed = window.confirm(
+          (t('schedule.v3.scenario.forceConfirm') as string) ||
+            'This scenario does not reach full coverage. Open the editor to apply it anyway?'
+        );
+        if (!proceed) return;
+      }
+      // Apply goes through the existing apply gate in the Schedule Editor.
+      router.push(`/schedule/edit?weekStart=${encodeURIComponent(weekStart)}`);
+    },
+    [router, weekStart, t]
+  );
 
   const runPreviewHealthCheck = useCallback(async () => {
     setAnalyzing(true);
@@ -411,6 +468,8 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     syncWeekToUrl(ws);
     setSolveData(null);
     setAnalyzeData(null);
+    setScenarioData(null);
+    setScenarioError(null);
     setHealthPhase('preview');
     setFeasibleMessage(null);
     setError(null);
@@ -515,6 +574,58 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
             />
           ) : (
             <p className="text-sm text-muted">{t('schedule.v3.healthCheck.loading')}</p>
+          )}
+        </div>
+      )}
+
+      {analyzeData?.workforcePlan && (
+        <div className="mb-6">
+          <WorkforcePlanningPanel
+            plan={analyzeData.workforcePlan}
+            formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
+            t={t}
+          />
+        </div>
+      )}
+
+      {analyzeData && analyzeData.analysis.status !== 'FEASIBLE' && (
+        <div className="mb-6">
+          {!scenarioData ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-purple-200 bg-purple-50/50 p-4">
+              <div>
+                <h2 className="text-sm font-semibold text-purple-950">
+                  {(t('schedule.v3.scenario.title') as string) || 'Scenario Simulator'}
+                </h2>
+                <p className="mt-0.5 text-xs text-purple-900/80">
+                  {(t('schedule.v3.scenario.prompt') as string) ||
+                    'Simulate alternative workforce strategies and compare ranked options.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={generateScenarios}
+                disabled={scenarioLoading}
+                className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
+              >
+                {scenarioLoading
+                  ? (t('schedule.v3.scenario.generating') as string) || 'Generating options…'
+                  : (t('schedule.v3.scenario.generate') as string) || 'Generate Options'}
+              </button>
+            </div>
+          ) : (
+            <ScenarioSimulatorPanel
+              scenarios={scenarioData.scenarios}
+              bestScenarioId={scenarioData.bestScenarioId}
+              summary={scenarioData.summary}
+              formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
+              onApply={applyScenario}
+              t={t}
+            />
+          )}
+          {scenarioError && (
+            <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {scenarioError}
+            </p>
           )}
         </div>
       )}

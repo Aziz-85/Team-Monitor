@@ -149,6 +149,33 @@ export type {
   RecommendationEngineInput,
   AffectedTimeRange,
 } from '@/lib/schedule/recommendationEngine';
+export { planWeeklyResources } from '@/lib/schedule/resourcePlanner';
+export type {
+  WorkforcePlan,
+  EmployeeResource,
+  DailyWorkload,
+  WorkforceBudget,
+  EmployeePlan,
+  BridgeAssignment,
+  OvertimeAssignment,
+  CompensationLedgerEntry,
+  PlannerRecommendation,
+  ShiftAllocationType,
+} from '@/lib/schedule/resourcePlanner';
+export { simulateScheduleScenarios } from '@/lib/schedule/scenarioSimulator';
+export type {
+  ScenarioType,
+  ScenarioAction,
+  ScenarioSimulationResult,
+  SimulatedScenario,
+  ScenarioSimulationSummary,
+  ScenarioSimulationOptions,
+  ScenarioSimulationOutput,
+  ScenarioSimulationPerformance,
+  ScenarioPreviewAssignment,
+} from '@/lib/schedule/scenarioSimulator';
+export { scoreScenario, rankScenarioScores, SCENARIO_SCORE_WEIGHTS } from '@/lib/schedule/scenarioScoring';
+export type { ScenarioScoreBreakdown, ScenarioScoreInput } from '@/lib/schedule/scenarioScoring';
 export { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 export { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
 
