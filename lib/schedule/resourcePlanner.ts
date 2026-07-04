@@ -15,7 +15,7 @@ import {
   parseTimeToMinutes,
   periodEndMinutes,
 } from '@/lib/schedule/generateSchedule/timeSlots';
-import { getSchedulePolicy } from '@/lib/schedule/policyEngine';
+import { getSchedulePolicy, FRIDAY_DOW } from '@/lib/schedule/policyEngine';
 import type {
   DayOperatingConfig,
   EmployeeCandidate,
@@ -34,6 +34,18 @@ export const BRIDGE_COMPENSATION_HOURS = 2;
 const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export type ShiftAllocationType = 'AM' | 'PM' | 'SPLIT' | 'BRIDGE' | 'OVERTIME';
+
+export type DailyTargetPattern = 'NORMAL' | 'SHORTAGE_3_STAFF' | 'FRIDAY_PM_ONLY';
+
+export type DailyTargetPlan = {
+  date: string;
+  dayOfWeek: number;
+  pattern: DailyTargetPattern;
+  availableEmployees: number;
+  targetAm: number;
+  targetPm: number;
+  targetBridge: number;
+};
 
 export type EmployeeResource = {
   employeeId: string;
@@ -147,6 +159,8 @@ export type WorkforcePlan = {
   recommendations: PlannerRecommendation[];
   /** One-line operations-manager summary of the strategy. */
   plannerDecision: string;
+  /** Daily target patterns the solver should execute. */
+  dailyTargetPlans: DailyTargetPlan[];
 };
 
 function round1(n: number): number {
@@ -661,6 +675,67 @@ function buildPlannerDecision(budget: WorkforceBudget, bridges: number, overtime
 }
 
 // ---------------------------------------------------------------------------
+// Daily target patterns (solver executes these)
+// ---------------------------------------------------------------------------
+
+const TARGET_AM_SAT_THU = 2;
+const TARGET_PM_SAT_THU = 2;
+const TARGET_PM_FRIDAY = 2;
+
+/** Build per-day target patterns for the planner-guided solver. */
+export function buildDailyTargetPlans(
+  input: GenerateScheduleInput,
+  unavail: Map<string, string>,
+  weeklyOff: Map<string, number> = new Map()
+): DailyTargetPlan[] {
+  return input.days.map((day) => {
+    const availableEmployees = input.regularEmployees.filter((emp) => {
+      if (!isEmployeeAvailable(emp, day.date, day.dayOfWeek, unavail)) return false;
+      const offDow = weeklyOff.get(emp.empId);
+      if (offDow !== undefined && day.dayOfWeek === offDow) return false;
+      return true;
+    }).length;
+
+    const isFridayPmOnly =
+      day.dayOfWeek === FRIDAY_DOW && !day.isRamadan && day.operatingPeriods.length === 1;
+
+    if (isFridayPmOnly) {
+      return {
+        date: day.date,
+        dayOfWeek: day.dayOfWeek,
+        pattern: 'FRIDAY_PM_ONLY' as const,
+        availableEmployees,
+        targetAm: 0,
+        targetPm: TARGET_PM_FRIDAY,
+        targetBridge: 0,
+      };
+    }
+
+    if (availableEmployees === 3) {
+      return {
+        date: day.date,
+        dayOfWeek: day.dayOfWeek,
+        pattern: 'SHORTAGE_3_STAFF' as const,
+        availableEmployees,
+        targetAm: 1,
+        targetPm: 1,
+        targetBridge: 1,
+      };
+    }
+
+    return {
+      date: day.date,
+      dayOfWeek: day.dayOfWeek,
+      pattern: 'NORMAL' as const,
+      availableEmployees,
+      targetAm: TARGET_AM_SAT_THU,
+      targetPm: TARGET_PM_SAT_THU,
+      targetBridge: 0,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Main entry
 // ---------------------------------------------------------------------------
 
@@ -673,6 +748,7 @@ export function planWeeklyResources(input: GenerateScheduleInput): WorkforcePlan
 
   const employeeResources = buildEmployeeResources(input, unavail, statsByEmp);
   const dailyPlans = buildDailyWorkloads(input, unavail);
+  const dailyTargetPlans = buildDailyTargetPlans(input, unavail);
   const bridgeAssignments = planBridges(input, dailyPlans, employeeResources, unavail);
   const overtimeAssignments = planOvertime(input, dailyPlans, employeeResources, unavail);
   const workforceBudget = buildWorkforceBudget(
@@ -711,5 +787,6 @@ export function planWeeklyResources(input: GenerateScheduleInput): WorkforcePlan
       bridgeAssignments.length,
       workforceBudget.overtimeRequiredHours
     ),
+    dailyTargetPlans,
   };
 }

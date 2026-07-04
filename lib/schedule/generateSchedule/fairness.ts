@@ -12,6 +12,8 @@ import type {
 } from './types';
 import { dayTotalHours } from './timeSlots';
 import { FRIDAY_DOW } from './operatingPeriods';
+import { isBridgeShiftSegments, BRIDGE_COMPENSATION_HOURS } from '@/lib/schedule/plannerGuidedSolver';
+import { segmentsAmPmContribution } from '@/lib/schedule/segmentCoverage';
 
 export function countEmployeeWeeklySplitDays(
   employeeId: string,
@@ -121,13 +123,50 @@ export function buildEmployeeSummaries(
       totalHours: 0,
       splitDays: 0,
       overtimeHours: 0,
+      amDays: 0,
+      pmDays: 0,
+      bridgeDays: 0,
+      leaveDays: 0,
+      offDays: 0,
+      compensationOwedHours: 0,
     };
     cur.totalHours += a.totalHours;
-    if (a.splitDay) cur.splitDays++;
+    if (a.shiftKind === 'Leave') cur.leaveDays += 1;
+    else if (a.shiftKind === 'Off') cur.offDays += 1;
+    else if (a.shiftKind === 'Bridge') {
+      cur.bridgeDays += 1;
+      cur.compensationOwedHours += BRIDGE_COMPENSATION_HOURS;
+    } else if (a.splitDay) cur.splitDays += 1;
+    else if (a.shiftKind === 'AM') cur.amDays += 1;
+    else if (a.shiftKind === 'PM') cur.pmDays += 1;
     if (a.totalHours > maxDailyHours) cur.overtimeHours += a.totalHours - maxDailyHours;
     byEmp.set(a.empId, cur);
   }
   return Array.from(byEmp.values()).sort((a, b) => b.totalHours - a.totalHours);
+}
+
+function resolveShiftKind(
+  w: WorkingDayShift,
+  day: GenerateScheduleInput['days'][number],
+  periodCount: number
+): EmployeeDayAssignment['shiftKind'] {
+  if (!w.segments.length) return 'Off';
+  if (isBridgeShiftSegments(w.segments)) return 'Bridge';
+  const periodIndexes = new Set(w.segments.map((s) => s.periodIndex));
+  const splitDay = periodIndexes.size >= 2;
+  if (splitDay) return 'Split';
+  if (w.isExternalSupport) return 'Support';
+  const { am, pm } = segmentsAmPmContribution(
+    w.segments,
+    day.operatingPeriods,
+    day.dayOfWeek,
+    day.isRamadan
+  );
+  if (am && !pm) return 'AM';
+  if (pm && !am) return 'PM';
+  if (periodCount > 1 && periodIndexes.has(0) && !periodIndexes.has(1)) return 'AM';
+  if (periodCount > 1 && periodIndexes.has(1)) return 'PM';
+  return am ? 'AM' : 'PM';
 }
 
 export function buildFullWeekAssignments(
@@ -206,15 +245,11 @@ export function buildFullWeekAssignments(
       }
 
       const periodCount = periodCountByDate.get(day.date) ?? 1;
+      const bridgeDay = isBridgeShiftSegments(w.segments);
       const periodIndexes = new Set(w.segments.map((s) => s.periodIndex));
-      const splitDay = periodIndexes.size >= 2;
+      const splitDay = !bridgeDay && periodIndexes.size >= 2;
       const totalHours = dayTotalHours(w.segments);
-      let shiftKind: EmployeeDayAssignment['shiftKind'] = 'Off';
-      if (splitDay) shiftKind = 'Split';
-      else if (w.isExternalSupport) shiftKind = 'Support';
-      else if (periodCount > 1 && periodIndexes.has(0) && !periodIndexes.has(1)) shiftKind = 'AM';
-      else if (periodCount > 1 && periodIndexes.has(1)) shiftKind = 'PM';
-      else shiftKind = 'AM';
+      const shiftKind = resolveShiftKind(w, day, periodCount);
 
       assignments.push({
         empId: w.empId,
@@ -269,15 +304,18 @@ export function workingShiftsToAssignments(
       };
     }
     const periodCount = periodCountByDate.get(w.date) ?? 1;
+    const day = bundles.find((b) => b.date === w.date);
+    const bridgeDay = isBridgeShiftSegments(w.segments);
     const periodIndexes = new Set(w.segments.map((s) => s.periodIndex));
-    const splitDay = periodIndexes.size >= 2;
+    const splitDay = !bridgeDay && periodIndexes.size >= 2;
     const totalHours = dayTotalHours(w.segments);
     let shiftKind: EmployeeDayAssignment['shiftKind'] = 'Off';
     if (w.segments.length) {
-      if (splitDay) shiftKind = 'Split';
+      if (day) {
+        shiftKind = resolveShiftKind(w, day, periodCount);
+      } else if (bridgeDay) shiftKind = 'Bridge';
+      else if (splitDay) shiftKind = 'Split';
       else if (w.isExternalSupport) shiftKind = 'Support';
-      else if (periodCount > 1 && periodIndexes.has(0) && !periodIndexes.has(1)) shiftKind = 'AM';
-      else if (periodCount > 1 && periodIndexes.has(1)) shiftKind = 'PM';
       else shiftKind = 'AM';
     }
     return {

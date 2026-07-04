@@ -36,8 +36,8 @@ import {
 import { shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
 import { assignmentsToGridProposals } from './toPlanActions';
 import type { ScheduleEnginePerfCollector } from '@/lib/schedule/scheduleEnginePerf';
+import { applyPlannerGuidedSolve } from '@/lib/schedule/plannerGuidedSolver';
 import {
-  FAIRNESS_ACCEPTABLE_THRESHOLD,
   MAX_ITERATIONS_PER_DAY,
   MAX_SCENARIOS,
   MAX_SOLVE_MS,
@@ -396,7 +396,8 @@ function solveScenario(
   perf?: ScheduleEnginePerfCollector
 ): { state: DayState; violations: ReturnType<typeof validateCoverage>['violations'] } {
   const solveStarted = performance.now();
-  const state: DayState = new Map();
+  // Start from Resource Planner daily target patterns; fallback fill runs on gaps only.
+  const state: DayState = applyPlannerGuidedSolve(input, bundles, weeklyOffOverrides, unavail);
   const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
   const historicalLoad = new Map(input.historicalStats.map((h) => [h.empId, h.priorWeekHours]));
 
@@ -683,10 +684,7 @@ export function generateSchedule(
 
     if (violations.length === 0) {
       ctx.stoppedReason = 'COVERAGE_COMPLETE';
-      if (fairnessBreakdown.score <= FAIRNESS_ACCEPTABLE_THRESHOLD) {
-        ctx.stoppedReason = 'FAIRNESS_ACCEPTABLE';
-        break;
-      }
+      break;
     }
 
     if (budgetExceeded(ctx)) break;

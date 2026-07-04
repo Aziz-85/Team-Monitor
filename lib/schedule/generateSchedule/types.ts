@@ -27,7 +27,7 @@ export type ShiftSegment = {
   periodIndex: number;
 };
 
-export type ShiftKind = 'AM' | 'PM' | 'Split' | 'Off' | 'Leave' | 'Support';
+export type ShiftKind = 'AM' | 'PM' | 'Split' | 'Bridge' | 'Off' | 'Leave' | 'Support';
 
 export type EmployeeDayAssignment = {
   empId: string;
@@ -113,6 +113,12 @@ export type EmployeeWeekSummary = {
   totalHours: number;
   splitDays: number;
   overtimeHours: number;
+  amDays: number;
+  pmDays: number;
+  bridgeDays: number;
+  leaveDays: number;
+  offDays: number;
+  compensationOwedHours: number;
 };
 
 export type GridShiftProposal = {

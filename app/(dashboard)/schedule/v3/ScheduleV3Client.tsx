@@ -15,6 +15,7 @@ import { SmartRecommendationsPanel } from '@/components/schedule/SmartRecommenda
 import type { SmartRecommendation } from '@/lib/schedule/recommendationEngine';
 import { WorkforcePlanningPanel } from '@/components/schedule/WorkforcePlanningPanel';
 import type { WorkforcePlan } from '@/lib/schedule/resourcePlanner';
+import { PlannerScheduleSummary } from '@/components/schedule/PlannerScheduleSummary';
 import { ScenarioSimulatorPanel } from '@/components/schedule/ScenarioSimulatorPanel';
 import type {
   SimulatedScenario,
@@ -678,6 +679,10 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
             t={t}
           />
 
+          {solveData.generateResult.employeeSummaries.length > 0 && (
+            <PlannerScheduleSummary summaries={solveData.generateResult.employeeSummaries} t={t} />
+          )}
+
           <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="text-sm font-semibold text-foreground">{t('schedule.v3.operatingPeriods')}</h2>
             <p className="mt-0.5 text-xs text-muted">
@@ -746,7 +751,12 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <span className="text-sm font-medium text-foreground">{a.name}</span>
-                            {a.splitDay && (
+                            {a.shiftKind === 'Bridge' && (
+                              <span className="shrink-0 rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-900">
+                                Bridge
+                              </span>
+                            )}
+                            {a.splitDay && a.shiftKind !== 'Bridge' && (
                               <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-900">
                                 Split
                               </span>

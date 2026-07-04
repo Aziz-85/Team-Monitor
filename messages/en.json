@@ -1551,6 +1551,18 @@
         "employee": "Employee",
         "peak": "Peak"
       },
+      "plannerSummary": {
+        "title": "Planner-guided schedule",
+        "subtitle": "Weekly shift mix per employee",
+        "employee": "Employee",
+        "am": "AM",
+        "pm": "PM",
+        "bridge": "Bridge",
+        "leave": "Leave",
+        "off": "Off",
+        "totalHours": "Total h",
+        "compensation": "Owed"
+      },
       "scenario": {
         "title": "Scenario Simulator",
         "subtitle": "Ranked workforce options · simulated, nothing applied",

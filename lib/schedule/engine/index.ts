@@ -149,9 +149,11 @@ export type {
   RecommendationEngineInput,
   AffectedTimeRange,
 } from '@/lib/schedule/recommendationEngine';
-export { planWeeklyResources } from '@/lib/schedule/resourcePlanner';
+export { planWeeklyResources, buildDailyTargetPlans } from '@/lib/schedule/resourcePlanner';
 export type {
   WorkforcePlan,
+  DailyTargetPlan,
+  DailyTargetPattern,
   EmployeeResource,
   DailyWorkload,
   WorkforceBudget,
@@ -162,7 +164,12 @@ export type {
   PlannerRecommendation,
   ShiftAllocationType,
 } from '@/lib/schedule/resourcePlanner';
-export { simulateScheduleScenarios } from '@/lib/schedule/scenarioSimulator';
+export {
+  applyPlannerGuidedSolve,
+  isBridgeShiftSegments,
+  countAmPmForDay,
+  BRIDGE_TOTAL_HOURS,
+} from '@/lib/schedule/plannerGuidedSolver';
 export type {
   ScenarioType,
   ScenarioAction,
