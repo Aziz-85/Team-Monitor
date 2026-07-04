@@ -1508,6 +1508,30 @@
         "modifyConstraints": "تعديل القيود",
         "needsSupportTitle": "قد تحتاج التغطية دعماً إضافياً قبل الحل.",
         "continueAnyway": "المتابعة على أي حال"
+      },
+      "smartRec": {
+        "title": "توصيات ذكية",
+        "subtitle": "أفضل 3 إجراءات مرتبة — للمعاينة فقط؛ لا يُطبّق شيء تلقائياً.",
+        "preview": "معاينة هذا الحل",
+        "previewTitle": "معاينة هذا الحل",
+        "impact": "الأثر",
+        "coverageAfter": "التغطية بعد التطبيق",
+        "costLabel": "التكلفة",
+        "fairnessImpact": "أثر العدالة",
+        "slotsResolved": "الفترات التي تُحل (تقدير)",
+        "requiredAction": "الإجراء المطلوب",
+        "affectedTimes": "الأيام / الأوقات المتأثرة",
+        "openEditor": "فتح محرر الجدول",
+        "costLevels": {
+          "low": "تكلفة منخفضة",
+          "medium": "تكلفة متوسطة",
+          "high": "تكلفة عالية"
+        },
+        "fairness": {
+          "better": "تحسّن العدالة",
+          "neutral": "عدالة محايدة",
+          "worse": "قد تقلل العدالة"
+        }
       }
     },
     "assistant": {

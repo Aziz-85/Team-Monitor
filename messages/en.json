@@ -1508,6 +1508,30 @@
         "modifyConstraints": "Modify constraints",
         "needsSupportTitle": "Coverage may need extra support before solving.",
         "continueAnyway": "Continue anyway"
+      },
+      "smartRec": {
+        "title": "Smart Recommendations",
+        "subtitle": "Top ranked fixes — preview only; nothing is applied automatically.",
+        "preview": "Preview this fix",
+        "previewTitle": "Preview this fix",
+        "impact": "Impact",
+        "coverageAfter": "Coverage after applying",
+        "costLabel": "Cost",
+        "fairnessImpact": "Fairness impact",
+        "slotsResolved": "Slots resolved (est.)",
+        "requiredAction": "Required action",
+        "affectedTimes": "Days / times affected",
+        "openEditor": "Open Schedule Editor",
+        "costLevels": {
+          "low": "Low cost",
+          "medium": "Medium cost",
+          "high": "High cost"
+        },
+        "fairness": {
+          "better": "Fairness improves",
+          "neutral": "Neutral fairness",
+          "worse": "May reduce fairness"
+        }
       }
     },
     "assistant": {

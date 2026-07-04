@@ -11,6 +11,8 @@ import { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
 import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 import { getSchedulePolicy } from '@/lib/schedule/policyEngine';
 import { qualityPercentsFromSolve } from '@/lib/schedule/scheduleQuality';
+import { topSmartRecommendations } from '@/lib/schedule/recommendationEngine';
+import { analyzeScheduleConstraints } from '@/lib/schedule/constraintAnalyzer';
 import {
   ScheduleEnginePerfCollector,
   isSchedulePerfResponseEnabled,
@@ -105,6 +107,24 @@ async function computeSolvePayload(
   const dayOperatingConfigs = input.days;
   const policy = getSchedulePolicy(input);
   const qualityPercents = qualityPercentsFromSolve(metrics, generateResult.fairnessScore);
+  const analysis = analyzeScheduleConstraints(input);
+  const smartRecommendations =
+    analysis.status === 'FEASIBLE' && generateResult.coverageValid
+      ? []
+      : topSmartRecommendations(
+          {
+            input,
+            analysis,
+            solverResult: {
+              slotViolations: generateResult.slotViolations,
+              coverageValid: generateResult.coverageValid,
+              fairnessScore: generateResult.fairnessScore,
+              employeeSummaries: generateResult.employeeSummaries,
+              assignments: generateResult.assignments,
+            },
+          },
+          3
+        );
 
   perf.setStat('planActionCount', actions.length);
 
@@ -116,6 +136,7 @@ async function computeSolvePayload(
     mode: generateResult.mode,
     policy,
     qualityPercents,
+    smartRecommendations,
     generateResult: {
       weekStart: generateResult.weekStart,
       mode: generateResult.mode,

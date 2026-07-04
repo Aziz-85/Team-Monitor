@@ -139,6 +139,16 @@ export {
   FRIDAY_DOW as POLICY_FRIDAY_DOW,
 } from '@/lib/schedule/policyEngine';
 export type { SchedulePolicy, SchedulePolicyMode, FridayMode } from '@/lib/schedule/policyEngine';
+export {
+  generateSmartRecommendations,
+  topSmartRecommendations,
+} from '@/lib/schedule/recommendationEngine';
+export type {
+  SmartRecommendation,
+  SmartRecommendationType,
+  RecommendationEngineInput,
+  AffectedTimeRange,
+} from '@/lib/schedule/recommendationEngine';
 export { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 export { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
 

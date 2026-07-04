@@ -10,6 +10,7 @@ import {
 import { loadGenerateScheduleInputForWeek } from '@/lib/schedule/loadScheduleEngineInput';
 import { getSchedulePolicy } from '@/lib/schedule/policyEngine';
 import { qualityPercentsFromAnalysis } from '@/lib/schedule/scheduleQuality';
+import { topSmartRecommendations } from '@/lib/schedule/recommendationEngine';
 import type { Role } from '@prisma/client';
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
@@ -61,6 +62,10 @@ export async function POST(request: NextRequest) {
     const analysis = analyzeScheduleConstraints(input);
     const policy = getSchedulePolicy(input);
     const qualityPercents = qualityPercentsFromAnalysis(analysis);
+    const smartRecommendations =
+      analysis.status === 'FEASIBLE'
+        ? []
+        : topSmartRecommendations({ input, analysis }, 3);
 
     return NextResponse.json({
       weekStart: resolvedWeek,
@@ -68,6 +73,7 @@ export async function POST(request: NextRequest) {
       analysis,
       policy,
       qualityPercents,
+      smartRecommendations,
       mainReason: mainConstraintReason(analysis),
       recommendedFix: topConstraintRecommendation(analysis),
     });

@@ -11,6 +11,8 @@ import {
   ScheduleHealthCheckPanel,
   type HealthCheckPhase,
 } from '@/components/schedule/ScheduleHealthCheckPanel';
+import { SmartRecommendationsPanel } from '@/components/schedule/SmartRecommendationsPanel';
+import type { SmartRecommendation } from '@/lib/schedule/recommendationEngine';
 import type { ConstraintAnalysisResult } from '@/lib/schedule/constraintAnalyzer';
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
@@ -31,6 +33,7 @@ type AnalyzeResponse = {
   analysis: ConstraintAnalysisResult;
   mainReason: string;
   recommendedFix: string | null;
+  smartRecommendations?: SmartRecommendation[];
 };
 
 type SolveMetrics = ScheduleQualityMetrics & { fairnessScore: number };
@@ -46,6 +49,7 @@ type SolveResponse = {
   scenariosTried: number;
   timings?: ScheduleEngineStageTimings;
   stats?: ScheduleEnginePerfStats;
+  smartRecommendations?: SmartRecommendation[];
 };
 
 type Props = {
@@ -216,6 +220,18 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
       externalSupportCount: m.externalSupportCount,
     };
   }, [solveData]);
+
+  const smartRecommendations = useMemo(() => {
+    if (solveData?.smartRecommendations?.length) return solveData.smartRecommendations;
+    if (analyzeData?.smartRecommendations?.length) return analyzeData.smartRecommendations;
+    return [];
+  }, [solveData, analyzeData]);
+
+  const showSmartRecommendations =
+    smartRecommendations.length > 0 &&
+    (analyzeData?.analysis.status === 'IMPOSSIBLE' ||
+      analyzeData?.analysis.status === 'NEEDS_SUPPORT' ||
+      (solveData != null && !solveData.metrics.coverageValid));
 
   const fetchAnalysis = useCallback(async (): Promise<AnalyzeResponse | null> => {
     setAnalyzeError(null);
@@ -500,6 +516,17 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
           ) : (
             <p className="text-sm text-muted">{t('schedule.v3.healthCheck.loading')}</p>
           )}
+        </div>
+      )}
+
+      {showSmartRecommendations && (
+        <div className="mb-6">
+          <SmartRecommendationsPanel
+            recommendations={smartRecommendations}
+            formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
+            editWeekUrl={`/schedule/edit?weekStart=${encodeURIComponent(weekStart)}`}
+            t={t}
+          />
         </div>
       )}
 
