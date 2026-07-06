@@ -467,11 +467,23 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <header className="mb-6">
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">{tr('schedule.v3.lab.bannerTitle', 'Engine lab — testing only')}</p>
+          <p className="mt-1 text-amber-900/90">
+            {tr(
+              'schedule.v3.lab.bannerHint',
+              'For day-to-day planning use Schedule Editor: generate a proposal, review, approve, or edit manually.'
+            )}
+          </p>
+        </div>
         <h1 className="text-2xl font-semibold text-foreground">
-          {tr('schedule.v3.title', 'Schedule Solver')}
+          {tr('schedule.v3.lab.title', 'Schedule Engine Lab')}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {tr('schedule.v3.manager.subtitle', 'Generate the best weekly schedule for your boutique.')}
+          {tr(
+            'schedule.v3.lab.subtitle',
+            'Experiment with Engine v3, constraint analysis, scenarios, and workforce planning.'
+          )}
         </p>
         {ramadanRange && weekOverlapsRamadan(weekStart, ramadanRange) && (
           <p className="mt-1 text-xs text-sky-700">
