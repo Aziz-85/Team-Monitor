@@ -35,7 +35,6 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     items: [
       { key: 'SCHEDULE_VIEW', href: '/schedule/view', labelKey: 'nav.scheduleView' },
       { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor' },
-      { key: 'SCHEDULE_SOLVER', href: '/schedule/v3', labelKey: 'nav.scheduleSolver' },
       { key: 'SCHEDULE_AUDIT', href: '/schedule/audit', labelKey: 'nav.scheduleAudit' },
       { key: 'SCHEDULE_EXPORT', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter' },
       { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },

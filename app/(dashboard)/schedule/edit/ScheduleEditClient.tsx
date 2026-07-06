@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
@@ -21,6 +22,7 @@ import { SwapWeeklyOffModal } from '@/components/schedule/SwapWeeklyOffModal';
 import { ScheduleAssistantModal } from '@/components/schedule/ScheduleAssistantModal';
 import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel';
 import { CompactScheduleWarnings } from '@/components/schedule/CompactScheduleWarnings';
+import { EditorTechnicalPanel } from '@/components/schedule/EditorTechnicalPanel';
 import { CollapsibleKeyHolders } from '@/components/schedule/CollapsibleKeyHolders';
 import { ScheduleShiftCellHint, ScheduleShiftReadOnlyBadge } from '@/components/schedule/ScheduleShiftCellHint';
 import {
@@ -1229,6 +1231,8 @@ export function ScheduleEditClient({
     [gridData, effectiveTimeCoverage.violations]
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
+  const activeSuggestionCount = effectiveSuggestions.filter((s) => !dismissedSuggestionIds.has(s.id)).length;
+  const technicalIssueCount = daysNeedingAttention + activeSuggestionCount;
 
   const scheduleQualityMetrics = useMemo(() => {
     if (!gridData?.dayCountContexts?.length) return null;
@@ -1712,6 +1716,15 @@ export function ScheduleEditClient({
   return (
     <div className="min-w-0 overflow-x-hidden p-4 md:p-6">
       <div className="mx-auto min-w-0 max-w-5xl overflow-x-hidden px-4 md:px-6">
+        <header className="mb-4">
+          <h1 className="text-2xl font-semibold text-foreground">
+            {(t('schedule.proposal.workflowTitle') as string) || 'Schedule Planning'}
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {(t('schedule.proposal.workflowHint') as string) ||
+              'Generate a visual proposal, approve it, regenerate alternatives, or edit shifts manually in the grid.'}
+          </p>
+        </header>
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <div className="flex gap-2">
             <button
@@ -1782,12 +1795,6 @@ export function ScheduleEditClient({
                         {t('schedule.ramadanModeBanner')}
                       </span>
                     )}
-                    <span className="rounded bg-surface-subtle px-2 py-1 text-xs font-mono text-muted" title="Ramadan env range">
-                      {(t('schedule.ramadanDebug') ?? 'RamadanMode: {status} ({range}) · weekStart: {weekStart}')
-                        .replace('{status}', ramadanMode ? 'ON' : 'OFF')
-                        .replace('{range}', `${ramadanRange.start}–${ramadanRange.end}`)
-                        .replace('{weekStart}', weekStart)}
-                    </span>
                   </>
                 );
               })()}
@@ -2009,6 +2016,13 @@ export function ScheduleEditClient({
           )}
           {canEdit && tab === 'week' && (
             <>
+              <button
+                type="button"
+                onClick={() => setProposalReviewOpen(true)}
+                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A] bg-[#0F4C3A] px-4 text-sm font-semibold text-white hover:bg-[#0d3f30] focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/40 focus:ring-offset-2"
+              >
+                {(t('schedule.proposal.open') as string) || 'Generate Proposal'}
+              </button>
               {pendingCount > 0 && (
                 <span className="rounded bg-amber-100 px-2 py-1 text-sm font-medium text-amber-800">
                   {(t('schedule.unsavedCount') as string)?.replace?.('{n}', String(pendingCount)) ?? `${pendingCount} changes`}
@@ -2018,7 +2032,7 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={() => setSaveModalOpen(true)}
                 disabled={pendingCount === 0}
-                className="h-9 md:h-10 rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                className="h-9 md:h-10 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.saveChanges') ?? 'Save changes'}
               </button>
@@ -2026,30 +2040,16 @@ export function ScheduleEditClient({
                 type="button"
                 onClick={discardAll}
                 disabled={pendingCount === 0}
-                className="h-9 md:h-10 rounded-lg border border-border bg-surface px-4 font-medium text-foreground hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                className="h-9 md:h-10 rounded-lg border border-border bg-surface px-4 font-medium text-muted hover:bg-surface-subtle hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.discardChanges') ?? 'Discard changes'}
               </button>
               <button
                 type="button"
                 onClick={() => setSwapWeeklyOffOpen(true)}
-                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A]/30 bg-[#0F4C3A]/5 px-4 text-sm font-medium text-[#0F4C3A] hover:bg-[#0F4C3A]/10 focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/30 focus:ring-offset-2"
+                className="h-9 md:h-10 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
               >
                 {t('schedule.swapWeeklyOff.button')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setProposalReviewOpen(true)}
-                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A] bg-[#0F4C3A] px-4 text-sm font-semibold text-white hover:bg-[#0d3f30] focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/40 focus:ring-offset-2"
-              >
-                {(t('schedule.proposal.open') as string) || 'Generate Proposal'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setScheduleAssistantOpen(true)}
-                className="h-9 md:h-10 rounded-lg border border-violet-300 bg-violet-50 px-4 text-sm font-medium text-violet-900 hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
-              >
-                {t('schedule.assistant.button')}
               </button>
             </>
           )}
@@ -2173,9 +2173,6 @@ export function ScheduleEditClient({
 
         {tab === 'week' && gridData && (
         <div className="flex min-w-0 flex-col gap-4">
-            {editorView === 'grid' && scheduleQualityMetrics && (
-              <ScheduleQualityPanel metrics={scheduleQualityMetrics} t={t} />
-            )}
             {editorView === 'grid' ? (
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] text-muted">
@@ -2508,7 +2505,30 @@ export function ScheduleEditClient({
 
         {tab === 'week' && gridData && (
           <div className="mt-4 space-y-4">
-            {canEdit && effectiveSuggestions.length > 0 && (
+            {canEdit && editorView === 'grid' && (
+              <EditorTechnicalPanel
+                t={t}
+                issueCount={technicalIssueCount}
+                footer={
+                  <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs">
+                    <Link
+                      href={`/schedule/v3?weekStart=${weekStart}`}
+                      className="font-medium text-accent hover:text-accent/80"
+                    >
+                      {(t('schedule.proposal.openEngineLab') as string) || 'Open Engine Lab (v3) →'}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setScheduleAssistantOpen(true)}
+                      className="font-medium text-muted hover:text-foreground"
+                    >
+                      {t('schedule.assistant.button')}
+                    </button>
+                  </div>
+                }
+              >
+                {scheduleQualityMetrics && <ScheduleQualityPanel metrics={scheduleQualityMetrics} t={t} />}
+                {effectiveSuggestions.length > 0 && (
               <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
                 <h3 className="mb-2 text-sm font-semibold text-foreground">
                   {t('schedule.suggestions') ?? 'Suggestions'}
@@ -2580,6 +2600,16 @@ export function ScheduleEditClient({
                     ))}
                 </ul>
               </div>
+                )}
+                <CompactScheduleWarnings
+                  grouped={groupedWarnings}
+                  coverageSummaries={coverageSummaries}
+                  daysNeedingAttention={daysNeedingAttention}
+                  formatDate={formatDDMM}
+                  onFocusDay={focusDay}
+                  t={t}
+                />
+              </EditorTechnicalPanel>
             )}
             <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
               <h3 className="mb-2 text-sm font-semibold text-foreground">
@@ -2651,17 +2681,6 @@ export function ScheduleEditClient({
                 {t('governance.viewFullAudit') ?? 'View full audit →'}
               </a>
             </div>
-
-            {canEdit && (
-              <CompactScheduleWarnings
-                grouped={groupedWarnings}
-                coverageSummaries={coverageSummaries}
-                daysNeedingAttention={daysNeedingAttention}
-                formatDate={formatDDMM}
-                onFocusDay={focusDay}
-                t={t}
-              />
-            )}
           </div>
         )}
 
