@@ -50,6 +50,10 @@ export type GenerateScheduleOptions = {
   preAnalyzed?: boolean;
   /** Run fill passes even when staffing headcount precheck fails (best-effort partial). */
   forcePartialSolve?: boolean;
+  /** Rotate weekly-off variant order (proposal regeneration). */
+  scenarioRotation?: number;
+  /** Rotate bridge employee tie-break (proposal regeneration). */
+  bridgeRotationOffset?: number;
 };
 
 type DayState = Map<string, WorkingDayShift>;
@@ -393,11 +397,13 @@ function solveScenario(
   weeklyOffOverrides: Map<string, number>,
   unavail: Map<string, string>,
   ctx: SolverContext,
-  perf?: ScheduleEnginePerfCollector
+  perf?: ScheduleEnginePerfCollector,
+  solveOptions?: GenerateScheduleOptions
 ): { state: DayState; violations: ReturnType<typeof validateCoverage>['violations'] } {
   const solveStarted = performance.now();
-  // Start from Resource Planner daily target patterns; fallback fill runs on gaps only.
-  const state: DayState = applyPlannerGuidedSolve(input, bundles, weeklyOffOverrides, unavail);
+  const state: DayState = applyPlannerGuidedSolve(input, bundles, weeklyOffOverrides, unavail, {
+    bridgeRotationOffset: solveOptions?.bridgeRotationOffset,
+  });
   const allEmployees = [...input.regularEmployees, ...input.externalSupportEmployees];
   const historicalLoad = new Map(input.historicalStats.map((h) => [h.empId, h.priorWeekHours]));
 
@@ -614,9 +620,14 @@ export function generateSchedule(
   }
 
   const baseUnavail = buildUnavailMap(input.unavailability);
-  const variants = perf
+  const rawVariants = perf
     ? perf.timeSync('generateCandidatesMs', () => generateWeeklyOffVariants(input, MAX_SCENARIOS))
     : generateWeeklyOffVariants(input, MAX_SCENARIOS);
+  const rotation = options?.scenarioRotation ?? 0;
+  const variants =
+    rotation > 0 && rawVariants.length > 1
+      ? [...rawVariants.slice(rotation % rawVariants.length), ...rawVariants.slice(0, rotation % rawVariants.length)]
+      : rawVariants;
 
   if (perf) {
     perf.setStat('weeklyOffVariants', variants.length);
@@ -627,6 +638,7 @@ export function generateSchedule(
     violations: GenerateScheduleResult['slotViolations'];
     fairness: number;
     proposals: GridShiftProposal[];
+    weeklyOff: Map<string, number>;
   } | null = null;
 
   let scenariosTried = 0;
@@ -655,7 +667,7 @@ export function generateSchedule(
         ctx.stoppedReason = 'IMPOSSIBLE_STAFFING';
       }
       allScenariosImpossible = false;
-      ({ state, violations } = solveScenario(input, bundles, weeklyOff, unavail, ctx, perf));
+      ({ state, violations } = solveScenario(input, bundles, weeklyOff, unavail, ctx, perf, options));
     }
 
     ctx.iterationsByScenario.push(ctx.totalIterations - scenarioStartIterations);
@@ -672,6 +684,7 @@ export function generateSchedule(
       violations,
       fairness: fairnessBreakdown.score,
       proposals,
+      weeklyOff,
     };
 
     if (
@@ -730,6 +743,9 @@ export function generateSchedule(
     scenariosTried,
     solverStatus,
     stoppedReason: ctx.stoppedReason,
+    weeklyOffVariant: result.weeklyOff
+      ? Object.fromEntries(result.weeklyOff.entries())
+      : undefined,
     iterationsByDay: { ...ctx.iterationsByDay },
     iterationsByScenario: [...ctx.iterationsByScenario],
   };

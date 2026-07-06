@@ -7,7 +7,7 @@ describe('validateTimeCoverageForGrid', () => {
   const dayCountContexts = buildDayCountContexts([date]);
 
   it('uses saved segments for slot coverage validation', () => {
-    const fullDay = [{ periodIndex: 0, startTime: '09:30', endTime: '22:30' }];
+    const periods = dayCountContexts[0]!.operatingPeriods;
     const rows: GridRow[] = ['e1', 'e2'].map((empId, idx) => ({
       empId,
       name: idx === 0 ? 'A' : 'B',
@@ -17,10 +17,16 @@ describe('validateTimeCoverageForGrid', () => {
         {
           date,
           availability: 'WORK' as const,
-          effectiveShift: 'EVENING' as const,
+          effectiveShift: 'SPLIT' as const,
           overrideId: `o${idx + 1}`,
           baseShift: 'MORNING' as const,
-          segments: fullDay,
+          segments:
+            periods.length >= 2
+              ? [
+                  { periodIndex: 0, startTime: periods[0].startTime, endTime: periods[0].endTime },
+                  { periodIndex: 1, startTime: periods[1].startTime, endTime: periods[1].endTime },
+                ]
+              : [{ periodIndex: 0, startTime: '09:30', endTime: '22:30' }],
         },
       ],
     }));

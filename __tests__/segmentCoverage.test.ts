@@ -43,11 +43,12 @@ describe('segmentCoverage counting', () => {
     expect(contrib.pm).toBe(true);
   });
 
-  it('SPLIT enum without saved segments counts AM and PM from label, not synthetic blocks', () => {
+  it('SPLIT enum without saved segments projects AM and PM period segments', () => {
     const periods = operatingPeriodsForDay(6, false);
-    const contrib = shiftAmPmContribution('SPLIT', periods, 6, false);
+    const segments = shiftToSegmentsForCounting('SPLIT', periods, 8);
+    expect(segments.length).toBe(2);
+    const contrib = shiftAmPmContribution('SPLIT', periods, 6, false, 8, segments);
     expect(contrib.am).toBe(true);
     expect(contrib.pm).toBe(true);
-    expect(shiftToSegmentsForCounting('SPLIT', periods, 8)).toEqual([]);
   });
 });

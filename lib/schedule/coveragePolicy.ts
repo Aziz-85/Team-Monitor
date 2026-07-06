@@ -166,20 +166,21 @@ export function isSplitAssignmentAllowed(
   ruleMinAm = 0
 ): boolean {
   if (isFridayDay(dayOfWeek)) return false;
-  const after = countsAfterShiftChange(counts, fromShift, 'SPLIT');
-  if (after.am < effectiveMinAm(dayOfWeek, ruleMinAm)) return false;
-  if (pmMustBeAtLeastAm(dayOfWeek) && after.pm < after.am) return false;
+  void counts;
+  void fromShift;
+  void ruleMinAm;
   return true;
 }
 
-/** Split is available on non-Friday days when the assignment would stay compliant. */
+/** Split is available on non-Friday days. Editor never hides Split based on AM/PM buckets. */
 export function shouldOfferSplitOption(
   counts: CoverageCounts,
   dayOfWeek: number,
   ruleMinAm = 0
 ): boolean {
-  if (isFridayDay(dayOfWeek)) return false;
-  return counts.am >= effectiveMinAm(dayOfWeek, ruleMinAm) || counts.pm > counts.am;
+  void counts;
+  void ruleMinAm;
+  return !isFridayDay(dayOfWeek);
 }
 
 /** Planner: AM→Split when AM ≥ min and PM needs +1 (PM ≥ AM after). */

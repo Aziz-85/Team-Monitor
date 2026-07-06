@@ -138,7 +138,8 @@ function pickBridgeEmployee(
   pool: EmployeeCandidate[],
   bridgeCounts: Map<string, number>,
   exclude: Set<string>,
-  dayIndex: number
+  dayIndex: number,
+  rotationOffset = 0
 ): EmployeeCandidate | null {
   const candidates = pool
     .filter((e) => !exclude.has(e.empId))
@@ -147,7 +148,7 @@ function pickBridgeEmployee(
 
   const minCount = Math.min(...candidates.map((c) => bridgeCounts.get(c.empId) ?? 0));
   const tied = candidates.filter((c) => (bridgeCounts.get(c.empId) ?? 0) === minCount);
-  return tied[dayIndex % tied.length] ?? tied[0];
+  return tied[(dayIndex + rotationOffset) % tied.length] ?? tied[0];
 }
 
 function assignDayFromPlan(
@@ -158,7 +159,8 @@ function assignDayFromPlan(
   unavail: Map<string, string>,
   state: DayState,
   bridgeCounts: Map<string, number>,
-  dayIndex: number
+  dayIndex: number,
+  bridgeRotationOffset = 0
 ): void {
   const day = input.days.find((d) => d.date === plan.date);
   if (!day) return;
@@ -189,7 +191,7 @@ function assignDayFromPlan(
   if (day.operatingPeriods.length >= 2) {
     if (plan.pattern === 'SHORTAGE_3_STAFF' && pool.length >= 3) {
       const sorted = [...pool].sort((a, b) => a.name.localeCompare(b.name));
-      const bridgeEmp = pickBridgeEmployee(sorted, bridgeCounts, new Set(), dayIndex);
+      const bridgeEmp = pickBridgeEmployee(sorted, bridgeCounts, new Set(), dayIndex, bridgeRotationOffset);
       if (!bridgeEmp) return;
       const rest = sorted.filter((e) => e.empId !== bridgeEmp.empId);
       const amEmp = rest[0];
@@ -221,7 +223,7 @@ function assignDayFromPlan(
 
   if (plan.pattern === 'SHORTAGE_3_STAFF' && pool.length >= 3) {
     const sorted = [...pool].sort((a, b) => a.name.localeCompare(b.name));
-    const bridgeEmp = pickBridgeEmployee(sorted, bridgeCounts, new Set(), dayIndex);
+    const bridgeEmp = pickBridgeEmployee(sorted, bridgeCounts, new Set(), dayIndex, bridgeRotationOffset);
     if (!bridgeEmp) return;
     const rest = sorted.filter((e) => e.empId !== bridgeEmp.empId);
     const amEmp = rest[0];
@@ -254,8 +256,10 @@ export function applyPlannerGuidedSolve(
   input: GenerateScheduleInput,
   bundles: DaySlotBundle[],
   weeklyOff: Map<string, number>,
-  unavail: Map<string, string>
+  unavail: Map<string, string>,
+  options?: { bridgeRotationOffset?: number }
 ): DayState {
+  const bridgeRotationOffset = options?.bridgeRotationOffset ?? 0;
   const plans = buildDailyTargetPlans(input, unavail, weeklyOff);
   const state: DayState = new Map();
   const bridgeCounts = new Map<string, number>();
@@ -275,7 +279,8 @@ export function applyPlannerGuidedSolve(
       unavail,
       state,
       bridgeCounts,
-      usesBridge ? bridgeDayCounter++ : 0
+      usesBridge ? bridgeDayCounter++ : 0,
+      bridgeRotationOffset
     );
   }
 

@@ -146,6 +146,8 @@ export type GenerateScheduleResult = {
   stoppedReason: StoppedReason | null;
   iterationsByDay: Record<string, number>;
   iterationsByScenario: number[];
+  /** Weekly-off DOW per employee used in the winning scenario (proposal review). */
+  weeklyOffVariant?: Record<string, number>;
 };
 
 export type DaySlotBundle = {
