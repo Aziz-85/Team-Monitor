@@ -1,18 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
-import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel';
+import { TechnicalAnalysisPanel } from '@/components/schedule/TechnicalAnalysisPanel';
 import {
-  ScheduleHealthCheckPanel,
-  type HealthCheckPhase,
-} from '@/components/schedule/ScheduleHealthCheckPanel';
-import { SmartRecommendationsPanel } from '@/components/schedule/SmartRecommendationsPanel';
+  ScheduleWeeklyGrid,
+  ScheduleBottomSummary,
+  ScheduleExplanation,
+  buildExplanationFromData,
+} from '@/components/schedule/ScheduleManagerView';
+import { ScheduleCellDetailModal } from '@/components/schedule/ScheduleCellDetailModal';
+import type { HealthCheckPhase } from '@/components/schedule/ScheduleHealthCheckPanel';
 import type { SmartRecommendation } from '@/lib/schedule/recommendationEngine';
+import type { WorkforcePlan } from '@/lib/schedule/resourcePlanner';
+import type {
+  SimulatedScenario,
+  ScenarioSimulationSummary,
+} from '@/lib/schedule/scenarioSimulator';
 import type { ConstraintAnalysisResult } from '@/lib/schedule/constraintAnalyzer';
 import type { ScheduleQualityMetrics } from '@/lib/schedule/scheduleUiMetrics';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
@@ -20,6 +28,10 @@ import type {
   ScheduleEnginePerfStats,
   ScheduleEngineStageTimings,
 } from '@/lib/schedule/scheduleEnginePerf';
+import {
+  buildScheduleGrid,
+  computeScheduleSummary,
+} from '@/lib/schedule/schedulePresentation';
 import type {
   DayOperatingConfig,
   EmployeeDayAssignment,
@@ -34,9 +46,19 @@ type AnalyzeResponse = {
   mainReason: string;
   recommendedFix: string | null;
   smartRecommendations?: SmartRecommendation[];
+  workforcePlan?: WorkforcePlan;
 };
 
 type SolveMetrics = ScheduleQualityMetrics & { fairnessScore: number };
+
+type ScenariosResponse = {
+  weekStart: string;
+  bestScenarioId: string;
+  scenarios: SimulatedScenario[];
+  summary: ScenarioSimulationSummary;
+  generatedAt: string;
+  performance: { scenariosGenerated: number; solves: number; totalMs: number; capped: boolean };
+};
 
 type SolveResponse = {
   weekStart: string;
@@ -98,7 +120,6 @@ function formatSolveError(
   return `Failed (${status})`;
 }
 
-/** Parse JSON from a keepalive stream (leading newlines before the payload). */
 function parseSolveResponseBody(raw: string): { error?: string } & Partial<SolveResponse> {
   const trimmed = raw.trim();
   if (!trimmed) throw new Error('Empty response');
@@ -119,24 +140,6 @@ function groupViolationsByDay(violations: SlotViolation[]): Map<string, SlotViol
   return map;
 }
 
-function AssignmentCell({ assignment }: { assignment: EmployeeDayAssignment }) {
-  if (assignment.shiftKind === 'Off' || assignment.shiftKind === 'Leave') {
-    return <span className="text-xs text-muted">{assignment.shiftKind}</span>;
-  }
-  if (!assignment.segments.length) {
-    return <span className="text-xs font-medium text-foreground">{assignment.shiftKind}</span>;
-  }
-  return (
-    <div className="space-y-0.5">
-      {assignment.segments.map((s, i) => (
-        <div key={`${s.startTime}-${i}`} className="font-mono text-xs text-foreground">
-          {s.startTime}–{s.endTime}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function ScheduleV3Client({ ramadanRange }: Props) {
   const { t, locale } = useT();
   const router = useRouter();
@@ -152,6 +155,10 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
   const [healthPhase, setHealthPhase] = useState<HealthCheckPhase>('preview');
   const [feasibleMessage, setFeasibleMessage] = useState<string | null>(null);
   const [solveData, setSolveData] = useState<SolveResponse | null>(null);
+  const [scenarioData, setScenarioData] = useState<ScenariosResponse | null>(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<EmployeeDayAssignment | null>(null);
 
   const intlLocale = intlLocaleForGregorianCalendar(locale);
 
@@ -183,7 +190,7 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
   const weekRangeLabel = useMemo(() => {
     const start = dateFromCalendarDayString(weekStart);
     const end = dateFromCalendarDayString(addDays(weekStart, 6));
-    const opts: Intl.DateTimeFormatOptions = { weekday: 'short', day: 'numeric', month: 'short' };
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
     return `${start.toLocaleDateString(intlLocale, opts)} – ${end.toLocaleDateString(intlLocale, opts)}`;
   }, [weekStart, intlLocale]);
 
@@ -221,19 +228,39 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     };
   }, [solveData]);
 
+  const scheduleGrid = useMemo(() => {
+    if (!solveData) return [];
+    return buildScheduleGrid(solveData.generateResult.assignments, solveData.dayOperatingConfigs);
+  }, [solveData]);
+
+  const scheduleSummary = useMemo(() => {
+    if (!solveData) return null;
+    return computeScheduleSummary(
+      solveData.generateResult.assignments,
+      solveData.dayOperatingConfigs,
+      solveData.generateResult.slotViolations,
+      solveData.generateResult.employeeSummaries,
+      solveData.metrics.coverageValid
+    );
+  }, [solveData]);
+
+  const explanationBullets = useMemo(() => {
+    if (!solveData || !scheduleSummary) return [];
+    return buildExplanationFromData(
+      solveData.generateResult.assignments,
+      solveData.dayOperatingConfigs,
+      scheduleSummary
+    );
+  }, [solveData, scheduleSummary]);
+
   const smartRecommendations = useMemo(() => {
     if (solveData?.smartRecommendations?.length) return solveData.smartRecommendations;
     if (analyzeData?.smartRecommendations?.length) return analyzeData.smartRecommendations;
     return [];
   }, [solveData, analyzeData]);
 
-  const showSmartRecommendations =
-    smartRecommendations.length > 0 &&
-    (analyzeData?.analysis.status === 'IMPOSSIBLE' ||
-      analyzeData?.analysis.status === 'NEEDS_SUPPORT' ||
-      (solveData != null && !solveData.metrics.coverageValid));
-
   const fetchAnalysis = useCallback(async (): Promise<AnalyzeResponse | null> => {
+    setAnalyzing(true);
     setAnalyzeError(null);
     try {
       const res = await fetch('/api/schedule/v3/analyze', {
@@ -251,32 +278,65 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         );
       }
       setAnalyzeData(data);
+      if (data.analysis.status === 'FEASIBLE') {
+        setHealthPhase('feasible');
+      } else if (data.analysis.status === 'NEEDS_SUPPORT') {
+        setHealthPhase('decision');
+      } else {
+        setHealthPhase('impossible');
+      }
       return data;
     } catch (e) {
       setAnalyzeError(e instanceof Error ? e.message : 'Analyze failed');
       setAnalyzeData(null);
       return null;
+    } finally {
+      setAnalyzing(false);
     }
   }, [weekStart, t]);
 
-  const runPreviewHealthCheck = useCallback(async () => {
-    setAnalyzing(true);
-    setHealthPhase('preview');
-    setFeasibleMessage(null);
-    await fetchAnalysis();
-    setAnalyzing(false);
-  }, [fetchAnalysis]);
+  const generateScenarios = useCallback(async () => {
+    setScenarioLoading(true);
+    setScenarioError(null);
+    try {
+      const res = await fetch('/api/schedule/v3/scenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekStart }),
+      });
+      const data = (await res.json()) as ScenariosResponse & { error?: string };
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `Scenario simulation failed (${res.status})`);
+      }
+      setScenarioData(data);
+    } catch (e) {
+      setScenarioError(e instanceof Error ? e.message : 'Scenario simulation failed');
+      setScenarioData(null);
+    } finally {
+      setScenarioLoading(false);
+    }
+  }, [weekStart]);
 
-  useEffect(() => {
-    void runPreviewHealthCheck();
-  }, [runPreviewHealthCheck]);
+  const applyScenario = useCallback(
+    (scenario: SimulatedScenario) => {
+      if (!scenario.simulationResult.coverageValid) {
+        const proceed = window.confirm(
+          (t('schedule.v3.scenario.forceConfirm') as string) ||
+            'This scenario does not reach full coverage. Open the editor to apply it anyway?'
+        );
+        if (!proceed) return;
+      }
+      router.push(`/schedule/edit?weekStart=${encodeURIComponent(weekStart)}`);
+    },
+    [router, weekStart, t]
+  );
 
   const runSolveRequest = useCallback(
     async (opts: { forcePartialSolve?: boolean } = {}) => {
       setLoading(true);
       setError(null);
       setApplyError(null);
-      setHealthPhase('solving');
+      setSelectedCell(null);
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 180_000);
       try {
@@ -286,7 +346,7 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
           body: JSON.stringify({
             weekStart,
             preAnalyzed: true,
-            forcePartialSolve: opts.forcePartialSolve ?? false,
+            forcePartialSolve: opts.forcePartialSolve ?? true,
           }),
           signal: controller.signal,
         });
@@ -304,54 +364,29 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         }
         setSolveData(data);
         setHealthPhase('preview');
+        void fetchAnalysis();
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') {
           setError((t('schedule.v3.timeout') as string) || 'Solve request timed out after 3 minutes.');
         } else {
           setError(e instanceof Error ? e.message : 'Solve failed');
         }
-        if (analyzeData?.analysis.status === 'NEEDS_SUPPORT') {
-          setHealthPhase('decision');
-        } else if (analyzeData?.analysis.status === 'IMPOSSIBLE') {
-          setHealthPhase('impossible');
-        } else {
-          setHealthPhase('preview');
-        }
       } finally {
         window.clearTimeout(timeoutId);
         setLoading(false);
       }
     },
-    [weekStart, t, analyzeData]
+    [weekStart, t, fetchAnalysis]
   );
 
-  const startSolveFlow = useCallback(async () => {
+  const handleGenerateSchedule = useCallback(() => {
     setSolveData(null);
-    setError(null);
-    setApplyError(null);
+    setAnalyzeData(null);
+    setScenarioData(null);
+    setScenarioError(null);
     setFeasibleMessage(null);
-    setAnalyzing(true);
-    setHealthPhase('preview');
-    const data = await fetchAnalysis();
-    setAnalyzing(false);
-    if (!data) return;
-
-    if (data.analysis.status === 'FEASIBLE') {
-      setHealthPhase('feasible');
-      setFeasibleMessage(
-        (t('schedule.v3.healthCheck.feasibleMessage') as string) || 'Schedule is feasible.'
-      );
-      await runSolveRequest({});
-      return;
-    }
-
-    if (data.analysis.status === 'NEEDS_SUPPORT') {
-      setHealthPhase('decision');
-      return;
-    }
-
-    setHealthPhase('impossible');
-  }, [fetchAnalysis, runSolveRequest, t]);
+    void runSolveRequest({ forcePartialSolve: true });
+  }, [runSolveRequest]);
 
   const handleContinueAnyway = useCallback(() => {
     void runSolveRequest({ forcePartialSolve: true });
@@ -372,10 +407,16 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
 
   const applyToWeek = useCallback(async () => {
     if (!solveData?.actions.length) return;
-    if (!solveData.metrics.coverageValid) {
-      setApplyError(t('schedule.v3.applyBlocked') as string);
-      return;
+
+    const incomplete = !solveData.metrics.coverageValid;
+    if (incomplete) {
+      const proceed = window.confirm(
+        (t('schedule.v3.manager.applyIncompleteConfirm') as string) ||
+          'Coverage is incomplete. Apply this schedule anyway?'
+      );
+      if (!proceed) return;
     }
+
     setApplying(true);
     setApplyError(null);
     try {
@@ -386,12 +427,12 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
           weekStart: solveData.weekStart,
           reason: (t('schedule.v3.applyReason') as string) || 'Schedule Engine v3 solve',
           actions: solveData.actions,
-          force: false,
+          force: incomplete,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data.code === 'COVERAGE_INVALID') {
+        if (data.code === 'COVERAGE_INVALID' && !incomplete) {
           setApplyError((t('schedule.v3.applyBlocked') as string) || data.error);
         } else {
           throw new Error((data.error as string) || `Failed (${res.status})`);
@@ -411,20 +452,27 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     syncWeekToUrl(ws);
     setSolveData(null);
     setAnalyzeData(null);
+    setScenarioData(null);
+    setScenarioError(null);
     setHealthPhase('preview');
     setFeasibleMessage(null);
     setError(null);
     setAnalyzeError(null);
     setApplyError(null);
+    setSelectedCell(null);
   };
+
+  const tr = (key: string, fallback: string) => (t(key) as string) || fallback;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">
-          {(t('schedule.v3.title') as string) || 'Schedule Solver'}
+          {tr('schedule.v3.title', 'Schedule Solver')}
         </h1>
-        <p className="mt-1 text-sm text-muted">{t('schedule.v3.subtitle')}</p>
+        <p className="mt-1 text-sm text-muted">
+          {tr('schedule.v3.manager.subtitle', 'Generate the best weekly schedule for your boutique.')}
+        </p>
         {ramadanRange && weekOverlapsRamadan(weekStart, ramadanRange) && (
           <p className="mt-1 text-xs text-sky-700">
             {t('schedule.v3.ramadanActive')} {ramadanRange.start} – {ramadanRange.end}
@@ -432,110 +480,60 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         )}
       </header>
 
-      <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">
-        <div>
-          <label className="text-xs font-medium text-muted">{t('schedule.weekStart')}</label>
-          <div className="mt-1 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => changeWeek(addDays(weekStart, -7))}
-              className="h-9 rounded-lg border border-border px-2 text-sm hover:bg-surface-subtle"
-              aria-label={t('schedule.previousWeek') as string}
-            >
-              ←
-            </button>
-            <input
-              type="date"
-              value={weekStart}
-              onChange={(e) => changeWeek(weekStartSaturday(e.target.value))}
-              className="h-9 rounded-lg border border-border px-2 text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => changeWeek(addDays(weekStart, 7))}
-              className="h-9 rounded-lg border border-border px-2 text-sm hover:bg-surface-subtle"
-              aria-label={t('schedule.nextWeek') as string}
-            >
-              →
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-muted">{weekRangeLabel}</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 ms-auto">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => void startSolveFlow()}
-            disabled={loading || applying || analyzing}
-            className="h-9 rounded-lg bg-[#0F4C3A] px-4 text-sm font-semibold text-white disabled:opacity-50"
+            onClick={() => changeWeek(addDays(weekStart, -7))}
+            className="h-9 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-subtle"
           >
-            {loading ? t('common.loading') : t('schedule.v3.solve')}
+            {tr('schedule.v3.manager.previousWeek', 'Previous')}
+          </button>
+          <div className="px-2 text-center">
+            <p className="text-xs font-medium text-muted">{tr('schedule.week', 'Week')}</p>
+            <p className="text-sm font-semibold text-foreground">{weekRangeLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => changeWeek(addDays(weekStart, 7))}
+            className="h-9 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-subtle"
+          >
+            {tr('schedule.v3.manager.nextWeek', 'Next')}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void handleGenerateSchedule()}
+            disabled={loading || applying}
+            className="h-10 rounded-lg bg-[#0F4C3A] px-5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {loading
+              ? tr('schedule.v3.manager.generating', 'Generating…')
+              : tr('schedule.v3.generate', 'Generate Schedule')}
           </button>
           {solveData && solveData.actions.length > 0 && (
             <button
               type="button"
               onClick={() => void applyToWeek()}
-              disabled={applying || loading || !solveData.metrics.coverageValid}
-              title={
-                !solveData.metrics.coverageValid
-                  ? (t('schedule.v3.applyBlocked') as string)
-                  : undefined
-              }
-              className="h-9 rounded-lg border border-[#0F4C3A] bg-surface px-4 text-sm font-semibold text-[#0F4C3A] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={applying || loading}
+              className="h-10 rounded-lg border border-[#0F4C3A] bg-surface px-5 text-sm font-semibold text-[#0F4C3A] disabled:opacity-50"
             >
-              {applying ? t('common.loading') : t('schedule.v3.apply')}
+              {applying
+                ? tr('common.loading', 'Loading…')
+                : tr('schedule.v3.apply', 'Apply Schedule')}
             </button>
           )}
         </div>
       </div>
-
-      {analyzeError && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {analyzeError}
-        </div>
-      )}
-
-      {(analyzeData || analyzing) && (
-        <div className="mb-6">
-          {analyzeData ? (
-            <ScheduleHealthCheckPanel
-              analysis={analyzeData.analysis}
-              mainReason={analyzeData.mainReason}
-              recommendedFix={analyzeData.recommendedFix}
-              phase={loading ? 'solving' : healthPhase}
-              loading={analyzing || loading}
-              feasibleMessage={feasibleMessage}
-              formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
-              weekStart={weekStart}
-              t={t}
-              onContinueAnyway={handleContinueAnyway}
-              onModifyConstraints={handleModifyConstraints}
-              onCancel={handleCancelDecision}
-              onRunBestPossible={handleRunBestPossible}
-            />
-          ) : (
-            <p className="text-sm text-muted">{t('schedule.v3.healthCheck.loading')}</p>
-          )}
-        </div>
-      )}
-
-      {showSmartRecommendations && (
-        <div className="mb-6">
-          <SmartRecommendationsPanel
-            recommendations={smartRecommendations}
-            formatDayLabel={(date) => `${formatDayName(date)} (${formatDateShort(date)})`}
-            editWeekUrl={`/schedule/edit?weekStart=${encodeURIComponent(weekStart)}`}
-            t={t}
-          />
-        </div>
-      )}
 
       {error && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <span>{error}</span>
           <button
             type="button"
-            onClick={() => void startSolveFlow()}
+            onClick={() => void handleGenerateSchedule()}
             disabled={loading}
             className="shrink-0 text-xs font-medium text-red-800 underline disabled:opacity-50"
           >
@@ -549,164 +547,83 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
         </div>
       )}
 
-      {!solveData && !loading && !analyzeData && !analyzing && (
+      {loading && !solveData && (
+        <div className="rounded-xl border border-border bg-surface px-6 py-16 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {tr('schedule.v3.manager.generatingSchedule', 'Generating your weekly schedule…')}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {tr('schedule.v3.manager.generatingHint', 'This usually takes a few seconds.')}
+          </p>
+        </div>
+      )}
+
+      {!loading && !solveData && (
         <div className="rounded-xl border border-dashed border-border bg-surface-subtle px-6 py-12 text-center">
-          <p className="text-sm text-muted">{t('schedule.v3.healthCheck.emptyState')}</p>
+          <p className="text-sm text-muted">
+            {tr(
+              'schedule.v3.manager.emptyState',
+              'Select a week and press Generate Schedule to build the weekly roster.'
+            )}
+          </p>
         </div>
       )}
 
-      {loading && !analyzeData && (
-        <p className="text-sm text-muted">{t('schedule.v3.solving')}</p>
-      )}
+      {solveData && scheduleSummary && (
+        <div className="space-y-5">
+          <section>
+            <h2 className="mb-3 text-base font-semibold text-foreground">
+              {tr('schedule.v3.manager.generatedSchedule', 'Generated Weekly Schedule')}
+            </h2>
+            <ScheduleWeeklyGrid
+              rows={scheduleGrid}
+              days={solveData.dayOperatingConfigs}
+              onCellClick={setSelectedCell}
+            />
+          </section>
 
-      {solveData && qualityMetrics && (
-        <div className="space-y-6">
-          <ScheduleQualityPanel
-            metrics={qualityMetrics}
-            rawFairnessScore={solveData.metrics.fairnessScore}
+          <ScheduleBottomSummary summary={scheduleSummary} t={t} />
+          <ScheduleExplanation bullets={explanationBullets} t={t} />
+
+          <TechnicalAnalysisPanel
             t={t}
+            weekStart={weekStart}
+            analyzeData={analyzeData}
+            analyzeError={analyzeError}
+            analyzing={analyzing}
+            healthPhase={healthPhase}
+            feasibleMessage={feasibleMessage}
+            loading={loading}
+            formatDayName={formatDayName}
+            formatDateShort={formatDateShort}
+            smartRecommendations={smartRecommendations}
+            scenarioData={scenarioData}
+            scenarioLoading={scenarioLoading}
+            scenarioError={scenarioError}
+            onGenerateScenarios={() => void generateScenarios()}
+            onApplyScenario={applyScenario}
+            onContinueAnyway={handleContinueAnyway}
+            onModifyConstraints={handleModifyConstraints}
+            onCancelDecision={handleCancelDecision}
+            onRunBestPossible={handleRunBestPossible}
+            qualityMetrics={qualityMetrics}
+            fairnessScore={solveData.metrics.fairnessScore}
+            employeeSummaries={solveData.generateResult.employeeSummaries}
+            mode={solveData.mode}
+            scenariosTried={solveData.scenariosTried}
+            dayOperatingConfigs={solveData.dayOperatingConfigs}
+            formatPeriods={formatPeriods}
+            violationsByDay={violationsByDay}
+            assignmentsByDay={assignmentsByDay}
+            timings={solveData.timings}
+            stats={solveData.stats}
+            warnings={solveData.generateResult.warnings}
           />
-
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <h2 className="text-sm font-semibold text-foreground">{t('schedule.v3.operatingPeriods')}</h2>
-            <p className="mt-0.5 text-xs text-muted">
-              {t('schedule.v3.mode')}: {solveData.mode} · {t('schedule.v3.scenariosTried')}:{' '}
-              {solveData.scenariosTried}
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {solveData.dayOperatingConfigs.map((day) => (
-                <li key={day.date} className="flex flex-wrap gap-x-2 text-sm">
-                  <span className="min-w-[7rem] font-medium text-foreground">
-                    {formatDayName(day.date)}
-                  </span>
-                  <span className="font-mono text-foreground">{formatPeriods(day.operatingPeriods)}</span>
-                  <span className="text-xs text-muted">({formatDateShort(day.date)})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {violationsByDay.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-              <h2 className="text-sm font-semibold text-amber-950">{t('schedule.v3.slotViolations')}</h2>
-              <div className="mt-3 space-y-3">
-                {violationsByDay.map(({ date, violations }) => (
-                  <div key={date}>
-                    <p className="text-xs font-semibold text-amber-900">
-                      {formatDayName(date)} · {formatDateShort(date)} ({violations.length})
-                    </p>
-                    <ul className="mt-1 space-y-0.5">
-                      {violations.map((v) => (
-                        <li key={v.slotId} className="font-mono text-xs text-amber-950">
-                          {v.startTime}–{v.endTime}: {v.coverage}/{v.minCoverage}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-foreground">{t('schedule.v3.scheduleByDay')}</h2>
-              <span className="text-xs text-muted">
-                {t('schedule.v3.changesCount')?.replace?.('{n}', String(solveData.actions.length)) ??
-                  `${solveData.actions.length} changes`}
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-6">
-              {assignmentsByDay.map(({ date, assignments }) => (
-                <section key={date} className="border-t border-border pt-4 first:border-t-0 first:pt-0">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {formatDayName(date)}{' '}
-                    <span className="font-normal text-muted">({formatDateShort(date)})</span>
-                  </h3>
-                  {assignments.length === 0 ? (
-                    <p className="mt-2 text-xs text-muted">{t('schedule.v3.noAssignments')}</p>
-                  ) : (
-                    <ul className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {assignments.map((a) => (
-                        <li
-                          key={`${a.empId}-${a.date}`}
-                          className="rounded-lg border border-border bg-surface-subtle px-3 py-2"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-sm font-medium text-foreground">{a.name}</span>
-                            {a.splitDay && (
-                              <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-900">
-                                Split
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-1">
-                            <AssignmentCell assignment={a} />
-                          </div>
-                          {a.totalHours > 0 && (
-                            <p className="mt-1 text-[10px] text-muted">
-                              {a.totalHours.toFixed(1)}h
-                              {a.isExternalSupport ? ` · ${t('schedule.externalCoverage')}` : ''}
-                            </p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              ))}
-            </div>
-          </div>
-
-          {solveData.timings && (
-            <details className="rounded-xl border border-dashed border-border bg-surface-subtle p-4">
-              <summary className="cursor-pointer text-sm font-medium text-foreground">
-                Engine performance (dev)
-              </summary>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold text-muted">Timings (ms)</p>
-                  <ul className="mt-1 space-y-0.5 font-mono text-xs">
-                    {Object.entries(solveData.timings).map(([key, ms]) => (
-                      <li key={key}>
-                        {key}: {typeof ms === 'number' ? ms.toFixed(1) : ms}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {solveData.stats && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted">Stats</p>
-                    <ul className="mt-1 space-y-0.5 font-mono text-xs">
-                      {Object.entries(solveData.stats).map(([key, val]) => (
-                        <li key={key}>
-                          {key}:{' '}
-                          {typeof val === 'object' && val !== null
-                            ? JSON.stringify(val)
-                            : String(val ?? '—')}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </details>
-          )}
-
-          {solveData.generateResult.warnings.length > 0 && (
-            <details className="rounded-xl border border-border bg-surface-subtle p-4">
-              <summary className="cursor-pointer text-sm font-medium text-foreground">
-                {t('schedule.v3.engineWarnings')} ({solveData.generateResult.warnings.length})
-              </summary>
-              <ul className="mt-2 space-y-1 text-xs text-muted">
-                {solveData.generateResult.warnings.map((w, i) => (
-                  <li key={i}>• {w}</li>
-                ))}
-              </ul>
-            </details>
-          )}
         </div>
+      )}
+
+      {selectedCell && (
+        <ScheduleCellDetailModal assignment={selectedCell} onClose={() => setSelectedCell(null)} t={t} />
       )}
     </div>
   );

@@ -149,6 +149,40 @@ export type {
   RecommendationEngineInput,
   AffectedTimeRange,
 } from '@/lib/schedule/recommendationEngine';
+export { planWeeklyResources, buildDailyTargetPlans } from '@/lib/schedule/resourcePlanner';
+export type {
+  WorkforcePlan,
+  DailyTargetPlan,
+  DailyTargetPattern,
+  EmployeeResource,
+  DailyWorkload,
+  WorkforceBudget,
+  EmployeePlan,
+  BridgeAssignment,
+  OvertimeAssignment,
+  CompensationLedgerEntry,
+  PlannerRecommendation,
+  ShiftAllocationType,
+} from '@/lib/schedule/resourcePlanner';
+export {
+  applyPlannerGuidedSolve,
+  isBridgeShiftSegments,
+  countAmPmForDay,
+  BRIDGE_TOTAL_HOURS,
+} from '@/lib/schedule/plannerGuidedSolver';
+export type {
+  ScenarioType,
+  ScenarioAction,
+  ScenarioSimulationResult,
+  SimulatedScenario,
+  ScenarioSimulationSummary,
+  ScenarioSimulationOptions,
+  ScenarioSimulationOutput,
+  ScenarioSimulationPerformance,
+  ScenarioPreviewAssignment,
+} from '@/lib/schedule/scenarioSimulator';
+export { scoreScenario, rankScenarioScores, SCENARIO_SCORE_WEIGHTS } from '@/lib/schedule/scenarioScoring';
+export type { ScenarioScoreBreakdown, ScenarioScoreInput } from '@/lib/schedule/scenarioScoring';
 export { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 export { buildSchedulePlanFromGenerate } from '@/lib/schedule/generateSchedule/planBridge';
 

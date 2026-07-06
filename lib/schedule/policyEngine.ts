@@ -61,7 +61,8 @@ export const FRIDAY_DOW = 5;
 const DEFAULT_WEEKLY_OFF_DAYS_PER_EMPLOYEE = 1;
 
 const NORMAL_SAT_THU: OperatingPeriod[] = [
-  { startTime: '09:30', endTime: '22:30', minCoverage: DEFAULT_MIN_COVERAGE },
+  { startTime: '09:30', endTime: '14:30', minCoverage: DEFAULT_MIN_COVERAGE },
+  { startTime: '17:30', endTime: '22:30', minCoverage: DEFAULT_MIN_COVERAGE },
 ];
 
 const NORMAL_FRI_PM_ONLY: OperatingPeriod[] = [

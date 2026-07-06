@@ -7,9 +7,10 @@ import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
 import {
-  formatSlotViolationMessage,
+  formatSlotViolationDetail,
   groupSlotViolationsByDate,
   validateTimeCoverageForGrid,
+  buildRowsForTimeCoverageValidation,
 } from '@/lib/schedule/timeCoverageValidation';
 import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditExcelViewClient';
@@ -45,14 +46,12 @@ import type { Role } from '@prisma/client';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
 import { buildEditorShiftOptions } from '@/lib/schedule/shiftOptions';
 import {
-  isSplitAssignmentAllowed,
-  shiftCountContribution,
-} from '@/lib/schedule/coveragePolicy';
-import {
   buildScheduleDisplayNames,
   getScheduleDisplayName,
 } from '@/lib/schedule/displayName';
 import { appendBoutiqueContextToApiPath } from '@/lib/scope/clientApiUrl';
+import { shiftToSegmentsForCounting } from '@/lib/schedule/segmentCoverage';
+import { ProposedScheduleReview } from '@/components/schedule/ProposedScheduleReview';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -317,7 +316,7 @@ type PendingEdit = {
   employeeName: string;
 };
 
-type ValidationResult = { type: string; message: string; amCount: number; pmCount: number; minAm?: number };
+type ValidationResult = { type: string; message: string; amCount?: number; pmCount?: number; minAm?: number };
 
 const DEFAULT_REASON = 'Schedule adjustment';
 
@@ -355,17 +354,6 @@ function lockedCellStatusLabel(availability: string, t: (key: string) => string)
     default:
       return availability;
   }
-}
-
-function countsWithoutEmployee(
-  dayAm: number,
-  dayPm: number,
-  cell: GridCell,
-  employeeShift: string
-): { am: number; pm: number } {
-  if (cell.availability !== 'WORK') return { am: dayAm, pm: dayPm };
-  const c = shiftCountContribution(employeeShift);
-  return { am: dayAm - c.am, pm: dayPm - c.pm };
 }
 
 function buildLockedCellOptions(
@@ -476,6 +464,7 @@ export function ScheduleEditClient({
   const [lockedCellSavingKey, setLockedCellSavingKey] = useState<string | null>(null);
   const [swapWeeklyOffOpen, setSwapWeeklyOffOpen] = useState(false);
   const [scheduleAssistantOpen, setScheduleAssistantOpen] = useState(false);
+  const [proposalReviewOpen, setProposalReviewOpen] = useState(false);
   const [leaveConfirm, setLeaveConfirm] = useState<{ href: string } | null>(null);
   const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(new Set());
   const [highlightedCells, setHighlightedCells] = useState<Set<string> | null>(null);
@@ -793,6 +782,11 @@ export function ScheduleEditClient({
   }, [tab, weekStart, refetchScopeLabel, fetchGuests]);
 
   const canEdit = !isWeekLocked;
+
+  const isFreshWeek = useMemo(() => {
+    if (!gridData?.rows.length) return false;
+    return gridData.rows.every((row) => row.cells.every((cell) => !cell.overrideId));
+  }, [gridData]);
   const lockedDaySet = useMemo(
     () => new Set(weekGovernance?.lockedDays?.map((d) => d.date) ?? []),
     [weekGovernance?.lockedDays]
@@ -1037,6 +1031,15 @@ export function ScheduleEditClient({
 
   const pendingCount = pendingEdits.size + localPendingGuests.length;
 
+  useEffect(() => {
+    if (!gridData || !canEdit || tab !== 'week' || pendingCount > 0) return;
+    const key = `schedule-proposal-prompted-${gridData.weekStart}`;
+    if (typeof window === 'undefined' || sessionStorage.getItem(key)) return;
+    if (!isFreshWeek) return;
+    sessionStorage.setItem(key, '1');
+    setProposalReviewOpen(true);
+  }, [gridData, canEdit, tab, isFreshWeek, pendingCount]);
+
   const getDraftShift = useCallback(
     (empId: string, date: string, serverEffective: string): string => {
       const edit = pendingEdits.get(editKey(empId, date));
@@ -1045,29 +1048,41 @@ export function ScheduleEditClient({
     [pendingEdits]
   );
 
+  const hasPendingEditForCell = useCallback(
+    (empId: string, date: string) => pendingEdits.has(editKey(empId, date)),
+    [pendingEdits]
+  );
+
   const draftCounts = useMemo(() => {
     if (!gridData?.rows.length) return [];
     return computeCountsFromGridRows(
       gridData.rows,
       getDraftShift,
-      gridData.dayCountContexts
+      gridData.dayCountContexts,
+      (empId, date, serverSegments) => {
+        if (!hasPendingEditForCell(empId, date)) return serverSegments;
+        const ctx = gridData.dayCountContexts?.find((c) => c.date === date);
+        const row = gridData.rows.find((r) => r.empId === empId);
+        const cell = row?.cells.find((c) => c.date === date);
+        const shift = getDraftShift(empId, date, cell?.effectiveShift ?? 'NONE');
+        if (!ctx) return serverSegments;
+        return shiftToSegmentsForCounting(shift, ctx.operatingPeriods, ctx.maxDailyHours);
+      }
     );
-  }, [gridData, getDraftShift]);
+  }, [gridData, getDraftShift, hasPendingEditForCell]);
 
   const effectiveTimeCoverage = useMemo(() => {
     if (!gridData?.dayCountContexts?.length) {
       return gridData?.timeCoverage ?? { valid: true, violations: [] };
     }
-    if (!pendingEdits.size) return gridData.timeCoverage ?? { valid: true, violations: [] };
-    const rows = gridData.rows.map((row) => ({
-      ...row,
-      cells: row.cells.map((cell) => ({
-        ...cell,
-        effectiveShift: getDraftShift(row.empId, cell.date, cell.effectiveShift),
-      })),
-    }));
+    const rows = buildRowsForTimeCoverageValidation(
+      gridData.rows as ServerGridRow[],
+      gridData.dayCountContexts,
+      getDraftShift,
+      hasPendingEditForCell
+    );
     return validateTimeCoverageForGrid(rows as ServerGridRow[], gridData.dayCountContexts);
-  }, [gridData, pendingEdits.size, getDraftShift]);
+  }, [gridData, getDraftShift, hasPendingEditForCell]);
 
   /** Per-day guest (external coverage) counts so AM/PM columns include coverage from another branch. */
   const guestCountsByDay = useMemo(() => {
@@ -1199,42 +1214,30 @@ export function ScheduleEditClient({
     (): Array<{ date: string; validations: ValidationResult[] }> => {
       const slotByDate = groupSlotViolationsByDate(effectiveTimeCoverage.violations);
       return (
-        gridData?.days.map((day, i) => {
-          const count = displayCounts[i] ?? gridData.counts[i];
-          const am = count?.amCount ?? 0;
-          const pm = count?.pmCount ?? 0;
-          const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
-          const minPm = day.minPm ?? 0;
-          const isFriday = day.dayOfWeek === 5;
+        gridData?.days.map((day) => {
           const validations: ValidationResult[] = [];
           for (const v of slotByDate.get(day.date) ?? []) {
             validations.push({
               type: 'SLOT_COVERAGE',
-              message: formatSlotViolationMessage(v),
-              amCount: am,
-              pmCount: pm,
+              message: formatSlotViolationDetail(v),
             });
           }
-          if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: (t('schedule.warningRashidOverflow') as string) || `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
-          if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: (t('schedule.minAmTwo') as string) || `AM must be at least ${effectiveMinAm} (${am} present)`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
-          if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: `PM (${pm}) < Min PM (${minPm})`, amCount: am, pmCount: pm });
           return { date: day.date, validations };
         }) ?? []
       );
     },
-    [gridData, displayCounts, effectiveTimeCoverage.violations, t]
+    [gridData, effectiveTimeCoverage.violations]
   );
   const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
 
   const scheduleQualityMetrics = useMemo(() => {
-    if (!gridData) return null;
-    const rows = gridData.rows.map((row) => ({
-      ...row,
-      cells: row.cells.map((cell) => ({
-        ...cell,
-        effectiveShift: getDraftShift(row.empId, cell.date, cell.effectiveShift),
-      })),
-    }));
+    if (!gridData?.dayCountContexts?.length) return null;
+    const rows = buildRowsForTimeCoverageValidation(
+      gridData.rows as ServerGridRow[],
+      gridData.dayCountContexts,
+      getDraftShift,
+      hasPendingEditForCell
+    );
     return computeScheduleQualityMetrics({
       rows,
       timeCoverage: effectiveTimeCoverage,
@@ -1242,7 +1245,7 @@ export function ScheduleEditClient({
       dayCountContexts: gridData.dayCountContexts,
       getEffectiveShift: (cell) => cell.effectiveShift,
     });
-  }, [gridData, getDraftShift, effectiveTimeCoverage, externalGuests.length, localPendingGuests.length]);
+  }, [gridData, getDraftShift, hasPendingEditForCell, effectiveTimeCoverage, externalGuests.length, localPendingGuests.length]);
 
   const groupedWarnings = useMemo(() => {
     const keyPlanWarnings =
@@ -1278,20 +1281,6 @@ export function ScheduleEditClient({
         return;
       }
       const key = editKey(empId, date);
-      const fromShift = pendingEdits.get(key)?.newShift ?? cell.effectiveShift;
-      if (newShift === 'SPLIT' && gridData) {
-        const dayIndex = gridData.days.findIndex((d) => d.date === date);
-        const day = gridData.days[dayIndex];
-        const dc = displayCounts[dayIndex];
-        if (day && dc) {
-          const base = countsWithoutEmployee(dc.amCount, dc.pmCount, cell, fromShift);
-          if (!isSplitAssignmentAllowed(base, fromShift, day.dayOfWeek, day.minAm ?? 0)) {
-            setToast((t('schedule.splitBlockedMinAm') as string) ?? 'Split would leave AM below minimum (2).');
-            setTimeout(() => setToast(null), 6000);
-            return;
-          }
-        }
-      }
       if (newShift === cell.effectiveShift) {
         setPendingEdits((m) => {
           const next = new Map(m);
@@ -1311,7 +1300,7 @@ export function ScheduleEditClient({
         return next;
       });
     },
-    [locale, ramadanRange, gridData, displayCounts, pendingEdits, t]
+    [locale, ramadanRange, t]
   );
 
   const applyLockedCellChange = useCallback(
@@ -2047,6 +2036,13 @@ export function ScheduleEditClient({
                 className="h-9 md:h-10 rounded-lg border border-[#0F4C3A]/30 bg-[#0F4C3A]/5 px-4 text-sm font-medium text-[#0F4C3A] hover:bg-[#0F4C3A]/10 focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/30 focus:ring-offset-2"
               >
                 {t('schedule.swapWeeklyOff.button')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setProposalReviewOpen(true)}
+                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A] bg-[#0F4C3A] px-4 text-sm font-semibold text-white hover:bg-[#0d3f30] focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/40 focus:ring-offset-2"
+              >
+                {(t('schedule.proposal.open') as string) || 'Generate Proposal'}
               </button>
               <button
                 type="button"
@@ -3074,6 +3070,42 @@ export function ScheduleEditClient({
             setToast(t('schedule.swapWeeklyOff.success') as string);
             setTimeout(() => setToast(null), 4000);
           }}
+        />
+      )}
+
+      {gridData && (
+        <ProposedScheduleReview
+          open={proposalReviewOpen}
+          weekStart={gridData.weekStart}
+          draftGuests={localPendingGuests}
+          onOpenAddGuest={() => setAddGuestOpen(true)}
+          onClose={() => setProposalReviewOpen(false)}
+          onApplied={async () => {
+            const guestWeekStart = resolveGuestWeekStart(weekStart);
+            const reason = globalReason.trim() || DEFAULT_REASON;
+            if (localPendingGuests.length > 0 && guestWeekStart) {
+              for (const g of localPendingGuests) {
+                await fetch('/api/schedule/guests', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    weekStart: guestWeekStart,
+                    date: g.date,
+                    employeeId: g.empId,
+                    shift: g.shift,
+                    reason: g.reason?.trim() || reason,
+                  }),
+                });
+              }
+              setLocalPendingGuests([]);
+            }
+            fetchGrid();
+            fetchGuests();
+            router.refresh();
+            setToast((t('schedule.proposal.applied') as string) || 'Proposed schedule applied.');
+            setTimeout(() => setToast(null), 4000);
+          }}
+          t={t}
         />
       )}
 

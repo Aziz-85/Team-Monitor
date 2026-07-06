@@ -44,8 +44,21 @@ export function shiftToSegmentsForCounting(
     const idx = periods.length >= 2 ? 1 : 0;
     return [segmentFromPeriodEnd(periods[idx], idx, maxDailyHours)];
   }
-  // SPLIT without saved segments: no synthetic time blocks (avoids fixed 09:30–13:30 + 18:30–22:30 gap).
-  if (s === 'SPLIT') return [];
+  if (s === 'SPLIT') {
+    if (periods.length >= 2) {
+      return [
+        segmentFromPeriodStart(periods[0], 0, maxDailyHours),
+        segmentFromPeriodEnd(periods[1], 1, maxDailyHours),
+      ];
+    }
+    if (periods.length === 1) {
+      return [
+        segmentFromPeriodStart(periods[0], 0, maxDailyHours),
+        segmentFromPeriodEnd(periods[0], 0, maxDailyHours),
+      ];
+    }
+    return [];
+  }
   return [];
 }
 

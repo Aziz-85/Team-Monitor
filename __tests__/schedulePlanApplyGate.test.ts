@@ -56,15 +56,20 @@ function action(empId: string, toShift: string, segments?: PlanAction['segments'
 }
 
 describe('validatePlanCoverage (Apply gate)', () => {
-  it('valid when engine segments cover the full operating day', () => {
+  it('valid when engine segments cover AM and PM operating periods', () => {
     const grid = makeGrid([
       { empId: 'e1', shift: 'NONE' },
       { empId: 'e2', shift: 'NONE' },
+      { empId: 'e3', shift: 'NONE' },
+      { empId: 'e4', shift: 'NONE' },
     ]);
-    const fullDay = [{ periodIndex: 0, startTime: '09:30', endTime: '22:30' }];
+    const amSeg = [{ periodIndex: 0, startTime: '09:30', endTime: '14:30' }];
+    const pmSeg = [{ periodIndex: 1, startTime: '17:30', endTime: '22:30' }];
     const result = validatePlanCoverage(grid, [
-      action('e1', 'EVENING', fullDay),
-      action('e2', 'EVENING', fullDay),
+      action('e1', 'MORNING', amSeg),
+      action('e2', 'MORNING', amSeg),
+      action('e3', 'EVENING', pmSeg),
+      action('e4', 'EVENING', pmSeg),
     ]);
     expect(result.valid).toBe(true);
     expect(result.violations).toHaveLength(0);
@@ -85,23 +90,23 @@ describe('validatePlanCoverage (Apply gate)', () => {
     expect(result.violations[0].minCoverage).toBe(2);
   });
 
-  it('non-contiguous split segments count only during their times', () => {
+  it('non-contiguous split segments cover AM and PM periods', () => {
     const grid = makeGrid([
       { empId: 'e1', shift: 'NONE' },
       { empId: 'e2', shift: 'NONE' },
       { empId: 'e3', shift: 'NONE' },
     ]);
-    const fullDay = [{ periodIndex: 0, startTime: '09:30', endTime: '22:30' }];
-    const split = [
+    const amSeg = [{ periodIndex: 0, startTime: '09:30', endTime: '14:30' }];
+    const pmSeg = [{ periodIndex: 1, startTime: '17:30', endTime: '22:30' }];
+    const bridge = [
       { periodIndex: 0, startTime: '09:30', endTime: '14:30' },
-      { periodIndex: 0, startTime: '17:30', endTime: '22:30' },
+      { periodIndex: 1, startTime: '17:30', endTime: '22:30' },
     ];
     const result = validatePlanCoverage(grid, [
-      action('e1', 'EVENING', fullDay),
-      action('e2', 'SPLIT', split),
-      action('e3', 'MORNING', [{ periodIndex: 0, startTime: '14:00', endTime: '18:00' }]),
+      action('e1', 'MORNING', amSeg),
+      action('e2', 'SPLIT', bridge),
+      action('e3', 'EVENING', pmSeg),
     ]);
-    // e1 covers all slots; split gap 14:30–17:30 covered by e3 (14:00–18:00) → valid
     expect(result.valid).toBe(true);
   });
 });

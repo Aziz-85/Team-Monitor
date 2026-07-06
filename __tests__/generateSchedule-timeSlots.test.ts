@@ -72,7 +72,7 @@ describe('validateCoverage', () => {
 
 describe('extendShiftToCoverSlot', () => {
   it('adds non-contiguous segment in same operating period when gap exists', () => {
-    const periods = operatingPeriodsForDay(6, false);
+    const periods = [{ startTime: '09:30', endTime: '22:30', minCoverage: 2 }];
     const period = periods[0];
     const slots = buildTimeSlots(periods, '2026-06-20', 30);
     const eveningSlot = slots.find((s) => s.startTime === '17:30') ?? slots[slots.length - 1];
