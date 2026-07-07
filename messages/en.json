@@ -93,8 +93,8 @@
     "executiveEmployees": "Employees",
     "schedule": "Schedule",
     "scheduleView": "Schedule View",
-    "scheduleEditor": "Schedule Planning",
-    "scheduleManualEdit": "Manual Edit",
+    "scheduleEditor": "Schedule Editor",
+    "scheduleManualEdit": "Schedule Editor",
     "scheduleNext": "Schedule Next",
     "scheduleSolver": "Schedule Solver",
     "scheduleSolverLab": "Engine Lab (v3)",
@@ -307,8 +307,8 @@
             "hint": "Primary weekly generator — external support, review, and apply."
           },
           "manualEdit": {
-            "title": "Manual Edit",
-            "hint": "Adjust shifts in the grid after generating a proposal."
+            "title": "Schedule Editor",
+            "hint": "Edit shifts, external coverage, weekly off swaps, and save changes."
           },
           "solver": {
             "title": "Schedule Solver",
@@ -1466,8 +1466,8 @@
     "proposal": {
       "workflowTitle": "Schedule Planning",
       "workflowHint": "Generate a visual proposal, approve it, regenerate alternatives, or edit shifts manually in the grid.",
-      "manualEditTitle": "Manual Schedule Edit",
-      "manualEditHint": "Use Schedule Next to generate a proposal. Use this page for manual adjustments.",
+      "manualEditTitle": "Schedule Editor",
+      "manualEditHint": "Edit weekly shifts in the grid. Use Save changes, Swap weekly off, or Add External Coverage as needed.",
       "openScheduleNext": "Schedule Next →",
       "openAudit": "Audit →",
       "advancedPanel": "Advanced",

@@ -34,6 +34,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'schedule',
     labelKey: 'nav.groups.schedulePlanning',
     items: [
+      { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor' },
       { key: 'SCHEDULE_NEXT', href: '/schedule/next', labelKey: 'nav.scheduleNext' },
       { key: 'SCHEDULE_VIEW', href: '/schedule/view', labelKey: 'nav.scheduleView' },
       { key: 'SCHEDULE_AUDIT', href: '/schedule/audit', labelKey: 'nav.scheduleAudit' },
