@@ -84,6 +84,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ADMIN: [
     '/nav',
     '/',
+    '/architecture',
     '/dashboard',
     '/executive',
     '/executive/monthly',
