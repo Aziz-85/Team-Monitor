@@ -11,8 +11,7 @@ import { prisma } from '@/lib/db';
 import { invalidateAllSessionsForUser } from '@/lib/auth';
 import * as bcrypt from 'bcryptjs';
 import type { Role } from '@prisma/client';
-
-const MIN_PASSWORD_LENGTH = 8;
+import { validatePasswordStrength, GENERIC_PASSWORD_ERROR } from '@/lib/passwordPolicy';
 
 export async function POST(request: NextRequest) {
   let actor: Awaited<ReturnType<typeof getSessionUser>>;
@@ -30,13 +29,11 @@ export async function POST(request: NextRequest) {
   const newPassword = String(body.newPassword ?? '');
 
   if (!empId) {
-    return NextResponse.json({ error: 'empId is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Request could not be completed.' }, { status: 400 });
   }
-  if (newPassword.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json(
-      { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` },
-      { status: 400 }
-    );
+  const policy = validatePasswordStrength(newPassword, { empId });
+  if (!policy.ok) {
+    return NextResponse.json({ error: GENERIC_PASSWORD_ERROR }, { status: 400 });
   }
 
   const targetUser = await prisma.user.findUnique({

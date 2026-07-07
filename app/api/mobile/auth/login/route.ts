@@ -3,9 +3,16 @@ import { prisma } from '@/lib/db';
 import * as bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
 import { getRequestClientInfo } from '@/lib/requestClientInfo';
-import { isUserLocked } from '@/lib/authRateLimit';
+import {
+  checkLoginRateLimits,
+  isUserLocked,
+  recordFailedLogin,
+  clearFailedLogin,
+  countRecentFailedAttemptsByIp,
+} from '@/lib/authRateLimit';
+import { SECURITY_ALERT_FAILED_ATTEMPTS_THRESHOLD } from '@/lib/sessionConfig';
 import { signAccessToken, signRefreshToken } from '@/lib/jwt/mobileJwt';
-import { checkMobileLoginRateLimit } from '@/lib/mobileAuthRateLimit';
+import { writeAuthAudit } from '@/lib/authAudit';
 
 const GENERIC_MESSAGE = 'Invalid credentials';
 
@@ -23,11 +30,18 @@ export async function POST(request: NextRequest) {
     const deviceHint = typeof body.deviceHint === 'string' ? body.deviceHint : client.deviceHint;
 
     if (!empId || !password) {
-      return NextResponse.json({ error: 'empId and password required' }, { status: 400 });
+      return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 400 });
     }
 
-    const rateLimit = checkMobileLoginRateLimit(client.ip ?? null);
-    if (!rateLimit.allowed) {
+    const rateLimit = await checkLoginRateLimits(client.ip ?? null, empId);
+    if (rateLimit.limited) {
+      await writeAuthAudit({
+        event: 'LOGIN_RATE_LIMITED',
+        emailAttempted: empId,
+        reason: rateLimit.reason ?? 'RATE_LIMIT',
+        ...client,
+        deviceHint: deviceHint ?? client.deviceHint,
+      });
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 429 });
     }
 
@@ -37,33 +51,87 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      await writeAuthAudit({
+        event: 'LOGIN_FAILED',
+        emailAttempted: empId,
+        reason: 'USER_NOT_FOUND',
+        ...client,
+        deviceHint: deviceHint ?? client.deviceHint,
+      });
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 401 });
     }
 
     if (user.disabled) {
+      await writeAuthAudit({
+        event: 'LOGIN_FAILED',
+        userId: user.id,
+        emailAttempted: empId,
+        reason: 'BLOCKED',
+        ...client,
+        deviceHint: deviceHint ?? client.deviceHint,
+      });
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 401 });
     }
 
     if (await isUserLocked(user)) {
+      await writeAuthAudit({
+        event: 'ACCOUNT_LOCKED',
+        userId: user.id,
+        emailAttempted: empId,
+        reason: 'LOCKED',
+        ...client,
+        deviceHint: deviceHint ?? client.deviceHint,
+      });
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 401 });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
+      await recordFailedLogin(user.id);
+      await writeAuthAudit({
+        event: 'LOGIN_FAILED',
+        userId: user.id,
+        emailAttempted: empId,
+        reason: 'INVALID_PASSWORD',
+        ...client,
+        deviceHint: deviceHint ?? client.deviceHint,
+      });
+      const failedCount = await countRecentFailedAttemptsByIp(client.ip ?? null);
+      if (failedCount >= SECURITY_ALERT_FAILED_ATTEMPTS_THRESHOLD) {
+        await writeAuthAudit({
+          event: 'SECURITY_ALERT',
+          userId: user.id,
+          emailAttempted: empId,
+          reason: 'HIGH_FAILED_ATTEMPTS_SAME_IP',
+          metadata: { count: failedCount },
+          ...client,
+          deviceHint: deviceHint ?? client.deviceHint,
+        });
+      }
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 401 });
     }
 
     if (!user.boutiqueId || !user.boutique?.id) {
-      return NextResponse.json({ error: 'No boutique assigned' }, { status: 403 });
+      return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 403 });
     }
 
+    await clearFailedLogin(user.id);
+    await writeAuthAudit({
+      event: 'LOGIN_SUCCESS',
+      userId: user.id,
+      emailAttempted: empId,
+      ...client,
+      deviceHint: deviceHint ?? client.deviceHint,
+      metadata: { channel: 'mobile' },
+    });
+
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const tokenRecord = await prisma.mobileRefreshToken.create({
       data: {
         userId: user.id,
-        tokenHash: '', // set after we have the token
+        tokenHash: '',
         expiresAt,
         deviceHint: deviceHint ?? null,
         ip: client.ip ?? null,

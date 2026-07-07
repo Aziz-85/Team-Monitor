@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import type { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { createSession, setSessionCookie } from '@/lib/auth';
 import { cookies } from 'next/headers';
@@ -13,46 +12,18 @@ import {
   countRecentFailedAttemptsByIp,
 } from '@/lib/authRateLimit';
 import { SECURITY_ALERT_FAILED_ATTEMPTS_THRESHOLD } from '@/lib/sessionConfig';
+import { validateCsrf } from '@/lib/csrf';
+import { roleRequires2FA, signTwoFactorPendingToken } from '@/lib/twoFactor';
+import { writeAuthAudit } from '@/lib/authAudit';
 
 const GENERIC_MESSAGE = 'Invalid credentials';
 
-type AuditEvent =
-  | 'LOGIN_SUCCESS'
-  | 'LOGIN_FAILED'
-  | 'LOGIN_RATE_LIMITED'
-  | 'ACCOUNT_LOCKED'
-  | 'SECURITY_ALERT';
-
-async function writeAuthAudit(data: {
-  event: AuditEvent;
-  userId?: string | null;
-  emailAttempted?: string | null;
-  ip?: string | null;
-  userAgent?: string | null;
-  deviceHint?: string | null;
-  reason?: string | null;
-  metadata?: Prisma.InputJsonValue | null;
-}) {
-  try {
-    await prisma.authAuditLog.create({
-      data: {
-        event: data.event,
-        userId: data.userId ?? null,
-        emailAttempted: data.emailAttempted ?? null,
-        ip: data.ip ?? null,
-        userAgent: data.userAgent ?? null,
-        deviceHint: data.deviceHint ?? null,
-        reason: data.reason ?? null,
-        metadata: data.metadata ?? undefined,
-      },
-    });
-  } catch {
-    // Do not fail login if audit write fails
-  }
-}
-
 export async function POST(request: NextRequest) {
   const client = getRequestClientInfo(request.headers);
+
+  if (!validateCsrf(request)) {
+    return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -60,7 +31,7 @@ export async function POST(request: NextRequest) {
     const password = String(body.password ?? '');
 
     if (!empId || !password) {
-      return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
+      return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 400 });
     }
 
     const rateLimit = await checkLoginRateLimits(client.ip ?? null, empId);
@@ -155,6 +126,23 @@ export async function POST(request: NextRequest) {
         });
       }
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 401 });
+    }
+
+    if (roleRequires2FA(user.role)) {
+      if (!user.totpEnabled) {
+        const setupToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_setup' });
+        return NextResponse.json({
+          ok: false,
+          requires2faSetup: true,
+          setupToken,
+        });
+      }
+      const pendingToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_login' });
+      return NextResponse.json({
+        ok: false,
+        requires2fa: true,
+        pendingToken,
+      });
     }
 
     await clearFailedLogin(user.id);

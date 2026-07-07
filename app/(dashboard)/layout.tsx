@@ -10,6 +10,7 @@ import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
 import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
+import { VersionFooter } from '@/components/auth/VersionFooter';
 import { getEffectiveAccessForBoutique } from '@/lib/rbac/effectiveAccess';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 
@@ -77,6 +78,7 @@ export default async function DashboardLayout({
           canEditSchedule={canEditSchedule}
           canApproveWeek={canApproveWeek}
         />
+        <VersionFooter />
       </div>
     </div>
   );

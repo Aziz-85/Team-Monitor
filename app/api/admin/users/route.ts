@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { deactivateEmployeeCascade } from '@/lib/services/deactivateEmployeeCascade';
 import { userListWhere } from '@/lib/userListWhere';
 import * as bcrypt from 'bcryptjs';
+import { validatePasswordStrength, GENERIC_PASSWORD_ERROR } from '@/lib/passwordPolicy';
 import type { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
@@ -84,7 +85,11 @@ export async function POST(request: NextRequest) {
   const role = String(body.role ?? 'EMPLOYEE').toUpperCase() as Role;
 
   if (!empId || !password) {
-    return NextResponse.json({ error: 'empId and password required' }, { status: 400 });
+    return NextResponse.json({ error: 'Request could not be completed.' }, { status: 400 });
+  }
+  const policy = validatePasswordStrength(password, { empId });
+  if (!policy.ok) {
+    return NextResponse.json({ error: GENERIC_PASSWORD_ERROR }, { status: 400 });
   }
   if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'].includes(role)) {
     return NextResponse.json({ error: 'role must be EMPLOYEE, MANAGER, ASSISTANT_MANAGER, ADMIN, or AREA_MANAGER' }, { status: 400 });

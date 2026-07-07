@@ -276,6 +276,8 @@ model User {
   boutiqueId        String   // session-bound boutique (no switching); backfilled in migration
   lockedUntil       DateTime? // account lockout until this time (login abuse protection)
   failedLoginAttempts Int    @default(0) // reset on successful login
+  totpSecretEncrypted String? // AES-GCM encrypted TOTP secret
+  totpEnabled       Boolean  @default(false)
   boutique          Boutique  @relation(fields: [boutiqueId], references: [id], onDelete: Restrict)
   employee          Employee? @relation(fields: [empId], references: [empId])
   sessions         Session[]

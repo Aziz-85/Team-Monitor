@@ -1271,6 +1271,12 @@
     "noBoutique": "Account not assigned to a boutique. Contact admin.",
     "idleSignOut": "You were signed out due to inactivity.",
     "loginFailed": "Login failed",
+    "passwordChangeFailed": "Could not change password. Check your current password and try a stronger new password.",
+    "passwordPolicyHint": "At least 12 characters with uppercase, lowercase, and a number.",
+    "twoFactorPrompt": "Enter the 6-digit code from your authenticator app.",
+    "twoFactorVerify": "Verify",
+    "twoFactorSetupPrompt": "Set up two-factor authentication: add this secret to your authenticator app, then enter the code.",
+    "twoFactorEnable": "Enable 2FA & sign in",
     "showPassword": "Show password",
     "hidePassword": "Hide password"
   },

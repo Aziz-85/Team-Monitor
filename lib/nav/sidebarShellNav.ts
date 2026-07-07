@@ -25,7 +25,8 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'home',
     labelKey: 'nav.groups.home',
     items: [
-      { key: 'HOME', href: '/', labelKey: 'nav.dashboard' },
+      { key: 'HOME', href: '/', labelKey: 'nav.home' },
+      { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard' },
       { key: 'EMPLOYEE_HOME', href: '/employee', labelKey: 'nav.employeeHome' },
     ],
   },

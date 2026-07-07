@@ -41,11 +41,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid locale' }, { status: 400 });
   }
   const cookieStore = await cookies();
+  const isHttps = new URL(request.url).protocol === 'https:';
+  const secure = process.env.NODE_ENV === 'production' || isHttps;
   cookieStore.set({
     name: LOCALE_COOKIE,
     value: locale,
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
   });
   return NextResponse.json({ ok: true });
 }
