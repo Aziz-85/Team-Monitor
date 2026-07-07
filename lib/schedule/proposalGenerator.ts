@@ -10,9 +10,19 @@ import { getRamadanRange } from '@/lib/time/ramadan';
 import { buildGenerateScheduleInput } from '@/lib/schedule/generateSchedule/buildInput';
 import { generateSchedule } from '@/lib/schedule/generateSchedule/engine';
 import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
-import type { GenerateScheduleResult } from '@/lib/schedule/generateSchedule/types';
+import type { DayOperatingConfig, GenerateScheduleInput, GenerateScheduleResult } from '@/lib/schedule/generateSchedule/types';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
 import type { ScheduleGridResult } from '@/lib/services/scheduleGrid';
+import {
+  buildProposalDayRows,
+  buildProposalSummary,
+} from '@/lib/schedule/proposalPresenter';
+import {
+  evaluateProposalQuality,
+  compareProposalQualityCandidates,
+  type ProposalQualityResult,
+} from '@/lib/schedule/proposalQualityGate';
+import { buildWeeklyStrategy, type WorkforceWeeklyStrategy } from '@/lib/schedule/workforceStrategyAI';
 import { weekDateStringsFromStart } from '@/lib/services/swapWeeklyOffForWeek';
 import { getDowRiyadhFromYmd } from '@/lib/schedule/dayOverride';
 
@@ -33,7 +43,7 @@ export type GenerateProposalInput = {
   strategySeed?: number;
 };
 
-export type GenerateProposalResult = {
+type GeneratedProposalBase = {
   proposalId: string;
   proposalNumber: number;
   strategySeed: number;
@@ -41,6 +51,43 @@ export type GenerateProposalResult = {
   actions: PlanAction[];
   grid: ScheduleGridResult;
 };
+
+function bridgeFairnessPenalty(result: GenerateScheduleResult): number {
+  const counts = result.employeeSummaries.map((e) => e.bridgeDays);
+  if (counts.length <= 1) return 0;
+  const max = Math.max(...counts);
+  const min = Math.min(...counts);
+  return max - min;
+}
+
+function evaluateGenerated(
+  generated: GeneratedProposalBase,
+  days: DayOperatingConfig[],
+  labelAsIncomplete?: boolean
+): ProposalQualityResult {
+  const rows = buildProposalDayRows(
+    days,
+    generated.generateResult.assignments,
+    generated.grid,
+    generated.generateResult.slotViolations,
+    generated.generateResult.weeklyOffVariant
+  );
+  const summary = buildProposalSummary(
+    generated.generateResult,
+    generated.grid,
+    generated.generateResult.weeklyOffVariant
+  );
+  return evaluateProposalQuality(
+    {
+      rows,
+      days,
+      slotViolations: generated.generateResult.slotViolations,
+      summary,
+    },
+    {},
+    { labelAsIncomplete }
+  );
+}
 
 function proposalSignature(result: GenerateScheduleResult): string {
   const parts = result.assignments
@@ -128,10 +175,16 @@ function weeklyOffSwapActions(
   return actions;
 }
 
-async function runOnce(
-  input: GenerateProposalInput,
-  strategySeed: number
-): Promise<GenerateProposalResult> {
+export type ProposalEngineContext = {
+  grid: ScheduleGridResult;
+  engineInput: GenerateScheduleInput;
+  weeklyStrategy: WorkforceWeeklyStrategy;
+};
+
+/** Load grid + engine input + workforce strategy for proposal flow. */
+export async function loadProposalEngineContext(
+  input: GenerateProposalInput
+): Promise<ProposalEngineContext> {
   const grid = await getScheduleGridForWeek(input.weekStart, { boutiqueIds: input.boutiqueIds });
   const empIds = grid.rows.map((r) => r.empId);
   const ramadanRange = getRamadanRange();
@@ -150,11 +203,26 @@ async function runOnce(
     preserveExisting: false,
   });
 
+  const weeklyStrategy = buildWeeklyStrategy(engineInput);
+
+  return { grid, engineInput, weeklyStrategy };
+}
+
+async function runOnce(
+  input: GenerateProposalInput,
+  strategySeed: number,
+  ctx: ProposalEngineContext
+): Promise<GeneratedProposalBase> {
+  const { grid, engineInput, weeklyStrategy } = ctx;
+  const exec = weeklyStrategy.execution;
+  const rotation = strategySeed + (exec.allowWeeklyOffMove ? exec.scenarioRotation : 0);
+  const bridgeOffset = exec.allowBridge ? strategySeed + exec.bridgeRotationOffset : strategySeed;
+
   const generateResult = generateSchedule(engineInput, {
     forcePartialSolve: true,
     preAnalyzed: true,
-    scenarioRotation: strategySeed,
-    bridgeRotationOffset: strategySeed,
+    scenarioRotation: rotation,
+    bridgeRotationOffset: bridgeOffset,
   });
 
   const shiftActions = generateResultToPlanActions(generateResult, grid.rows);
@@ -178,23 +246,84 @@ async function runOnce(
   };
 }
 
-const MAX_REGENERATE_ATTEMPTS = 12;
+export type GenerateProposalResult = GeneratedProposalBase & {
+  quality: ProposalQualityResult;
+  weeklyStrategy: WorkforceWeeklyStrategy;
+};
 
-/** Generate a proposal; retries with rotated seeds when rejected or duplicate. */
+const MAX_STRATEGY_ATTEMPTS = 12;
+const MAX_QUALITY_ATTEMPTS = 5;
+
+/** Generate a proposal that passes the quality gate, or return the best achievable incomplete option. */
 export async function generateScheduleProposal(
-  input: GenerateProposalInput
+  input: GenerateProposalInput,
+  days: DayOperatingConfig[]
 ): Promise<GenerateProposalResult> {
+  const ctx = await loadProposalEngineContext(input);
   const rejected = new Set(input.rejectedProposalIds ?? []);
   const startSeed = input.strategySeed ?? 0;
+  const failedCandidates: Array<{
+    base: GeneratedProposalBase;
+    quality: ProposalQualityResult;
+    summary: ReturnType<typeof buildProposalSummary>;
+    bridgeFairnessPenalty: number;
+  }> = [];
 
-  for (let attempt = 0; attempt < MAX_REGENERATE_ATTEMPTS; attempt++) {
+  let qualityAttempts = 0;
+  for (let attempt = 0; attempt < MAX_STRATEGY_ATTEMPTS && qualityAttempts < MAX_QUALITY_ATTEMPTS; attempt++) {
     const strategySeed = startSeed + attempt;
-    const result = await runOnce(input, strategySeed);
-    if (!rejected.has(result.proposalId)) {
-      return result;
+    const base = await runOnce(input, strategySeed, ctx);
+    if (rejected.has(base.proposalId)) continue;
+
+    qualityAttempts += 1;
+    const quality = evaluateGenerated(base, days);
+    if (quality.acceptable) {
+      return { ...base, quality: { ...quality, status: 'ACCEPTABLE' }, weeklyStrategy: ctx.weeklyStrategy };
     }
+
+    rejected.add(base.proposalId);
+    const summary = buildProposalSummary(
+      base.generateResult,
+      base.grid,
+      base.generateResult.weeklyOffVariant
+    );
+    failedCandidates.push({
+      base,
+      quality,
+      summary,
+      bridgeFairnessPenalty: bridgeFairnessPenalty(base.generateResult),
+    });
   }
 
-  const fallback = await runOnce(input, startSeed + MAX_REGENERATE_ATTEMPTS);
-  return { ...fallback, proposalId: `${fallback.proposalId}-alt` };
+  if (failedCandidates.length > 0) {
+    failedCandidates.sort((a, b) =>
+      compareProposalQualityCandidates(
+        {
+          quality: a.quality,
+          summary: a.summary,
+          bridgeFairnessPenalty: a.bridgeFairnessPenalty,
+        },
+        {
+          quality: b.quality,
+          summary: b.summary,
+          bridgeFairnessPenalty: b.bridgeFairnessPenalty,
+        }
+      )
+    );
+    const best = failedCandidates[0]!;
+    const incompleteQuality = evaluateGenerated(best.base, days, true);
+    return { ...best.base, quality: incompleteQuality, weeklyStrategy: ctx.weeklyStrategy };
+  }
+
+  for (let attempt = qualityAttempts; attempt < MAX_STRATEGY_ATTEMPTS; attempt++) {
+    const strategySeed = startSeed + attempt;
+    const base = await runOnce(input, strategySeed, ctx);
+    if (rejected.has(base.proposalId)) continue;
+    const quality = evaluateGenerated(base, days, true);
+    return { ...base, quality, weeklyStrategy: ctx.weeklyStrategy };
+  }
+
+  const fallback = await runOnce(input, startSeed + MAX_STRATEGY_ATTEMPTS, ctx);
+  const quality = evaluateGenerated(fallback, days, true);
+  return { ...fallback, proposalId: `${fallback.proposalId}-alt`, quality, weeklyStrategy: ctx.weeklyStrategy };
 }

@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { getScheduleScope } from '@/lib/scope/scheduleScope';
 import { canEditSchedule } from '@/lib/rbac/schedulePermissions';
-import { generateScheduleProposal } from '@/lib/schedule/proposalGenerator';
-import { presentProposal } from '@/lib/schedule/proposalPresenter';
-import { buildWeekOperatingConfigs } from '@/lib/schedule/generateSchedule/operatingPeriods';
-import { getRamadanRange } from '@/lib/time/ramadan';
-import { weekDateStringsFromStart } from '@/lib/services/swapWeeklyOffForWeek';
+import { loadProposalEngineContext } from '@/lib/schedule/proposalGenerator';
 import type { Role } from '@prisma/client';
 
-export const maxDuration = 300;
+export const maxDuration = 120;
 
 const EDIT_ROLES: Role[] = ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -35,8 +31,6 @@ export async function POST(request: NextRequest) {
         shift: string;
         sourceBoutiqueId?: string;
       }>;
-      rejectedProposalIds?: string[];
-      strategySeed?: number;
     };
 
     try {
@@ -57,34 +51,15 @@ export async function POST(request: NextRequest) {
 
     const targetBoutiqueIds = body.boutiqueId ? [body.boutiqueId] : boutiqueIds;
 
-    const weekDates = weekDateStringsFromStart(weekStart);
-    const days = buildWeekOperatingConfigs(weekDates, getRamadanRange());
-
-    const generated = await generateScheduleProposal(
-      {
-        weekStart,
-        boutiqueIds: targetBoutiqueIds,
-        externalCoverage: body.externalCoverage,
-        rejectedProposalIds: body.rejectedProposalIds,
-        strategySeed: body.strategySeed,
-      },
-      days
-    );
-
-    const presented = presentProposal(
-      generated.generateResult,
-      generated.actions,
-      generated.grid,
-      days,
-      { proposalId: generated.proposalId, proposalNumber: generated.proposalNumber },
-      generated.quality
-    );
+    const ctx = await loadProposalEngineContext({
+      weekStart,
+      boutiqueIds: targetBoutiqueIds,
+      externalCoverage: body.externalCoverage,
+    });
 
     return NextResponse.json({
       weekStart,
-      strategySeed: generated.strategySeed,
-      weeklyStrategy: generated.weeklyStrategy,
-      ...presented,
+      weeklyStrategy: ctx.weeklyStrategy,
     });
   } catch (e) {
     const err = e as { code?: string };
@@ -94,8 +69,8 @@ export async function POST(request: NextRequest) {
     if (err.code === 'FORBIDDEN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    const message = e instanceof Error ? e.message : 'Proposal generation failed';
-    console.error('[schedule/v3/propose]', e);
+    const message = e instanceof Error ? e.message : 'Strategy analysis failed';
+    console.error('[schedule/v3/strategy]', e);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

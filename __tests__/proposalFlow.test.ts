@@ -15,6 +15,7 @@ import {
   buildProposalSummary,
   presentProposal,
 } from '@/lib/schedule/proposalPresenter';
+import { evaluateProposalQuality } from '@/lib/schedule/proposalQualityGate';
 import { generateResultToPlanActions } from '@/lib/schedule/generateSchedule/toPlanActions';
 import { createHash } from 'crypto';
 
@@ -185,13 +186,21 @@ describe('proposal flow', () => {
     const result = generateSchedule(input, { forcePartialSolve: true });
     const grid = mockGridFromInput(input);
     const actions = generateResultToPlanActions(result, grid.rows);
+    const summary = buildProposalSummary(result, grid as never);
+    const quality = evaluateProposalQuality({
+      rows: buildProposalDayRows(input.days, result.assignments, grid as never, result.slotViolations, result.weeklyOffVariant),
+      days: input.days,
+      slotViolations: result.slotViolations,
+      summary,
+    });
     const presented = presentProposal(result, actions, grid as never, input.days, {
       proposalId: 'test-1',
       proposalNumber: 1,
-    });
+    }, quality);
 
     expect(presented.actions.length).toBeGreaterThan(0);
     expect(presented.summary.coverageValid).toBe(true);
+    expect(presented.quality.status).toBe('ACCEPTABLE');
     expect(presented.rows).toHaveLength(7);
     expect(buildProposalSummary(result, grid as never).bridgeCount).toBeGreaterThanOrEqual(0);
   });

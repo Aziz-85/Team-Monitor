@@ -150,6 +150,15 @@ export type {
   AffectedTimeRange,
 } from '@/lib/schedule/recommendationEngine';
 export { planWeeklyResources, buildDailyTargetPlans } from '@/lib/schedule/resourcePlanner';
+export { buildWeeklyStrategy, recommendationCategoryOrder } from '@/lib/schedule/workforceStrategyAI';
+export type {
+  WorkforceWeeklyStrategy,
+  WorkforceStrategyPlan,
+  StrategyRecommendation,
+  StrategyDecision,
+  StaffSituation,
+  WeeklyStrategySummary,
+} from '@/lib/schedule/workforceStrategyAI';
 export type {
   WorkforcePlan,
   DailyTargetPlan,

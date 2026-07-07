@@ -14,6 +14,7 @@ import type {
 } from '@/lib/schedule/generateSchedule/types';
 import type { PlanAction } from '@/lib/services/schedulePlanner';
 import type { ScheduleGridResult } from '@/lib/services/scheduleGrid';
+import type { ProposalQualityResult } from '@/lib/schedule/proposalQualityGate';
 
 export type ProposalPerson = {
   empId: string;
@@ -228,6 +229,9 @@ export type ProposalApiResponse = {
   actions: PlanAction[];
   summary: ProposalSummary;
   insights: string[];
+  quality: ProposalQualityResult;
+  status: ProposalQualityResult['status'];
+  statusLabel: string | null;
 };
 
 export function presentProposal(
@@ -235,7 +239,8 @@ export function presentProposal(
   actions: PlanAction[],
   grid: ScheduleGridResult,
   days: DayOperatingConfig[],
-  meta: { proposalId: string; proposalNumber: number }
+  meta: { proposalId: string; proposalNumber: number },
+  quality: ProposalQualityResult
 ): ProposalApiResponse {
   const rows = buildProposalDayRows(
     days,
@@ -247,6 +252,9 @@ export function presentProposal(
   const summary = buildProposalSummary(generateResult, grid, generateResult.weeklyOffVariant);
   const insights = buildProposalInsights(rows, summary);
 
+  const statusLabel =
+    quality.status === 'INCOMPLETE' ? 'Best achievable schedule' : quality.status === 'ACCEPTABLE' ? null : null;
+
   return {
     proposalId: meta.proposalId,
     proposalNumber: meta.proposalNumber,
@@ -254,5 +262,8 @@ export function presentProposal(
     actions,
     summary,
     insights,
+    quality,
+    status: quality.status,
+    statusLabel,
   };
 }
