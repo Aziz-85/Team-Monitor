@@ -11,7 +11,7 @@ type Props = {
 
 export function EditorTechnicalPanel({ t, issueCount = 0, children, footer }: Props) {
   const tr = (key: string, fallback: string) => (t(key) as string) || fallback;
-  const label = tr('schedule.proposal.technicalAnalysis', 'Technical analysis');
+  const label = tr('schedule.proposal.advancedPanel', 'Advanced');
   const badge = issueCount > 0 ? ` (${issueCount})` : '';
 
   return (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExternalSupportPrompt } from '@/components/schedule-next/ExternalSupportPrompt';
 import { NextProposalTable } from '@/components/schedule-next/NextProposalTable';
@@ -107,12 +108,26 @@ export function ScheduleNextPage({ initialWeekStart, t }: Props) {
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">
-          {t('scheduleNext.title') || 'Schedule Next'}
+          {t('scheduleNext.title') || 'Schedule Planning'}
         </h1>
         <p className="mt-1 text-sm text-muted">
           {t('scheduleNext.subtitle') ||
-            'Generate one practical weekly schedule to review and apply.'}
+            'Generate one practical weekly schedule, review it, then approve or edit manually.'}
         </p>
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link
+            href={`/schedule/edit?weekStart=${weekStart}`}
+            className="font-medium text-muted hover:text-foreground"
+          >
+            {t('scheduleNext.manualEditLink') || 'Manual Edit →'}
+          </Link>
+          <Link href="/schedule/audit" className="font-medium text-muted hover:text-foreground">
+            {t('scheduleNext.auditLink') || 'Audit →'}
+          </Link>
+          <Link href="/schedule/view" className="font-medium text-muted hover:text-foreground">
+            {t('scheduleNext.viewLink') || 'Schedule View →'}
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">

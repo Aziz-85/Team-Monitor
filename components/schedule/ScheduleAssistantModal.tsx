@@ -207,6 +207,14 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
       <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !applying && onClose()} />
       <div className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface shadow-lg">
         <div className="border-b border-border px-5 py-4">
+          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+            <span className="font-semibold">
+              {(t('schedule.assistant.legacyLabel') as string) || 'Legacy'}
+            </span>
+            {' — '}
+            {(t('schedule.assistant.legacyHint') as string) ||
+              'Superseded by Schedule Next. For experiments only.'}
+          </div>
           <h3 className="text-lg font-semibold text-foreground">
             {(t('schedule.assistant.titleV3') as string) || 'Solve Schedule'}
           </h3>

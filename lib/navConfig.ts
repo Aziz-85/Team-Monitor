@@ -70,7 +70,7 @@ export type AppShellQuickItem = {
 export const APP_SHELL_QUICK_ACCESS: AppShellQuickItem[] = [
   { key: 'HOME', href: '/dashboard', labelKey: 'nav.home', requiresRouteAccess: true },
   { key: 'DASHBOARD', href: '/', labelKey: 'nav.dashboard', requiresRouteAccess: true },
-  { key: 'SCHEDULE', href: '/schedule/view', labelKey: 'nav.sidebar.schedule' },
+  { key: 'SCHEDULE', href: '/schedule', labelKey: 'nav.sidebar.schedule' },
 ];
 
 export type AppShellHubItem = { key: string; href: string; labelKey: string };
@@ -105,8 +105,8 @@ const GROUP_TEAM: NavGroup = {
   labelKey: 'nav.group.TEAM',
   items: [
     item('/schedule/view', 'nav.scheduleView', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEMO_VIEWER'], 'CORE'),
-    item('/schedule/edit', 'nav.scheduleEditor', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/next', 'nav.scheduleNext', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
+    item('/schedule/edit', 'nav.scheduleManualEdit', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE', true),
     item('/schedule/v3', 'nav.scheduleSolverLab', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'LEGACY', true),
     item('/schedule/audit', 'nav.scheduleAudit', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit-edits', 'schedule.auditEditsTitle', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),

@@ -1,6 +1,6 @@
 # Team Monitor — Route & Page Audit
 
-Audit date: 2026-07-07  
+Audit date: 2026-07-07 (Phase 1 simplification)  
 Scope: all `app/**/page.tsx` routes (119), `lib/navConfig.ts`, `lib/nav/sidebarShellNav.ts`.
 
 **No pages were deleted.** Legacy routes remain reachable; nav-hidden where noted.
@@ -9,32 +9,46 @@ Scope: all `app/**/page.tsx` routes (119), `lib/navConfig.ts`, `lib/nav/sidebarS
 
 | Status | Meaning |
 |--------|---------|
+| **PRIMARY** | Main product entry for managers |
+| **MANUAL_EDIT** | Secondary manual grid editor |
 | **KEEP** | Active product surface |
 | **HIDE_FROM_NAV** | Intentionally not in sidebar (hub, deep link, admin tool) |
-| **LEGACY** | Redirect, lab, or superseded flow |
+| **LEGACY** / **LEGACY_LAB** | Redirect, lab, or superseded flow |
 | **DELETE_CANDIDATE** | Orphaned / duplicate; safe to remove after traffic check |
 
-## Schedule (priority)
+## Schedule (priority — Phase 1)
 
 | Route | File | Nav? | Linked? | Status | Reason | Replacement |
 |-------|------|------|---------|--------|--------|-------------|
-| `/schedule/edit` | `app/(dashboard)/schedule/edit/page.tsx` | Yes | Yes | **KEEP** | Official Schedule Planning + grid editor | — |
-| `/schedule/next` | `app/(dashboard)/schedule/next/page.tsx` | Yes | Yes | **KEEP** | Experimental pattern-based generator | — |
+| `/schedule/next` | `app/(dashboard)/schedule/next/page.tsx` | Yes | Yes | **PRIMARY** | Primary weekly generator (Schedule Planning group) | — |
+| `/schedule/edit` | `app/(dashboard)/schedule/edit/page.tsx` | Hidden | Yes | **MANUAL_EDIT** | Manual grid adjustments after proposal | `/schedule/next` |
 | `/schedule/view` | `app/(dashboard)/schedule/view/page.tsx` | Yes | Yes | **KEEP** | Read-only schedule for staff | — |
 | `/schedule/audit` | `app/(dashboard)/schedule/audit/page.tsx` | Yes | Yes | **KEEP** | Governance audit log | — |
 | `/schedule/audit-edits` | `app/(dashboard)/schedule/audit-edits/page.tsx` | Hub | Yes | **KEEP** | Edit audit trail | — |
-| `/schedule` | `app/(dashboard)/schedule/page.tsx` | — | Redirect | **KEEP** | Routes to edit or view by role | — |
-| `/schedule/v3` | `app/(dashboard)/schedule/v3/page.tsx` | Hidden | Lab link | **LEGACY** | Engine lab; `hiddenFromNav` | `/schedule/edit` |
+| `/schedule` | `app/(dashboard)/schedule/page.tsx` | — | Redirect | **KEEP** | Managers → `/schedule/next`; others → `/schedule/view` | — |
+| `/schedule/v3` | `app/(dashboard)/schedule/v3/page.tsx` | Hidden | Deep link | **LEGACY_LAB** | Engine lab; `hiddenFromNav` + banner | `/schedule/next` |
 | `/schedule/editor` | `app/(dashboard)/schedule/editor/page.tsx` | No | Redirect | **LEGACY** | Old URL → `/schedule/edit` | `/schedule/edit` |
-| `SchedulePageClient` | `app/(dashboard)/schedule/SchedulePageClient.tsx` | — | **No** | **DELETE_CANDIDATE** | Not mounted by any route | `/schedule/edit` |
+| `SchedulePageClient` | `app/(dashboard)/schedule/SchedulePageClient.tsx` | — | **No** | **DELETE_CANDIDATE** | Not mounted by any route | `/schedule/next` |
 
 ### Schedule components (not routes)
 
 | Item | File | Status | Reason | Replacement |
 |------|------|--------|--------|-------------|
-| Schedule Assistant modal | `components/schedule/ScheduleAssistantModal.tsx` | **LEGACY** | Old plan assistant; technical modal | Proposal review |
+| Schedule Assistant modal | `components/schedule/ScheduleAssistantModal.tsx` | **LEGACY** | Old plan assistant; reachable from Edit → Advanced only | Schedule Next |
+| Proposed Schedule Review | `components/schedule/ProposedScheduleReview.tsx` | **LEGACY** | v3 proposal flow in Edit → Advanced | Schedule Next |
 | Raw slot warning lists | Various (pre-formatter) | **DELETE_CANDIDATE** | Replaced by `coverageWarningFormatter` | `CoverageWarningSummary` |
 | Coverage formatter | `lib/schedule/coverageWarningFormatter.ts` | **KEEP** | Shared grouped warnings | — |
+| `CoverageWarningSummary` | `components/schedule/CoverageWarningSummary.tsx` | **KEEP** | Standard warning UI | — |
+
+### Sidebar (Phase 1)
+
+Group **Schedule Planning** shows:
+
+- Schedule Next → `/schedule/next`
+- Schedule View → `/schedule/view`
+- Schedule Audit → `/schedule/audit`
+
+Hidden from sidebar: `/schedule/edit` (manual), `/schedule/v3` (lab), legacy assistant entry points.
 
 ## Home & dashboard
 

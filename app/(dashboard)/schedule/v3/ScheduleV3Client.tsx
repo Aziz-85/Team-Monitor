@@ -468,11 +468,11 @@ export function ScheduleV3Client({ ramadanRange }: Props) {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <header className="mb-6">
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <p className="font-semibold">{tr('schedule.v3.lab.bannerTitle', 'Engine lab — testing only')}</p>
+          <p className="font-semibold">{tr('schedule.v3.lab.bannerTitle', 'Engine Lab — for testing only')}</p>
           <p className="mt-1 text-amber-900/90">
             {tr(
               'schedule.v3.lab.bannerHint',
-              'For day-to-day planning use Schedule Editor: generate a proposal, review, approve, or edit manually.'
+              'For day-to-day planning use Schedule Next: generate a proposal, review, approve, or edit manually.'
             )}
           </p>
         </div>

@@ -92,8 +92,9 @@
     "executiveCompare": "مقارنة",
     "executiveEmployees": "الموظفون",
     "schedule": "الجدول",
-    "scheduleView": "الجدول (عرض)",
+    "scheduleView": "عرض الجدول",
     "scheduleEditor": "تخطيط الجدول",
+    "scheduleManualEdit": "تعديل يدوي",
     "scheduleNext": "الجدول التالي",
     "scheduleSolver": "حلّال الجدول",
     "scheduleSolverLab": "مختبر المحرك (v3)",
@@ -126,6 +127,7 @@
     "groups": {
       "home": "الرئيسية",
       "schedule": "الجدول",
+      "schedulePlanning": "تخطيط الجدول",
       "tasks": "المهام",
       "inventory": "الجرد",
       "analytics": "التحليلات",
@@ -299,6 +301,14 @@
           "edit": {
             "title": "تخطيط الجدول",
             "hint": "إنشاء مقترحات، اعتمادها، أو تعديل الجدول الأسبوعي يدوياً."
+          },
+          "next": {
+            "title": "الجدول التالي",
+            "hint": "المولّد الأسبوعي الرئيسي — دعم خارجي، مراجعة، وتطبيق."
+          },
+          "manualEdit": {
+            "title": "تعديل يدوي",
+            "hint": "تعديل الورديات في الشبكة بعد إنشاء مقترح."
           },
           "solver": {
             "title": "حلّال الجدول",
@@ -1435,6 +1445,11 @@
     "proposal": {
       "workflowTitle": "تخطيط الجدول",
       "workflowHint": "أنشئ مقترحاً مرئياً، اعتمده، أعد توليد بدائل، أو عدّل الورديات يدوياً في الشبكة.",
+      "manualEditTitle": "تعديل الجدول يدوياً",
+      "manualEditHint": "استخدم الجدول التالي لإنشاء مقترح. استخدم هذه الصفحة للتعديلات اليدوية.",
+      "openScheduleNext": "الجدول التالي ←",
+      "openAudit": "السجل ←",
+      "advancedPanel": "متقدم",
       "technicalAnalysis": "تحليل تقني",
       "openEngineLab": "فتح مختبر المحرك (v3) ←",
       "open": "إنشاء مقترح",
@@ -1710,6 +1725,9 @@
     },
     "assistant": {
       "button": "مساعد الجدول",
+      "legacyButton": "المساعد القديم",
+      "legacyLabel": "قديم",
+      "legacyHint": "استُبدل بالجدول التالي. للتجارب فقط.",
       "title": "مساعد ترتيب الجدول",
       "titleV3": "حل الجدول",
       "subtitle": "سبت–خميس: AM ≥ 2، PM ≥ AM. الجمعة: مساءً فقط. Split حتى 2 لكل موظف/أسبوع.",

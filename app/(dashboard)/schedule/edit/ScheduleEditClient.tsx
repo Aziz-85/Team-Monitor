@@ -1727,12 +1727,23 @@ export function ScheduleEditClient({
       <div className="mx-auto min-w-0 max-w-5xl overflow-x-hidden px-4 md:px-6">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold text-foreground">
-            {(t('schedule.proposal.workflowTitle') as string) || 'Schedule Planning'}
+            {(t('schedule.proposal.manualEditTitle') as string) || 'Manual Schedule Edit'}
           </h1>
           <p className="mt-1 text-sm text-muted">
-            {(t('schedule.proposal.workflowHint') as string) ||
-              'Generate a visual proposal, approve it, regenerate alternatives, or edit shifts manually in the grid.'}
+            {(t('schedule.proposal.manualEditHint') as string) ||
+              'Use Schedule Next to generate a proposal. Use this page for manual adjustments.'}
           </p>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            <Link
+              href={`/schedule/next?weekStart=${weekStart}`}
+              className="font-medium text-accent hover:text-accent/80"
+            >
+              {(t('schedule.proposal.openScheduleNext') as string) || 'Schedule Next →'}
+            </Link>
+            <Link href="/schedule/audit" className="font-medium text-muted hover:text-foreground">
+              {(t('schedule.proposal.openAudit') as string) || 'Audit →'}
+            </Link>
+          </div>
         </header>
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <div className="flex gap-2">
@@ -2025,13 +2036,6 @@ export function ScheduleEditClient({
           )}
           {canEdit && tab === 'week' && (
             <>
-              <button
-                type="button"
-                onClick={() => setProposalReviewOpen(true)}
-                className="h-9 md:h-10 rounded-lg border border-[#0F4C3A] bg-[#0F4C3A] px-4 text-sm font-semibold text-white hover:bg-[#0d3f30] focus:outline-none focus:ring-2 focus:ring-[#0F4C3A]/40 focus:ring-offset-2"
-              >
-                {(t('schedule.proposal.open') as string) || 'Generate Proposal'}
-              </button>
               {pendingCount > 0 && (
                 <span className="rounded bg-amber-100 px-2 py-1 text-sm font-medium text-amber-800">
                   {(t('schedule.unsavedCount') as string)?.replace?.('{n}', String(pendingCount)) ?? `${pendingCount} changes`}
@@ -2520,18 +2524,25 @@ export function ScheduleEditClient({
                 issueCount={technicalIssueCount}
                 footer={
                   <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setProposalReviewOpen(true)}
+                      className="font-medium text-muted hover:text-foreground"
+                    >
+                      {(t('schedule.proposal.open') as string) || 'Generate Proposal (legacy v3)'}
+                    </button>
                     <Link
                       href={`/schedule/v3?weekStart=${weekStart}`}
-                      className="font-medium text-accent hover:text-accent/80"
+                      className="font-medium text-muted hover:text-foreground"
                     >
-                      {(t('schedule.proposal.openEngineLab') as string) || 'Open Engine Lab (v3) →'}
+                      {(t('schedule.proposal.openEngineLab') as string) || 'Engine Lab (v3) →'}
                     </Link>
                     <button
                       type="button"
                       onClick={() => setScheduleAssistantOpen(true)}
                       className="font-medium text-muted hover:text-foreground"
                     >
-                      {t('schedule.assistant.button')}
+                      {(t('schedule.assistant.legacyButton') as string) || 'Legacy Assistant'}
                     </button>
                   </div>
                 }

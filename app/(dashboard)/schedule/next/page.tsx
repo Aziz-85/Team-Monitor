@@ -12,13 +12,20 @@ function saturdayWeekStart(d: Date): string {
   return copy.toISOString().slice(0, 10);
 }
 
-export default async function ScheduleNextRoutePage() {
+export default async function ScheduleNextRoutePage({
+  searchParams,
+}: {
+  searchParams: { weekStart?: string };
+}) {
   const user = await getSessionUser();
   if (!user) redirect('/login');
   if (!canEditSchedule(user)) redirect('/schedule/view');
 
   const t = await getTranslations();
-  const weekStart = saturdayWeekStart(new Date());
+  const weekStart =
+    typeof searchParams.weekStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.weekStart)
+      ? searchParams.weekStart
+      : saturdayWeekStart(new Date());
 
   return (
     <div className="w-full min-w-0 overflow-x-hidden">

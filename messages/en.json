@@ -92,8 +92,9 @@
     "executiveCompare": "Compare",
     "executiveEmployees": "Employees",
     "schedule": "Schedule",
-    "scheduleView": "Schedule (View)",
+    "scheduleView": "Schedule View",
     "scheduleEditor": "Schedule Planning",
+    "scheduleManualEdit": "Manual Edit",
     "scheduleNext": "Schedule Next",
     "scheduleSolver": "Schedule Solver",
     "scheduleSolverLab": "Engine Lab (v3)",
@@ -126,6 +127,7 @@
     "groups": {
       "home": "Home",
       "schedule": "Schedule",
+      "schedulePlanning": "Schedule Planning",
       "tasks": "Tasks",
       "inventory": "Inventory",
       "analytics": "Analytics",
@@ -299,6 +301,14 @@
           "edit": {
             "title": "Schedule Planning",
             "hint": "Generate proposals, approve, or edit the weekly schedule."
+          },
+          "next": {
+            "title": "Schedule Next",
+            "hint": "Primary weekly generator — external support, review, and apply."
+          },
+          "manualEdit": {
+            "title": "Manual Edit",
+            "hint": "Adjust shifts in the grid after generating a proposal."
           },
           "solver": {
             "title": "Schedule Solver",
@@ -1435,6 +1445,11 @@
     "proposal": {
       "workflowTitle": "Schedule Planning",
       "workflowHint": "Generate a visual proposal, approve it, regenerate alternatives, or edit shifts manually in the grid.",
+      "manualEditTitle": "Manual Schedule Edit",
+      "manualEditHint": "Use Schedule Next to generate a proposal. Use this page for manual adjustments.",
+      "openScheduleNext": "Schedule Next →",
+      "openAudit": "Audit →",
+      "advancedPanel": "Advanced",
       "technicalAnalysis": "Technical analysis",
       "openEngineLab": "Open Engine Lab (v3) →",
       "open": "Generate Proposal",
@@ -1542,8 +1557,8 @@
       "lab": {
         "title": "Schedule Engine Lab",
         "subtitle": "Experiment with Engine v3, constraint analysis, scenarios, and workforce planning.",
-        "bannerTitle": "Engine lab — testing only",
-        "bannerHint": "For day-to-day planning use Schedule Planning: generate a proposal, review, approve, or edit manually."
+        "bannerTitle": "Engine Lab — for testing only",
+        "bannerHint": "For day-to-day planning use Schedule Next: generate a proposal, review, approve, or edit manually."
       },
       "manager": {
         "subtitle": "Generate the best weekly schedule for your boutique.",
@@ -1710,6 +1725,9 @@
     },
     "assistant": {
       "button": "Schedule assistant",
+      "legacyButton": "Legacy Assistant",
+      "legacyLabel": "Legacy",
+      "legacyHint": "Superseded by Schedule Next. For experiments only.",
       "title": "Schedule assistant",
       "titleV3": "Solve Schedule",
       "subtitle": "Sat–Thu: AM ≥ 2, PM ≥ AM. Friday: PM only. Split max 2 per employee/week.",
@@ -1795,8 +1813,11 @@
     "monthExcelView": "Excel View"
   },
   "scheduleNext": {
-    "title": "Schedule Next",
-    "subtitle": "Generate one practical weekly schedule to review and apply.",
+    "title": "Schedule Planning",
+    "subtitle": "Generate one practical weekly schedule, review it, then approve or edit manually.",
+    "manualEditLink": "Manual Edit →",
+    "auditLink": "Audit →",
+    "viewLink": "Schedule View →",
     "weekLabel": "Week starting",
     "continue": "Continue",
     "generate": "Generate Schedule",
