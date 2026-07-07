@@ -2,7 +2,7 @@
 /**
  * Grant or revoke platform-owner dual-mode capability.
  *
- * Usage:
+ * Usage (run after `npx prisma generate` if the client is stale):
  *   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/set-platform-owner.ts admin_rashid
  *   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/set-platform-owner.ts admin_rashid --remove
  */

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev-with-lan-url.js",
     "dev:lan": "node scripts/dev-with-lan-url.js 3001",
+    "prebuild": "prisma generate",
     "build": "next build",
     "prestart": "node -e \"const fs=require('fs'); if(!fs.existsSync('.next/BUILD_ID')){ console.error('\\nError: No production build in .next. Run: npm run build\\n'); process.exit(1); }\"",
     "start": "next start -p 3002",
