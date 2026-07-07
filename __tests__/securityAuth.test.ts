@@ -30,3 +30,11 @@ describe('totp', () => {
     expect(decryptTotpSecret(enc)).toBe(secret);
   });
 });
+
+describe('formatBase32Secret', () => {
+  it('groups secret in blocks of four', () => {
+    const { formatBase32Secret, normalizeBase32Secret } = require('@/lib/formatBase32Secret');
+    expect(formatBase32Secret('abcdefghijklmnop')).toBe('ABCD EFGH IJKL MNOP');
+    expect(normalizeBase32Secret('ABCD EFGH')).toBe('ABCDEFGH');
+  });
+});

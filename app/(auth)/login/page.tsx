@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import { getPostLoginPath, type Role } from '@/lib/permissions';
 import { authFetch, fetchCsrfToken } from '@/lib/client/authFetch';
+import { TwoFactorSetupPanel } from '@/components/auth/TwoFactorSetupPanel';
 
 type Step = 'credentials' | 'totp' | 'setup';
 
@@ -133,9 +134,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="mb-6 text-xl font-semibold text-slate-900">{t('nav.appTitle')}</h1>
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
+      <div
+        className={`w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm ${
+          step === 'setup' ? 'max-w-md' : 'max-w-sm'
+        }`}
+      >
+        {step !== 'setup' ? (
+          <h1 className="mb-6 text-xl font-semibold text-slate-900">{t('nav.appTitle')}</h1>
+        ) : null}
 
         {step === 'credentials' && (
           <form onSubmit={handleCredentials} className="space-y-4">
@@ -192,7 +199,10 @@ export default function LoginPage() {
 
         {step === 'totp' && (
           <form onSubmit={handleTotp} className="space-y-4">
-            <p className="text-sm text-slate-600">{t('auth.twoFactorPrompt')}</p>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">{t('auth.twoFactorTitle')}</h2>
+              <p className="mt-1 text-sm text-slate-600">{t('auth.twoFactorPrompt')}</p>
+            </div>
             <input
               type="text"
               inputMode="numeric"
@@ -217,34 +227,20 @@ export default function LoginPage() {
         )}
 
         {step === 'setup' && (
-          <form onSubmit={handleSetupConfirm} className="space-y-4">
-            <p className="text-sm text-slate-600">{t('auth.twoFactorSetupPrompt')}</p>
-            {manualSecret ? (
-              <p className="break-all rounded bg-slate-50 p-2 font-mono text-xs text-slate-700">{manualSecret}</p>
-            ) : null}
-            {otpauthUri ? (
-              <p className="break-all text-xs text-slate-500">{otpauthUri}</p>
-            ) : null}
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-              className="w-full rounded border border-slate-300 px-3 py-2 text-center text-lg tracking-widest"
-              placeholder="000000"
-              required
-            />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded bg-sky-600 px-4 py-2 text-base font-medium text-white disabled:opacity-50"
-            >
-              {t('auth.twoFactorEnable')}
-            </button>
-          </form>
+          <TwoFactorSetupPanel
+            otpauthUri={otpauthUri}
+            manualSecret={manualSecret}
+            totpCode={totpCode}
+            onTotpCodeChange={setTotpCode}
+            onSubmit={handleSetupConfirm}
+            loading={loading}
+            error={error}
+            onBack={() => {
+              setStep('credentials');
+              setTotpCode('');
+              setError('');
+            }}
+          />
         )}
       </div>
     </div>
