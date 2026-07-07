@@ -106,6 +106,7 @@ const GROUP_TEAM: NavGroup = {
   items: [
     item('/schedule/view', 'nav.scheduleView', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEMO_VIEWER'], 'CORE'),
     item('/schedule/edit', 'nav.scheduleEditor', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
+    item('/schedule/next', 'nav.scheduleNext', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/v3', 'nav.scheduleSolverLab', ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'LEGACY', true),
     item('/schedule/audit', 'nav.scheduleAudit', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/schedule/audit-edits', 'schedule.auditEditsTitle', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
@@ -391,7 +392,8 @@ function itemVisible(
   it: NavItem
 ): boolean {
   if (!it.roles.includes(user.role)) return false;
-  if (it.href === '/schedule/edit' || it.href === '/schedule/v3') return canEditScheduleRbac(user);
+  if (it.href === '/schedule/edit' || it.href === '/schedule/v3' || it.href === '/schedule/next')
+    return canEditScheduleRbac(user);
   if (it.href === '/approvals' || it.href.startsWith('/approvals?'))
     return user.canApproveWeek ?? canApproveWeekRbac(user);
   return true;
