@@ -14,7 +14,7 @@ describe('coverageWarningFormatter', () => {
       { date: '2026-04-05', slotId: 'd', startTime: '19:00', endTime: '19:30', coverage: 0, minCoverage: 2 },
     ]);
     const formatted = formatCoverageWarnings(slots);
-    expect(formatted.summaryLine).toContain('PM shortage');
+    expect(formatted.summaryLine).toContain('affected');
     expect(formatted.totalAffectedDays).toBe(1);
     expect(formatted.groupedByDay[0]?.items.length).toBe(1);
     expect(formatted.groupedByDay[0]?.items[0]?.periodRange).toBe('17:30–19:30');
@@ -33,7 +33,7 @@ describe('coverageWarningFormatter', () => {
       ]),
     ];
     const formatted = formatCoverageWarnings(warnings);
-    expect(formatted.summaryLine).toBe('Coverage needs attention: 3 days have PM shortage.');
+    expect(formatted.summaryLine).toBe('Coverage needs attention: 3 days affected.');
     expect(formatted.compactItems.length).toBeLessThanOrEqual(3);
   });
 
@@ -56,7 +56,7 @@ describe('coverageWarningFormatter', () => {
     ];
     const formatted = formatCoverageWarnings(warnings);
     expect(formatted.groupedByDay[0]?.items.length).toBe(1);
-    expect(formatted.groupedByDay[0]?.items[0]?.label).toBe('PM coverage shortage');
+    expect(formatted.groupedByDay[0]?.items[0]?.label).toBe('PM shortage');
   });
 
   it('returns null summary when no warnings', () => {

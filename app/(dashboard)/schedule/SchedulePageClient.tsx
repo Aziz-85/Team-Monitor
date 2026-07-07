@@ -18,6 +18,7 @@ import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
 import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
 import {
   formatCoverageWarnings,
+  formatDayWarningCompact,
   warningsFromSlotViolations,
   warningsFromValidationResults,
   type CoverageWarningInput,
@@ -824,7 +825,9 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
                       </LuxuryTd>
                       <LuxuryTd>{day.amCount}</LuxuryTd>
                       <LuxuryTd>{day.pmCount}</LuxuryTd>
-                      <LuxuryTd className="text-amber-700">{day.warnings.length > 0 ? day.warnings.join('; ') : '—'}</LuxuryTd>
+                      <LuxuryTd className="text-amber-700">
+                        {formatDayWarningCompact(day.date, day.warnings)}
+                      </LuxuryTd>
                     </tr>
                   );
                 })}

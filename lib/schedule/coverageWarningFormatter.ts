@@ -72,9 +72,9 @@ function inferShortageType(w: CoverageWarningInput): ShortageType {
 function shortageLabel(type: ShortageType): string {
   switch (type) {
     case 'AM':
-      return 'AM coverage shortage';
+      return 'AM shortage';
     case 'PM':
-      return 'PM coverage shortage';
+      return 'PM shortage';
     case 'GAP':
       return 'Coverage gap';
     default:
@@ -262,21 +262,12 @@ export function formatCoverageWarnings(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const totalAffectedDays = groupedByDay.length;
-  const pmDays = groupedByDay.filter((d) => d.items.some((i) => i.shortageType === 'PM')).length;
-  const amDays = groupedByDay.filter((d) => d.items.some((i) => i.shortageType === 'AM')).length;
   const severeCount = groupedByDay.reduce(
     (n, d) => n + d.items.filter((i) => (i.available ?? 0) === 0).length,
     0
   );
 
-  let summaryLine: string;
-  if (pmDays > 0 && amDays === 0) {
-    summaryLine = `Coverage needs attention: ${pmDays} day${pmDays === 1 ? '' : 's'} have PM shortage.`;
-  } else if (amDays > 0 && pmDays === 0) {
-    summaryLine = `Coverage needs attention: ${amDays} day${amDays === 1 ? '' : 's'} have AM shortage.`;
-  } else {
-    summaryLine = `Coverage needs attention: ${totalAffectedDays} day${totalAffectedDays === 1 ? '' : 's'} affected.`;
-  }
+  const summaryLine = `Coverage needs attention: ${totalAffectedDays} day${totalAffectedDays === 1 ? '' : 's'} affected.`;
 
   const compactItems = groupedByDay.slice(0, 3).map((d) => {
     const primary = d.items[0];
@@ -355,6 +346,23 @@ export function warningsFromValidationsByDay(
       dayOfWeek: d.dayOfWeek,
     })
   );
+}
+
+export function formatWarningsFromMessageLists(
+  days: Array<{ date: string; dayName?: string; messages: string[] }>
+): FormattedCoverageWarnings {
+  return formatCoverageWarnings(warningsFromWeekSummary(days));
+}
+
+export function formatDayWarningCompact(date: string, messages: string[]): string {
+  if (!messages.length) return '—';
+  const formatted = formatWarningsFromMessageLists([{ date, messages }]);
+  const day = formatted.groupedByDay[0];
+  if (!day?.items.length) return 'Coverage issue';
+  const item = day.items[0];
+  const extra = day.items.length > 1 ? ` (+${day.items.length - 1})` : '';
+  const range = item.periodRange ? ` ${item.periodRange}` : '';
+  return `${item.label}${range}${extra}`;
 }
 
 export function warningsFromWeekSummary(

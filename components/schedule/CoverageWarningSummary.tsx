@@ -70,10 +70,10 @@ export function CoverageWarningSummary({
               <ul className="mt-1 space-y-1">
                 {day.items.map((item, idx) => (
                   <li key={`${day.date}-${item.label}-${idx}`} className="text-xs text-amber-900">
-                    <span className="font-medium">{item.label}</span>
-                    {item.periodRange ? (
-                      <span className="text-amber-800"> from {item.periodRange}</span>
-                    ) : null}
+                    <span className="font-medium">
+                      {item.label}
+                      {item.periodRange ? ` ${item.periodRange}` : ''}
+                    </span>
                     {item.required != null && item.available != null ? (
                       <span className="block text-amber-800/90">
                         Required {item.required}, available {item.available}

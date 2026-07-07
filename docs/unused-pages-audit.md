@@ -1,72 +1,186 @@
-# Unused Pages Audit
+# Team Monitor — Route & Page Audit
 
 Audit date: 2026-07-07  
-Scope: `app/`, navigation (`lib/navConfig.ts`, `lib/nav/sidebarShellNav.ts`), and schedule-related UI.
+Scope: all `app/**/page.tsx` routes (119), `lib/navConfig.ts`, `lib/nav/sidebarShellNav.ts`.
 
-This report flags routes that are unreachable from nav, duplicated, legacy, or orphaned. **No pages were deleted** in this pass.
+**No pages were deleted.** Legacy routes remain reachable; nav-hidden where noted.
 
-## Schedule routes
+## Legend
 
-| Route | File | Status | Reason | Replacement |
-|-------|------|--------|--------|-------------|
-| `/schedule/view` | `app/(dashboard)/schedule/view/page.tsx` | **KEEP** | Primary read-only schedule for all roles | — |
-| `/schedule/edit` | `app/(dashboard)/schedule/edit/page.tsx` | **KEEP** | Official manager planning + grid editor | — |
-| `/schedule/next` | `app/(dashboard)/schedule/next/page.tsx` | **KEEP** | New parallel pattern-based generator | — |
-| `/schedule/audit` | `app/(dashboard)/schedule/audit/page.tsx` | **KEEP** | In sidebar; governance audit | — |
-| `/schedule/audit-edits` | `app/(dashboard)/schedule/audit-edits/page.tsx` | **KEEP** | In nav hub; edit audit trail | — |
-| `/schedule` | `app/(dashboard)/schedule/page.tsx` | **KEEP** | Smart redirect → `/schedule/edit` or `/schedule/view` | — |
-| `/schedule/v3` | `app/(dashboard)/schedule/v3/page.tsx` | **LEGACY** | Engine lab; `hiddenFromNav: true` in `navConfig` | `/schedule/edit` (proposal flow) |
-| `/schedule/editor` | `app/(dashboard)/schedule/editor/page.tsx` | **LEGACY** | Redirect only → `/schedule/edit` | `/schedule/edit` |
-| `SchedulePageClient.tsx` | `app/(dashboard)/schedule/SchedulePageClient.tsx` | **DELETE_CANDIDATE** | Not mounted by any route; superseded by `ScheduleEditClient` / `ScheduleViewClient` | `/schedule/edit` |
+| Status | Meaning |
+|--------|---------|
+| **KEEP** | Active product surface |
+| **HIDE_FROM_NAV** | Intentionally not in sidebar (hub, deep link, admin tool) |
+| **LEGACY** | Redirect, lab, or superseded flow |
+| **DELETE_CANDIDATE** | Orphaned / duplicate; safe to remove after traffic check |
 
-## Schedule components (not pages)
+## Schedule (priority)
+
+| Route | File | Nav? | Linked? | Status | Reason | Replacement |
+|-------|------|------|---------|--------|--------|-------------|
+| `/schedule/edit` | `app/(dashboard)/schedule/edit/page.tsx` | Yes | Yes | **KEEP** | Official Schedule Planning + grid editor | — |
+| `/schedule/next` | `app/(dashboard)/schedule/next/page.tsx` | Yes | Yes | **KEEP** | Experimental pattern-based generator | — |
+| `/schedule/view` | `app/(dashboard)/schedule/view/page.tsx` | Yes | Yes | **KEEP** | Read-only schedule for staff | — |
+| `/schedule/audit` | `app/(dashboard)/schedule/audit/page.tsx` | Yes | Yes | **KEEP** | Governance audit log | — |
+| `/schedule/audit-edits` | `app/(dashboard)/schedule/audit-edits/page.tsx` | Hub | Yes | **KEEP** | Edit audit trail | — |
+| `/schedule` | `app/(dashboard)/schedule/page.tsx` | — | Redirect | **KEEP** | Routes to edit or view by role | — |
+| `/schedule/v3` | `app/(dashboard)/schedule/v3/page.tsx` | Hidden | Lab link | **LEGACY** | Engine lab; `hiddenFromNav` | `/schedule/edit` |
+| `/schedule/editor` | `app/(dashboard)/schedule/editor/page.tsx` | No | Redirect | **LEGACY** | Old URL → `/schedule/edit` | `/schedule/edit` |
+| `SchedulePageClient` | `app/(dashboard)/schedule/SchedulePageClient.tsx` | — | **No** | **DELETE_CANDIDATE** | Not mounted by any route | `/schedule/edit` |
+
+### Schedule components (not routes)
 
 | Item | File | Status | Reason | Replacement |
 |------|------|--------|--------|-------------|
-| Schedule Assistant modal | `components/schedule/ScheduleAssistantModal.tsx` | **LEGACY** | Old plan-assistant flow; still opened from editor technical area | Proposal review in `ScheduleEditClient` |
-| Schedule Overview section | `components/dashboard/sections/ScheduleOverviewSection.tsx` | **KEEP** | Executive dashboard AM/PM snapshot; now uses compact coverage formatter (no slot spam) | — |
-| Raw slot violation lists | Various (fixed in this pass) | **DELETE_CANDIDATE** | Replaced by `coverageWarningFormatter` + `CoverageWarningSummary` | Grouped warnings UI |
+| Schedule Assistant modal | `components/schedule/ScheduleAssistantModal.tsx` | **LEGACY** | Old plan assistant; technical modal | Proposal review |
+| Raw slot warning lists | Various (pre-formatter) | **DELETE_CANDIDATE** | Replaced by `coverageWarningFormatter` | `CoverageWarningSummary` |
+| Coverage formatter | `lib/schedule/coverageWarningFormatter.ts` | **KEEP** | Shared grouped warnings | — |
 
-## Reports / export
+## Home & dashboard
 
-| Route | File | Status | Reason | Replacement |
-|-------|------|--------|--------|-------------|
-| `/reports/schedule-export` | `app/(dashboard)/reports/schedule-export/page.tsx` | **KEEP** | Linked from sidebar export center | `/reports/export-center` |
-| `/planner-export` | `app/(dashboard)/planner-export/page.tsx` | **HIDE_FROM_NAV** | Super-admin tooling; not in main sidebar | — |
+| Route | File | Nav? | Status | Reason |
+|-------|------|------|--------|--------|
+| `/` | `app/(dashboard)/page.tsx` | Yes | **KEEP** | Manager home |
+| `/dashboard` | `app/(dashboard)/dashboard/page.tsx` | Yes | **KEEP** | Executive dashboard |
+| `/employee` | `app/(dashboard)/employee/page.tsx` | Yes | **KEEP** | Employee home |
+| `/performance` | `app/(dashboard)/performance/page.tsx` | Hub | **KEEP** | Performance hub |
 
-## Hub / drill-down nav (`/nav/*`)
+## Executive
 
-| Route pattern | Status | Reason |
-|---------------|--------|--------|
-| `/nav/team/schedule` | **KEEP** | Hub mirror of schedule links |
-| `/nav/*` hub pages | **KEEP** | Secondary navigation; not duplicates of sidebar |
+| Route | Nav? | Status |
+|-------|------|--------|
+| `/executive` | Hub | **KEEP** |
+| `/executive/monthly` | Hub | **KEEP** |
+| `/executive/insights` | Hub | **KEEP** |
+| `/executive/compare` | Hub | **KEEP** |
+| `/executive/employees` | Hub | **KEEP** |
+| `/executive/employees/[empId]` | Deep | **KEEP** |
+| `/executive/network` | Hub | **HIDE_FROM_NAV** |
 
-## Dashboard home vs executive
+## Sales
 
-| Surface | Status | Reason |
-|---------|--------|--------|
-| `HomePageClient` operational alerts | **KEEP** (updated) | Now shows one coverage summary line instead of per-slot bullets |
-| `ExecutiveDashboard` Schedule Overview | **KEEP** (updated) | Uses formatter; imbalance line only when AM > PM |
-| Duplicate week warning list on home | **DELETE_CANDIDATE** (UI removed) | Was redundant with Operational Alerts; replaced by `CoverageWarningSummary` |
+| Route | Nav? | Status |
+|-------|------|--------|
+| `/sales/daily` | Yes | **KEEP** |
+| `/sales/my` | Yes | **KEEP** |
+| `/sales/summary` | Hub | **KEEP** |
+| `/sales/returns` | Hub | **KEEP** |
+| `/sales/analytics` | Hub | **KEEP** |
+| `/sales/import` | Admin | **KEEP** |
+| `/sales/import-matrix` | Admin | **KEEP** |
+| `/sales/import-issues` | Admin | **KEEP** |
+| `/sales/monthly-matrix` | Admin | **KEEP** |
+| `/sales/leadership-impact` | Hub | **HIDE_FROM_NAV** |
 
-## Recommended follow-up (not done)
+## Tasks & inventory
 
-1. **Remove** `SchedulePageClient.tsx` after confirming no external deep links.
-2. **Retire** `ScheduleAssistantModal` once all managers use Proposal Review / Schedule Next.
-3. **Keep** `/schedule/v3` hidden — lab access via direct URL only.
-4. Add redirect audit for `/schedule/editor` in analytics if traffic is zero.
+| Route | Nav? | Status |
+|-------|------|--------|
+| `/tasks` | Yes | **KEEP** |
+| `/tasks/setup` | Yes | **KEEP** |
+| `/tasks/monitor` | Manager | **KEEP** |
+| `/inventory/daily` | Yes | **KEEP** |
+| `/inventory/daily/history` | Yes | **KEEP** |
+| `/inventory/zones` | Yes | **KEEP** |
+| `/inventory/zones/weekly` | Deep | **KEEP** |
+| `/inventory/follow-up` | Yes | **KEEP** |
 
-## Navigation alignment
+## Leaves & compliance
 
-Sidebar schedule group (`lib/nav/sidebarShellNav.ts`):
+| Route | Nav? | Status |
+|-------|------|--------|
+| `/leaves` | Yes | **KEEP** |
+| `/leaves/requests` | Employee | **KEEP** |
+| `/boutique/leaves` | Manager | **KEEP** |
+| `/compliance` | Yes | **KEEP** |
+| `/approvals` | Yes | **KEEP** |
 
-- Schedule (View) → `/schedule/view`
-- Schedule Planning → `/schedule/edit`
-- Schedule Next → `/schedule/next`
-- Schedule Audit → `/schedule/audit`
+## Reports & export
 
-Not in sidebar (by design):
+| Route | Nav? | Status |
+|-------|------|--------|
+| `/reports/export-center` | Yes | **KEEP** |
+| `/reports/weekly` | Hub | **KEEP** |
+| `/reports/store` | Hub | **KEEP** |
+| `/reports/store/[boutiqueId]` | Deep | **KEEP** |
+| `/reports/store/[boutiqueId]/print` | Deep | **KEEP** |
+| `/reports/schedule-export` | Sidebar export | **KEEP** |
+| `/planner-export` | Super-admin | **HIDE_FROM_NAV** |
 
-- `/schedule/v3` — LEGACY lab (`hiddenFromNav`)
-- `/schedule/audit-edits` — hub / direct link
-- `/schedule/editor` — legacy redirect
+## Nav hub (`/nav/*`)
+
+| Route | Status | Reason |
+|-------|--------|--------|
+| `/nav/team` | **KEEP** | Drill-down hub |
+| `/nav/team/schedule` | **KEEP** | Schedule hub mirror |
+| `/nav/team/employees` | **KEEP** | Hub |
+| `/nav/team/leaves` | **KEEP** | Hub |
+| `/nav/operations` | **KEEP** | Hub |
+| `/nav/operations/tasks` | **KEEP** | Hub |
+| `/nav/operations/inventory` | **KEEP** | Hub |
+| `/nav/analytics` | **KEEP** | Hub |
+| `/nav/analytics/sales` | **KEEP** | Hub |
+| `/nav/analytics/reports` | **KEEP** | Hub |
+| `/nav/system` | **KEEP** | Admin hub |
+| `/nav/system/admin` | **KEEP** | Admin hub |
+| `/nav/system/imports` | **KEEP** | Admin hub |
+
+## Admin (`/admin/*`) — 38 routes
+
+All admin routes are **KEEP** or **HIDE_FROM_NAV** (super-admin / integration tooling). Not listed individually; they are linked from `/nav/system`, administration menus, or direct bookmarks.
+
+Notable:
+
+| Route | Status | Reason |
+|-------|--------|--------|
+| `/admin/coverage-rules` | **KEEP** | Coverage policy config |
+| `/admin/integrations/planner` | **HIDE_FROM_NAV** | Integration |
+| `/admin/system-audit` | **HIDE_FROM_NAV** | Super-admin audit |
+
+## Auth
+
+| Route | Status |
+|-------|--------|
+| `/login` | **KEEP** |
+| `/change-password` | **KEEP** |
+
+## Company / area / targets
+
+| Route | Status |
+|-------|--------|
+| `/company` | **KEEP** |
+| `/company/*` (4 sub-routes) | **KEEP** |
+| `/area/employees` | **KEEP** |
+| `/area/targets` | **KEEP** |
+| `/targets` | **KEEP** |
+| `/targets/*` (3 sub-routes) | **KEEP** |
+| `/me/target` | **KEEP** |
+| `/boutique/tasks` | **KEEP** |
+| `/sync/planner` | **KEEP** |
+| `/kpi/upload` | **HIDE_FROM_NAV** |
+| `/about` | **KEEP** |
+
+## Coverage warning cleanup (this pass)
+
+Shared formatter: `lib/schedule/coverageWarningFormatter.ts`  
+Shared UI: `components/schedule/CoverageWarningSummary.tsx`
+
+Updated surfaces:
+
+- Home dashboard — Operational Alerts, week summary
+- Executive Schedule Overview
+- Schedule View — week warnings panel
+- Schedule Planning — technical panel (`CompactScheduleWarnings`)
+- Schedule month tables — compact per-day warning cell
+- Technical Analysis / v3 lab — grouped slot violations
+- Schedule Assistant modal — apply blocked summary
+
+Main UI rule: **one line** — `Coverage needs attention: X days affected.`  
+Details: collapsed, grouped by day and period (never 30-minute slot lists by default).
+
+## Recommended follow-up
+
+1. Delete `SchedulePageClient.tsx` after confirming zero traffic.
+2. Retire `ScheduleAssistantModal` when proposal-first flow is universal.
+3. Keep `/schedule/v3` hidden from nav (lab only).
+4. Monitor `/schedule/editor` redirect — candidate for permanent removal of route file.

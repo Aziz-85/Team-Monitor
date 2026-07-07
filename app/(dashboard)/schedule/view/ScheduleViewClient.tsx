@@ -11,18 +11,22 @@ import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { isDateInRamadanRange } from '@/lib/time/ramadan';
-import {
-  formatSlotViolationMessage,
-  groupSlotViolationsByDate,
-} from '@/lib/schedule/timeCoverageValidation';
 import type { DayCountContext } from '@/lib/services/scheduleGrid';
-import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { getVisibleSlotCount } from '@/lib/schedule/scheduleSlots';
 import { getCoverageHeaderLabel } from '@/lib/schedule/coverageHeaderLabel';
 import { buildCoverageByDay } from '@/lib/schedule/coverageItems';
 import type { CoverageItem, CoverageTooltipLabels } from '@/lib/schedule/coverageItems';
 import { hasCoverageItems } from '@/lib/schedule/coverageItems';
 import { CoverageCell } from '@/components/schedule/CoverageCell';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+  warningsFromValidationResults,
+  type CoverageWarningInput,
+  type FormattedCoverageWarnings,
+} from '@/lib/schedule/coverageWarningFormatter';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { getEmployeeDisplayName } from '@/lib/employees/getEmployeeDisplayName';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
@@ -186,7 +190,14 @@ type GridData = {
   timeCoverage?: { valid: boolean; violations: SlotViolation[] };
 };
 
-type ValidationResult = { type: string; message: string };
+type ValidationResult = {
+  type: string;
+  message: string;
+  amCount?: number;
+  pmCount?: number;
+  minAm?: number;
+  minPm?: number;
+};
 
 function parseViewParam(view: string | null): ViewMode {
   if (view === 'grid' || view === 'mobile') return view;
@@ -521,8 +532,7 @@ export function ScheduleViewClient({
   }, []);
 
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> => {
-      const slotByDate = groupSlotViolationsByDate(gridData?.timeCoverage?.violations ?? []);
+    (): Array<{ date: string; dayName: string; dayOfWeek: number; validations: ValidationResult[] }> => {
       return (
         gridData?.days.map((day, i) => {
           const count = gridData.counts[i];
@@ -532,19 +542,52 @@ export function ScheduleViewClient({
           const minPm = day.minPm ?? 0;
           const isFriday = day.dayOfWeek === 5;
           const validations: ValidationResult[] = [];
-          for (const v of slotByDate.get(day.date) ?? []) {
-            validations.push({ type: 'SLOT_COVERAGE', message: formatSlotViolationMessage(v) });
-          }
           const effectiveMinAm = !isFriday ? Math.max(minAm ?? 2, 2) : 0;
           if (am > pm) validations.push({ type: 'RASHID_OVERFLOW', message: t('schedule.warningRashidOverflow') });
-          if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: t('schedule.minAmTwo') });
-          if (minPm > 0 && pm < minPm) validations.push({ type: 'MIN_PM', message: t('schedule.warningMinPm') });
-          return { date: day.date, validations };
+          if (!isFriday && effectiveMinAm > 0 && am < effectiveMinAm) {
+            validations.push({
+              type: 'MIN_AM',
+              message: t('schedule.minAmTwo'),
+              amCount: am,
+              pmCount: pm,
+              minAm: effectiveMinAm,
+            });
+          }
+          if (minPm > 0 && pm < minPm) {
+            validations.push({
+              type: 'MIN_PM',
+              message: t('schedule.warningMinPm'),
+              amCount: am,
+              pmCount: pm,
+              minPm,
+            });
+          }
+          return {
+            date: day.date,
+            dayName: getDayName(day.date, locale),
+            dayOfWeek: day.dayOfWeek,
+            validations,
+          };
         }) ?? []
       );
     },
-    [gridData, t]
+    [gridData, t, locale]
   );
+
+  const coverageWarningsFormatted = useMemo(() => {
+    if (!gridData) return formatCoverageWarnings([]);
+    const dayMeta = new Map(
+      gridData.days.map((d) => [d.date, { dayName: getDayName(d.date, locale), dayOfWeek: d.dayOfWeek }])
+    );
+    const bucketWarnings: CoverageWarningInput[] = validationsByDay.flatMap((d) =>
+      warningsFromValidationResults(d.date, d.validations, {
+        dayName: d.dayName,
+        dayOfWeek: d.dayOfWeek,
+      })
+    );
+    const slotWarnings = warningsFromSlotViolations(gridData.timeCoverage?.violations ?? [], dayMeta);
+    return formatCoverageWarnings([...bucketWarnings, ...slotWarnings]);
+  }, [gridData, validationsByDay, locale]);
 
   const focusDay = useCallback((date: string) => {
     const el = dayRefs.current[date];
@@ -993,7 +1036,7 @@ export function ScheduleViewClient({
                     getDayName={(d: string) => getDayName(d, locale)}
                     t={t}
                     fullGrid={fullGrid}
-                    validationsByDay={[]}
+                    coverageWarningsFormatted={formatCoverageWarnings([])}
                     focusDay={() => {}}
                   />
                 </div>
@@ -1115,7 +1158,7 @@ export function ScheduleViewClient({
             getDayName={(d: string) => getDayName(d, locale)}
             t={t}
             fullGrid={fullGrid}
-            validationsByDay={validationsByDay}
+            coverageWarningsFormatted={coverageWarningsFormatted}
             focusDay={focusDay}
           />
         )}
@@ -1154,7 +1197,7 @@ function ScheduleGridView({
   getDayName,
   t,
   fullGrid,
-  validationsByDay,
+  coverageWarningsFormatted,
   focusDay,
 }: {
   gridData: GridData;
@@ -1167,7 +1210,7 @@ function ScheduleGridView({
   getDayName: (d: string) => string;
   t: (k: string) => string;
   fullGrid: boolean;
-  validationsByDay: Array<{ date: string; validations: ValidationResult[] }>;
+  coverageWarningsFormatted: FormattedCoverageWarnings;
   focusDay: (date: string) => void;
 }) {
   const { locale } = useT();
@@ -1320,31 +1363,15 @@ function ScheduleGridView({
           </LuxuryTableBody>
         </LuxuryTable>
       </div>
-      {fullGrid && validationsByDay.some((d) => d.validations.length > 0) && (
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <h4 className="mb-3 text-sm font-semibold text-amber-900">
-            {(t('schedule.daysNeedingAttention') as string)?.replace?.(
-              '{n}',
-              String(validationsByDay.filter((d) => d.validations.length > 0).length)
-            ) ?? 'Days needing attention'}
-          </h4>
-          <ul className="space-y-2">
-            {validationsByDay.map(
-              ({ date, validations }) =>
-                validations.length > 0 && (
-                  <li key={date}>
-                    <button
-                      type="button"
-                      onClick={() => focusDay(date)}
-                      className="w-full rounded-lg border border-amber-200 bg-surface px-3 py-2 text-start text-sm text-amber-900 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-                    >
-                      <span className="font-medium">{formatDDMM(date)} {getDayName(date)}:</span>{' '}
-                      {validations.map((v) => v.message).join('; ')}
-                    </button>
-                  </li>
-                )
-            )}
-          </ul>
+      {fullGrid && coverageWarningsFormatted.summaryLine && (
+        <div className="mt-6">
+          <CoverageWarningSummary
+            formatted={coverageWarningsFormatted}
+            maxCompactLines={3}
+            onFocusDay={focusDay}
+            viewDetailsLabel={(t('schedule.warnings.showDetails') as string) || 'View details'}
+            hideDetailsLabel={(t('schedule.warnings.hideDetails') as string) || 'Hide details'}
+          />
         </div>
       )}
     </>

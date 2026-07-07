@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import type { PlanAction, SchedulePlanResult, SchedulePlanScenario } from '@/lib/services/schedulePlanner';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+} from '@/lib/schedule/coverageWarningFormatter';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 
 type ChatLine = { role: 'user' | 'assistant'; content: string };
 
@@ -57,6 +63,19 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
     if (!plan) return null;
     return plan.scenarios.find((s) => s.id === scenarioId) ?? plan.scenarios[0] ?? null;
   }, [plan, scenarioId]);
+
+  const applyViolationsFormatted = useMemo(() => {
+    if (!applyViolations.length) return formatCoverageWarnings([]);
+    const asSlots: SlotViolation[] = applyViolations.map((v, i) => ({
+      date: v.date,
+      slotId: `apply-${i}`,
+      startTime: v.startTime,
+      endTime: v.endTime,
+      coverage: v.coverage,
+      minCoverage: v.minCoverage,
+    }));
+    return formatCoverageWarnings(warningsFromSlotViolations(asSlots));
+  }, [applyViolations]);
 
   const fetchPlan = useCallback(async () => {
     const seq = ++fetchSeq.current;
@@ -323,16 +342,18 @@ export function ScheduleAssistantModal({ open, onClose, weekStart, onApplied }: 
                     </div>
                   )}
 
-                  {applyViolations.length > 0 && (
+                  {applyViolationsFormatted.summaryLine && (
                     <div className="rounded-lg border border-red-300 bg-red-50 p-3">
                       <p className="text-xs font-semibold text-red-900">{t('schedule.assistant.coverageBlocked')}</p>
-                      <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-xs text-red-900">
-                        {applyViolations.map((v, i) => (
-                          <li key={`${v.date}-${v.startTime}-${i}`}>
-                            • {v.date} {v.startTime}–{v.endTime}: {v.coverage}/{v.minCoverage}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="mt-2">
+                        <CoverageWarningSummary
+                          formatted={applyViolationsFormatted}
+                          maxCompactLines={1}
+                          viewDetailsLabel={(t('schedule.warnings.showDetails') as string) || 'View details'}
+                          hideDetailsLabel={(t('schedule.warnings.hideDetails') as string) || 'Hide details'}
+                          className="border-red-200 bg-red-50/80"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => void applyPlan(true)}

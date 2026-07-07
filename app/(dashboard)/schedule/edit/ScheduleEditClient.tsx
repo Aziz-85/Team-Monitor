@@ -13,6 +13,7 @@ import {
 } from '@/lib/schedule/timeCoverageValidation';
 import {
   formatCoverageWarnings,
+  formatDayWarningCompact,
   warningsFromSlotViolations,
   warningsFromValidationsByDay,
 } from '@/lib/schedule/coverageWarningFormatter';
@@ -2719,7 +2720,9 @@ export function ScheduleEditClient({
                       </LuxuryTd>
                       <LuxuryTd>{day.amCount}</LuxuryTd>
                       <LuxuryTd>{day.pmCount}</LuxuryTd>
-                      <LuxuryTd className="text-amber-700">{day.warnings.length > 0 ? day.warnings.join('; ') : '—'}</LuxuryTd>
+                      <LuxuryTd className="text-amber-700">
+                        {formatDayWarningCompact(day.date, day.warnings)}
+                      </LuxuryTd>
                     </tr>
                   );
                 })}
