@@ -129,20 +129,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (roleRequires2FA(user.role)) {
-      if (!user.totpEnabled) {
-        const setupToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_setup' });
+      try {
+        if (!user.totpEnabled) {
+          const setupToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_setup' });
+          return NextResponse.json({
+            ok: false,
+            requires2faSetup: true,
+            setupToken,
+          });
+        }
+        const pendingToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_login' });
         return NextResponse.json({
           ok: false,
-          requires2faSetup: true,
-          setupToken,
+          requires2fa: true,
+          pendingToken,
         });
+      } catch (twoFactorErr) {
+        console.error('[auth/login] 2FA token error — check MOBILE_JWT_ACCESS_SECRET', twoFactorErr);
+        return NextResponse.json({ error: 'Server error' }, { status: 503 });
       }
-      const pendingToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_login' });
-      return NextResponse.json({
-        ok: false,
-        requires2fa: true,
-        pendingToken,
-      });
     }
 
     await clearFailedLogin(user.id);

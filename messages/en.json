@@ -1271,6 +1271,7 @@
     "noBoutique": "Account not assigned to a boutique. Contact admin.",
     "idleSignOut": "You were signed out due to inactivity.",
     "loginFailed": "Login failed",
+    "serverError": "Server error. Contact your administrator or try again later.",
     "passwordChangeFailed": "Could not change password. Check your current password and try a stronger new password.",
     "passwordPolicyHint": "At least 12 characters with uppercase, lowercase, and a number.",
     "twoFactorPrompt": "Enter the 6-digit code from your authenticator app.",

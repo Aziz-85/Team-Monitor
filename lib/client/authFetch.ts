@@ -4,7 +4,7 @@ let cachedCsrf: string | null = null;
 
 /** Fetch CSRF token (sets cookie + returns token for header). */
 export async function fetchCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  const res = await fetch('/api/auth/csrf', { credentials: 'same-origin', cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
   const token = typeof data.csrfToken === 'string' ? data.csrfToken : '';
   cachedCsrf = token;
@@ -12,7 +12,8 @@ export async function fetchCsrfToken(): Promise<string> {
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  const token = cachedCsrf ?? (await fetchCsrfToken());
+  let token = cachedCsrf;
+  if (!token) token = await fetchCsrfToken();
   const headers = new Headers(init.headers);
   headers.set(CSRF_HEADER, token);
   if (!headers.has('Content-Type') && init.body) {

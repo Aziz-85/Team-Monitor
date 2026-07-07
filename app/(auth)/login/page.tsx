@@ -49,6 +49,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      await fetchCsrfToken();
       const res = await authFetch('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
@@ -56,6 +57,7 @@ export default function LoginPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 429) setError(t('auth.tooManyAttempts'));
+        else if (res.status >= 500) setError(t('auth.serverError'));
         else setError(t('auth.loginFailed'));
         return;
       }
