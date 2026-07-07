@@ -7,8 +7,6 @@ import { ScheduleExcelViewClient } from '@/app/(dashboard)/schedule/excel/Schedu
 import { useT } from '@/lib/i18n/useT';
 import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
 import {
-  formatSlotViolationMessage,
-  groupSlotViolationsByDate,
   validateTimeCoverageForGrid,
 } from '@/lib/schedule/timeCoverageValidation';
 import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
@@ -17,6 +15,13 @@ import { buildScheduleDisplayNames, getScheduleDisplayName, type ScheduleNameSlo
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { dateFromCalendarDayString, intlLocaleForGregorianCalendar } from '@/lib/i18n/format';
 import { getRiyadhDateKey, getRiyadhMonthKey } from '@/lib/dates/riyadhDate';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+  warningsFromValidationResults,
+  type CoverageWarningInput,
+} from '@/lib/schedule/coverageWarningFormatter';
 
 function formatDDMM(d: string): string {
   const ymd = String(d).slice(0, 10);
@@ -248,32 +253,62 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
   }, [gridData, pendingEdits.size, getDraftShift]);
 
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> => {
-      const slotByDate = groupSlotViolationsByDate(effectiveTimeCoverage.violations);
+    (): Array<{ date: string; dayName: string; dayOfWeek: number; validations: ValidationResult[] }> => {
       return (
         gridData?.days.map((day, i) => {
           const count = draftCounts[i] ?? gridData.counts[i];
           const am = count?.amCount ?? 0;
           const pm = count?.pmCount ?? 0;
           const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
+          const effectiveMinPm = Math.max(day.minPm ?? 2, 2);
           const validations: ValidationResult[] = [];
-          for (const v of slotByDate.get(day.date) ?? []) {
+          if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
+          if (effectiveMinAm > 0 && am < effectiveMinAm) {
             validations.push({
-              type: 'SLOT_COVERAGE',
-              message: formatSlotViolationMessage(v),
+              type: 'MIN_AM',
+              message: `AM (${am}) < ${effectiveMinAm}`,
               amCount: am,
               pmCount: pm,
+              minAm: effectiveMinAm,
             });
           }
-          if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
-          if (effectiveMinAm > 0 && am < effectiveMinAm) validations.push({ type: 'MIN_AM', message: `AM (${am}) < ${effectiveMinAm}`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
-          return { date: day.date, validations };
+          if (pm < effectiveMinPm) {
+            validations.push({
+              type: 'MIN_PM',
+              message: `PM (${pm}) < ${effectiveMinPm}`,
+              amCount: am,
+              pmCount: pm,
+              minAm: effectiveMinAm,
+            });
+          }
+          return {
+            date: day.date,
+            dayName: getDayName(day.date, locale),
+            dayOfWeek: day.dayOfWeek,
+            validations,
+          };
         }) ?? []
       );
     },
-    [gridData, draftCounts, effectiveTimeCoverage.violations]
+    [gridData, draftCounts, locale]
   );
-  const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
+
+  const coverageWarningsFormatted = useMemo(() => {
+    if (!gridData) {
+      return formatCoverageWarnings([]);
+    }
+    const dayMeta = new Map(
+      gridData.days.map((d) => [d.date, { dayName: getDayName(d.date, locale), dayOfWeek: d.dayOfWeek }])
+    );
+    const bucketWarnings: CoverageWarningInput[] = validationsByDay.flatMap((d) =>
+      warningsFromValidationResults(d.date, d.validations, {
+        dayName: d.dayName,
+        dayOfWeek: d.dayOfWeek,
+      })
+    );
+    const slotWarnings = warningsFromSlotViolations(effectiveTimeCoverage.violations, dayMeta);
+    return formatCoverageWarnings([...bucketWarnings, ...slotWarnings]);
+  }, [gridData, validationsByDay, effectiveTimeCoverage.violations, locale]);
 
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
@@ -746,38 +781,15 @@ export function SchedulePageClient({ canEdit }: { canEdit: boolean }) {
               <div className="w-full shrink-0 lg:w-72">
                 <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
                   <h3 className="mb-2 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
-                  <p className="mb-3 text-xs text-muted">
-                    {(t('schedule.daysNeedingAttention') as string)?.replace?.('{n}', String(daysNeedingAttention)) ??
-                      `Days needing attention: ${daysNeedingAttention}`}
-                  </p>
-                  <ul className="space-y-2">
-                    {validationsByDay.map(({ date, validations }) =>
-                      validations.length > 0 ? (
-                        <li key={date}>
-                          <button
-                            type="button"
-                            onClick={() => focusDay(date)}
-                            className="w-full rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-start text-sm text-amber-900 hover:bg-amber-100"
-                          >
-                            {formatDDMM(date)} {getDayName(date, locale)}
-                            <div className="mt-0.5 flex flex-wrap gap-1">
-                              {validations.map((v) => (
-                                <span
-                                  key={v.type}
-                                  className={`inline rounded px-1.5 py-0.5 text-xs ${
-                                    v.type === 'AM_GT_PM' ? 'bg-red-100 text-red-800' : 'bg-amber-200 text-amber-900'
-                                  }`}
-                                >
-                                  {v.message}
-                                </span>
-                              ))}
-                            </div>
-                          </button>
-                        </li>
-                      ) : null
-                    )}
-                  </ul>
-                  {daysNeedingAttention === 0 && (
+                  {coverageWarningsFormatted.summaryLine ? (
+                    <CoverageWarningSummary
+                      formatted={coverageWarningsFormatted}
+                      maxCompactLines={3}
+                      onFocusDay={focusDay}
+                      viewDetailsLabel={(t('schedule.warnings.showDetails') as string) || 'View details'}
+                      hideDetailsLabel={(t('schedule.warnings.hideDetails') as string) || 'Hide details'}
+                    />
+                  ) : (
                     <p className="text-sm text-muted">{t('coverage.noWarnings')}</p>
                   )}
                 </div>

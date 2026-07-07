@@ -37,6 +37,12 @@ import {
 import { useQuickActions } from '@/lib/nav/useQuickActions';
 import { DAILY_SALES_LEDGER_HREF, QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
 import { Button } from '@/components/ui/Button';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
+import {
+  formatCoverageWarnings,
+  warningsFromValidationResults,
+  warningsFromWeekSummary,
+} from '@/lib/schedule/coverageWarningFormatter';
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -171,6 +177,7 @@ export function HomePageClient({
     date: string;
     dayName: string;
     messages: string[];
+    validations?: ValidationResult[];
     suggestion?: { empId: string; employeeName: string } | null;
   }>>([]);
   const [applyingSuggestion, setApplyingSuggestion] = useState(false);
@@ -287,6 +294,7 @@ export function HomePageClient({
             date: d.date,
             dayName: dayNames[new Date(d.date + 'T12:00:00Z').getUTCDay()],
             messages: (d.coverageValidation ?? []).map((v: ValidationResult) => v.message),
+            validations: d.coverageValidation ?? [],
             suggestion: d.coverageSuggestion ?? null,
           }));
         setWeekSummary(list);
@@ -342,6 +350,24 @@ export function HomePageClient({
     };
   }, [performance]);
 
+  const coverageValidation: ValidationResult[] = data?.coverageValidation ?? [];
+  const coverageSuggestion = data?.coverageSuggestion ?? null;
+  const coverageSuggestionExplanation = data?.coverageSuggestionExplanation;
+
+  const todayCoverageFormatted = useMemo(
+    () => formatCoverageWarnings(warningsFromValidationResults(date, coverageValidation)),
+    [date, coverageValidation]
+  );
+
+  const weekCoverageFormatted = useMemo(() => {
+    const warnings = weekSummary.flatMap((d) =>
+      d.validations?.length
+        ? warningsFromValidationResults(d.date, d.validations, { dayName: d.dayName })
+        : warningsFromWeekSummary([d])
+    );
+    return formatCoverageWarnings(warnings);
+  }, [weekSummary]);
+
   if (!data) {
     return (
       <PageContainer>
@@ -361,15 +387,18 @@ export function HomePageClient({
     pmEmployees: [] as Array<{ empId: string; name: string }>,
     warnings: [] as string[],
   };
-  const coverageValidation: ValidationResult[] = data.coverageValidation ?? [];
-  const coverageSuggestion = data.coverageSuggestion ?? null;
-  const coverageSuggestionExplanation = data.coverageSuggestionExplanation;
-  const totalWarnings = coverageValidation.length + weekSummary.length + complianceAlerts.length;
+
+  const totalWarnings =
+    (todayCoverageFormatted.totalAffectedDays > 0 ? 1 : 0) +
+    (weekCoverageFormatted.totalAffectedDays > 0 ? 1 : 0) +
+    complianceAlerts.length;
   const tasksTotal = myTodayTasks?.length ?? 0;
   const tasksCompleted = myTodayTasks?.filter((tt) => tt.isCompleted).length ?? 0;
   const tasksPending = Math.max(0, tasksTotal - tasksCompleted);
   const taskCompletionPct = tasksTotal > 0 ? Math.round((tasksCompleted * 100) / tasksTotal) : 100;
-  const weekCoveragePct = Math.round(((7 - Math.min(7, weekSummary.length)) * 100) / 7);
+  const weekCoveragePct = Math.round(
+    ((7 - Math.min(7, weekCoverageFormatted.totalAffectedDays)) * 100) / 7
+  );
   const pace = performance?.monthly.percent ?? 0;
   const paceUi = paceSignal(
     pace,
@@ -518,6 +547,7 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
                 date: d.date,
                 dayName: dayNames[new Date(d.date + 'T12:00:00Z').getUTCDay()],
                 messages: (d.coverageValidation ?? []).map((v: ValidationResult) => v.message),
+                validations: d.coverageValidation ?? [],
               }))
           );
         }
@@ -739,8 +769,8 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
           {/* ROW 1: Coverage Status | Shift Snapshot */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <CoverageStatusCard
-              selectedDayMessage={coverageValidation.length > 0 ? coverageValidation[0].message : null}
-              weekWarningCount={weekSummary.length}
+              selectedDayMessage={todayCoverageFormatted.summaryLine}
+              weekWarningCount={weekCoverageFormatted.totalAffectedDays}
               suggestedAction={
                 coverageSuggestion
                   ? {
@@ -849,20 +879,38 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
               title={t('home.operationalAlerts')}
               allClearLabel={t('home.allClear')}
               alerts={[
-                ...coverageValidation.map((v, i) => ({
-                  key: `cov-${i}`,
-                  label: 'Coverage',
-                  value: v.message,
-                  severity: 'warn' as const,
-                })),
-                ...weekSummary.map((d) => ({
-                  key: `week-${d.date}`,
-                  label: `${d.dayName} ${d.date.slice(8)}`,
-                  value: d.messages.join('; '),
-                  severity: 'warn' as const,
-                })),
-                ...(coverageSuggestionExplanation && !coverageSuggestion && coverageValidation.some((v) => v.type === 'AM_GT_PM')
-                  ? [{ key: 'explain', label: 'Note', value: String(coverageSuggestionExplanation), severity: 'info' as const }]
+                ...(weekCoverageFormatted.summaryLine
+                  ? [
+                      {
+                        key: 'coverage-week',
+                        label: t('coverage.title') as string,
+                        value: weekCoverageFormatted.summaryLine,
+                        severity: 'warn' as const,
+                      },
+                    ]
+                  : []),
+                ...(todayCoverageFormatted.summaryLine &&
+                todayCoverageFormatted.summaryLine !== weekCoverageFormatted.summaryLine
+                  ? [
+                      {
+                        key: 'coverage-today',
+                        label: t('home.selectedDay') as string,
+                        value: todayCoverageFormatted.summaryLine,
+                        severity: 'warn' as const,
+                      },
+                    ]
+                  : []),
+                ...(coverageSuggestionExplanation &&
+                !coverageSuggestion &&
+                coverageValidation.some((v) => v.type === 'AM_GT_PM')
+                  ? [
+                      {
+                        key: 'explain',
+                        label: 'Note',
+                        value: String(coverageSuggestionExplanation),
+                        severity: 'info' as const,
+                      },
+                    ]
                   : []),
               ]}
             />
@@ -899,62 +947,84 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
           </div>
 
           {/* Week summary apply buttons */}
-          {weekSummary.length > 0 && (
+          {weekCoverageFormatted.summaryLine && (
             <CardShell variant="home">
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted">
                 {t('coverage.weekSummary')}
               </h3>
-              <ul className="space-y-2">
-                {weekSummary.map((d) => (
-                  <li key={d.date} className="flex flex-wrap items-center gap-2 text-sm">
-                    <span>
-                      <span className="font-medium">{d.dayName} {d.date.slice(8)}/{d.date.slice(5, 7)}:</span>{' '}
-                      {d.messages.join('; ')}
-                      {d.suggestion && (
-                        <span className="ms-1 text-foreground">
-                          — {(t('coverage.moveSuggestion') as string).replace('{name}', d.suggestion.employeeName)}
-                        </span>
-                      )}
-                    </span>
-                    {d.suggestion && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const res = await fetch('/api/suggestions/coverage/apply', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ date: d.date, empId: d.suggestion!.empId }),
-                          });
-                          if (res.ok) {
-                            const homeRes = await fetch(`/api/home?date=${date}`);
-                            const homeJson = await homeRes.json().catch(() => null);
-                            if (homeJson?.roster != null) setData(homeJson as HomeData);
-                            const ws = weekStartFor(date);
-                            const weekRes = await fetch(`/api/schedule/week?weekStart=${ws}`, { cache: 'no-store' });
-                            const weekJson = await weekRes.json().catch(() => null);
-                            if (weekJson?.days) {
-                              const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                              setWeekSummary(
-                                weekJson.days
-                                  .filter((day: { coverageValidation?: ValidationResult[] }) => day.coverageValidation?.length)
-                                  .map((day: { date: string; coverageValidation: ValidationResult[]; coverageSuggestion?: { empId: string; employeeName: string } | null }) => ({
-                                    date: day.date,
-                                    dayName: dayNames[new Date(day.date + 'T12:00:00Z').getUTCDay()],
-                                    messages: (day.coverageValidation ?? []).map((v: ValidationResult) => v.message),
-                                    suggestion: day.coverageSuggestion ?? null,
-                                  }))
-                              );
-                            }
-                          }
-                        }}
-                        className="rounded-lg bg-amber-600 px-2.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700"
-                      >
-                        {t('coverage.applySuggestion')}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <CoverageWarningSummary
+                formatted={weekCoverageFormatted}
+                maxCompactLines={1}
+                viewDetailsLabel={(t('schedule.warnings.showDetails') as string) || 'View details'}
+                hideDetailsLabel={(t('schedule.warnings.hideDetails') as string) || 'Hide details'}
+              >
+                {weekSummary.some((d) => d.suggestion) && (
+                  <ul className="mt-2 space-y-2 border-t border-amber-200/80 pt-2">
+                    {weekSummary
+                      .filter((d) => d.suggestion)
+                      .map((d) => (
+                        <li key={d.date} className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="text-amber-950">
+                            {d.dayName}:{' '}
+                            {(t('coverage.moveSuggestion') as string).replace(
+                              '{name}',
+                              d.suggestion!.employeeName
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const res = await fetch('/api/suggestions/coverage/apply', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ date: d.date, empId: d.suggestion!.empId }),
+                              });
+                              if (res.ok) {
+                                const homeRes = await fetch(`/api/home?date=${date}`);
+                                const homeJson = await homeRes.json().catch(() => null);
+                                if (homeJson?.roster != null) setData(homeJson as HomeData);
+                                const ws = weekStartFor(date);
+                                const weekRes = await fetch(`/api/schedule/week?weekStart=${ws}`, {
+                                  cache: 'no-store',
+                                });
+                                const weekJson = await weekRes.json().catch(() => null);
+                                if (weekJson?.days) {
+                                  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                                  setWeekSummary(
+                                    weekJson.days
+                                      .filter(
+                                        (day: { coverageValidation?: ValidationResult[] }) =>
+                                          day.coverageValidation?.length
+                                      )
+                                      .map(
+                                        (day: {
+                                          date: string;
+                                          coverageValidation: ValidationResult[];
+                                          coverageSuggestion?: { empId: string; employeeName: string } | null;
+                                        }) => ({
+                                          date: day.date,
+                                          dayName:
+                                            dayNames[new Date(day.date + 'T12:00:00Z').getUTCDay()],
+                                          messages: (day.coverageValidation ?? []).map(
+                                            (v: ValidationResult) => v.message
+                                          ),
+                                          validations: day.coverageValidation ?? [],
+                                          suggestion: day.coverageSuggestion ?? null,
+                                        })
+                                      )
+                                  );
+                                }
+                              }
+                            }}
+                            className="rounded-lg bg-amber-600 px-2.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700"
+                          >
+                            {t('coverage.applySuggestion')}
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </CoverageWarningSummary>
             </CardShell>
           )}
         </div>

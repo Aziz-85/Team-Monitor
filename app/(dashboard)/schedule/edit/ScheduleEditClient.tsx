@@ -8,11 +8,14 @@ import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
 import {
-  formatSlotViolationDetail,
-  groupSlotViolationsByDate,
   validateTimeCoverageForGrid,
   buildRowsForTimeCoverageValidation,
 } from '@/lib/schedule/timeCoverageValidation';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+  warningsFromValidationsByDay,
+} from '@/lib/schedule/coverageWarningFormatter';
 import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
 import { ScheduleEditExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditExcelViewClient';
 import { ScheduleEditMonthExcelViewClient } from '@/app/(dashboard)/schedule/edit/ScheduleEditMonthExcelViewClient';
@@ -28,7 +31,6 @@ import { ScheduleShiftCellHint, ScheduleShiftReadOnlyBadge } from '@/components/
 import {
   buildGroupedWarnings,
   computeScheduleQualityMetrics,
-  summarizeCoverageWarnings,
 } from '@/lib/schedule/scheduleUiMetrics';
 import { SCHEDULE_UI } from '@/lib/scheduleUi';
 import {
@@ -1213,24 +1215,42 @@ export function ScheduleEditClient({
   }, [searchParams]);
 
   const validationsByDay = useMemo(
-    (): Array<{ date: string; validations: ValidationResult[] }> => {
-      const slotByDate = groupSlotViolationsByDate(effectiveTimeCoverage.violations);
+    (): Array<{ date: string; dayName: string; dayOfWeek: number; validations: ValidationResult[] }> => {
       return (
-        gridData?.days.map((day) => {
+        gridData?.days.map((day, i) => {
+          const count = displayCounts[i] ?? gridData.counts[i];
+          const am = count?.amCount ?? 0;
+          const pm = count?.pmCount ?? 0;
+          const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
+          const effectiveMinPm = Math.max(day.minPm ?? 2, 2);
           const validations: ValidationResult[] = [];
-          for (const v of slotByDate.get(day.date) ?? []) {
-            validations.push({
-              type: 'SLOT_COVERAGE',
-              message: formatSlotViolationDetail(v),
-            });
+          if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
+          if (effectiveMinAm > 0 && am < effectiveMinAm) {
+            validations.push({ type: 'MIN_AM', message: `AM (${am}) < ${effectiveMinAm}`, amCount: am, pmCount: pm, minAm: effectiveMinAm });
           }
-          return { date: day.date, validations };
+          if (pm < effectiveMinPm) {
+            validations.push({ type: 'MIN_PM', message: `PM (${pm}) < ${effectiveMinPm}`, amCount: am, pmCount: pm, minAm: effectiveMinPm });
+          }
+          return {
+            date: day.date,
+            dayName: formatDDMM(day.date),
+            dayOfWeek: day.dayOfWeek,
+            validations,
+          };
         }) ?? []
       );
     },
-    [gridData, effectiveTimeCoverage.violations]
+    [gridData, displayCounts]
   );
-  const daysNeedingAttention = validationsByDay.filter((d) => d.validations.length > 0).length;
+  const daysNeedingAttention = useMemo(() => {
+    const dayMeta = new Map(
+      (gridData?.days ?? []).map((d) => [d.date, { dayName: formatDDMM(d.date), dayOfWeek: d.dayOfWeek }])
+    );
+    return formatCoverageWarnings([
+      ...warningsFromValidationsByDay(validationsByDay),
+      ...warningsFromSlotViolations(effectiveTimeCoverage.violations, dayMeta),
+    ]).totalAffectedDays;
+  }, [validationsByDay, effectiveTimeCoverage.violations, gridData?.days]);
   const activeSuggestionCount = effectiveSuggestions.filter((s) => !dismissedSuggestionIds.has(s.id)).length;
   const technicalIssueCount = daysNeedingAttention + activeSuggestionCount;
 
@@ -1260,18 +1280,6 @@ export function ScheduleEditClient({
       integrityWarnings: gridData?.integrityWarnings,
     });
   }, [validationsByDay, keyPlan, gridData?.integrityWarnings]);
-
-  const coverageSummaries = useMemo(
-    () =>
-      summarizeCoverageWarnings(
-        validationsByDay.map(({ date, validations }) => ({
-          date,
-          validations,
-          dayOfWeek: gridData?.days.find((d) => d.date === date)?.dayOfWeek,
-        }))
-      ),
-    [validationsByDay, gridData?.days]
-  );
 
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
@@ -2603,7 +2611,8 @@ export function ScheduleEditClient({
                 )}
                 <CompactScheduleWarnings
                   grouped={groupedWarnings}
-                  coverageSummaries={coverageSummaries}
+                  validationsByDay={validationsByDay}
+                  slotViolations={effectiveTimeCoverage.violations}
                   daysNeedingAttention={daysNeedingAttention}
                   formatDate={formatDDMM}
                   onFocusDay={focusDay}

@@ -2,6 +2,10 @@ import { prisma } from '@/lib/db';
 import { rosterForDate } from './roster';
 import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
 import { formatSlotViolationMessage } from '@/lib/schedule/timeCoverageValidation';
+import {
+  formatCoverageWarnings,
+  warningsFromValidationResults,
+} from '@/lib/schedule/coverageWarningFormatter';
 
 /**
  * Coverage Validation — VALIDATION + WARNINGS ONLY. Reads Schedule Engine output.
@@ -141,5 +145,7 @@ export function clearCoverageValidationCache(): void {
 
 /** Helper: human-readable summary for tooltips/UI */
 export function formatValidationSummary(results: ValidationResult[]): string {
-  return results.map((r) => r.message).join('; ');
+  if (!results.length) return '';
+  const formatted = formatCoverageWarnings(warningsFromValidationResults('unknown', results));
+  return formatted.summaryLine ?? results[0]?.message ?? '';
 }

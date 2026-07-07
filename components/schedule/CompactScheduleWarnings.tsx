@@ -1,39 +1,67 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { GroupedWarning, WarningGroup } from '@/lib/schedule/scheduleUiMetrics';
+import { useMemo } from 'react';
+import type { SlotViolation } from '@/lib/schedule/generateSchedule/types';
+import type { GroupedWarning } from '@/lib/schedule/scheduleUiMetrics';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+  warningsFromValidationsByDay,
+} from '@/lib/schedule/coverageWarningFormatter';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
 
 type Props = {
   grouped: GroupedWarning[];
-  coverageSummaries: Array<{ key: string; label: string; dates: string[] }>;
+  validationsByDay: Array<{
+    date: string;
+    dayName?: string;
+    dayOfWeek?: number;
+    validations: Array<{
+      type: string;
+      message?: string;
+      amCount?: number;
+      pmCount?: number;
+      minAm?: number;
+      minPm?: number;
+    }>;
+  }>;
+  slotViolations?: SlotViolation[];
   daysNeedingAttention: number;
   formatDate: (date: string) => string;
   onFocusDay?: (date: string) => void;
   t: (key: string) => string;
-};
-
-const GROUP_LABEL_KEYS: Record<WarningGroup, string> = {
-  coverage: 'schedule.warnings.groupCoverage',
-  handover: 'schedule.warnings.groupHandover',
-  keyHolder: 'schedule.warnings.groupKeyHolder',
-  policy: 'schedule.warnings.groupPolicy',
+  maxCompactLines?: number;
 };
 
 export function CompactScheduleWarnings({
   grouped,
-  coverageSummaries,
+  validationsByDay,
+  slotViolations = [],
   daysNeedingAttention,
   formatDate,
   onFocusDay,
   t,
+  maxCompactLines = 3,
 }: Props) {
-  const [expanded, setExpanded] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const coverageFormatted = useMemo(() => {
+    const dayMeta = new Map(
+      validationsByDay.map((d) => [
+        d.date,
+        { dayName: d.dayName ?? formatDate(d.date), dayOfWeek: d.dayOfWeek },
+      ])
+    );
+    const withNames = validationsByDay.map((d) => ({
+      ...d,
+      dayName: d.dayName ?? formatDate(d.date),
+    }));
+    const bucket = warningsFromValidationsByDay(withNames);
+    const slots = warningsFromSlotViolations(slotViolations, dayMeta);
+    return formatCoverageWarnings([...bucket, ...slots]);
+  }, [validationsByDay, slotViolations, formatDate]);
 
-  const preview = useMemo(() => grouped.slice(0, 2), [grouped]);
-  const restCount = Math.max(0, grouped.length - 2);
+  const nonCoverage = grouped.filter((w) => w.group !== 'coverage');
 
-  if (grouped.length === 0 && daysNeedingAttention === 0) {
+  if (!coverageFormatted.summaryLine && daysNeedingAttention === 0 && nonCoverage.length === 0) {
     return (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
         {t('coverage.noWarnings')}
@@ -42,82 +70,31 @@ export function CompactScheduleWarnings({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-3 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
-          <p className="text-xs text-muted">
-            {(t('schedule.daysNeedingAttention') as string)?.replace?.('{n}', String(daysNeedingAttention)) ??
-              `${daysNeedingAttention} days need attention`}
-          </p>
-        </div>
-        {restCount > 0 && !expanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-foreground hover:bg-surface"
-          >
-            {(t('schedule.warnings.more') as string)?.replace?.('{n}', String(restCount)) ?? `+ ${restCount} more`}
-          </button>
-        )}
-      </div>
-
-      <ul className="mt-2 space-y-1.5">
-        {(expanded ? grouped : preview).map((w) => (
-          <li key={w.id}>
-            <button
-              type="button"
-              onClick={() => w.date && onFocusDay?.(w.date)}
-              className="flex w-full items-start gap-2 rounded border border-amber-100 bg-amber-50/70 px-2 py-1.5 text-start text-xs text-amber-950 hover:bg-amber-100/80"
-            >
-              <span className="shrink-0 rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted">
-                {t(GROUP_LABEL_KEYS[w.group])}
-              </span>
-              <span className="min-w-0 flex-1">
-                {w.date ? `${formatDate(w.date)} · ` : ''}
-                {w.message}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {expanded && coverageSummaries.length > 0 && (
-        <div className="mt-3 border-t border-border pt-3">
-          <button
-            type="button"
-            onClick={() => setShowAll((v) => !v)}
-            className="text-xs font-medium text-accent hover:underline"
-          >
-            {showAll
-              ? (t('schedule.warnings.hideDetails') as string) || 'Hide details'
-              : (t('schedule.warnings.showDetails') as string) || 'Show grouped details'}
-          </button>
-          {showAll && (
-            <ul className="mt-2 space-y-2">
-              {coverageSummaries.map((s) => (
-                <li key={s.key} className="rounded border border-border bg-surface-subtle px-2 py-1.5 text-xs">
-                  <div className="font-medium text-foreground">
-                    {t(s.label) !== s.label ? t(s.label) : s.label}
-                  </div>
-                  <div className="mt-0.5 text-muted">
-                    {s.dates.map(formatDate).join(', ')}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    <div className="space-y-3">
+      {coverageFormatted.summaryLine && (
+        <CoverageWarningSummary
+          formatted={coverageFormatted}
+          maxCompactLines={maxCompactLines}
+          onFocusDay={onFocusDay}
+          viewDetailsLabel={(t('schedule.warnings.showDetails') as string) || 'View details'}
+          hideDetailsLabel={(t('schedule.warnings.hideDetails') as string) || 'Hide details'}
+        />
       )}
 
-      {expanded && (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="mt-2 text-xs text-muted hover:text-foreground"
-        >
-          {t('schedule.warnings.collapse') ?? 'Collapse'}
-        </button>
+      {nonCoverage.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('schedule.warnings.otherIssues') || 'Other issues'}
+          </h4>
+          <ul className="mt-2 space-y-1">
+            {nonCoverage.slice(0, 5).map((w) => (
+              <li key={w.id} className="text-xs text-foreground">
+                {w.date ? `${formatDate(w.date)} · ` : ''}
+                {w.message}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

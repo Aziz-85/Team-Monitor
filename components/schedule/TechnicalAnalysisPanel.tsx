@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { ScheduleQualityPanel } from '@/components/schedule/ScheduleQualityPanel';
 import {
   ScheduleHealthCheckPanel,
@@ -27,6 +28,11 @@ import type {
   ScheduleEngineStageTimings,
 } from '@/lib/schedule/scheduleEnginePerf';
 import type { EmployeeWeekSummary } from '@/lib/schedule/generateSchedule/types';
+import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
+import {
+  formatCoverageWarnings,
+  warningsFromSlotViolations,
+} from '@/lib/schedule/coverageWarningFormatter';
 
 type Props = {
   t: (key: string) => string;
@@ -126,6 +132,14 @@ export function TechnicalAnalysisPanel({
 }: Props) {
   const tr = (key: string, fallback: string) => (t(key) as string) || fallback;
   const formatDayLabel = (date: string) => `${formatDayName(date)} (${formatDateShort(date)})`;
+
+  const slotCoverageFormatted = useMemo(() => {
+    const allViolations = violationsByDay.flatMap((d) => d.violations);
+    const dayMeta = new Map(
+      violationsByDay.map((d) => [d.date, { dayName: formatDayName(d.date) }])
+    );
+    return formatCoverageWarnings(warningsFromSlotViolations(allViolations, dayMeta));
+  }, [violationsByDay, formatDayName]);
 
   return (
     <details className="rounded-xl border border-border bg-surface-subtle/40">
@@ -248,21 +262,13 @@ export function TechnicalAnalysisPanel({
         {violationsByDay.length > 0 && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
             <h2 className="text-sm font-semibold text-amber-950">{t('schedule.v3.slotViolations')}</h2>
-            <div className="mt-3 space-y-3">
-              {violationsByDay.map(({ date, violations }) => (
-                <div key={date}>
-                  <p className="text-xs font-semibold text-amber-900">
-                    {formatDayName(date)} · {formatDateShort(date)} ({violations.length})
-                  </p>
-                  <ul className="mt-1 space-y-0.5">
-                    {violations.map((v) => (
-                      <li key={v.slotId} className="font-mono text-xs text-amber-950">
-                        {v.startTime}–{v.endTime}: {v.coverage}/{v.minCoverage}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <div className="mt-3">
+              <CoverageWarningSummary
+                formatted={slotCoverageFormatted}
+                maxCompactLines={3}
+                viewDetailsLabel={tr('schedule.warnings.showDetails', 'View details')}
+                hideDetailsLabel={tr('schedule.warnings.hideDetails', 'Hide details')}
+              />
             </div>
           </div>
         )}
