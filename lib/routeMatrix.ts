@@ -220,6 +220,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   SUPER_ADMIN: [
     '/nav',
     '/',
+    '/architecture',
     '/dashboard',
     '/company',
     '/executive',

@@ -177,6 +177,7 @@ export const config = {
     '/login',
     '/dashboard',
     '/dashboard/:path*',
+    '/architecture',
     '/about',
     '/employee/:path*',
     '/schedule/:path*',
