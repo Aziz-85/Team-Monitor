@@ -272,6 +272,7 @@ model User {
   mustChangePassword Boolean @default(false)
   disabled          Boolean  @default(false)
   canEditSchedule   Boolean  @default(false)
+  isPlatformOwner   Boolean  @default(false)
   createdAt         DateTime @default(now())
   boutiqueId        String   // session-bound boutique (no switching); backfilled in migration
   lockedUntil       DateTime? // account lockout until this time (login abuse protection)
@@ -391,6 +392,8 @@ model Session {
   lastSeenAt DateTime @default(now())
   createdAt  DateTime @default(now())
   expiresAt  DateTime
+  activeMode String   @default("BRANCH_MANAGER") // BRANCH_MANAGER | PLATFORM_ADMIN (platform owner only)
+  platformModeLastActiveAt DateTime?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([expiresAt])

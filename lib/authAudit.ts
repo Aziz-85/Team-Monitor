@@ -9,7 +9,9 @@ export type AuthAuditEvent =
   | 'SECURITY_ALERT'
   | 'LOGOUT'
   | '2FA_FAILED'
-  | '2FA_SUCCESS';
+  | '2FA_SUCCESS'
+  | 'PLATFORM_MODE_ENABLED'
+  | 'PLATFORM_MODE_DISABLED';
 
 export async function writeAuthAudit(data: {
   event: AuthAuditEvent;

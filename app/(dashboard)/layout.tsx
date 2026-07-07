@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/auth';
+import { getAuthenticatedSession } from '@/lib/platformOwner/session';
 
 /** Entire authenticated shell uses fresh session/scope data (sales, schedule, tasks, admin). */
 export const dynamic = 'force-dynamic';
@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/nav/Sidebar';
 import { MobileTopBar } from '@/components/nav/MobileTopBar';
 import { MobileBottomNav } from '@/components/nav/MobileBottomNav';
 import { DesktopTopBar } from '@/components/nav/DesktopTopBar';
+import { PlatformModeBanner } from '@/components/nav/PlatformModeBanner';
 import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
@@ -19,26 +20,39 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
-  if (!user) {
+  const auth = await getAuthenticatedSession();
+  if (!auth) {
     redirect('/login');
   }
+  const user = auth.user;
   if (!user.boutiqueId && (user.role as string) !== 'SUPER_ADMIN' && (user.role as string) !== 'DEMO_VIEWER') {
     redirect('/login?error=no_boutique');
   }
 
   const scope = await getOperationalScope();
-  const boutiqueId = scope?.boutiqueId ?? user.boutiqueId ?? '';
-  const access = boutiqueId
+  const boutiqueId = auth.access.globalScope
+    ? (scope?.boutiqueId ?? '')
+    : (auth.access.scopeBoutiqueId ?? scope?.boutiqueId ?? user.boutiqueId ?? '');
+  const access = boutiqueId && !auth.access.globalScope
     ? await getEffectiveAccessForBoutique(boutiqueId, {
         id: user.id,
-        role: user.role as import('@prisma/client').Role,
+        role: auth.access.effectiveRole as import('@prisma/client').Role,
         canEditSchedule: user.canEditSchedule,
       })
     : null;
-  const navRole = (user.role as string) === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (user.role as string) === 'DEMO_VIEWER' ? 'DEMO_VIEWER' : (access?.effectiveRole ?? user.role);
-  const canEditSchedule = (user.role as string) === 'SUPER_ADMIN' ? true : (user.role as string) === 'DEMO_VIEWER' ? false : (access?.effectiveFlags.canEditSchedule ?? false);
-  const canApproveWeek = (user.role as string) === 'SUPER_ADMIN' ? true : (user.role as string) === 'DEMO_VIEWER' ? false : (access?.effectiveFlags.canApproveWeek ?? false);
+  const navRole = auth.access.effectiveRole as import('@prisma/client').Role;
+  const canEditSchedule =
+    auth.access.globalScope
+      ? true
+      : (user.role as string) === 'DEMO_VIEWER'
+        ? false
+        : (access?.effectiveFlags.canEditSchedule ?? user.canEditSchedule);
+  const canApproveWeek =
+    auth.access.globalScope
+      ? true
+      : (user.role as string) === 'DEMO_VIEWER'
+        ? false
+        : (access?.effectiveFlags.canApproveWeek ?? false);
   const isDemoMode = (user.role as string) === 'DEMO_VIEWER';
 
   return (
@@ -57,6 +71,7 @@ export default async function DashboardLayout({
             DEMO MODE — READ ONLY
           </div>
         )}
+        <PlatformModeBanner />
         <MobileTopBar
           role={navRole}
           name={user.employee?.name ?? undefined}

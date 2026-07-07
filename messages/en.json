@@ -125,6 +125,18 @@
     "changePassword": "Change Password",
     "architectureConsole": "Architecture Console",
     "compliance": "Government Documents",
+    "platformMode": {
+      "branchManager": "Branch Manager Mode",
+      "platformAdmin": "Platform Admin Mode",
+      "globalAccess": "Global Access",
+      "branchScope": "Branch scope",
+      "switchPlatformAdmin": "Switch to Platform Admin",
+      "returnBranchManager": "Return to Branch Manager",
+      "confirmSwitch": "Confirm switch",
+      "passwordPlaceholder": "Confirm password",
+      "totpPlaceholder": "2FA code",
+      "error": "Unable to switch mode"
+    },
     "groups": {
       "home": "Home",
       "schedule": "Schedule",

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/auth';
+import { getAuthenticatedSession } from '@/lib/platformOwner/session';
 import { prisma } from '@/lib/db';
 import { getUserAllowedBoutiqueIds } from '@/lib/scope/resolveScope';
 import { resolveEffectiveBoutiqueId } from '@/lib/scope/scopeContext';
@@ -35,7 +35,13 @@ export async function getTrustedOperationalBoutiqueId(
   request?: NextRequest | null
 ): Promise<string | null> {
   if (!user?.id) return null;
-  const role = user.role as Role;
+  const auth = await getAuthenticatedSession();
+  const role = (auth?.access.effectiveRole ?? user.role) as Role;
+
+  if (auth?.access.isPlatformOwner && auth.access.activeMode === 'BRANCH_MANAGER') {
+    return user.boutiqueId ?? null;
+  }
+
   if (role === 'MANAGER' || role === 'ADMIN') return user.boutiqueId ?? null;
   if (role === 'AREA_MANAGER') {
     const allowed = await getUserAllowedBoutiqueIds(user.id);
@@ -55,9 +61,28 @@ export async function getTrustedOperationalBoutiqueId(
  * AREA_MANAGER: returns all allowed boutique IDs from UserBoutiqueMembership (multi-boutique area).
  */
 export async function getOperationalScope(request?: NextRequest | null): Promise<OperationalScopeResult | null> {
-  const user = await getSessionUser();
-  if (!user?.id) return null;
-  const role = user.role as Role;
+  const auth = await getAuthenticatedSession();
+  if (!auth?.user?.id) return null;
+  const user = auth.user;
+  const role = auth.access.effectiveRole as Role;
+
+  if (auth.access.isPlatformOwner && auth.access.activeMode === 'BRANCH_MANAGER') {
+    const boutiqueId = user.boutiqueId ?? '';
+    if (!boutiqueId) return null;
+    const boutique = await prisma.boutique.findUnique({
+      where: { id: boutiqueId },
+      select: { id: true, name: true, code: true },
+    });
+    const label = boutique ? `${boutique.name} (${boutique.code})` : boutiqueId;
+    return {
+      userId: user.id,
+      role: auth.access.primaryRole,
+      empId: user.empId ?? null,
+      boutiqueId,
+      boutiqueIds: [boutiqueId],
+      label,
+    };
+  }
 
   if (role === 'AREA_MANAGER') {
     const allowedIds = await getUserAllowedBoutiqueIds(user.id);

@@ -62,3 +62,9 @@ export function isDemoViewer(role: Role): boolean {
  * Implemented in `navLinks.ts` → `navConfig`; `navConsistency` must import `canAccessRoute` from `@/lib/routeMatrix` only.
  */
 export { getNavLinksForUser, getNavLinksForRole } from '@/lib/navLinks';
+export {
+  getEffectiveAccessContext,
+  canAccessRouteForContext,
+  canAccessArchitectureConsole,
+} from '@/lib/platformOwner/effectiveAccessContext';
+export type { EffectiveAccessContext, PlatformActiveMode } from '@/lib/platformOwner/types';

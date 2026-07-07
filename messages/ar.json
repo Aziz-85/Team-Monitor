@@ -125,6 +125,18 @@
     "changePassword": "تغيير كلمة المرور",
     "architectureConsole": "لوحة معمارية النظام",
     "compliance": "الوثائق الحكومية",
+    "platformMode": {
+      "branchManager": "وضع مدير الفرع",
+      "platformAdmin": "وضع مدير المنصة",
+      "globalAccess": "وصول شامل",
+      "branchScope": "نطاق الفرع",
+      "switchPlatformAdmin": "التبديل إلى وضع مدير المنصة",
+      "returnBranchManager": "العودة إلى وضع مدير الفرع",
+      "confirmSwitch": "تأكيد التبديل",
+      "passwordPlaceholder": "تأكيد كلمة المرور",
+      "totpPlaceholder": "رمز المصادقة الثنائية",
+      "error": "تعذر تبديل الوضع"
+    },
     "groups": {
       "home": "الرئيسية",
       "schedule": "الجدول",
