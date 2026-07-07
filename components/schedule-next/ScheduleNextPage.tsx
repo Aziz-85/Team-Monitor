@@ -8,10 +8,10 @@ import { NextProposalTable } from '@/components/schedule-next/NextProposalTable'
 import { EmployeeSummary } from '@/components/schedule-next/EmployeeSummary';
 import type { ExternalSupportDraft, ScheduleNextProposal } from '@/lib/schedule-next/types';
 import { weekDateStringsFromStart } from '@/lib/services/swapWeeklyOffForWeek';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   initialWeekStart: string;
-  t: (key: string) => string;
 };
 
 type Step = 'week' | 'support' | 'ready' | 'review';
@@ -24,7 +24,8 @@ function saturdayWeekStart(d: Date): string {
   return copy.toISOString().slice(0, 10);
 }
 
-export function ScheduleNextPage({ initialWeekStart, t }: Props) {
+export function ScheduleNextPage({ initialWeekStart }: Props) {
+  const { t } = useT();
   const router = useRouter();
 
   const [weekStart, setWeekStart] = useState(initialWeekStart || saturdayWeekStart(new Date()));
@@ -164,7 +165,6 @@ export function ScheduleNextPage({ initialWeekStart, t }: Props) {
           drafts={supportDrafts}
           onChange={setSupportDrafts}
           onContinue={() => setStep('ready')}
-          t={t}
         />
       )}
 
@@ -235,8 +235,8 @@ export function ScheduleNextPage({ initialWeekStart, t }: Props) {
               </p>
             )}
           </div>
-          <NextProposalTable rows={proposal.rows} t={t} />
-          <EmployeeSummary proposal={proposal} t={t} />
+          <NextProposalTable rows={proposal.rows} />
+          <EmployeeSummary proposal={proposal} />
           <label className="block max-w-md text-sm">
             <span className="font-medium">{t('scheduleNext.applyReason') || 'Apply reason'}</span>
             <input

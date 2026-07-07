@@ -1,18 +1,19 @@
 'use client';
 
 import type { ExternalSupportDraft } from '@/lib/schedule-next/types';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   open: boolean;
   drafts: ExternalSupportDraft[];
   onChange: (drafts: ExternalSupportDraft[]) => void;
   onContinue: () => void;
-  t: (key: string) => string;
 };
 
 const SHIFTS = ['MORNING', 'EVENING', 'SPLIT'] as const;
 
-export function ExternalSupportPrompt({ open, drafts, onChange, onContinue, t }: Props) {
+export function ExternalSupportPrompt({ open, drafts, onChange, onContinue }: Props) {
+  const { t } = useT();
   if (!open) return null;
 
   const tr = (key: string, fallback: string) => (t(key) as string) || fallback;

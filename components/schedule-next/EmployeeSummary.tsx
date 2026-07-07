@@ -1,13 +1,14 @@
 'use client';
 
 import type { ScheduleNextProposal } from '@/lib/schedule-next/types';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   proposal: ScheduleNextProposal;
-  t: (key: string) => string;
 };
 
-export function EmployeeSummary({ proposal, t }: Props) {
+export function EmployeeSummary({ proposal }: Props) {
+  const { t } = useT();
   const tr = (key: string, fallback: string) => (t(key) as string) || fallback;
   if (!proposal.employeeSummary.length) return null;
 

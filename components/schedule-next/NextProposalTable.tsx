@@ -1,6 +1,7 @@
 'use client';
 
 import type { ScheduleNextProposalRow } from '@/lib/schedule-next/types';
+import { useT } from '@/lib/i18n/useT';
 
 type Person = ScheduleNextProposalRow['morning'][number];
 
@@ -46,10 +47,10 @@ function statusTone(status: ScheduleNextProposalRow['status']): string {
 
 type Props = {
   rows: ScheduleNextProposalRow[];
-  t: (key: string) => string;
 };
 
-export function NextProposalTable({ rows, t }: Props) {
+export function NextProposalTable({ rows }: Props) {
+  const { t } = useT();
   const tr = (key: string, fallback: string) => (t(key) as string) || fallback;
 
   return (
