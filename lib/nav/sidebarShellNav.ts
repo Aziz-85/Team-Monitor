@@ -14,10 +14,10 @@ import { canAccessRoute } from '@/lib/permissions';
 
 export const ENTRY_DAILY_SALES_SIDEBAR_ROLES = APP_SHELL_ENTRY_DAILY_ROLES;
 
-export type SidebarShellLink = { key: string; label: string; href: string };
+export type SidebarShellLink = { key: string; label: string; href: string; icon?: 'architecture' };
 export type SidebarShellGroup = { key: string; label: string; items: SidebarShellLink[] };
 
-type SidebarShellGroupedItem = { key: string; href: string; labelKey: string };
+type SidebarShellGroupedItem = { key: string; href: string; labelKey: string; icon?: 'architecture' };
 type SidebarShellGroupedSection = { key: string; labelKey: string; items: SidebarShellGroupedItem[] };
 
 const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
@@ -100,6 +100,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
       { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
       { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
       { key: 'CHANGE_PASSWORD', href: '/change-password', labelKey: 'nav.changePassword' },
+      { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
     ],
   },
 ];
@@ -129,7 +130,12 @@ export function getSidebarGroupedSections(role: Role, t: (key: string) => string
   return SIDEBAR_GROUPS.map((section) => {
     const items = section.items
       .filter((item) => canAccessRoute(role, item.href))
-      .map((item) => ({ key: item.key, href: item.href, label: t(item.labelKey) }));
+      .map((item) => ({
+        key: item.key,
+        href: item.href,
+        label: t(item.labelKey),
+        icon: item.icon,
+      }));
     return { key: section.key, label: t(section.labelKey), items };
   }).filter((section) => section.items.length > 0);
 }

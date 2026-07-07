@@ -123,6 +123,7 @@
     "more": "More",
     "employeeHome": "My Home",
     "changePassword": "Change Password",
+    "architectureConsole": "Architecture Console",
     "compliance": "Government Documents",
     "groups": {
       "home": "Home",
@@ -290,6 +291,10 @@
         "about": {
           "title": "About",
           "hint": "Platform and product context."
+        },
+        "architecture": {
+          "title": "Architecture Console",
+          "hint": "Enterprise system overview, routes, permissions, APIs, and health."
         }
       },
       "routes": {

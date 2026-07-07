@@ -8,6 +8,32 @@ import {
   getSidebarGroupedSections,
 } from '@/lib/nav/sidebarShellNav';
 
+function SidebarNavIcon({ icon, active }: { icon?: 'architecture'; active: boolean }) {
+  if (icon !== 'architecture') {
+    return (
+      <span
+        className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
+          active ? 'bg-accent' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground/70'
+        }`}
+      />
+    );
+  }
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={`h-4 w-4 shrink-0 ${active ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+    >
+      <path d="M4 7h16M4 12h10M4 17h7" strokeLinecap="round" />
+      <path d="M16 10l4 2-4 2v-4z" strokeLinejoin="round" />
+      <path d="M3 5h18v14H3z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 type SidebarNavContentProps = {
   role: Role;
   isItemActive: (href: string) => boolean;
@@ -45,11 +71,7 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
                         active ? 'bg-accent/10 text-accent' : 'text-foreground/85 hover:bg-muted/40'
                       }`}
                     >
-                      <span
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
-                          active ? 'bg-accent' : 'bg-muted-foreground/50 group-hover:bg-muted-foreground/70'
-                        }`}
-                      />
+                      <SidebarNavIcon icon={item.icon} active={active} />
                       <span className="min-w-0 truncate">{item.label}</span>
                       {active ? (
                         <span

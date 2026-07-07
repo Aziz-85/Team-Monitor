@@ -105,6 +105,7 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/tasks/setup', titleKey: 'nav.drilldown.routes.tasks.setup.title' },
   { prefix: '/tasks', titleKey: 'nav.drilldown.routes.tasks.list.title' },
   { prefix: '/about', titleKey: 'nav.drilldown.routes.admin.about.title' },
+  { prefix: '/architecture', titleKey: 'nav.architectureConsole' },
 ];
 
 PATH_TITLE_KEYS.sort((a, b) => b.prefix.length - a.prefix.length);

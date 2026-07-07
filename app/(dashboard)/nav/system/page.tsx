@@ -6,6 +6,7 @@ const CARDS = [
   { href: '/nav/system/admin', gate: '/admin/administration', titleKey: 'system.admin.title', hintKey: 'system.admin.hint' },
   { href: '/nav/system/imports', gate: '/admin/import', titleKey: 'system.imports.title', hintKey: 'system.imports.hint' },
   { href: '/admin/integrations/planner', gate: '/admin/integrations/planner', titleKey: 'system.integrations.title', hintKey: 'system.integrations.hint' },
+  { href: '/architecture', gate: '/architecture', titleKey: 'system.architecture.title', hintKey: 'system.architecture.hint' },
   { href: '/about', gate: '/about', titleKey: 'system.about.title', hintKey: 'system.about.hint' },
 ];
 
