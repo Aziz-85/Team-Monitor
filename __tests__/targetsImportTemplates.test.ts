@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 const db = {
   boutique: { findUnique: jest.fn(), findMany: jest.fn() },
   employee: { findMany: jest.fn() },
+  boutiqueMonthlyTarget: { findMany: jest.fn() },
 };
 jest.mock('@/lib/db', () => ({ prisma: db }));
 
@@ -41,6 +42,7 @@ const RASHID = { id: 'b-rashid', code: '01', name: 'Rashid' };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  db.boutiqueMonthlyTarget.findMany.mockResolvedValue([]);
   db.employee.findMany.mockResolvedValue([
     { empId: 'D001', name: 'Sara', position: 'SENIOR_SALES' },
     { empId: 'D002', name: 'Omar', position: 'SALES' },

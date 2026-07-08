@@ -14,6 +14,11 @@ import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
 import { parseTargetValue } from './parseTargetValue';
 import { readRowsByHeaders } from './spreadsheetRows';
+import {
+  buildTargetImportDebug,
+  logTargetImportError,
+  type TargetImportRowDebug,
+} from './targetImportDebug';
 import { EMPLOYEE_SHEET, EMPLOYEE_HEADERS } from './templates';
 
 export type EmployeeTargetRow = {
@@ -31,6 +36,7 @@ export type EmployeeRowError = {
   rowIndex: number;
   message: string;
   row?: EmployeeTargetRow;
+  debug?: TargetImportRowDebug;
 };
 
 export type EmployeePreviewResult = {
@@ -150,7 +156,7 @@ export async function parseAndValidateEmployees(
     };
   }
 
-  const { rows: dataRows, rowIndexes } = parsedSheet;
+  const { rows: dataRows, rowIndexes, detectedHeaders } = parsedSheet;
 
   const boutiquesByCode = await prisma.boutique.findMany({
     where: { isActive: true },
@@ -197,7 +203,11 @@ export async function parseAndValidateEmployees(
     if (targetResult.kind === 'empty') continue;
     if (targetResult.kind === 'error') {
       targetFormatErrors++;
-      invalidRows.push({ rowIndex, message: targetResult.message });
+      const debug = buildTargetImportDebug(detectedHeaders, targetRaw);
+      logTargetImportError('targets/import/employees', rowIndex, targetResult.message, debug);
+      const rowError: EmployeeRowError = { rowIndex, message: targetResult.message };
+      if (process.env.NODE_ENV === 'development') rowError.debug = debug;
+      invalidRows.push(rowError);
       continue;
     }
 

@@ -95,11 +95,18 @@ export async function buildBoutiqueTargetsImportTemplate(input: {
   const months = nextMonthKeys(12, startMonth);
   const generatedAt = new Date().toISOString();
 
+  const existingTargets = await prisma.boutiqueMonthlyTarget.findMany({
+    where: { boutiqueId: boutique.id, month: { in: months } },
+    select: { month: true, amount: true },
+  });
+  const amountByMonth = new Map(existingTargets.map((row) => [row.month, row.amount]));
+
   const workbook = new ExcelJS.Workbook();
   const dataSheet = workbook.addWorksheet(BOUTIQUE_SHEET);
   dataSheet.addRow(BOUTIQUE_HEADERS);
   for (const mk of months) {
-    dataSheet.addRow([mk, code, name, '', 'OFFICIAL', '']);
+    const target = amountByMonth.get(mk) ?? 0;
+    dataSheet.addRow([mk, code, name, target, 'OFFICIAL', '']);
   }
 
   const readme = workbook.addWorksheet(README_SHEET);

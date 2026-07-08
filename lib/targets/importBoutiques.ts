@@ -11,6 +11,11 @@ import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
 import { parseTargetValue } from './parseTargetValue';
 import { readRowsByHeaders } from './spreadsheetRows';
+import {
+  buildTargetImportDebug,
+  logTargetImportError,
+  type TargetImportRowDebug,
+} from './targetImportDebug';
 import { BOUTIQUE_SHEET, BOUTIQUE_HEADERS } from './templates';
 
 export type BoutiqueTargetRow = {
@@ -26,6 +31,7 @@ export type BoutiqueRowError = {
   rowIndex: number;
   message: string;
   row?: BoutiqueTargetRow;
+  debug?: TargetImportRowDebug;
 };
 
 export type BoutiquePreviewResult = {
@@ -99,7 +105,7 @@ export async function parseAndValidateBoutiques(
     };
   }
 
-  const { rows: dataRows, rowIndexes } = parsedSheet;
+  const { rows: dataRows, rowIndexes, detectedHeaders } = parsedSheet;
 
   const boutiquesByCode = await prisma.boutique.findMany({
     where: { isActive: true },
@@ -143,7 +149,15 @@ export async function parseAndValidateBoutiques(
     if (targetResult.kind === 'empty') continue;
     if (targetResult.kind === 'error') {
       targetFormatErrors++;
-      invalidRows.push({ rowIndex, message: targetResult.message, row: { month, scopeId, boutiqueName, target: 0, source, notes } });
+      const debug = buildTargetImportDebug(detectedHeaders, targetRaw);
+      logTargetImportError('targets/import/boutiques', rowIndex, targetResult.message, debug);
+      const rowError: BoutiqueRowError = {
+        rowIndex,
+        message: targetResult.message,
+        row: { month, scopeId, boutiqueName, target: 0, source, notes },
+      };
+      if (process.env.NODE_ENV === 'development') rowError.debug = debug;
+      invalidRows.push(rowError);
       continue;
     }
 
