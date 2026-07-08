@@ -20,6 +20,7 @@
     "db:check": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/check-db-counts.ts",
     "db:list-employees-by-boutique": "node scripts/list-employees-by-boutique.js",
     "backfill:taskkeys": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/backfill-taskkeys.ts",
+    "boutique-config:backfill": "ts-node -r tsconfig-paths/register --compiler-options '{\"module\":\"CommonJS\"}' scripts/backfill-boutique-configuration.ts",
     "audit:retention": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/auth-audit-retention.ts",
     "test": "jest --passWithNoTests",
     "test:smoke": "jest __tests__/leaves-self-requests.test.ts __tests__/post-login-path.test.ts __tests__/targets-me-vs-metrics.test.ts",

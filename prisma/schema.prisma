@@ -179,6 +179,10 @@ model Boutique {
   storeReportKpis       StoreReportKpi[]
   salesMatrixEditUnlockSessions SalesMatrixEditUnlockSession[]
   salesMatrixEditVersions       SalesMatrixEditVersion[]
+  boutiqueConfiguration         BoutiqueConfiguration?
+  boutiqueShiftTemplates        BoutiqueShiftTemplate[]
+  boutiqueSpecialPeriods        BoutiqueSpecialOperatingPeriod[]
+  boutiqueCoveragePolicies      BoutiqueCoveragePolicy[]
   salesMatrixSnapshots          SalesMatrixSnapshot[]
 
   @@index([regionId])
@@ -680,6 +684,114 @@ model CoverageRule {
   minAM     Int     @default(2)
   minPM     Int     @default(0)
   enabled   Boolean @default(true)
+  @@index([boutiqueId])
+}
+
+// --- Boutique Configuration (foundation for future scheduling; not yet wired to planners) ---
+enum BoutiqueShiftTemplateType {
+  MORNING
+  EVENING
+  BRIDGE
+  CUSTOM
+}
+
+enum BoutiqueSpecialPeriodType {
+  RAMADAN
+  EID_AL_FITR
+  EID_AL_ADHA
+  NATIONAL_DAY
+  FOUNDING_DAY
+  SEASON
+  CUSTOM
+}
+
+model BoutiqueConfiguration {
+  id                              String   @id @default(cuid())
+  boutiqueId                      String   @unique
+  timezone                        String   @default("Asia/Riyadh")
+  normalOpenTime                  String   @default("09:30")
+  normalCloseTime                 String   @default("22:00")
+  fridayOpenTime                  String   @default("16:00")
+  fridayCloseTime                 String   @default("22:00")
+  weeklyOffPolicy                 String   @default("FLEXIBLE") // FIXED | FLEXIBLE | DEFERRED_ALLOWED
+  preferredWeeklyOffRecoveryDay   String   @default("FRIDAY")
+  allowWeeklyOffDeferral          Boolean  @default(true)
+  maxDeferredWeeklyOffPerWeek     Int      @default(1)
+  allowExternalSupport            Boolean  @default(true)
+  externalSupportPriority         String   @default("AFTER_BRIDGE") // BEFORE_WEEKLY_OFF_MOVE | AFTER_WEEKLY_OFF_MOVE | AFTER_BRIDGE | LAST_RESORT
+  allowOvertime                   Boolean  @default(false)
+  maxOvertimeHoursPerEmployeePerDay Int    @default(2)
+  allowBridgeShift                Boolean  @default(true)
+  maxBridgeDaysPerEmployeePerWeek Int      @default(2)
+  planningStrategy                String   @default("MAXIMUM_COVERAGE") // MAXIMUM_COVERAGE | LOWEST_COST | LEAST_BRIDGE | LEAST_OVERTIME | BALANCED
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+  boutique                        Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId])
+}
+
+model BoutiqueShiftTemplate {
+  id              String                    @id @default(cuid())
+  boutiqueId      String
+  code            String
+  name            String
+  type            BoutiqueShiftTemplateType @default(CUSTOM)
+  startTime       String
+  endTime         String
+  secondStartTime String?
+  secondEndTime   String?
+  isDefault       Boolean                   @default(false)
+  isActive        Boolean                   @default(true)
+  sortOrder       Int                       @default(0)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  boutique        Boutique                  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([boutiqueId, code])
+  @@index([boutiqueId])
+}
+
+model BoutiqueSpecialOperatingPeriod {
+  id                 String                    @id @default(cuid())
+  boutiqueId         String
+  name               String
+  type               BoutiqueSpecialPeriodType @default(CUSTOM)
+  startDate          DateTime
+  endDate            DateTime
+  openTime           String
+  closeTime          String
+  secondOpenTime     String?
+  secondCloseTime    String?
+  minMorningCoverage Int?
+  minEveningCoverage Int?
+  minTotalCoverage   Int?
+  suspendWeeklyOff   Boolean                   @default(false)
+  allowExternalSupport Boolean                 @default(true)
+  notes              String?
+  isActive           Boolean                   @default(true)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  boutique           Boutique                  @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@index([boutiqueId])
+  @@index([boutiqueId, startDate, endDate])
+}
+
+model BoutiqueCoveragePolicy {
+  id               String   @id @default(cuid())
+  boutiqueId       String
+  dayOfWeek        Int      // 0..6 (JS Date.getDay: 0=Sun..6=Sat)
+  minMorning       Int      @default(2)
+  minEvening       Int      @default(2)
+  minTotal         Int?
+  isFridayOverride Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  boutique         Boutique @relation(fields: [boutiqueId], references: [id], onDelete: Cascade)
+
+  @@unique([boutiqueId, dayOfWeek])
   @@index([boutiqueId])
 }
 

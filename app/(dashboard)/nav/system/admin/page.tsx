@@ -13,7 +13,7 @@ const ROUTES = [
   { href: '/admin/boutiques', key: 'admin.boutiques' },
   { href: '/admin/regions', key: 'admin.regions' },
   { href: '/admin/boutique-groups', key: 'admin.groups' },
-  { href: '/admin/coverage-rules', key: 'admin.coverageRules' },
+  { href: '/admin/boutique-configuration', key: 'admin.boutiqueConfiguration' },
   { href: '/admin/kpi-templates', key: 'admin.kpiTemplates' },
   { href: '/admin/reset-password', key: 'admin.resetPassword' },
   { href: '/admin/reset-emp-id', key: 'admin.resetEmpId' },

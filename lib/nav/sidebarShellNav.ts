@@ -96,7 +96,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'system',
     labelKey: 'nav.groups.system',
     items: [
-      { key: 'COVERAGE_RULES', href: '/admin/coverage-rules', labelKey: 'nav.admin.coverageRules' },
+      { key: 'BOUTIQUE_CONFIGURATION', href: '/admin/boutique-configuration', labelKey: 'nav.admin.boutiqueConfiguration' },
       { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
       { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
       { key: 'CHANGE_PASSWORD', href: '/change-password', labelKey: 'nav.changePassword' },

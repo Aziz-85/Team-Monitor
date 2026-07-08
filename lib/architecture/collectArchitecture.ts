@@ -622,6 +622,7 @@ function buildFeatures(routes: ArchitectureRoute[]): FeatureStatus[] {
     ['Schedule Engine V3', 'Experimental', ['/schedule/v3']],
     ['Schedule Next', 'Experimental', ['/schedule/next']],
     ['Proposal Generator', 'Experimental', ['/schedule/next']],
+    ['Boutique Configuration', 'Experimental', ['/admin/boutique-configuration']],
     ['Coverage Checker', 'Stable', ['/schedule/edit', '/schedule/view']],
     ['Task Monitor', 'Stable', ['/tasks/monitor']],
     ['Inventory', 'Stable', ['/inventory/daily', '/inventory/zones']],
@@ -631,7 +632,7 @@ function buildFeatures(routes: ArchitectureRoute[]): FeatureStatus[] {
   return featureDefs.map(([name, status, pages]) => ({
     name,
     version: packageJson.version,
-    owner: name.includes('Schedule') || name.includes('Coverage') ? 'Operations' : 'Platform',
+    owner: name.includes('Schedule') || name.includes('Coverage') || name.includes('Boutique') ? 'Operations' : 'Platform',
     status,
     pages: pages.filter((page) => routes.some((route) => route.route === page)),
   }));

@@ -218,7 +218,7 @@ const GROUP_RULES_TEMPLATES: NavGroup = {
   key: 'RULES_TEMPLATES',
   labelKey: 'nav.group.RULES_TEMPLATES',
   items: [
-    item('/admin/coverage-rules', 'nav.admin.coverageRules', ['ADMIN', 'SUPER_ADMIN'], 'RULE'),
+    item('/admin/boutique-configuration', 'nav.admin.boutiqueConfiguration', ['ADMIN', 'SUPER_ADMIN'], 'RULE'),
     item('/admin/kpi-templates', 'nav.admin.kpiTemplates', ['ADMIN', 'SUPER_ADMIN'], 'RULE'),
   ],
 };

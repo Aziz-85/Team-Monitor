@@ -1,4 +1,125 @@
 {
+  "boutiqueConfig": {
+    "title": "إعدادات البوتيك",
+    "subtitle": "حدد ساعات العمل وقوالب الورديات وقواعد التغطية والعطلات وسياسات الجدولة لكل بوتيك.",
+    "experimentalBadge": "تجريبي",
+    "selectBoutique": "البوتيك",
+    "selectBoutiquePlaceholder": "اختر بوتيك",
+    "usingDefaults": "لا توجد إعدادات محفوظة لهذا البوتيك بعد. يتم عرض القيم الافتراضية. قم بالتهيئة لإنشائها.",
+    "initialize": "التهيئة بالقيم الافتراضية",
+    "save": "حفظ التغييرات",
+    "saved": "تم حفظ الإعدادات.",
+    "saveFailed": "فشل حفظ الإعدادات.",
+    "loadFailed": "فشل تحميل الإعدادات.",
+    "runBackfill": "تعبئة جميع البوتيكات",
+    "backfillDone": "اكتملت التعبئة.",
+    "sections": {
+      "operatingHours": "ساعات العمل",
+      "shiftTemplates": "قوالب الورديات",
+      "coverage": "قواعد التغطية",
+      "weeklyOff": "سياسة الإجازة الأسبوعية",
+      "bridge": "سياسة الوردية الجسرية / المقسمة",
+      "externalSupport": "الدعم الخارجي",
+      "overtime": "العمل الإضافي",
+      "specialPeriods": "العطلات والفترات الخاصة",
+      "planning": "استراتيجية التخطيط"
+    },
+    "hours": {
+      "timezone": "المنطقة الزمنية",
+      "normalOpen": "الافتتاح العادي",
+      "normalClose": "الإغلاق العادي",
+      "fridayOpen": "افتتاح الجمعة",
+      "fridayClose": "إغلاق الجمعة"
+    },
+    "templates": {
+      "name": "الاسم",
+      "code": "الرمز",
+      "type": "النوع",
+      "start": "البداية",
+      "end": "النهاية",
+      "secondStart": "بداية ثانية",
+      "secondEnd": "نهاية ثانية",
+      "active": "مفعّل",
+      "default": "افتراضي",
+      "add": "إضافة قالب",
+      "remove": "حذف"
+    },
+    "types": {
+      "MORNING": "صباحي",
+      "EVENING": "مسائي",
+      "BRIDGE": "جسري",
+      "CUSTOM": "مخصص"
+    },
+    "coverage": {
+      "day": "اليوم",
+      "minMorning": "الحد الأدنى صباحاً",
+      "minEvening": "الحد الأدنى مساءً",
+      "minTotal": "الحد الأدنى الإجمالي",
+      "active": "مفعّل"
+    },
+    "weeklyOff": {
+      "policy": "السياسة",
+      "FIXED": "ثابتة",
+      "FLEXIBLE": "مرنة",
+      "DEFERRED_ALLOWED": "يسمح بالتأجيل",
+      "recoveryDay": "يوم الاسترداد المفضل",
+      "allowDeferral": "السماح بتأجيل الإجازة الأسبوعية",
+      "maxDeferred": "الحد الأقصى للتأجيل أسبوعياً"
+    },
+    "bridge": {
+      "allow": "السماح بالوردية الجسرية",
+      "maxDays": "الحد الأقصى لأيام الجسر لكل موظف أسبوعياً"
+    },
+    "external": {
+      "allow": "السماح بالدعم الخارجي",
+      "priority": "الأولوية",
+      "BEFORE_WEEKLY_OFF_MOVE": "قبل نقل الإجازة الأسبوعية",
+      "AFTER_WEEKLY_OFF_MOVE": "بعد نقل الإجازة الأسبوعية",
+      "AFTER_BRIDGE": "بعد الجسر",
+      "LAST_RESORT": "الملاذ الأخير"
+    },
+    "overtime": {
+      "allow": "السماح بالعمل الإضافي",
+      "maxHours": "الحد الأقصى لساعات العمل الإضافي لكل موظف يومياً"
+    },
+    "special": {
+      "name": "الاسم",
+      "type": "النوع",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "open": "الافتتاح",
+      "close": "الإغلاق",
+      "secondOpen": "افتتاح ثانٍ",
+      "secondClose": "إغلاق ثانٍ",
+      "minMorning": "الحد الأدنى صباحاً",
+      "minEvening": "الحد الأدنى مساءً",
+      "minTotal": "الحد الأدنى الإجمالي",
+      "suspendWeeklyOff": "تعليق الإجازة الأسبوعية",
+      "allowExternal": "السماح بالدعم الخارجي",
+      "notes": "ملاحظات",
+      "active": "مفعّل",
+      "add": "إضافة فترة خاصة",
+      "remove": "حذف",
+      "empty": "لا توجد فترات خاصة محددة."
+    },
+    "specialTypes": {
+      "RAMADAN": "رمضان",
+      "EID_AL_FITR": "عيد الفطر",
+      "EID_AL_ADHA": "عيد الأضحى",
+      "NATIONAL_DAY": "اليوم الوطني",
+      "FOUNDING_DAY": "يوم التأسيس",
+      "SEASON": "موسم",
+      "CUSTOM": "مخصص"
+    },
+    "planning": {
+      "strategy": "استراتيجية التخطيط",
+      "MAXIMUM_COVERAGE": "أقصى تغطية",
+      "LOWEST_COST": "أقل تكلفة",
+      "LEAST_BRIDGE": "أقل جسر",
+      "LEAST_OVERTIME": "أقل عمل إضافي",
+      "BALANCED": "متوازن"
+    }
+  },
   "common": {
     "login": "تسجيل الدخول",
     "logout": "تسجيل الخروج",
@@ -585,6 +706,10 @@
             "title": "قواعد التغطية",
             "hint": "تعديل قواعد التغطية."
           },
+          "boutiqueConfiguration": {
+            "title": "إعدادات البوتيك",
+            "hint": "ساعات العمل وقوالب الورديات والتغطية والعطلات وسياسات الجدولة."
+          },
           "kpiTemplates": {
             "title": "قوالب KPI",
             "hint": "إدارة مكتبة قوالب KPI."
@@ -672,6 +797,7 @@
       "resetEmpId": "إعادة تعيين الرقم السني للموظفين",
       "resetPassword": "إعادة تعيين كلمة المرور",
       "coverageRules": "قواعد التغطية",
+      "boutiqueConfiguration": "إعدادات البوتيك",
       "import": "استيراد",
       "monthSnapshot": "لقطة شهرية",
       "historicalImport": "استيراد تاريخي",

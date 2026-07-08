@@ -1,4 +1,125 @@
 {
+  "boutiqueConfig": {
+    "title": "Boutique Configuration",
+    "subtitle": "Define operating hours, shift templates, coverage rules, holidays, and scheduling policies for each boutique.",
+    "experimentalBadge": "Experimental",
+    "selectBoutique": "Boutique",
+    "selectBoutiquePlaceholder": "Select a boutique",
+    "usingDefaults": "This boutique has no saved configuration yet. Defaults are shown. Initialize to create it.",
+    "initialize": "Initialize with defaults",
+    "save": "Save changes",
+    "saved": "Configuration saved.",
+    "saveFailed": "Failed to save configuration.",
+    "loadFailed": "Failed to load configuration.",
+    "runBackfill": "Backfill all boutiques",
+    "backfillDone": "Backfill complete.",
+    "sections": {
+      "operatingHours": "Operating Hours",
+      "shiftTemplates": "Shift Templates",
+      "coverage": "Coverage Rules",
+      "weeklyOff": "Weekly Off Policy",
+      "bridge": "Bridge / Split Policy",
+      "externalSupport": "External Support",
+      "overtime": "Overtime",
+      "specialPeriods": "Holidays & Special Periods",
+      "planning": "Planning Strategy"
+    },
+    "hours": {
+      "timezone": "Timezone",
+      "normalOpen": "Normal open",
+      "normalClose": "Normal close",
+      "fridayOpen": "Friday open",
+      "fridayClose": "Friday close"
+    },
+    "templates": {
+      "name": "Name",
+      "code": "Code",
+      "type": "Type",
+      "start": "Start",
+      "end": "End",
+      "secondStart": "Second start",
+      "secondEnd": "Second end",
+      "active": "Active",
+      "default": "Default",
+      "add": "Add template",
+      "remove": "Remove"
+    },
+    "types": {
+      "MORNING": "Morning",
+      "EVENING": "Evening",
+      "BRIDGE": "Bridge",
+      "CUSTOM": "Custom"
+    },
+    "coverage": {
+      "day": "Day",
+      "minMorning": "Min morning",
+      "minEvening": "Min evening",
+      "minTotal": "Min total",
+      "active": "Active"
+    },
+    "weeklyOff": {
+      "policy": "Policy",
+      "FIXED": "Fixed",
+      "FLEXIBLE": "Flexible",
+      "DEFERRED_ALLOWED": "Deferred allowed",
+      "recoveryDay": "Preferred recovery day",
+      "allowDeferral": "Allow weekly off deferral",
+      "maxDeferred": "Max deferred per week"
+    },
+    "bridge": {
+      "allow": "Allow bridge shift",
+      "maxDays": "Max bridge days per employee per week"
+    },
+    "external": {
+      "allow": "Allow external support",
+      "priority": "Priority",
+      "BEFORE_WEEKLY_OFF_MOVE": "Before weekly off move",
+      "AFTER_WEEKLY_OFF_MOVE": "After weekly off move",
+      "AFTER_BRIDGE": "After bridge",
+      "LAST_RESORT": "Last resort"
+    },
+    "overtime": {
+      "allow": "Allow overtime",
+      "maxHours": "Max overtime hours per employee per day"
+    },
+    "special": {
+      "name": "Name",
+      "type": "Type",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "open": "Open",
+      "close": "Close",
+      "secondOpen": "Second open",
+      "secondClose": "Second close",
+      "minMorning": "Min morning",
+      "minEvening": "Min evening",
+      "minTotal": "Min total",
+      "suspendWeeklyOff": "Suspend weekly off",
+      "allowExternal": "Allow external support",
+      "notes": "Notes",
+      "active": "Active",
+      "add": "Add special period",
+      "remove": "Remove",
+      "empty": "No special periods defined."
+    },
+    "specialTypes": {
+      "RAMADAN": "Ramadan",
+      "EID_AL_FITR": "Eid Al-Fitr",
+      "EID_AL_ADHA": "Eid Al-Adha",
+      "NATIONAL_DAY": "National Day",
+      "FOUNDING_DAY": "Founding Day",
+      "SEASON": "Season",
+      "CUSTOM": "Custom"
+    },
+    "planning": {
+      "strategy": "Planning strategy",
+      "MAXIMUM_COVERAGE": "Maximum coverage",
+      "LOWEST_COST": "Lowest cost",
+      "LEAST_BRIDGE": "Least bridge",
+      "LEAST_OVERTIME": "Least overtime",
+      "BALANCED": "Balanced"
+    }
+  },
   "common": {
     "login": "Login",
     "logout": "Logout",
@@ -585,6 +706,10 @@
             "title": "Coverage Rules",
             "hint": "Edit coverage rule sets."
           },
+          "boutiqueConfiguration": {
+            "title": "Boutique Configuration",
+            "hint": "Operating hours, shift templates, coverage, holidays, and scheduling policies."
+          },
           "kpiTemplates": {
             "title": "KPI Templates",
             "hint": "Manage KPI template library."
@@ -672,6 +797,7 @@
       "resetEmpId": "Reset employee number",
       "resetPassword": "Reset password",
       "coverageRules": "Coverage Rules",
+      "boutiqueConfiguration": "Boutique Configuration",
       "import": "Import",
       "monthSnapshot": "Monthly Snapshot",
       "historicalImport": "Historical Import",

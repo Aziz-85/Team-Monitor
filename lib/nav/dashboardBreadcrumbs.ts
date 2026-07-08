@@ -19,6 +19,7 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/admin/administration', titleKey: 'nav.drilldown.routes.admin.administration.title' },
   { prefix: '/admin/audit/login', titleKey: 'nav.drilldown.routes.admin.loginAudit.title' },
   { prefix: '/admin/boutique-groups', titleKey: 'nav.drilldown.routes.admin.groups.title' },
+  { prefix: '/admin/boutique-configuration', titleKey: 'nav.admin.boutiqueConfiguration' },
   { prefix: '/admin/boutiques', titleKey: 'nav.drilldown.routes.admin.boutiques.title' },
   { prefix: '/admin/control-panel/delegation', titleKey: 'nav.admin.delegation' },
   { prefix: '/admin/coverage-rules', titleKey: 'nav.drilldown.routes.admin.coverageRules.title' },
