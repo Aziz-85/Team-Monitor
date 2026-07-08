@@ -1,17 +1,16 @@
 /**
  * Employee targets import: parse, validate, preview, apply.
- * Resolve employee by EmployeeCode (empId) first; then by name only if unique.
- * Historical / resigned allowed if User exists.
- *
- * Business rules (strict):
- * - Boutique monthly target is the parent; employee targets are child allocations for same boutique/month.
- * - We never force employee total to equal boutique target; mismatch is shown only as a warning.
- * - All target amounts are integer SAR only.
- * - Historical data remains stable: target is stored by (boutiqueId, month, userId); no inference from current boutique.
  */
 
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
+import {
+  computePreviewTotals,
+  previewStatusLabel,
+  resolveTargetWriteAction,
+  type ImportPreviewTotals,
+  type ImportRowAction,
+} from './importPreview';
 import { parseTargetValue } from './parseTargetValue';
 import { readRowsByHeaders } from './spreadsheetRows';
 import {
@@ -39,18 +38,52 @@ export type EmployeeRowError = {
   debug?: TargetImportRowDebug;
 };
 
+export type EmployeeImportPreviewRow = {
+  rowNumber: number;
+  month: string;
+  employeeId: string | null;
+  empId: string;
+  employeeName: string;
+  role: string | null;
+  boutiqueId: string | null;
+  boutiqueName: string;
+  targetAmount: number | null;
+  action: ImportRowAction;
+  existingAmount: number | null;
+  newAmount: number | null;
+  reason: string | null;
+  status: string;
+};
+
 export type EmployeePreviewResult = {
   totalRows: number;
   validRows: (EmployeeTargetRow & { userId: string; boutiqueId: string })[];
   invalidRows: EmployeeRowError[];
   duplicateKeys: string[];
-  inserts: { month: string; boutiqueId: string; userId: string; target: number; source: string; notes: string }[];
-  updates: { id: string; month: string; boutiqueId: string; userId: string; target: number; source: string; notes: string }[];
+  inserts: {
+    month: string;
+    boutiqueId: string;
+    userId: string;
+    target: number;
+    source: string;
+    notes: string;
+  }[];
+  updates: {
+    id: string;
+    month: string;
+    boutiqueId: string;
+    userId: string;
+    target: number;
+    source: string;
+    notes: string;
+  }[];
   unresolvedEmployees: string[];
   unresolvedBoutiques: string[];
   monthFormatErrors: number;
   targetFormatErrors: number;
   sumMismatchWarnings: { month: string; boutiqueId: string; boutiqueSum: number; employeeSum: number }[];
+  previewRows: EmployeeImportPreviewRow[];
+  previewTotals: ImportPreviewTotals;
 };
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -60,12 +93,36 @@ function trim(s: unknown): string {
   return String(s).trim();
 }
 
+function emptyPreview(overrides: Partial<EmployeePreviewResult> = {}): EmployeePreviewResult {
+  return {
+    totalRows: 0,
+    validRows: [],
+    invalidRows: [],
+    duplicateKeys: [],
+    inserts: [],
+    updates: [],
+    unresolvedEmployees: [],
+    unresolvedBoutiques: [],
+    monthFormatErrors: 0,
+    targetFormatErrors: 0,
+    sumMismatchWarnings: [],
+    previewRows: [],
+    previewTotals: computePreviewTotals([]),
+    ...overrides,
+  };
+}
+
+function positionLabel(position: string | null | undefined): string | null {
+  if (!position) return null;
+  return position.replace(/_/g, ' ');
+}
+
 /** Resolve to userId: 1) by empId (EmployeeCode), 2) by name only if single match. */
 async function resolveEmployee(
   employeeCode: string,
   employeeName: string,
   prismaClient: typeof prisma
-): Promise<{ userId: string } | { error: string }> {
+): Promise<{ userId: string; empId: string; role: string | null } | { error: string }> {
   const code = employeeCode.trim();
   const name = employeeName.trim();
   if (code) {
@@ -73,30 +130,32 @@ async function resolveEmployee(
       where: { empId: code },
       select: { id: true },
     });
-    if (user) return { userId: user.id };
-    const emp = await prismaClient.employee.findUnique({
+    const employee = await prismaClient.employee.findUnique({
       where: { empId: code },
-      select: { empId: true },
+      select: { empId: true, position: true },
     });
-    if (emp) return { error: `Employee ${code} has no user account; cannot assign target` };
+    if (user) {
+      return { userId: user.id, empId: code, role: positionLabel(employee?.position) };
+    }
+    if (employee) return { error: `Employee ${code} has no user account; cannot assign target` };
     return { error: `EmployeeCode not found: ${code}` };
   }
   if (!name) return { error: 'EmployeeCode or EmployeeName required' };
   const employees = await prismaClient.employee.findMany({
     where: { name: { equals: name, mode: 'insensitive' } },
-    select: { empId: true },
+    select: { empId: true, position: true },
   });
-  const userIds: string[] = [];
+  const userIds: { userId: string; empId: string; role: string | null }[] = [];
   for (const e of employees) {
     const u = await prismaClient.user.findUnique({
       where: { empId: e.empId },
       select: { id: true },
     });
-    if (u) userIds.push(u.id);
+    if (u) userIds.push({ userId: u.id, empId: e.empId, role: positionLabel(e.position) });
   }
   if (userIds.length === 0) return { error: `No user found for name: ${name}` };
   if (userIds.length > 1) return { error: `Ambiguous employee name: ${name} (multiple users)` };
-  return { userId: userIds[0] };
+  return userIds[0];
 }
 
 export async function parseAndValidateEmployees(
@@ -107,53 +166,83 @@ export async function parseAndValidateEmployees(
   try {
     workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, raw: false });
   } catch {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      {
+        rowNumber: 0,
+        month: '',
+        employeeId: null,
+        empId: '',
+        employeeName: '',
+        role: null,
+        boutiqueId: null,
+        boutiqueName: '',
+        targetAmount: null,
+        action: 'ERROR' as const,
+        existingAmount: null,
+        newAmount: null,
+        reason: 'Invalid Excel file',
+        status: 'Invalid Excel file',
+      },
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: 'Invalid Excel file' }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedEmployees: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-      sumMismatchWarnings: [],
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const sheet = workbook.Sheets[EMPLOYEE_SHEET];
   if (!sheet) {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      {
+        rowNumber: 0,
+        month: '',
+        employeeId: null,
+        empId: '',
+        employeeName: '',
+        role: null,
+        boutiqueId: null,
+        boutiqueName: '',
+        targetAmount: null,
+        action: 'ERROR' as const,
+        existingAmount: null,
+        newAmount: null,
+        reason: `Missing sheet: ${EMPLOYEE_SHEET}`,
+        status: `Missing sheet: ${EMPLOYEE_SHEET}`,
+      },
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: `Missing sheet: ${EMPLOYEE_SHEET}` }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedEmployees: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-      sumMismatchWarnings: [],
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const parsedSheet = readRowsByHeaders(sheet, EMPLOYEE_HEADERS);
   if (!parsedSheet.ok) {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      {
+        rowNumber: 0,
+        month: '',
+        employeeId: null,
+        empId: '',
+        employeeName: '',
+        role: null,
+        boutiqueId: null,
+        boutiqueName: '',
+        targetAmount: null,
+        action: 'ERROR' as const,
+        existingAmount: null,
+        newAmount: null,
+        reason: parsedSheet.error,
+        status: parsedSheet.error,
+      },
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: parsedSheet.error }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedEmployees: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-      sumMismatchWarnings: [],
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const { rows: dataRows, rowIndexes, detectedHeaders } = parsedSheet;
@@ -164,8 +253,27 @@ export async function parseAndValidateEmployees(
   });
   const codeToBoutique = new Map(boutiquesByCode.map((b) => [b.code.trim().toUpperCase(), b]));
 
+  const monthsInSheet = Array.from(
+    new Set(
+      dataRows
+        .map((row) => trim(row.Month))
+        .filter((month) => MONTH_REGEX.test(month))
+    )
+  );
+  const existing = await prisma.employeeMonthlyTarget.findMany({
+    where: {
+      boutiqueId: { in: allowedBoutiqueIds },
+      month: { in: monthsInSheet },
+    },
+    select: { id: true, boutiqueId: true, month: true, userId: true, amount: true },
+  });
+  const existingMap = new Map(existing.map((e) => [`${e.month}|${e.boutiqueId}|${e.userId}`, e]));
+
   const validRows: (EmployeeTargetRow & { userId: string; boutiqueId: string })[] = [];
   const invalidRows: EmployeeRowError[] = [];
+  const previewRows: EmployeeImportPreviewRow[] = [];
+  const inserts: EmployeePreviewResult['inserts'] = [];
+  const updates: EmployeePreviewResult['updates'] = [];
   const seenKeys = new Set<string>();
   const duplicateKeys: string[] = [];
   let monthFormatErrors = 0;
@@ -185,22 +293,90 @@ export async function parseAndValidateEmployees(
     const source = trim(r.Source) || 'OFFICIAL';
     const notes = trim(r.Notes);
 
+    const pushPreview = (row: EmployeeImportPreviewRow) => previewRows.push(row);
+
     if (!month) {
       invalidRows.push({ rowIndex, message: 'Month is required' });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: null,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: null,
+        reason: 'Month is required',
+        status: 'Month is required',
+      });
       continue;
     }
     if (!MONTH_REGEX.test(month)) {
       monthFormatErrors++;
       invalidRows.push({ rowIndex, message: 'Month must be YYYY-MM' });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: null,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: null,
+        reason: 'Month must be YYYY-MM',
+        status: 'Month must be YYYY-MM',
+      });
       continue;
     }
     if (!scopeId) {
       invalidRows.push({ rowIndex, message: 'ScopeId is required' });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: null,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: null,
+        reason: 'ScopeId is required',
+        status: 'ScopeId is required',
+      });
       continue;
     }
 
     const targetResult = parseTargetValue(targetRaw);
-    if (targetResult.kind === 'empty') continue;
+    if (targetResult.kind === 'empty') {
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: null,
+        action: 'SKIPPED',
+        existingAmount: null,
+        newAmount: null,
+        reason: 'Empty target',
+        status: 'Empty target',
+      });
+      continue;
+    }
     if (targetResult.kind === 'error') {
       targetFormatErrors++;
       const debug = buildTargetImportDebug(detectedHeaders, targetRaw);
@@ -208,6 +384,22 @@ export async function parseAndValidateEmployees(
       const rowError: EmployeeRowError = { rowIndex, message: targetResult.message };
       if (process.env.NODE_ENV === 'development') rowError.debug = debug;
       invalidRows.push(rowError);
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: null,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: null,
+        reason: targetResult.message,
+        status: targetResult.message,
+      });
       continue;
     }
 
@@ -215,10 +407,42 @@ export async function parseAndValidateEmployees(
     if (!boutique) {
       unresolvedScopes.add(scopeId);
       invalidRows.push({ rowIndex, message: `ScopeId not found: ${scopeId}` });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: null,
+        boutiqueName,
+        targetAmount: targetResult.value,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: targetResult.value,
+        reason: `ScopeId not found: ${scopeId}`,
+        status: `ScopeId not found: ${scopeId}`,
+      });
       continue;
     }
     if (!allowedBoutiqueIds.includes(boutique.id)) {
       invalidRows.push({ rowIndex, message: 'Boutique not in your scope' });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: boutique.id,
+        boutiqueName: boutiqueName || boutique.name,
+        targetAmount: targetResult.value,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: targetResult.value,
+        reason: 'Boutique not in your scope',
+        status: 'Boutique not in your scope',
+      });
       continue;
     }
 
@@ -226,20 +450,58 @@ export async function parseAndValidateEmployees(
     if ('error' in resolved) {
       unresolvedEmps.add(employeeCode || employeeName || `row ${rowIndex}`);
       invalidRows.push({ rowIndex, message: resolved.error });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: null,
+        empId: employeeCode,
+        employeeName,
+        role: null,
+        boutiqueId: boutique.id,
+        boutiqueName: boutiqueName || boutique.name,
+        targetAmount: targetResult.value,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: targetResult.value,
+        reason: resolved.error,
+        status: resolved.error,
+      });
       continue;
     }
 
     const key = `${month}|${boutique.id}|${resolved.userId}`;
     if (seenKeys.has(key)) {
       duplicateKeys.push(key);
+      invalidRows.push({ rowIndex, message: 'Duplicate month for employee' });
+      pushPreview({
+        rowNumber: rowIndex,
+        month,
+        employeeId: resolved.userId,
+        empId: resolved.empId,
+        employeeName,
+        role: resolved.role,
+        boutiqueId: boutique.id,
+        boutiqueName: boutiqueName || boutique.name,
+        targetAmount: targetResult.value,
+        action: 'ERROR',
+        existingAmount: null,
+        newAmount: targetResult.value,
+        reason: 'Duplicate month for employee',
+        status: 'Duplicate month for employee',
+      });
+      continue;
     }
     seenKeys.add(key);
+
+    const existingRow = existingMap.get(key);
+    const writeAction = resolveTargetWriteAction(targetResult.value, existingRow ?? null);
+    const resolvedBoutiqueName = boutiqueName || boutique.name;
 
     validRows.push({
       month,
       scopeId,
-      boutiqueName,
-      employeeCode,
+      boutiqueName: resolvedBoutiqueName,
+      employeeCode: resolved.empId,
       employeeName,
       target: targetResult.value,
       source,
@@ -247,47 +509,46 @@ export async function parseAndValidateEmployees(
       userId: resolved.userId,
       boutiqueId: boutique.id,
     });
-  }
 
-  const existing = await prisma.employeeMonthlyTarget.findMany({
-    where: {
-      boutiqueId: { in: allowedBoutiqueIds },
-      month: { in: Array.from(new Set(validRows.map((r) => r.month))) },
-    },
-    select: { id: true, boutiqueId: true, month: true, userId: true, amount: true },
-  });
-  const existingMap = new Map(existing.map((e) => [`${e.month}|${e.boutiqueId}|${e.userId}`, e]));
+    pushPreview({
+      rowNumber: rowIndex,
+      month,
+      employeeId: resolved.userId,
+      empId: resolved.empId,
+      employeeName,
+      role: resolved.role,
+      boutiqueId: boutique.id,
+      boutiqueName: resolvedBoutiqueName,
+      targetAmount: targetResult.value,
+      action: writeAction.action,
+      existingAmount: existingRow?.amount ?? null,
+      newAmount: targetResult.value,
+      reason: writeAction.reason ?? null,
+      status: previewStatusLabel(writeAction.action, writeAction.reason ?? null),
+    });
 
-  const inserts: EmployeePreviewResult['inserts'] = [];
-  const updates: EmployeePreviewResult['updates'] = [];
-
-  for (const row of validRows) {
-    const key = `${row.month}|${row.boutiqueId}|${row.userId}`;
-    const ex = existingMap.get(key);
-    if (ex) {
-      updates.push({
-        id: ex.id,
-        month: row.month,
-        boutiqueId: row.boutiqueId,
-        userId: row.userId,
-        target: row.target,
-        source: row.source,
-        notes: row.notes,
-      });
-    } else {
+    if (writeAction.action === 'INSERT') {
       inserts.push({
-        month: row.month,
-        boutiqueId: row.boutiqueId,
-        userId: row.userId,
-        target: row.target,
-        source: row.source,
-        notes: row.notes,
+        month,
+        boutiqueId: boutique.id,
+        userId: resolved.userId,
+        target: targetResult.value,
+        source,
+        notes,
+      });
+    } else if (writeAction.action === 'UPDATE' && existingRow) {
+      updates.push({
+        id: existingRow.id,
+        month,
+        boutiqueId: boutique.id,
+        userId: resolved.userId,
+        target: targetResult.value,
+        source,
+        notes,
       });
     }
   }
 
-  // Sum mismatch: for each (month, boutiqueId) compare sum(employee targets) to BoutiqueMonthlyTarget.
-  // Warning only — we never force employee total to equal boutique target; user sees mismatch clearly.
   const sumMismatchWarnings: EmployeePreviewResult['sumMismatchWarnings'] = [];
   const byMonthBoutique = new Map<string, { boutiqueSum: number; employeeSum: number }>();
   for (const row of validRows) {
@@ -297,7 +558,7 @@ export async function parseAndValidateEmployees(
     byMonthBoutique.set(k, cur);
   }
   const boutiqueTargets = await prisma.boutiqueMonthlyTarget.findMany({
-    where: { boutiqueId: { in: allowedBoutiqueIds }, month: { in: Array.from(new Set(validRows.map((r) => r.month))) } },
+    where: { boutiqueId: { in: allowedBoutiqueIds }, month: { in: monthsInSheet } },
     select: { boutiqueId: true, month: true, amount: true },
   });
   for (const bt of boutiqueTargets) {
@@ -329,11 +590,13 @@ export async function parseAndValidateEmployees(
     monthFormatErrors,
     targetFormatErrors,
     sumMismatchWarnings,
+    previewRows,
+    previewTotals: computePreviewTotals(previewRows),
   };
 }
 
 export async function applyEmployeesImport(
-  preview: EmployeePreviewResult
+  preview: Pick<EmployeePreviewResult, 'inserts' | 'updates'>
 ): Promise<{ inserted: number; updated: number }> {
   let inserted = 0;
   let updated = 0;

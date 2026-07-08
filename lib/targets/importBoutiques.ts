@@ -1,14 +1,17 @@
 /**
  * Boutique targets import: parse, validate, preview, apply.
  * Strict: required sheet, header names, YYYY-MM, integer target, no duplicates.
- *
- * Business rules: Boutique monthly target is the parent for that boutique/month;
- * employee targets are child allocations. All amounts integer SAR only.
- * We do not force employee total to equal boutique target; mismatch is shown in import preview only.
  */
 
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
+import {
+  computePreviewTotals,
+  previewStatusLabel,
+  resolveTargetWriteAction,
+  type ImportPreviewTotals,
+  type ImportRowAction,
+} from './importPreview';
 import { parseTargetValue } from './parseTargetValue';
 import { readRowsByHeaders } from './spreadsheetRows';
 import {
@@ -34,16 +37,47 @@ export type BoutiqueRowError = {
   debug?: TargetImportRowDebug;
 };
 
+export type BoutiqueImportPreviewRow = {
+  rowNumber: number;
+  month: string;
+  boutiqueId: string | null;
+  boutiqueCode: string;
+  boutiqueName: string;
+  targetAmount: number | null;
+  action: ImportRowAction;
+  existingAmount: number | null;
+  newAmount: number | null;
+  reason: string | null;
+  status: string;
+};
+
 export type BoutiquePreviewResult = {
   totalRows: number;
   validRows: BoutiqueTargetRow[];
   invalidRows: BoutiqueRowError[];
-  duplicateKeys: string[]; // "month|boutiqueId"
-  inserts: { month: string; boutiqueId: string; boutiqueName: string; target: number; source: string; notes: string }[];
-  updates: { month: string; boutiqueId: string; boutiqueName: string; target: number; source: string; notes: string; existingId: string }[];
-  unresolvedBoutiques: string[]; // ScopeId or names that didn't resolve
+  duplicateKeys: string[];
+  inserts: {
+    month: string;
+    boutiqueId: string;
+    boutiqueName: string;
+    target: number;
+    source: string;
+    notes: string;
+  }[];
+  updates: {
+    month: string;
+    boutiqueId: string;
+    boutiqueName: string;
+    target: number;
+    source: string;
+    notes: string;
+    existingId: string;
+  }[];
+  unresolvedBoutiques: string[];
   monthFormatErrors: number;
   targetFormatErrors: number;
+  previewRows: BoutiqueImportPreviewRow[];
+  previewTotals: ImportPreviewTotals;
 };
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -51,6 +85,54 @@ const MONTH_REGEX = /^\d{4}-\d{2}$/;
 function trim(s: unknown): string {
   if (s == null) return '';
   return String(s).trim();
+}
+
+function emptyPreview(overrides: Partial<BoutiquePreviewResult> = {}): BoutiquePreviewResult {
+  return {
+    totalRows: 0,
+    validRows: [],
+    invalidRows: [],
+    duplicateKeys: [],
+    inserts: [],
+    updates: [],
+    unresolvedBoutiques: [],
+    monthFormatErrors: 0,
+    targetFormatErrors: 0,
+    previewRows: [],
+    previewTotals: computePreviewTotals([]),
+    ...overrides,
+  };
+}
+
+function previewRowBase(
+  rowNumber: number,
+  month: string,
+  boutiqueCode: string,
+  boutiqueName: string
+): Omit<BoutiqueImportPreviewRow, 'action' | 'reason' | 'status'> {
+  return {
+    rowNumber,
+    month,
+    boutiqueId: null,
+    boutiqueCode,
+    boutiqueName,
+    targetAmount: null,
+    existingAmount: null,
+    newAmount: null,
+  };
+}
+
+function finalizePreviewRow(
+  row: Omit<BoutiqueImportPreviewRow, 'status'>,
+  action: ImportRowAction,
+  reason: string | null
+): BoutiqueImportPreviewRow {
+  return {
+    ...row,
+    action,
+    reason,
+    status: previewStatusLabel(action, reason),
+  };
 }
 
 /** Parse workbook and validate; returns preview (no DB write). */
@@ -62,47 +144,62 @@ export async function parseAndValidateBoutiques(
   try {
     workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, raw: false });
   } catch {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      finalizePreviewRow(
+        {
+          ...previewRowBase(0, '', '', ''),
+          action: 'ERROR',
+          reason: 'Invalid Excel file',
+        },
+        'ERROR',
+        'Invalid Excel file'
+      ),
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: 'Invalid Excel file' }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const sheet = workbook.Sheets[BOUTIQUE_SHEET];
   if (!sheet) {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      finalizePreviewRow(
+        {
+          ...previewRowBase(0, '', '', ''),
+          action: 'ERROR',
+          reason: `Missing sheet: ${BOUTIQUE_SHEET}`,
+        },
+        'ERROR',
+        `Missing sheet: ${BOUTIQUE_SHEET}`
+      ),
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: `Missing sheet: ${BOUTIQUE_SHEET}` }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const parsedSheet = readRowsByHeaders(sheet, BOUTIQUE_HEADERS);
   if (!parsedSheet.ok) {
-    return {
-      totalRows: 0,
-      validRows: [],
+    const previewRows = [
+      finalizePreviewRow(
+        {
+          ...previewRowBase(0, '', '', ''),
+          action: 'ERROR',
+          reason: parsedSheet.error,
+        },
+        'ERROR',
+        parsedSheet.error
+      ),
+    ];
+    return emptyPreview({
       invalidRows: [{ rowIndex: 0, message: parsedSheet.error }],
-      duplicateKeys: [],
-      inserts: [],
-      updates: [],
-      unresolvedBoutiques: [],
-      monthFormatErrors: 0,
-      targetFormatErrors: 0,
-    };
+      previewRows,
+      previewTotals: computePreviewTotals(previewRows),
+    });
   }
 
   const { rows: dataRows, rowIndexes, detectedHeaders } = parsedSheet;
@@ -113,8 +210,27 @@ export async function parseAndValidateBoutiques(
   });
   const codeToBoutique = new Map(boutiquesByCode.map((b) => [b.code.trim().toUpperCase(), b]));
 
+  const monthsInSheet = Array.from(
+    new Set(
+      dataRows
+        .map((row) => trim(row.Month))
+        .filter((month) => MONTH_REGEX.test(month))
+    )
+  );
+  const existing = await prisma.boutiqueMonthlyTarget.findMany({
+    where: {
+      boutiqueId: { in: allowedBoutiqueIds },
+      month: { in: monthsInSheet },
+    },
+    select: { id: true, boutiqueId: true, month: true, amount: true },
+  });
+  const existingMap = new Map(existing.map((e) => [`${e.month}|${e.boutiqueId}`, e]));
+
   const validRows: BoutiqueTargetRow[] = [];
   const invalidRows: BoutiqueRowError[] = [];
+  const previewRows: BoutiqueImportPreviewRow[] = [];
+  const inserts: BoutiquePreviewResult['inserts'] = [];
+  const updates: BoutiquePreviewResult['updates'] = [];
   const seenKeys = new Set<string>();
   const duplicateKeys: string[] = [];
   let monthFormatErrors = 0;
@@ -131,22 +247,40 @@ export async function parseAndValidateBoutiques(
     const source = trim(r.Source) || 'OFFICIAL';
     const notes = trim(r.Notes);
 
+    const base = previewRowBase(rowIndex, month, scopeId, boutiqueName);
+
     if (!month) {
       invalidRows.push({ rowIndex, message: 'Month is required' });
+      previewRows.push(finalizePreviewRow({ ...base, action: 'ERROR', reason: 'Month is required' }, 'ERROR', 'Month is required'));
       continue;
     }
     if (!MONTH_REGEX.test(month)) {
       monthFormatErrors++;
-      invalidRows.push({ rowIndex, message: 'Month must be YYYY-MM', row: { month, scopeId, boutiqueName, target: 0, source, notes } });
+      invalidRows.push({
+        rowIndex,
+        message: 'Month must be YYYY-MM',
+        row: { month, scopeId, boutiqueName, target: 0, source, notes },
+      });
+      previewRows.push(finalizePreviewRow({ ...base, action: 'ERROR', reason: 'Month must be YYYY-MM' }, 'ERROR', 'Month must be YYYY-MM'));
       continue;
     }
     if (!scopeId) {
       invalidRows.push({ rowIndex, message: 'ScopeId is required' });
+      previewRows.push(finalizePreviewRow({ ...base, action: 'ERROR', reason: 'ScopeId is required' }, 'ERROR', 'ScopeId is required'));
       continue;
     }
 
     const targetResult = parseTargetValue(targetRaw);
-    if (targetResult.kind === 'empty') continue;
+    if (targetResult.kind === 'empty') {
+      previewRows.push(
+        finalizePreviewRow(
+          { ...base, month, boutiqueCode: scopeId, boutiqueName, action: 'SKIPPED', reason: 'Empty target' },
+          'SKIPPED',
+          'Empty target'
+        )
+      );
+      continue;
+    }
     if (targetResult.kind === 'error') {
       targetFormatErrors++;
       const debug = buildTargetImportDebug(detectedHeaders, targetRaw);
@@ -158,6 +292,21 @@ export async function parseAndValidateBoutiques(
       };
       if (process.env.NODE_ENV === 'development') rowError.debug = debug;
       invalidRows.push(rowError);
+      previewRows.push(
+        finalizePreviewRow(
+          {
+            ...base,
+            month,
+            boutiqueCode: scopeId,
+            boutiqueName,
+            targetAmount: null,
+            action: 'ERROR',
+            reason: targetResult.message,
+          },
+          'ERROR',
+          targetResult.message
+        )
+      );
       continue;
     }
 
@@ -165,64 +314,120 @@ export async function parseAndValidateBoutiques(
     if (!boutique) {
       unresolvedScopes.add(scopeId);
       invalidRows.push({ rowIndex, message: `ScopeId not found: ${scopeId}` });
+      previewRows.push(
+        finalizePreviewRow(
+          {
+            ...base,
+            month,
+            boutiqueCode: scopeId,
+            boutiqueName,
+            targetAmount: targetResult.value,
+            newAmount: targetResult.value,
+            action: 'ERROR',
+            reason: `ScopeId not found: ${scopeId}`,
+          },
+          'ERROR',
+          `ScopeId not found: ${scopeId}`
+        )
+      );
       continue;
     }
     if (!allowedBoutiqueIds.includes(boutique.id)) {
       invalidRows.push({ rowIndex, message: 'Boutique not in your scope' });
+      previewRows.push(
+        finalizePreviewRow(
+          {
+            ...base,
+            month,
+            boutiqueId: boutique.id,
+            boutiqueCode: boutique.code ?? scopeId,
+            boutiqueName: boutiqueName || boutique.name,
+            targetAmount: targetResult.value,
+            newAmount: targetResult.value,
+            action: 'ERROR',
+            reason: 'Boutique not in your scope',
+          },
+          'ERROR',
+          'Boutique not in your scope'
+        )
+      );
       continue;
     }
 
     const key = `${month}|${boutique.id}`;
     if (seenKeys.has(key)) {
       duplicateKeys.push(key);
+      invalidRows.push({ rowIndex, message: 'Duplicate month for boutique' });
+      previewRows.push(
+        finalizePreviewRow(
+          {
+            ...base,
+            month,
+            boutiqueId: boutique.id,
+            boutiqueCode: boutique.code ?? scopeId,
+            boutiqueName: boutiqueName || boutique.name,
+            targetAmount: targetResult.value,
+            newAmount: targetResult.value,
+            action: 'ERROR',
+            reason: 'Duplicate month for boutique',
+          },
+          'ERROR',
+          'Duplicate month for boutique'
+        )
+      );
+      continue;
     }
     seenKeys.add(key);
+
+    const existingRow = existingMap.get(key);
+    const writeAction = resolveTargetWriteAction(targetResult.value, existingRow ?? null);
+    const resolvedName = boutiqueName || boutique.name;
 
     validRows.push({
       month,
       scopeId,
-      boutiqueName,
+      boutiqueName: resolvedName,
       target: targetResult.value,
       source,
       notes,
     });
-  }
 
-  // Resolve inserts vs updates
-  const existing = await prisma.boutiqueMonthlyTarget.findMany({
-    where: {
-      boutiqueId: { in: allowedBoutiqueIds },
-      month: { in: Array.from(new Set(validRows.map((r) => r.month))) },
-    },
-    select: { id: true, boutiqueId: true, month: true, amount: true },
-  });
-  const existingMap = new Map(existing.map((e) => [`${e.month}|${e.boutiqueId}`, e]));
-
-  const inserts: BoutiquePreviewResult['inserts'] = [];
-  const updates: BoutiquePreviewResult['updates'] = [];
-
-  for (const row of validRows) {
-    const boutique = codeToBoutique.get(row.scopeId.trim().toUpperCase())!;
-    const key = `${row.month}|${boutique.id}`;
-    const ex = existingMap.get(key);
-    if (ex) {
-      updates.push({
-        month: row.month,
+    const previewEntry = finalizePreviewRow(
+      {
+        rowNumber: rowIndex,
+        month,
         boutiqueId: boutique.id,
-        boutiqueName: row.boutiqueName || boutique.name,
-        target: row.target,
-        source: row.source,
-        notes: row.notes,
-        existingId: ex.id,
-      });
-    } else {
+        boutiqueCode: boutique.code ?? scopeId,
+        boutiqueName: resolvedName,
+        targetAmount: targetResult.value,
+        existingAmount: existingRow?.amount ?? null,
+        newAmount: targetResult.value,
+        action: writeAction.action,
+        reason: writeAction.reason ?? null,
+      },
+      writeAction.action,
+      writeAction.reason ?? null
+    );
+    previewRows.push(previewEntry);
+
+    if (writeAction.action === 'INSERT') {
       inserts.push({
-        month: row.month,
+        month,
         boutiqueId: boutique.id,
-        boutiqueName: row.boutiqueName || boutique.name,
-        target: row.target,
-        source: row.source,
-        notes: row.notes,
+        boutiqueName: resolvedName,
+        target: targetResult.value,
+        source,
+        notes,
+      });
+    } else if (writeAction.action === 'UPDATE' && existingRow) {
+      updates.push({
+        month,
+        boutiqueId: boutique.id,
+        boutiqueName: resolvedName,
+        target: targetResult.value,
+        source,
+        notes,
+        existingId: existingRow.id,
       });
     }
   }
@@ -237,12 +442,14 @@ export async function parseAndValidateBoutiques(
     unresolvedBoutiques: Array.from(unresolvedScopes),
     monthFormatErrors,
     targetFormatErrors,
+    previewRows,
+    previewTotals: computePreviewTotals(previewRows),
   };
 }
 
-/** Apply boutique import (transaction). Call after preview; uses same logic for inserts/updates. */
+/** Apply boutique import (transaction). Uses inserts/updates from dry-run preview. */
 export async function applyBoutiquesImport(
-  preview: BoutiquePreviewResult,
+  preview: Pick<BoutiquePreviewResult, 'inserts' | 'updates'>,
   createdById: string
 ): Promise<{ inserted: number; updated: number }> {
   let inserted = 0;

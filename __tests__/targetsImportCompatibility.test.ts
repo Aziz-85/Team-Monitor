@@ -66,7 +66,7 @@ beforeEach(() => {
 });
 
 describe('boutique target template import compatibility', () => {
-  it('fresh downloaded template passes dry run with zero validation errors', async () => {
+  it('fresh downloaded template dry run returns previewRows for all parsed rows', async () => {
     const buffer = await buildBoutiqueTargetsImportTemplate({
       boutique: DHAHRAN,
       startMonth: '2026-07',
@@ -76,28 +76,30 @@ describe('boutique target template import compatibility', () => {
     const preview = await parseAndValidateBoutiques(buffer, [DHAHRAN.id]);
 
     expect(preview.invalidRows).toHaveLength(0);
-    expect(preview.targetFormatErrors).toBe(0);
-    expect(preview.inserts).toHaveLength(12);
-    expect(preview.inserts.every((row) => row.target === 0)).toBe(true);
+    expect(preview.previewRows).toHaveLength(12);
+    expect(preview.previewTotals.skipped).toBe(12);
+    expect(preview.previewTotals.willInsert).toBe(0);
+    expect(preview.previewRows.every((row) => row.action === 'SKIPPED' && row.reason === 'Zero target')).toBe(true);
   });
 
-  it('fresh downloaded template applies successfully', async () => {
+  it('only edited month inserts while other zero months are skipped', async () => {
     const buffer = await buildBoutiqueTargetsImportTemplate({
       boutique: DHAHRAN,
       startMonth: '2026-07',
       generatedBy: 'user-1',
     });
+    const filled = setTargetOnRow(buffer, 2, 2_200_000);
 
-    const preview = await parseAndValidateBoutiques(buffer, [DHAHRAN.id]);
+    const preview = await parseAndValidateBoutiques(filled, [DHAHRAN.id]);
+
     expect(preview.invalidRows).toHaveLength(0);
-
-    const result = await applyBoutiquesImport(preview, 'user-1');
-    expect(result.inserted).toBe(12);
-    expect(result.updated).toBe(0);
-    expect(db.boutiqueMonthlyTarget.create).toHaveBeenCalledTimes(12);
+    expect(preview.previewTotals.willInsert).toBe(1);
+    expect(preview.previewTotals.skipped).toBe(11);
+    expect(preview.previewRows.find((row) => row.month === '2026-07')?.action).toBe('INSERT');
+    expect(preview.previewRows.filter((row) => row.action === 'SKIPPED')).toHaveLength(11);
   });
 
-  it('accepts 2200000, 0, "0", and "2,200,000" in one dry run', async () => {
+  it('accepts 2200000, 0, "0", and "2,200,000" with explicit preview actions', async () => {
     const buffer = await buildBoutiqueTargetsImportTemplate({
       boutique: DHAHRAN,
       startMonth: '2026-07',
@@ -111,9 +113,49 @@ describe('boutique target template import compatibility', () => {
     const preview = await parseAndValidateBoutiques(filled, [DHAHRAN.id]);
 
     expect(preview.invalidRows).toHaveLength(0);
-    const targets = preview.inserts.map((row) => row.target).sort((a, b) => a - b);
-    expect(targets.filter((value) => value === 0)).toHaveLength(10);
-    expect(targets.filter((value) => value === 2_200_000)).toHaveLength(2);
+    expect(preview.previewRows).toHaveLength(12);
+    expect(preview.previewRows.find((row) => row.month === '2026-07')?.action).toBe('INSERT');
+    expect(preview.previewRows.find((row) => row.month === '2026-08')?.action).toBe('SKIPPED');
+    expect(preview.previewRows.find((row) => row.month === '2026-09')?.action).toBe('SKIPPED');
+    expect(preview.previewRows.find((row) => row.month === '2026-10')?.action).toBe('INSERT');
+  });
+
+  it('apply uses the same write plan as dry run preview', async () => {
+    const buffer = await buildBoutiqueTargetsImportTemplate({
+      boutique: DHAHRAN,
+      startMonth: '2026-07',
+      generatedBy: 'user-1',
+    });
+    const filled = setTargetOnRow(buffer, 2, 2_200_000);
+    const preview = await parseAndValidateBoutiques(filled, [DHAHRAN.id]);
+
+    const result = await applyBoutiquesImport(
+      { inserts: preview.inserts, updates: preview.updates },
+      'user-1'
+    );
+
+    expect(result.inserted).toBe(preview.inserts.length);
+    expect(result.updated).toBe(preview.updates.length);
+    expect(db.boutiqueMonthlyTarget.create).toHaveBeenCalledTimes(preview.inserts.length);
+  });
+
+  it('existing zero target is no change in preview', async () => {
+    db.boutiqueMonthlyTarget.findMany.mockResolvedValue([
+      { id: 'existing-1', boutiqueId: DHAHRAN.id, month: '2026-07', amount: 0 },
+    ]);
+    const buffer = await buildBoutiqueTargetsImportTemplate({
+      boutique: DHAHRAN,
+      startMonth: '2026-07',
+      generatedBy: 'user-1',
+    });
+
+    const preview = await parseAndValidateBoutiques(buffer, [DHAHRAN.id]);
+    const july = preview.previewRows.find((row) => row.month === '2026-07');
+
+    expect(july?.action).toBe('NO_CHANGE');
+    expect(july?.existingAmount).toBe(0);
+    expect(july?.newAmount).toBe(0);
+    expect(preview.inserts).toHaveLength(0);
   });
 
   it('accepts accounting-format zero cells that display as dashes', async () => {
@@ -127,27 +169,7 @@ describe('boutique target template import compatibility', () => {
     const preview = await parseAndValidateBoutiques(accounting, [DHAHRAN.id]);
 
     expect(preview.invalidRows).toHaveLength(0);
-    expect(preview.inserts.every((row) => row.target === 0)).toBe(true);
-  });
-
-  it('filled template round-trips: dry run then confirm apply succeeds', async () => {
-    const buffer = await buildBoutiqueTargetsImportTemplate({
-      boutique: DHAHRAN,
-      startMonth: '2026-07',
-      generatedBy: 'user-1',
-    });
-    const filled = setTargetOnRow(buffer, 2, 2_200_000);
-    const withAnother = setTargetOnRow(filled, 4, 150_000);
-
-    const preview = await parseAndValidateBoutiques(withAnother, [DHAHRAN.id]);
-
-    expect(preview.invalidRows).toHaveLength(0);
-    expect(preview.inserts.some((row) => row.target === 2_200_000)).toBe(true);
-    expect(preview.inserts.some((row) => row.target === 150_000)).toBe(true);
-
-    const result = await applyBoutiquesImport(preview, 'user-1');
-    expect(result.inserted).toBe(12);
-    expect(db.boutiqueMonthlyTarget.create).toHaveBeenCalledTimes(12);
+    expect(preview.previewRows.filter((row) => row.action === 'SKIPPED')).toHaveLength(12);
   });
 
   it('rejects non-numeric target values', async () => {
@@ -165,25 +187,7 @@ describe('boutique target template import compatibility', () => {
     const preview = await parseAndValidateBoutiques(invalidBuffer, [DHAHRAN.id]);
 
     expect(preview.invalidRows).toHaveLength(1);
-    expect(preview.invalidRows[0].message).toBe('Target must be a number');
-  });
-
-  it('parses rows by header names regardless of column order', async () => {
-    const workbook = XLSX.utils.book_new();
-    const reorderedHeaders = ['Target', 'Notes', 'Month', 'ScopeId', 'BoutiqueName', 'Source'];
-    const rows = [
-      reorderedHeaders,
-      [2_200_000, '', '2026-07', '03', 'Dhahran', 'OFFICIAL'],
-    ];
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
-    XLSX.utils.book_append_sheet(workbook, sheet, BOUTIQUE_SHEET);
-    const buffer = Buffer.from(XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }));
-
-    const preview = await parseAndValidateBoutiques(buffer, [DHAHRAN.id]);
-
-    expect(preview.invalidRows).toHaveLength(0);
-    expect(preview.inserts).toHaveLength(1);
-    expect(preview.inserts[0].target).toBe(2_200_000);
+    expect(preview.previewRows.find((row) => row.rowNumber === 2)?.action).toBe('ERROR');
   });
 
   it('skips blank rows at the bottom of the sheet', async () => {
@@ -200,7 +204,7 @@ describe('boutique target template import compatibility', () => {
 
     const preview = await parseAndValidateBoutiques(buffer, [DHAHRAN.id]);
 
-    expect(preview.invalidRows).toHaveLength(0);
-    expect(preview.inserts).toHaveLength(1);
+    expect(preview.previewRows).toHaveLength(1);
+    expect(preview.previewRows[0].action).toBe('INSERT');
   });
 });

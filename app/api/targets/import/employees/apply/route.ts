@@ -1,10 +1,11 @@
 /**
- * POST /api/targets/import/employees/apply — Re-validate file and apply (FormData with "file").
+ * POST /api/targets/import/employees/apply — Apply dry-run plan (FormData: applyPlan JSON).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTargetsImport } from '@/lib/targets/scope';
-import { parseAndValidateEmployees, applyEmployeesImport } from '@/lib/targets/importEmployees';
+import { parseEmployeeApplyPlan } from '@/lib/targets/applyImportPlan';
+import { applyEmployeesImport } from '@/lib/targets/importEmployees';
 
 export async function POST(request: NextRequest) {
   const scopeResult = await requireTargetsImport(request);
@@ -12,21 +13,24 @@ export async function POST(request: NextRequest) {
   const scope = scopeResult.scope!;
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get('file');
-  if (!file || !(file instanceof Blob)) {
-    return NextResponse.json({ error: 'Missing file in FormData' }, { status: 400 });
-  }
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const preview = await parseAndValidateEmployees(buffer, scope.allowedBoutiqueIds);
-
-  if (preview.invalidRows.length > 0) {
-    return NextResponse.json(
-      { error: 'Cannot apply: file has invalid rows', invalidRows: preview.invalidRows },
-      { status: 400 }
-    );
+  const applyPlanRaw = formData?.get('applyPlan');
+  if (!applyPlanRaw || typeof applyPlanRaw !== 'string') {
+    return NextResponse.json({ error: 'Missing applyPlan from dry run preview' }, { status: 400 });
   }
 
-  const result = await applyEmployeesImport(preview);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(applyPlanRaw);
+  } catch {
+    return NextResponse.json({ error: 'Invalid applyPlan JSON' }, { status: 400 });
+  }
+
+  const applyPlan = parseEmployeeApplyPlan(parsed, scope.allowedBoutiqueIds);
+  if (!applyPlan) {
+    return NextResponse.json({ error: 'Invalid or out-of-scope apply plan' }, { status: 400 });
+  }
+
+  const result = await applyEmployeesImport(applyPlan);
   return NextResponse.json({
     ok: true,
     inserted: result.inserted,

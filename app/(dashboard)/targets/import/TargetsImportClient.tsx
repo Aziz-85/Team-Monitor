@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import {
   DataTable,
   DataTableHead,
@@ -12,8 +13,46 @@ import {
   DataTableBody,
   DataTableTd,
 } from '@/components/ui/DataTable';
+import type { ImportRowAction } from '@/lib/targets/importPreview';
 
 type ImportType = 'boutique' | 'employee';
+type PreviewFilter = 'all' | 'insert' | 'update' | 'no_change' | 'skipped' | 'errors';
+
+type PreviewTotals = {
+  totalRows: number;
+  willInsert: number;
+  willUpdate: number;
+  noChange: number;
+  skipped: number;
+  errors: number;
+};
+
+type BoutiquePreviewRow = {
+  rowNumber: number;
+  month: string;
+  boutiqueCode: string;
+  boutiqueName: string;
+  existingAmount: number | null;
+  newAmount: number | null;
+  action: ImportRowAction;
+  reason: string | null;
+  status: string;
+};
+
+type EmployeePreviewRow = {
+  rowNumber: number;
+  month: string;
+  empId: string;
+  employeeName: string;
+  role: string | null;
+  boutiqueName: string;
+  existingAmount: number | null;
+  newAmount: number | null;
+  action: ImportRowAction;
+  reason: string | null;
+  status: string;
+};
+
 type Preview = {
   totalRows: number;
   validRows: unknown[];
@@ -24,13 +63,53 @@ type Preview = {
   unresolvedBoutiques?: string[];
   unresolvedEmployees?: string[];
   sumMismatchWarnings?: { month: string; boutiqueId: string; boutiqueSum: number; employeeSum: number }[];
+  previewRows?: BoutiquePreviewRow[] | EmployeePreviewRow[];
+  previewTotals?: PreviewTotals;
 };
+
+function formatAmount(value: number | null | undefined): string {
+  if (value == null) return '—';
+  return value.toLocaleString('en-US');
+}
+
+function actionBadgeVariant(action: ImportRowAction): 'success' | 'warning' | 'neutral' | 'danger' {
+  if (action === 'INSERT') return 'success';
+  if (action === 'UPDATE') return 'warning';
+  if (action === 'ERROR') return 'danger';
+  return 'neutral';
+}
+
+function actionLabel(action: ImportRowAction, t: (key: string) => string): string {
+  switch (action) {
+    case 'INSERT':
+      return t('targetsManagement.actionInsert');
+    case 'UPDATE':
+      return t('targetsManagement.actionUpdate');
+    case 'NO_CHANGE':
+      return t('targetsManagement.actionNoChange');
+    case 'SKIPPED':
+      return t('targetsManagement.actionSkipped');
+    default:
+      return t('targetsManagement.actionError');
+  }
+}
+
+function matchesFilter(action: ImportRowAction, filter: PreviewFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'insert') return action === 'INSERT';
+  if (filter === 'update') return action === 'UPDATE';
+  if (filter === 'no_change') return action === 'NO_CHANGE';
+  if (filter === 'skipped') return action === 'SKIPPED';
+  return action === 'ERROR';
+}
 
 export function TargetsImportClient() {
   const { t } = useT();
   const [importType, setImportType] = useState<ImportType>('boutique');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [applyPlan, setApplyPlan] = useState<{ inserts: unknown[]; updates: unknown[] } | null>(null);
+  const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('all');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<{ inserted: number; updated: number } | null>(null);
@@ -57,6 +136,11 @@ export function TargetsImportClient() {
     return () => window.removeEventListener('scope-changed', onScopeChanged);
   }, [refreshScopeLabel]);
 
+  const filteredPreviewRows = useMemo(() => {
+    if (!preview?.previewRows) return [];
+    return preview.previewRows.filter((row) => matchesFilter(row.action, previewFilter));
+  }, [preview?.previewRows, previewFilter]);
+
   const downloadTemplate = (type: 'boutique' | 'employee') => {
     if (!/^\d{4}-\d{2}$/.test(templateMonth.trim())) return;
     const base =
@@ -69,7 +153,9 @@ export function TargetsImportClient() {
     if (!file) return;
     setLoading(true);
     setPreview(null);
+    setApplyPlan(null);
     setApplyResult(null);
+    setPreviewFilter('all');
     const formData = new FormData();
     formData.set('file', file);
     const url =
@@ -80,9 +166,13 @@ export function TargetsImportClient() {
       const res = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
       const data = await res.json();
       setPreview(data);
-      setCanImport(data.invalidRows?.length === 0 && (data.inserts?.length > 0 || data.updates?.length > 0));
+      setApplyPlan({ inserts: data.inserts ?? [], updates: data.updates ?? [] });
+      const totals = data.previewTotals as PreviewTotals | undefined;
+      const hasWrites = (totals?.willInsert ?? 0) > 0 || (totals?.willUpdate ?? 0) > 0;
+      setCanImport((totals?.errors ?? data.invalidRows?.length ?? 0) === 0 && hasWrites);
     } catch {
       setPreview(null);
+      setApplyPlan(null);
       setCanImport(false);
     } finally {
       setLoading(false);
@@ -90,10 +180,10 @@ export function TargetsImportClient() {
   };
 
   const runApply = async () => {
-    if (!file || !canImport) return;
+    if (!applyPlan || !canImport) return;
     setApplying(true);
     const formData = new FormData();
-    formData.set('file', file);
+    formData.set('applyPlan', JSON.stringify(applyPlan));
     const url =
       importType === 'boutique'
         ? '/api/targets/import/boutiques/apply'
@@ -104,6 +194,7 @@ export function TargetsImportClient() {
       if (res.ok) {
         setApplyResult({ inserted: data.inserted ?? 0, updated: data.updated ?? 0 });
         setPreview(null);
+        setApplyPlan(null);
         setCanImport(false);
         setFile(null);
       } else {
@@ -115,8 +206,17 @@ export function TargetsImportClient() {
     }
   };
 
+  const filterButtons: { id: PreviewFilter; label: string }[] = [
+    { id: 'all', label: t('targetsManagement.previewFilterAll') },
+    { id: 'insert', label: t('targetsManagement.previewFilterInserts') },
+    { id: 'update', label: t('targetsManagement.previewFilterUpdates') },
+    { id: 'no_change', label: t('targetsManagement.previewFilterNoChange') },
+    { id: 'skipped', label: t('targetsManagement.previewFilterSkipped') },
+    { id: 'errors', label: t('targetsManagement.previewFilterErrors') },
+  ];
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/targets" className="text-sm text-muted hover:text-foreground">
           ← {t('targetsManagement.title')}
@@ -169,6 +269,7 @@ export function TargetsImportClient() {
             onChange={(e) => {
               setImportType(e.target.value as ImportType);
               setPreview(null);
+              setApplyPlan(null);
               setFile(null);
               setCanImport(false);
             }}
@@ -183,6 +284,7 @@ export function TargetsImportClient() {
             onChange={(e) => {
               setFile(e.target.files?.[0] ?? null);
               setPreview(null);
+              setApplyPlan(null);
               setCanImport(false);
             }}
             className="text-sm text-foreground"
@@ -190,11 +292,7 @@ export function TargetsImportClient() {
           <Button variant="primary" onClick={runPreview} disabled={!file || loading}>
             {loading ? t('common.loading') : t('targetsManagement.dryRun')}
           </Button>
-          <Button
-            variant="primary"
-            onClick={runApply}
-            disabled={!canImport || applying}
-          >
+          <Button variant="primary" onClick={runApply} disabled={!canImport || applying}>
             {applying ? t('common.loading') : t('targetsManagement.confirmApply')}
           </Button>
         </div>
@@ -210,26 +308,35 @@ export function TargetsImportClient() {
       )}
 
       {preview && (
-        <div className="space-y-3 rounded-lg border border-border bg-surface p-4 shadow-sm">
+        <div className="space-y-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-foreground">Preview</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded border border-border p-2">
-              <span className="text-muted">Total</span>
-              <p className="font-medium">{preview.totalRows}</p>
+              <span className="text-muted">{t('targetsManagement.previewTotalRows')}</span>
+              <p className="font-medium">{preview.previewTotals?.totalRows ?? preview.totalRows}</p>
             </div>
             <div className="rounded border border-border p-2">
-              <span className="text-muted">{t('targetsManagement.validRows')}</span>
-              <p className="font-medium">{preview.validRows?.length ?? 0}</p>
+              <span className="text-muted">{t('targetsManagement.previewWillInsert')}</span>
+              <p className="font-medium text-green-700">{preview.previewTotals?.willInsert ?? preview.inserts?.length ?? 0}</p>
             </div>
             <div className="rounded border border-border p-2">
-              <span className="text-muted">{t('targetsManagement.invalidRows')}</span>
-              <p className="font-medium">{preview.invalidRows?.length ?? 0}</p>
+              <span className="text-muted">{t('targetsManagement.previewWillUpdate')}</span>
+              <p className="font-medium text-amber-700">{preview.previewTotals?.willUpdate ?? preview.updates?.length ?? 0}</p>
             </div>
             <div className="rounded border border-border p-2">
-              <span className="text-muted">{t('targetsManagement.inserts')} / {t('targetsManagement.updates')}</span>
-              <p className="font-medium">{preview.inserts?.length ?? 0} / {preview.updates?.length ?? 0}</p>
+              <span className="text-muted">{t('targetsManagement.previewNoChange')}</span>
+              <p className="font-medium">{preview.previewTotals?.noChange ?? 0}</p>
+            </div>
+            <div className="rounded border border-border p-2">
+              <span className="text-muted">{t('targetsManagement.previewSkipped')}</span>
+              <p className="font-medium">{preview.previewTotals?.skipped ?? 0}</p>
+            </div>
+            <div className="rounded border border-border p-2">
+              <span className="text-muted">{t('targetsManagement.previewErrors')}</span>
+              <p className="font-medium text-red-700">{preview.previewTotals?.errors ?? preview.invalidRows?.length ?? 0}</p>
             </div>
           </div>
+
           {preview.sumMismatchWarnings && preview.sumMismatchWarnings.length > 0 && (
             <div className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900">
               <p className="font-medium">{t('targetsManagement.sumMismatch')}</p>
@@ -242,22 +349,79 @@ export function TargetsImportClient() {
               </ul>
             </div>
           )}
-          {preview.invalidRows && preview.invalidRows.length > 0 && (
-            <DataTable variant="luxury" zebra>
-              <DataTableHead>
-                <DataTableTh>Row</DataTableTh>
-                <DataTableTh>Message</DataTableTh>
-              </DataTableHead>
-              <DataTableBody>
-                {preview.invalidRows.map((err, i) => (
-                  <tr key={i}>
-                    <DataTableTd>{err.rowIndex}</DataTableTd>
-                    <DataTableTd>{err.message}</DataTableTd>
-                  </tr>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          )}
+
+          <div className="space-y-3 border-t border-border pt-4">
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">{t('targetsManagement.previewDetails')}</h4>
+              <p className="mt-1 text-xs text-muted">{t('targetsManagement.previewApplyHint')}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {filterButtons.map((btn) => (
+                <Button
+                  key={btn.id}
+                  variant={previewFilter === btn.id ? 'primary' : 'secondary'}
+                  onClick={() => setPreviewFilter(btn.id)}
+                  className="!h-8 !px-3 !text-xs"
+                >
+                  {btn.label}
+                </Button>
+              ))}
+            </div>
+            {filteredPreviewRows.length === 0 ? (
+              <p className="text-sm text-muted">{t('targetsManagement.noPreviewRows')}</p>
+            ) : (
+              <DataTable variant="luxury" zebra>
+                <DataTableHead>
+                  <DataTableTh>{t('targetsManagement.previewColRow')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColMonth')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColScopeEmployee')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColCurrentTarget')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColNewTarget')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColAction')}</DataTableTh>
+                  <DataTableTh>{t('targetsManagement.previewColStatus')}</DataTableTh>
+                </DataTableHead>
+                <DataTableBody>
+                  {importType === 'boutique'
+                    ? (filteredPreviewRows as BoutiquePreviewRow[]).map((row) => (
+                        <tr key={`b-${row.rowNumber}`}>
+                          <DataTableTd>{row.rowNumber}</DataTableTd>
+                          <DataTableTd>{row.month}</DataTableTd>
+                          <DataTableTd>
+                            <div className="font-medium">{row.boutiqueName}</div>
+                            <div className="text-xs text-muted">{row.boutiqueCode}</div>
+                          </DataTableTd>
+                          <DataTableTd>{formatAmount(row.existingAmount)}</DataTableTd>
+                          <DataTableTd>{formatAmount(row.newAmount)}</DataTableTd>
+                          <DataTableTd>
+                            <Badge variant={actionBadgeVariant(row.action)}>{actionLabel(row.action, t)}</Badge>
+                          </DataTableTd>
+                          <DataTableTd className="text-xs">{row.status}</DataTableTd>
+                        </tr>
+                      ))
+                    : (filteredPreviewRows as EmployeePreviewRow[]).map((row) => (
+                        <tr key={`e-${row.rowNumber}`}>
+                          <DataTableTd>{row.rowNumber}</DataTableTd>
+                          <DataTableTd>{row.month}</DataTableTd>
+                          <DataTableTd>
+                            <div className="font-medium">{row.employeeName}</div>
+                            <div className="text-xs text-muted">
+                              {row.empId}
+                              {row.role ? ` · ${row.role}` : ''}
+                            </div>
+                            <div className="text-xs text-muted">{row.boutiqueName}</div>
+                          </DataTableTd>
+                          <DataTableTd>{formatAmount(row.existingAmount)}</DataTableTd>
+                          <DataTableTd>{formatAmount(row.newAmount)}</DataTableTd>
+                          <DataTableTd>
+                            <Badge variant={actionBadgeVariant(row.action)}>{actionLabel(row.action, t)}</Badge>
+                          </DataTableTd>
+                          <DataTableTd className="text-xs">{row.status}</DataTableTd>
+                        </tr>
+                      ))}
+                </DataTableBody>
+              </DataTable>
+            )}
+          </div>
         </div>
       )}
     </div>
