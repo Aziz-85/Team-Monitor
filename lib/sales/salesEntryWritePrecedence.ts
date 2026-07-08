@@ -27,6 +27,7 @@ export function getSalesEntrySourceRank(source: string | null | undefined): numb
     case 'HISTORICAL_CORRECTION':
       return 81;
     case 'EXCEL_IMPORT':
+    case 'EXCEL_YEARLY_IMPORT':
     case 'YEARLY_IMPORT':
     case 'HISTORICAL_IMPORT':
       return 80;

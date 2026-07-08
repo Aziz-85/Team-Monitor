@@ -61,8 +61,9 @@ export async function buildYearlySalesTemplateForBoutique(
           ]
         : [
             [
-              '- Upload via Import Center → Sales → Yearly import API (/api/sales/import/yearly) with operational scope.',
+              '- Upload: Sales → Import Sales (/sales/import) — dry run then confirm apply.',
             ],
+            ['- API: POST /api/sales/import/yearly/dry-run then /api/sales/import/yearly/apply'],
           ];
 
   const readmeRows: unknown[][] = [

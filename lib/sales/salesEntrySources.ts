@@ -21,6 +21,8 @@ export const SALES_ENTRY_SOURCE = {
   /** Admin-only secure matrix correction UI (`/admin/sales/monthly-matrix-secure-edit`). */
   MATRIX_MANUAL_EDIT: 'MATRIX_MANUAL_EDIT',
   EXCEL_IMPORT: 'EXCEL_IMPORT',
+  /** Yearly wide-calendar employee sales import (/api/sales/import/yearly/*). */
+  EXCEL_YEARLY_IMPORT: 'EXCEL_YEARLY_IMPORT',
   MANUAL: 'MANUAL',
   API: 'API',
   /** Admin historical backfill: canonical row insert only via dedicated import route (no silent overwrite). */

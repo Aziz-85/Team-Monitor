@@ -133,7 +133,8 @@ const GROUP_SALES: NavGroup = {
   items: [
     item('/sales/my', 'nav.salesMy', ['EMPLOYEE'], 'CORE'),
     item('/sales/returns', 'nav.salesReturns', ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
-    item('/admin/import/sales', 'nav.salesImport', ['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/sales/import', 'nav.salesImport', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
+    item('/admin/import/sales', 'nav.salesMatrixImport', ['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/sales/leadership-impact', 'nav.sales.leadershipImpact', ['MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
     item('/admin/sales-edit-requests', 'nav.salesEditRequests', ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'], 'CORE'),
     item('/me/target', 'nav.myTarget', ['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'], 'CORE'),
