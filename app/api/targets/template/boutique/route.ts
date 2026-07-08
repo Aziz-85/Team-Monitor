@@ -1,6 +1,5 @@
 /**
- * GET /api/targets/template/boutiques?month=YYYY-MM
- * GET /api/targets/template/boutique?month=YYYY-MM (alias)
+ * GET /api/targets/template/boutique?month=YYYY-MM — alias for boutiques route.
  */
 
 import { NextRequest } from 'next/server';

@@ -1,6 +1,5 @@
 /**
- * GET /api/targets/template/employees?month=YYYY-MM
- * GET /api/targets/template/employee?month=YYYY-MM (alias)
+ * GET /api/targets/template/employee?month=YYYY-MM — alias for employees route.
  */
 
 import { NextRequest } from 'next/server';

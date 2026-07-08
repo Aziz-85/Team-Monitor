@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -35,9 +35,33 @@ export function TargetsImportClient() {
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<{ inserted: number; updated: number } | null>(null);
   const [canImport, setCanImport] = useState(false);
+  const [templateMonth, setTemplateMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [scopeLabel, setScopeLabel] = useState<string | null>(null);
+
+  const refreshScopeLabel = useCallback(() => {
+    fetch('/api/me/scope', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { resolved?: { label?: string } } | null) => {
+        setScopeLabel(data?.resolved?.label ?? null);
+      })
+      .catch(() => setScopeLabel(null));
+  }, []);
+
+  useEffect(() => {
+    refreshScopeLabel();
+    const onScopeChanged = () => refreshScopeLabel();
+    window.addEventListener('scope-changed', onScopeChanged);
+    return () => window.removeEventListener('scope-changed', onScopeChanged);
+  }, [refreshScopeLabel]);
 
   const downloadTemplate = (type: 'boutique' | 'employee') => {
-    const url = type === 'boutique' ? '/api/targets/template/boutiques' : '/api/targets/template/employees';
+    if (!/^\d{4}-\d{2}$/.test(templateMonth.trim())) return;
+    const base =
+      type === 'boutique' ? '/api/targets/template/boutique' : '/api/targets/template/employee';
+    const url = `${base}?month=${encodeURIComponent(templateMonth.trim())}`;
     window.open(url, '_blank');
   };
 
@@ -105,7 +129,22 @@ export function TargetsImportClient() {
 
       <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
         <h3 className="mb-2 text-sm font-semibold text-foreground">{t('targetsManagement.templateDownload')}</h3>
-        <div className="flex gap-2">
+        {scopeLabel ? (
+          <p className="mb-3 text-xs text-muted">
+            {t('targetsManagement.currentBoutiqueScope')}: <span className="font-medium text-foreground">{scopeLabel}</span>
+          </p>
+        ) : null}
+        <p className="mb-3 text-xs text-muted">{t('targetsManagement.templateScopeHelper')}</p>
+        <label className="mb-3 block text-xs text-muted">
+          {t('targetsManagement.templateMonth')}
+          <input
+            type="month"
+            value={templateMonth}
+            onChange={(e) => setTemplateMonth(e.target.value)}
+            className="mt-1 block h-10 w-full max-w-xs rounded-md border border-border bg-surface px-3 text-sm text-foreground"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => downloadTemplate('boutique')}>
             {t('targetsManagement.downloadBoutiqueTemplate')}
           </Button>
