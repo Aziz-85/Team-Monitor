@@ -4,7 +4,7 @@
 
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
-import { filterOperationalEmployees } from '@/lib/systemUsers';
+import { loadImportTemplateEmployees } from '@/lib/import-center/boutiqueTemplateScope';
 import { getMonthRangeDayKeys } from '@/lib/time';
 
 export const MATRIX_SHEET_NAME = 'DATA_MATRIX';
@@ -23,12 +23,7 @@ export async function buildMatrixMonthTemplateForBoutique(
   if (!boutique) throw new Error('Boutique not found');
 
   const scopeCode = (boutique.code ?? '').trim();
-  const employeesRaw = await prisma.employee.findMany({
-    where: { boutiqueId, active: true },
-    select: { empId: true, name: true, isSystemOnly: true },
-    orderBy: [{ name: 'asc' }, { empId: 'asc' }],
-  });
-  const employees = filterOperationalEmployees(employeesRaw);
+  const employees = await loadImportTemplateEmployees(boutiqueId);
 
   const headerRow: (string | number)[] = ['ScopeId', 'Date', 'Day'];
   for (const e of employees) {

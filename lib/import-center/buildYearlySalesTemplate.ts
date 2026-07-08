@@ -4,8 +4,8 @@
  */
 
 import * as XLSX from 'xlsx';
-import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { prisma } from '@/lib/db';
+import { loadImportTemplateEmployees } from '@/lib/import-center/boutiqueTemplateScope';
 
 const README = 'README';
 
@@ -25,12 +25,7 @@ export async function buildYearlySalesTemplateForBoutique(
   });
   if (!boutique) throw new Error('Boutique not found');
 
-  const employeesRaw = await prisma.employee.findMany({
-    where: { boutiqueId, active: true },
-    select: { empId: true, name: true, isSystemOnly: true },
-    orderBy: [{ empId: 'asc' }],
-  });
-  const employees = filterOperationalEmployees(employeesRaw);
+  const employees = await loadImportTemplateEmployees(boutiqueId);
 
   const sheetName = `Import_${year}`;
   const headers: string[] = ['Date', ...employees.map((e) => `emp_${(e.empId ?? '').trim()}`)];

@@ -5,27 +5,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, handleAdminError } from '@/lib/admin/requireAdmin';
 import { buildHistoricalSnapshotTemplateForBoutique } from '@/lib/import-center/buildHistoricalSnapshotTemplate';
+import { salesImportTemplateFilename } from '@/lib/import-center/boutiqueTemplateScope';
+import { requireAdminImportTemplateBoutique } from '@/lib/import-center/resolveAdminImportTemplateBoutique';
 
 export async function GET(request: NextRequest) {
+  let user;
   try {
-    await requireAdmin();
+    user = await requireAdmin();
   } catch (e) {
     return handleAdminError(e);
   }
 
-  const boutiqueId = request.nextUrl.searchParams.get('boutiqueId')?.trim() ?? '';
   const month = request.nextUrl.searchParams.get('month')?.trim() ?? '';
-  if (!boutiqueId || !/^\d{4}-\d{2}$/.test(month)) {
-    return NextResponse.json({ error: 'boutiqueId and month (YYYY-MM) required' }, { status: 400 });
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return NextResponse.json({ error: 'month (YYYY-MM) required' }, { status: 400 });
   }
 
+  const paramBoutiqueId = request.nextUrl.searchParams.get('boutiqueId');
+  const scopeResult = await requireAdminImportTemplateBoutique(user, paramBoutiqueId);
+  if ('res' in scopeResult) return scopeResult.res;
+  const { boutique } = scopeResult;
+
   try {
-    const buf = await buildHistoricalSnapshotTemplateForBoutique(boutiqueId, month);
+    const buf = await buildHistoricalSnapshotTemplateForBoutique(boutique.id, month);
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="HistoricalSnapshot_${month}_${boutiqueId.slice(0, 8)}.xlsx"`,
+        'Content-Disposition': `attachment; filename="${salesImportTemplateFilename('historical-snapshot', boutique, month)}"`,
       },
     });
   } catch (e) {

@@ -7,9 +7,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { requireRole } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
-import { filterOperationalEmployees } from '@/lib/systemUsers';
+import {
+  loadImportTemplateEmployees,
+  resolveOperationalImportBoutique,
+  salesImportTemplateFilename,
+} from '@/lib/import-center/boutiqueTemplateScope';
 import { getMonthRangeDayKeys } from '@/lib/time';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'ASSISTANT_MANAGER', 'AREA_MANAGER'] as const;
@@ -34,19 +37,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'month required (YYYY-MM)' }, { status: 400 });
   }
 
-  const boutiqueRow = await prisma.boutique.findUnique({
-    where: { id: boutiqueId },
-    select: { code: true },
-  });
+  const boutiqueRow = await resolveOperationalImportBoutique(boutiqueId);
+  if (!boutiqueRow) {
+    return NextResponse.json({ error: 'Boutique not found' }, { status: 404 });
+  }
   /** Matrix import validates ScopeId against boutique code, not DB id. */
-  const scopeCode = (boutiqueRow?.code ?? '').trim();
+  const scopeCode = (boutiqueRow.code ?? '').trim();
 
-  const employeesRaw = await prisma.employee.findMany({
-    where: { boutiqueId, active: true },
-    select: { empId: true, name: true, isSystemOnly: true },
-    orderBy: [{ name: 'asc' }, { empId: 'asc' }],
-  });
-  const employees = filterOperationalEmployees(employeesRaw);
+  const employees = await loadImportTemplateEmployees(boutiqueId);
 
   const headerRow: (string | number)[] = ['ScopeId', 'Date', 'Day'];
   for (const e of employees) {
@@ -76,7 +74,7 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="Matrix_Template_${monthParam}.xlsx"`,
+      'Content-Disposition': `attachment; filename="${salesImportTemplateFilename('matrix', boutiqueRow, monthParam)}"`,
     },
   });
 }

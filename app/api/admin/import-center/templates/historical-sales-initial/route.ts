@@ -6,33 +6,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, handleAdminError } from '@/lib/admin/requireAdmin';
 import { buildYearlySalesTemplateForBoutique } from '@/lib/import-center/buildYearlySalesTemplate';
+import { salesImportTemplateFilename } from '@/lib/import-center/boutiqueTemplateScope';
+import { requireAdminImportTemplateBoutique } from '@/lib/import-center/resolveAdminImportTemplateBoutique';
 
 export async function GET(request: NextRequest) {
+  let user;
   try {
-    await requireAdmin();
+    user = await requireAdmin();
   } catch (e) {
     return handleAdminError(e);
   }
 
-  const boutiqueId = request.nextUrl.searchParams.get('boutiqueId')?.trim() ?? '';
   const year =
     request.nextUrl.searchParams.get('year')?.trim() ?? String(new Date().getFullYear());
-  if (!boutiqueId) {
-    return NextResponse.json({ error: 'boutiqueId required' }, { status: 400 });
-  }
   if (!/^\d{4}$/.test(year)) {
     return NextResponse.json({ error: 'year must be YYYY' }, { status: 400 });
   }
 
+  const paramBoutiqueId = request.nextUrl.searchParams.get('boutiqueId');
+  const scopeResult = await requireAdminImportTemplateBoutique(user, paramBoutiqueId);
+  if ('res' in scopeResult) return scopeResult.res;
+  const { boutique } = scopeResult;
+
   try {
-    const buf = await buildYearlySalesTemplateForBoutique(boutiqueId, year, {
+    const buf = await buildYearlySalesTemplateForBoutique(boutique.id, year, {
       mode: 'historical_initial',
     });
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="HistoricalInitial_${boutiqueId.slice(0, 8)}_${year}.xlsx"`,
+        'Content-Disposition': `attachment; filename="${salesImportTemplateFilename('historical-initial', boutique, year)}"`,
       },
     });
   } catch (e) {

@@ -5,37 +5,33 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, handleAdminError } from '@/lib/admin/requireAdmin';
-import { prisma } from '@/lib/db';
 import { buildSimpleSalesImportTemplate } from '@/lib/import-center/buildSimpleSalesTemplate';
+import { salesImportTemplateFilename } from '@/lib/import-center/boutiqueTemplateScope';
+import { requireAdminImportTemplateBoutique } from '@/lib/import-center/resolveAdminImportTemplateBoutique';
 
 export async function GET(request: NextRequest) {
+  let user;
   try {
-    await requireAdmin();
+    user = await requireAdmin();
   } catch (e) {
     return handleAdminError(e);
   }
 
-  const boutiqueId = request.nextUrl.searchParams.get('boutiqueId')?.trim() ?? '';
-  if (!boutiqueId) {
-    return NextResponse.json({ error: 'boutiqueId required' }, { status: 400 });
-  }
-
-  const b = await prisma.boutique.findUnique({
-    where: { id: boutiqueId },
-    select: { id: true, code: true, name: true },
-  });
-  if (!b) return NextResponse.json({ error: 'Boutique not found' }, { status: 404 });
+  const paramBoutiqueId = request.nextUrl.searchParams.get('boutiqueId');
+  const scopeResult = await requireAdminImportTemplateBoutique(user, paramBoutiqueId);
+  if ('res' in scopeResult) return scopeResult.res;
+  const { boutique } = scopeResult;
 
   const buf = buildSimpleSalesImportTemplate({
-    boutiqueId: b.id,
-    boutiqueCode: b.code,
-    boutiqueName: b.name,
+    boutiqueId: boutique.id,
+    boutiqueCode: boutique.code,
+    boutiqueName: boutique.name,
   });
   return new NextResponse(new Uint8Array(buf), {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="SimpleSales_${boutiqueId.slice(0, 8)}.xlsx"`,
+      'Content-Disposition': `attachment; filename="${salesImportTemplateFilename('simple', boutique)}"`,
     },
   });
 }

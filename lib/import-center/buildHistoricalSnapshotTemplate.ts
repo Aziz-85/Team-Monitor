@@ -4,8 +4,8 @@
  */
 
 import * as XLSX from 'xlsx';
-import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { prisma } from '@/lib/db';
+import { loadImportTemplateEmployees } from '@/lib/import-center/boutiqueTemplateScope';
 
 const DATA_SHEET = 'HistoricalData';
 const REF_SHEET = 'Employees_Ref';
@@ -26,14 +26,15 @@ export async function buildHistoricalSnapshotTemplateForBoutique(
   });
   if (!boutique) throw new Error('Boutique not found');
 
-  const employeesRaw = await prisma.employee.findMany({
-    where: { boutiqueId, active: true },
-    select: { empId: true, name: true, isSystemOnly: true },
-    orderBy: [{ empId: 'asc' }],
-  });
-  const employees = filterOperationalEmployees(employeesRaw);
+  const employees = await loadImportTemplateEmployees(boutiqueId);
 
-  const dataRows: unknown[][] = [DATA_HEADERS, ['YYYY-MM-DD', 'EMP001', 'Example', 1000, 0, 0, 0]];
+  const exampleEmp = employees[0];
+  const dataRows: unknown[][] = [
+    DATA_HEADERS,
+    exampleEmp
+      ? [`${month}-01`, exampleEmp.empId, exampleEmp.name, 1000, 0, 0, 0]
+      : ['YYYY-MM-DD', 'EMP_ID', 'Employee Name', 1000, 0, 0, 0],
+  ];
 
   const refRows: unknown[][] = [
     ['EmpId', 'Name', 'Note'],

@@ -29,15 +29,34 @@ export function ImportCenterClient() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/admin/boutiques?active=true');
-        if (!res.ok) {
+        const [boutiquesRes, scopeRes] = await Promise.all([
+          fetch('/api/admin/boutiques?active=true'),
+          fetch('/api/me/scope', { cache: 'no-store' }),
+        ]);
+        if (!boutiquesRes.ok) {
           setLoadErr(t('admin.importCenter.boutiquesLoadFailed'));
           return;
         }
-        const data = (await res.json()) as BoutiqueOpt[];
+        const data = (await boutiquesRes.json()) as BoutiqueOpt[];
+        const scopeData = scopeRes.ok
+          ? ((await scopeRes.json()) as {
+              resolved?: { boutiqueId?: string; boutiqueIds?: string[] };
+            })
+          : null;
         if (!cancelled) {
           setBoutiques(data);
-          setBoutiqueId((prev) => prev || data[0]?.id || '');
+          const scopeBoutiqueId =
+            scopeData?.resolved?.boutiqueIds?.length === 1
+              ? scopeData.resolved.boutiqueIds[0]
+              : scopeData?.resolved?.boutiqueId;
+          const defaultId =
+            (scopeBoutiqueId && data.some((b) => b.id === scopeBoutiqueId) ? scopeBoutiqueId : null) ??
+            data[0]?.id ??
+            '';
+          setBoutiqueId((prev) => {
+            if (prev && data.some((b) => b.id === prev)) return prev;
+            return defaultId;
+          });
         }
       } catch {
         if (!cancelled) setLoadErr(t('admin.importCenter.boutiquesLoadFailed'));
@@ -47,6 +66,23 @@ export function ImportCenterClient() {
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    const onScopeChanged = () => {
+      fetch('/api/me/scope', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((scopeData: { resolved?: { boutiqueId?: string; boutiqueIds?: string[] } } | null) => {
+          const scopeBoutiqueId =
+            scopeData?.resolved?.boutiqueIds?.length === 1
+              ? scopeData.resolved.boutiqueIds[0]
+              : scopeData?.resolved?.boutiqueId;
+          if (scopeBoutiqueId) setBoutiqueId(scopeBoutiqueId);
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('scope-changed', onScopeChanged);
+    return () => window.removeEventListener('scope-changed', onScopeChanged);
+  }, []);
 
   const focus = searchParams.get('focus') ?? '';
 
