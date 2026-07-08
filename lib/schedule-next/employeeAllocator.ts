@@ -8,8 +8,13 @@ import { segmentsAmPmContribution } from '@/lib/schedule/segmentCoverage';
 import { getRamadanRange } from '@/lib/time/ramadan';
 import type { GridRow } from '@/lib/services/scheduleGrid';
 import { weekDateStringsFromStart } from '@/lib/services/swapWeeklyOffForWeek';
-import { patternForDay } from './patternLibrary';
+import {
+  bestAchievableSlots,
+  patternForDay,
+  slotsForAllocationStage,
+} from './patternLibrary';
 import type {
+  AllocationStage,
   DaySlotAssignment,
   ExternalSupportDraft,
   ScheduleNextDayConfig,
@@ -19,12 +24,24 @@ import type {
   WeeklyOffMove,
 } from './types';
 import {
+  ALLOCATION_STAGE_ORDER,
   BRIDGE_COMPENSATION_HOURS,
   BRIDGE_SEGMENTS_NORMAL,
   BRIDGE_WORKING_HOURS,
   DAY_NAMES,
 } from './types';
 import type { WeekClassification } from './types';
+
+// Re-export stage order for tests
+export { ALLOCATION_STAGE_ORDER } from './types';
+
+const STAGE_LABELS: Record<AllocationStage, string> = {
+  NORMAL: 'Normal allocation',
+  BRIDGE: 'Bridge allocation',
+  WEEKLY_OFF_MOVE: 'Weekly-off move',
+  WEEKLY_OFF_DEFERRAL: 'Weekly-off deferral',
+  BEST_ACHIEVABLE: 'Best achievable',
+};
 
 export type AllocatorResult = {
   dayAssignments: Map<string, DaySlotAssignment[]>;
@@ -40,6 +57,7 @@ export type AllocatorResult = {
     }
   >;
   lastBridgeByEmp: Map<string, string>;
+  allocationLog: string[];
 };
 
 export type AllocateOptions = {
@@ -121,16 +139,33 @@ function effectiveOffDow(
   return emp.weeklyOffDay;
 }
 
+function isOnLeave(emp: ScheduleNextEmployee, date: string): boolean {
+  return emp.onLeaveAllWeek || emp.unavailableDates.has(date);
+}
+
 function isAvailable(
   emp: ScheduleNextEmployee,
   date: string,
   dayOfWeek: number,
-  moves: WeeklyOffMove[]
+  moves: WeeklyOffMove[],
+  ignoreWeeklyOff = false
 ): boolean {
-  if (emp.onLeaveAllWeek || emp.unavailableDates.has(date)) return false;
-  const off = effectiveOffDow(emp, moves);
-  if (off !== 'NONE' && off === dayOfWeek) return false;
+  if (isOnLeave(emp, date)) return false;
+  if (!ignoreWeeklyOff) {
+    const off = effectiveOffDow(emp, moves);
+    if (off !== 'NONE' && off === dayOfWeek) return false;
+  }
   return true;
+}
+
+function availablePool(
+  active: ScheduleNextEmployee[],
+  date: string,
+  dayOfWeek: number,
+  moves: WeeklyOffMove[],
+  ignoreWeeklyOff = false
+): ScheduleNextEmployee[] {
+  return active.filter((e) => isAvailable(e, date, dayOfWeek, moves, ignoreWeeklyOff));
 }
 
 function rotate<T>(arr: T[], offset: number): T[] {
@@ -147,7 +182,7 @@ function tryWeeklyOffMove(
   needed: number
 ): WeeklyOffMove | null {
   const active = input.employees.filter((e) => !e.onLeaveAllWeek);
-  const available = active.filter((e) => isAvailable(e, day.date, day.dayOfWeek, moves));
+  const available = availablePool(active, day.date, day.dayOfWeek, moves);
   if (available.length >= needed) return null;
 
   const blocked = active.filter(
@@ -198,6 +233,275 @@ function pickBridgeEmployee(
     return emp;
   }
   return sorted[0] ?? null;
+}
+
+function fillPatternSlots(
+  day: ScheduleNextDayConfig,
+  slotKinds: SlotKind[],
+  pool: ScheduleNextEmployee[],
+  periods: OperatingPeriod[],
+  isFridayPmOnly: boolean,
+  weeklyOffMoves: WeeklyOffMove[],
+  lastBridgeByEmp: Map<string, string>,
+  prevDate: string | null,
+  employeeStats: AllocatorResult['employeeStats'],
+  seed: number,
+  dayIndex: number,
+  options: { markWeeklyOffDeferral?: boolean } = {}
+): DaySlotAssignment[] {
+  if (!slotKinds.length || !pool.length) return [];
+
+  const assignments: DaySlotAssignment[] = [];
+  const used = new Set<string>();
+  const rotated = rotate(
+    [...pool].sort((a, b) => a.empId.localeCompare(b.empId)),
+    seed + dayIndex
+  );
+
+  for (const slotKind of slotKinds) {
+    let emp: ScheduleNextEmployee | undefined;
+    if (slotKind === 'BRIDGE') {
+      emp = pickBridgeEmployee(
+        rotated.filter((e) => !used.has(e.empId)),
+        lastBridgeByEmp,
+        prevDate,
+        employeeStats
+      ) ?? undefined;
+    } else {
+      emp = rotated.find((e) => !used.has(e.empId));
+    }
+    if (!emp) continue;
+
+    used.add(emp.empId);
+    const segments = segmentsForSlot(slotKind, periods, day.isRamadan, isFridayPmOnly);
+    const moved =
+      weeklyOffMoves.some((m) => m.empId === emp!.empId && m.fromDate === day.date) ||
+      weeklyOffMoves.some((m) => m.empId === emp!.empId);
+    const onWeeklyOff =
+      emp.weeklyOffDay !== 'NONE' &&
+      effectiveOffDow(emp, weeklyOffMoves) === day.dayOfWeek;
+    const compensationRequired = Boolean(options.markWeeklyOffDeferral && onWeeklyOff && !moved);
+
+    assignments.push({
+      empId: emp.empId,
+      name: emp.name,
+      kind: personKind(slotKind),
+      segments,
+      movedWeeklyOff: moved && effectiveOffDow(emp, weeklyOffMoves) !== emp.weeklyOffDay,
+      compensationRequired,
+      slotKind,
+    });
+
+    const st = employeeStats.get(emp.empId);
+    if (st) {
+      const hrs = slotHours(slotKind, day.isRamadan);
+      st.totalHours += hrs;
+      if (slotKind === 'BRIDGE') {
+        st.bridgeCount++;
+        st.compensationHours += BRIDGE_COMPENSATION_HOURS;
+        lastBridgeByEmp.set(emp.empId, day.date);
+      }
+      if (compensationRequired) {
+        st.compensationHours += BRIDGE_COMPENSATION_HOURS;
+      }
+    }
+  }
+
+  return assignments;
+}
+
+function cloneEmployeeStats(stats: AllocatorResult['employeeStats']): AllocatorResult['employeeStats'] {
+  return new Map(Array.from(stats.entries()).map(([k, v]) => [k, { ...v }]));
+}
+
+function restoreEmployeeStats(
+  target: AllocatorResult['employeeStats'],
+  snapshot: AllocatorResult['employeeStats']
+): void {
+  for (const [k, v] of Array.from(snapshot.entries())) {
+    target.set(k, { ...v });
+  }
+}
+
+function cloneBridgeMap(map: Map<string, string>): Map<string, string> {
+  return new Map(map);
+}
+
+function restoreBridgeMap(target: Map<string, string>, snapshot: Map<string, string>): void {
+  target.clear();
+  for (const [k, v] of Array.from(snapshot.entries())) target.set(k, v);
+}
+
+function logStageFailure(
+  allocationLog: string[],
+  date: string,
+  stage: AllocationStage,
+  availableCount: number,
+  slotCount: number
+): void {
+  const msg = `[schedule-next] ${date}: ${STAGE_LABELS[stage]} failed (available=${availableCount}, slots=${slotCount})`;
+  allocationLog.push(msg);
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn(msg);
+  }
+}
+
+function assertNonEmptyDay(
+  day: ScheduleNextDayConfig,
+  availableCount: number,
+  assignments: DaySlotAssignment[],
+  failedStages: AllocationStage[],
+  allocationLog: string[]
+): void {
+  if (availableCount === 0 || assignments.length > 0) return;
+
+  const reason = `date=${day.date}, availableEmployees=${availableCount}, assignedEmployees=0, failedStages=${failedStages.map((s) => STAGE_LABELS[s]).join(' → ')}`;
+  allocationLog.push(`[schedule-next] EMPTY_DAY_BLOCKED: ${reason}`);
+
+  if (process.env.NODE_ENV === 'development') {
+    throw new Error(`Schedule Next planner error: empty day with available staff. ${reason}`);
+  }
+
+  console.error(`[schedule-next] empty day blocked in production; ${reason}`);
+}
+
+type DayAllocationOutcome = {
+  assignments: DaySlotAssignment[];
+  moves: WeeklyOffMove[];
+  stageUsed: AllocationStage | null;
+  failedStages: AllocationStage[];
+};
+
+function allocateSingleDay(
+  input: ScheduleNextInput,
+  day: ScheduleNextDayConfig,
+  dayIndex: number,
+  classification: WeekClassification,
+  weeklyOffMoves: WeeklyOffMove[],
+  periods: OperatingPeriod[],
+  isFridayPmOnly: boolean,
+  active: ScheduleNextEmployee[],
+  lastBridgeByEmp: Map<string, string>,
+  prevDate: string | null,
+  employeeStats: AllocatorResult['employeeStats'],
+  seed: number,
+  allocationLog: string[]
+): DayAllocationOutcome {
+  const leaveOnlyPool = availablePool(active, day.date, day.dayOfWeek, weeklyOffMoves, true);
+  const availableCount = leaveOnlyPool.length;
+
+  if (availableCount === 0) {
+    return { assignments: [], moves: [], stageUsed: null, failedStages: [] };
+  }
+
+  const failedStages: AllocationStage[] = [];
+  let dayMoves: WeeklyOffMove[] = [...weeklyOffMoves];
+  let result: DaySlotAssignment[] = [];
+  let stageUsed: AllocationStage | null = null;
+  let movesAddedThisDay: WeeklyOffMove[] = [];
+
+  for (const stage of ALLOCATION_STAGE_ORDER) {
+    const statsSnapshot = cloneEmployeeStats(employeeStats);
+    const bridgeSnapshot = cloneBridgeMap(lastBridgeByEmp);
+    const movesForStage = [...dayMoves];
+    movesAddedThisDay = [];
+
+    if (stage === 'WEEKLY_OFF_MOVE') {
+      const pattern = patternForDay(
+        day,
+        availablePool(active, day.date, day.dayOfWeek, movesForStage).length,
+        classification
+      );
+      const needed = pattern.slots.length || bestAchievableSlots(day, availableCount, classification).length;
+      const move = tryWeeklyOffMove(input, day, movesForStage, needed);
+      if (move) {
+        movesAddedThisDay = [move];
+        dayMoves = [...movesForStage, move];
+      }
+    }
+
+    const ignoreWeeklyOff = stage === 'WEEKLY_OFF_DEFERRAL' || stage === 'BEST_ACHIEVABLE';
+    const pool = availablePool(active, day.date, day.dayOfWeek, dayMoves, ignoreWeeklyOff);
+    const poolCount = pool.length;
+    const slots = slotsForAllocationStage(stage, day, poolCount, classification);
+
+    result = fillPatternSlots(
+      day,
+      slots,
+      pool,
+      periods,
+      isFridayPmOnly,
+      dayMoves,
+      lastBridgeByEmp,
+      prevDate,
+      employeeStats,
+      seed,
+      dayIndex,
+      { markWeeklyOffDeferral: stage === 'WEEKLY_OFF_DEFERRAL' }
+    );
+
+    if (result.length > 0) {
+      stageUsed = stage;
+      for (const move of movesAddedThisDay) {
+        const st = employeeStats.get(move.empId);
+        if (st) st.movedWeeklyOff = true;
+      }
+      if (failedStages.length) {
+        const recovery = `[schedule-next] ${day.date}: recovered via ${STAGE_LABELS[stage]} after failing ${failedStages.map((s) => STAGE_LABELS[s]).join(', ')}`;
+        allocationLog.push(recovery);
+        if (process.env.NODE_ENV !== 'test') {
+          console.info(recovery);
+        }
+      }
+      break;
+    }
+
+    restoreEmployeeStats(employeeStats, statsSnapshot);
+    restoreBridgeMap(lastBridgeByEmp, bridgeSnapshot);
+    if (movesAddedThisDay.length) {
+      dayMoves = movesForStage;
+    }
+
+    failedStages.push(stage);
+    logStageFailure(allocationLog, day.date, stage, poolCount, slots.length);
+  }
+
+  if (result.length === 0) {
+    const statsSnapshot = cloneEmployeeStats(employeeStats);
+    const bridgeSnapshot = cloneBridgeMap(lastBridgeByEmp);
+    const emergencyPool = availablePool(active, day.date, day.dayOfWeek, dayMoves, true);
+    const emergencySlots = bestAchievableSlots(day, emergencyPool.length, classification);
+    result = fillPatternSlots(
+      day,
+      emergencySlots,
+      emergencyPool,
+      periods,
+      isFridayPmOnly,
+      dayMoves,
+      lastBridgeByEmp,
+      prevDate,
+      employeeStats,
+      seed,
+      dayIndex,
+      { markWeeklyOffDeferral: true }
+    );
+    if (result.length > 0) {
+      stageUsed = 'BEST_ACHIEVABLE';
+      allocationLog.push(`[schedule-next] ${day.date}: emergency best-achievable fallback applied`);
+    } else {
+      restoreEmployeeStats(employeeStats, statsSnapshot);
+      restoreBridgeMap(lastBridgeByEmp, bridgeSnapshot);
+    }
+  }
+
+  assertNonEmptyDay(day, availableCount, result, failedStages, allocationLog);
+
+  return {
+    assignments: result,
+    moves: dayMoves.slice(weeklyOffMoves.length),
+    stageUsed,
+    failedStages,
+  };
 }
 
 export function buildScheduleNextInputFromGrid(
@@ -258,6 +562,7 @@ export function allocateEmployeesToPattern(
   const employeeStats = initStats(input);
   const dayAssignments = new Map<string, DaySlotAssignment[]>();
   const lastBridgeByEmp = new Map<string, string>();
+  const allocationLog: string[] = [];
 
   const ramadanRange = getRamadanRange();
   const opByDate = new Map(
@@ -275,74 +580,31 @@ export function allocateEmployeesToPattern(
     const periods = op?.operatingPeriods ?? [];
     const isFridayPmOnly = day.isFriday && !day.isRamadan;
 
-    let available = active.filter((e) => isAvailable(e, day.date, day.dayOfWeek, weeklyOffMoves));
-    const pattern = patternForDay(day, available.length, classification);
-    const needed = pattern.slots.length;
-
-    if (available.length < needed && needed > 0) {
-      const move = tryWeeklyOffMove(input, day, weeklyOffMoves, needed);
-      if (move) {
-        weeklyOffMoves.push(move);
-        const st = employeeStats.get(move.empId);
-        if (st) st.movedWeeklyOff = true;
-        available = active.filter((e) => isAvailable(e, day.date, day.dayOfWeek, weeklyOffMoves));
-      }
-    }
-
-    const assignments: DaySlotAssignment[] = [];
-    const used = new Set<string>();
-    const pool = rotate(
-      [...available].sort((a, b) => a.empId.localeCompare(b.empId)),
-      seed + dayIndex
+    const outcome = allocateSingleDay(
+      input,
+      day,
+      dayIndex,
+      classification,
+      weeklyOffMoves,
+      periods,
+      isFridayPmOnly,
+      active,
+      lastBridgeByEmp,
+      prevDate,
+      employeeStats,
+      seed,
+      allocationLog
     );
 
-    for (const slotKind of pattern.slots) {
-      let emp: ScheduleNextEmployee | undefined;
-      if (slotKind === 'BRIDGE') {
-        const bridgeEmp = pickBridgeEmployee(
-          pool.filter((e) => !used.has(e.empId)),
-          lastBridgeByEmp,
-          prevDate,
-          employeeStats
-        );
-        emp = bridgeEmp ?? undefined;
-      } else {
-        emp = pool.find((e) => !used.has(e.empId));
-      }
-      if (!emp) continue;
-
-      used.add(emp.empId);
-      const segments = segmentsForSlot(slotKind, periods, day.isRamadan, isFridayPmOnly);
-      const moved =
-        weeklyOffMoves.some((m) => m.empId === emp!.empId && m.fromDate === day.date) ||
-        weeklyOffMoves.some((m) => m.empId === emp!.empId);
-
-      assignments.push({
-        empId: emp.empId,
-        name: emp.name,
-        kind: personKind(slotKind),
-        segments,
-        movedWeeklyOff: moved && effectiveOffDow(emp, weeklyOffMoves) !== emp.weeklyOffDay,
-        slotKind,
-      });
-
-      const st = employeeStats.get(emp.empId);
-      if (st) {
-        const hrs = slotHours(slotKind, day.isRamadan);
-        st.totalHours += hrs;
-        if (slotKind === 'BRIDGE') {
-          st.bridgeCount++;
-          st.compensationHours += BRIDGE_COMPENSATION_HOURS;
-          lastBridgeByEmp.set(emp.empId, day.date);
-        }
-      }
+    for (const move of outcome.moves) {
+      weeklyOffMoves.push(move);
     }
 
-    dayAssignments.set(day.date, assignments);
+    dayAssignments.set(day.date, outcome.assignments);
     prevDate = day.date;
   });
 
-  return { dayAssignments, weeklyOffMoves, employeeStats, lastBridgeByEmp };
+  return { dayAssignments, weeklyOffMoves, employeeStats, lastBridgeByEmp, allocationLog };
 }
 
 export function countAmPmForAssignments(

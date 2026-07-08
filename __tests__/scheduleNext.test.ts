@@ -1,10 +1,20 @@
 import { FRIDAY_DOW } from '@/lib/schedule/policyEngine';
 import {
+  allocateEmployeesToPattern,
   buildDayConfigsFromWeekStart,
   buildScheduleNextProposal,
   checkProposalCoverage,
+  classifyScheduleWeek,
 } from '@/lib/schedule-next';
 import type { ExternalSupportDraft, ScheduleNextEmployee, ScheduleNextInput } from '@/lib/schedule-next/types';
+
+function assignedCount(row: { morning: unknown[]; afternoon: unknown[] }): number {
+  return row.morning.length + row.afternoon.length;
+}
+
+function hasAnyAssignment(proposal: ReturnType<typeof buildScheduleNextProposal>): boolean {
+  return proposal.rows.some((r) => assignedCount(r) > 0);
+}
 
 const WEEK = '2026-04-04';
 
@@ -175,5 +185,34 @@ describe('schedule next generator', () => {
     if (sunday && sunday.pmCount === 0) {
       expect(proposal.status).not.toBe('ACCEPTABLE');
     }
+  });
+
+  it('never returns a completely empty day when at least one employee is available', () => {
+    const input = baseInput([employee('e1', 'A'), employee('e2', 'B')]);
+    const proposal = buildScheduleNextProposal(input);
+    for (const row of proposal.rows) {
+      expect(assignedCount(row)).toBeGreaterThan(0);
+    }
+  });
+
+  it('single available employee still receives a shift assignment', () => {
+    const input = baseInput([employee('e1', 'A')]);
+    const classification = classifyScheduleWeek(input);
+    const allocation = allocateEmployeesToPattern(input, classification, { seed: 0 });
+    for (const day of input.days) {
+      const assignments = allocation.dayAssignments.get(day.date) ?? [];
+      expect(assignments.length).toBeGreaterThan(0);
+    }
+    expect(hasAnyAssignment(buildScheduleNextProposal(input))).toBe(true);
+  });
+
+  it('understaffed weekday uses best achievable allocation instead of empty slots', () => {
+    const input = baseInput([employee('e1', 'A'), employee('e2', 'B')]);
+    const proposal = buildScheduleNextProposal(input);
+    const weekdays = proposal.rows.filter((r) => r.dayOfWeek !== FRIDAY_DOW);
+    for (const row of weekdays) {
+      expect(row.morning.length + row.afternoon.length).toBeGreaterThan(0);
+    }
+    expect(proposal.explanation.some((line) => line.includes('allocation'))).toBe(true);
   });
 });

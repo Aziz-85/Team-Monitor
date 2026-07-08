@@ -25,6 +25,11 @@ function PersonCell({ people }: { people: Person[] }) {
               OFF MOVED
             </span>
           )}
+          {p.compensationRequired && (
+            <span className="rounded bg-violet-200/80 px-1 text-[9px] font-bold uppercase tracking-wide text-violet-900">
+              COMP REQUIRED
+            </span>
+          )}
         </span>
       ))}
     </div>

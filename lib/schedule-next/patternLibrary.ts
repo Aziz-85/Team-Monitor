@@ -1,5 +1,11 @@
 import { isFridayDay } from './weekClassifier';
-import type { ScheduleNextDayConfig, ScheduleNextWeekType, SlotKind, WeekClassification } from './types';
+import type {
+  AllocationStage,
+  ScheduleNextDayConfig,
+  ScheduleNextWeekType,
+  SlotKind,
+  WeekClassification,
+} from './types';
 
 export type DayPattern = {
   slots: SlotKind[];
@@ -17,7 +23,8 @@ function weekdayPattern(availableCount: number, classification: WeekClassificati
   if (classification.isRamadan) {
     if (availableCount >= 4) return { slots: ['AM', 'AM', 'PM', 'PM'], label: 'Ramadan 4+ staff' };
     if (availableCount === 3) return { slots: ['AM', 'PM', 'BRIDGE'], label: 'Ramadan 3 staff bridge' };
-    return { slots: ['PM'], label: 'Ramadan understaffed' };
+    if (availableCount >= 1) return { slots: ['PM'], label: 'Ramadan understaffed' };
+    return { slots: [], label: 'No staff' };
   }
   if (availableCount >= 4) {
     return { slots: ['AM', 'AM', 'PM', 'PM'], label: '4+ staff AM/PM' };
@@ -25,7 +32,62 @@ function weekdayPattern(availableCount: number, classification: WeekClassificati
   if (availableCount === 3) {
     return { slots: ['AM', 'PM', 'BRIDGE'], label: '3 staff AM+PM+Bridge' };
   }
+  // Under minimum coverage — normal stage defers to later strategies.
   return { slots: [], label: 'Needs external support' };
+}
+
+/** Guaranteed non-empty slot plan when at least one employee is available. */
+export function bestAchievableSlots(
+  day: ScheduleNextDayConfig,
+  availableCount: number,
+  classification: WeekClassification
+): SlotKind[] {
+  if (availableCount <= 0) return [];
+  if (isFridayDay(day.dayOfWeek) && !day.isRamadan) {
+    return Array(Math.min(availableCount, 2)).fill('PM') as SlotKind[];
+  }
+  if (classification.isRamadan) {
+    if (availableCount >= 4) return ['AM', 'AM', 'PM', 'PM'];
+    if (availableCount === 3) return ['AM', 'PM', 'BRIDGE'];
+    if (availableCount === 2) return ['AM', 'PM'];
+    return ['PM'];
+  }
+  if (availableCount >= 4) return ['AM', 'AM', 'PM', 'PM'];
+  if (availableCount === 3) return ['AM', 'PM', 'BRIDGE'];
+  if (availableCount === 2) return ['AM', 'PM'];
+  return ['BRIDGE'];
+}
+
+function bridgeStageSlots(day: ScheduleNextDayConfig, availableCount: number): SlotKind[] {
+  if (availableCount <= 0) return [];
+  if (isFridayDay(day.dayOfWeek) && !day.isRamadan) {
+    return Array(Math.min(availableCount, 2)).fill('PM') as SlotKind[];
+  }
+  if (availableCount >= 3) return ['AM', 'PM', 'BRIDGE'];
+  if (availableCount === 2) return ['AM', 'BRIDGE'];
+  return ['BRIDGE'];
+}
+
+export function slotsForAllocationStage(
+  stage: AllocationStage,
+  day: ScheduleNextDayConfig,
+  availableCount: number,
+  classification: WeekClassification
+): SlotKind[] {
+  switch (stage) {
+    case 'NORMAL':
+      return patternForDay(day, availableCount, classification).slots;
+    case 'BRIDGE':
+      return bridgeStageSlots(day, availableCount);
+    case 'WEEKLY_OFF_MOVE':
+      return patternForDay(day, availableCount, classification).slots;
+    case 'WEEKLY_OFF_DEFERRAL':
+      return bestAchievableSlots(day, availableCount, classification);
+    case 'BEST_ACHIEVABLE':
+      return bestAchievableSlots(day, availableCount, classification);
+    default:
+      return [];
+  }
 }
 
 export function patternForDay(

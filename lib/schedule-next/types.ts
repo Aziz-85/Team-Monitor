@@ -67,12 +67,28 @@ export type WeekClassification = {
   minDailyAvailable: number;
 };
 
+export type AllocationStage =
+  | 'NORMAL'
+  | 'BRIDGE'
+  | 'WEEKLY_OFF_MOVE'
+  | 'WEEKLY_OFF_DEFERRAL'
+  | 'BEST_ACHIEVABLE';
+
+export const ALLOCATION_STAGE_ORDER: AllocationStage[] = [
+  'NORMAL',
+  'BRIDGE',
+  'WEEKLY_OFF_MOVE',
+  'WEEKLY_OFF_DEFERRAL',
+  'BEST_ACHIEVABLE',
+];
+
 export type DaySlotAssignment = {
   empId: string;
   name: string;
   kind: PersonKind;
   segments: ShiftSegment[];
   movedWeeklyOff?: boolean;
+  compensationRequired?: boolean;
   slotKind: SlotKind;
 };
 
@@ -88,6 +104,7 @@ export type ScheduleNextProposalRow = {
     kind: PersonKind;
     segments: ShiftSegment[];
     movedWeeklyOff?: boolean;
+    compensationRequired?: boolean;
   }>;
   afternoon: Array<{
     empId: string;
@@ -95,6 +112,7 @@ export type ScheduleNextProposalRow = {
     kind: PersonKind;
     segments: ShiftSegment[];
     movedWeeklyOff?: boolean;
+    compensationRequired?: boolean;
   }>;
   externalCoverage: Array<{
     empId: string;

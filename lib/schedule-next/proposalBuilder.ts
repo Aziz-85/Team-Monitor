@@ -134,6 +134,7 @@ function buildRows(
         kind: a.kind,
         segments: a.segments,
         movedWeeklyOff: a.movedWeeklyOff,
+        compensationRequired: a.compensationRequired,
       };
       if (am) morning.push(entry);
       if (pm) afternoon.push(entry);
@@ -214,6 +215,18 @@ function finalizeProposal(
     explanation.push(
       `Moved ${m.name} weekly off from ${m.fromDate} to ${m.toDate} for coverage`
     );
+  }
+  for (const row of enrichedRows) {
+    for (const person of [...row.morning, ...row.afternoon]) {
+      if (person.compensationRequired) {
+        explanation.push(
+          `COMPENSATION_REQUIRED:${person.empId}|${row.date}|${person.name}`
+        );
+      }
+    }
+  }
+  if (allocation.allocationLog?.length) {
+    explanation.push(...allocation.allocationLog);
   }
   if (classification.weekType === 'CRITICAL_3_AVAILABLE') {
     explanation.push('Using AM + PM + Bridge pattern for 3 available staff');
