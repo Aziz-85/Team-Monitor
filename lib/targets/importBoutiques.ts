@@ -1,6 +1,6 @@
 /**
  * Boutique targets import: parse, validate, preview, apply.
- * Strict: required sheet, exact column order, YYYY-MM, integer target, no duplicates.
+ * Strict: required sheet, header names, YYYY-MM, integer target, no duplicates.
  *
  * Business rules: Boutique monthly target is the parent for that boutique/month;
  * employee targets are child allocations. All amounts integer SAR only.
@@ -9,6 +9,8 @@
 
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
+import { parseTargetValue } from './parseTargetValue';
+import { readRowsByHeaders } from './spreadsheetRows';
 import { BOUTIQUE_SHEET, BOUTIQUE_HEADERS } from './templates';
 
 export type BoutiqueTargetRow = {
@@ -43,15 +45,6 @@ const MONTH_REGEX = /^\d{4}-\d{2}$/;
 function trim(s: unknown): string {
   if (s == null) return '';
   return String(s).trim();
-}
-
-function parseTarget(raw: unknown): { value: number; error?: string } {
-  if (raw == null || raw === '') return { value: 0, error: 'Target is required' };
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return { value: 0, error: 'Target must be a number' };
-  if (Math.floor(n) !== n) return { value: 0, error: 'Target must be integer' };
-  if (n < 0) return { value: 0, error: 'Target must be non-negative' };
-  return { value: n };
 }
 
 /** Parse workbook and validate; returns preview (no DB write). */
@@ -91,18 +84,22 @@ export async function parseAndValidateBoutiques(
     };
   }
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    header: BOUTIQUE_HEADERS,
-    range: 0,
-    defval: '',
-    raw: false,
-  });
+  const parsedSheet = readRowsByHeaders(sheet, BOUTIQUE_HEADERS);
+  if (!parsedSheet.ok) {
+    return {
+      totalRows: 0,
+      validRows: [],
+      invalidRows: [{ rowIndex: 0, message: parsedSheet.error }],
+      duplicateKeys: [],
+      inserts: [],
+      updates: [],
+      unresolvedBoutiques: [],
+      monthFormatErrors: 0,
+      targetFormatErrors: 0,
+    };
+  }
 
-  // Skip header row (first row might be headers)
-  const dataRows = rows.filter((r) => {
-    const first = r?.Month ?? r?.month;
-    return first != null && String(first).trim() !== '' && String(first) !== 'Month';
-  });
+  const { rows: dataRows, rowIndexes } = parsedSheet;
 
   const boutiquesByCode = await prisma.boutique.findMany({
     where: { isActive: true },
@@ -119,14 +116,14 @@ export async function parseAndValidateBoutiques(
   const unresolvedScopes: Set<string> = new Set();
 
   for (let i = 0; i < dataRows.length; i++) {
-    const r = dataRows[i] as Record<string, unknown>;
-    const rowIndex = i + 2; // 1-based + header
-    const month = trim(r.Month ?? r.month);
-    const scopeId = trim(r.ScopeId ?? r.scopeId);
-    const boutiqueName = trim(r.BoutiqueName ?? r.boutiqueName);
-    const targetRaw = r.Target ?? r.target;
-    const source = trim(r.Source ?? r.source) || 'OFFICIAL';
-    const notes = trim(r.Notes ?? r.notes);
+    const r = dataRows[i];
+    const rowIndex = rowIndexes[i];
+    const month = trim(r.Month);
+    const scopeId = trim(r.ScopeId);
+    const boutiqueName = trim(r.BoutiqueName);
+    const targetRaw = r.Target;
+    const source = trim(r.Source) || 'OFFICIAL';
+    const notes = trim(r.Notes);
 
     if (!month) {
       invalidRows.push({ rowIndex, message: 'Month is required' });
@@ -142,10 +139,11 @@ export async function parseAndValidateBoutiques(
       continue;
     }
 
-    const targetResult = parseTarget(targetRaw);
-    if (targetResult.error) {
+    const targetResult = parseTargetValue(targetRaw);
+    if (targetResult.kind === 'empty') continue;
+    if (targetResult.kind === 'error') {
       targetFormatErrors++;
-      invalidRows.push({ rowIndex, message: targetResult.error, row: { month, scopeId, boutiqueName, target: 0, source, notes } });
+      invalidRows.push({ rowIndex, message: targetResult.message, row: { month, scopeId, boutiqueName, target: 0, source, notes } });
       continue;
     }
 

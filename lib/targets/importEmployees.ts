@@ -12,6 +12,8 @@
 
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db';
+import { parseTargetValue } from './parseTargetValue';
+import { readRowsByHeaders } from './spreadsheetRows';
 import { EMPLOYEE_SHEET, EMPLOYEE_HEADERS } from './templates';
 
 export type EmployeeTargetRow = {
@@ -50,15 +52,6 @@ const MONTH_REGEX = /^\d{4}-\d{2}$/;
 function trim(s: unknown): string {
   if (s == null) return '';
   return String(s).trim();
-}
-
-function parseTarget(raw: unknown): { value: number; error?: string } {
-  if (raw == null || raw === '') return { value: 0, error: 'Target is required' };
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return { value: 0, error: 'Target must be a number' };
-  if (Math.floor(n) !== n) return { value: 0, error: 'Target must be integer' };
-  if (n < 0) return { value: 0, error: 'Target must be non-negative' };
-  return { value: n };
 }
 
 /** Resolve to userId: 1) by empId (EmployeeCode), 2) by name only if single match. */
@@ -140,17 +133,24 @@ export async function parseAndValidateEmployees(
     };
   }
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    header: EMPLOYEE_HEADERS,
-    range: 0,
-    defval: '',
-    raw: false,
-  });
+  const parsedSheet = readRowsByHeaders(sheet, EMPLOYEE_HEADERS);
+  if (!parsedSheet.ok) {
+    return {
+      totalRows: 0,
+      validRows: [],
+      invalidRows: [{ rowIndex: 0, message: parsedSheet.error }],
+      duplicateKeys: [],
+      inserts: [],
+      updates: [],
+      unresolvedEmployees: [],
+      unresolvedBoutiques: [],
+      monthFormatErrors: 0,
+      targetFormatErrors: 0,
+      sumMismatchWarnings: [],
+    };
+  }
 
-  const dataRows = rows.filter((r) => {
-    const first = r?.Month ?? r?.month;
-    return first != null && String(first).trim() !== '' && String(first) !== 'Month';
-  });
+  const { rows: dataRows, rowIndexes } = parsedSheet;
 
   const boutiquesByCode = await prisma.boutique.findMany({
     where: { isActive: true },
@@ -168,16 +168,16 @@ export async function parseAndValidateEmployees(
   const unresolvedScopes: Set<string> = new Set();
 
   for (let i = 0; i < dataRows.length; i++) {
-    const r = dataRows[i] as Record<string, unknown>;
-    const rowIndex = i + 2;
-    const month = trim(r.Month ?? r.month);
-    const scopeId = trim(r.ScopeId ?? r.scopeId);
-    const boutiqueName = trim(r.BoutiqueName ?? r.boutiqueName);
-    const employeeCode = trim(r.EmployeeCode ?? r.employeeCode);
-    const employeeName = trim(r.EmployeeName ?? r.employeeName);
-    const targetRaw = r.Target ?? r.target;
-    const source = trim(r.Source ?? r.source) || 'OFFICIAL';
-    const notes = trim(r.Notes ?? r.notes);
+    const r = dataRows[i];
+    const rowIndex = rowIndexes[i];
+    const month = trim(r.Month);
+    const scopeId = trim(r.ScopeId);
+    const boutiqueName = trim(r.BoutiqueName);
+    const employeeCode = trim(r.EmployeeCode);
+    const employeeName = trim(r.EmployeeName);
+    const targetRaw = r.Target;
+    const source = trim(r.Source) || 'OFFICIAL';
+    const notes = trim(r.Notes);
 
     if (!month) {
       invalidRows.push({ rowIndex, message: 'Month is required' });
@@ -193,10 +193,11 @@ export async function parseAndValidateEmployees(
       continue;
     }
 
-    const targetResult = parseTarget(targetRaw);
-    if (targetResult.error) {
+    const targetResult = parseTargetValue(targetRaw);
+    if (targetResult.kind === 'empty') continue;
+    if (targetResult.kind === 'error') {
       targetFormatErrors++;
-      invalidRows.push({ rowIndex, message: targetResult.error });
+      invalidRows.push({ rowIndex, message: targetResult.message });
       continue;
     }
 

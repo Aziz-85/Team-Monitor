@@ -1,6 +1,6 @@
 /**
  * Target Management — Excel template constants.
- * Sheet names and column order must match import parser exactly.
+ * Sheet names and header names must match import parser exactly.
  */
 
 export const BOUTIQUE_SHEET = 'BOUTIQUE_TARGETS';

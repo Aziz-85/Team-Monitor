@@ -1,6 +1,6 @@
 /**
  * Boutique-aware target import templates (ExcelJS).
- * Data sheet column order must match import parsers exactly.
+ * Data sheet headers must match import parsers exactly.
  */
 
 import ExcelJS from 'exceljs';
