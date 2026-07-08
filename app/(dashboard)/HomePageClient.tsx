@@ -115,6 +115,8 @@ type PerformanceSummary = {
   paceDailyRequiredSar?: number;
   paceWeeklyRequiredSar?: number;
   remainingMonthTargetSar?: number;
+  hasMonthlyTarget?: boolean;
+  monthlyTargetSar?: number | null;
   dailyTrajectory?: { dateKey: string; targetCumulative: number; actualCumulative: number }[];
   topSellers?: {
     week: Array<{ employeeId: string; employeeName: string; amount: number; rank: number }>;

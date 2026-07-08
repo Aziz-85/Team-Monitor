@@ -25,9 +25,10 @@ import { getWeekStart } from '@/lib/services/scheduleLock';
 import { rosterForDate } from '@/lib/services/roster';
 import { validateCoverage } from '@/lib/services/coverageValidation';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
-import { calculateBoutiqueScore } from '@/lib/executive/score';
+import { sumBoutiqueMonthlyTargets } from '@/lib/targets/boutiqueMonthlyTargetLookup';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
+import { calculateBoutiqueScore } from '@/lib/executive/score';
 
 const BURST_WINDOW_MS = 3 * 60 * 1000;
 const BURST_MIN_TASKS = 4;
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
       : [];
 
   const [
-    boutiqueTarget,
+    boutiqueTargetsCurrentMonth,
     salesCurrentMonthSum,
     salesByMonth,
     targetsByMonth,
@@ -144,8 +145,10 @@ export async function GET(request: NextRequest) {
     allUsers,
     salesEntryTodayCount,
   ] = await Promise.all([
-    prisma.boutiqueMonthlyTarget.findFirst({
-      where: { month: monthKey, ...boutiqueFilter },
+    sumBoutiqueMonthlyTargets({
+      boutiqueIds,
+      monthKey,
+      routeName: '/api/executive',
     }),
     aggregateSalesEntrySumForBoutiquesMonth(monthKey, boutiqueIds),
     groupSalesSumByMonthForScopedBoutiques(boutiqueIds),
@@ -224,8 +227,11 @@ export async function GET(request: NextRequest) {
   );
 
   const revenue = salesCurrentMonthSum;
-  const target = boutiqueTarget?.amount ?? 0;
-  const achievementPct = calculatePerformance({ target, sales: revenue }).percent;
+  const hasMonthlyTarget = boutiqueTargetsCurrentMonth.hasTarget;
+  const target = hasMonthlyTarget ? boutiqueTargetsCurrentMonth.amount ?? 0 : 0;
+  const achievementPct = hasMonthlyTarget
+    ? calculatePerformance({ target, sales: revenue }).percent
+    : 0;
 
   let totalWeekly = 0;
   let completed = 0;
@@ -279,26 +285,31 @@ export async function GET(request: NextRequest) {
   );
 
   const prevMonthKey = lastMonthKeys(now, 2)[1];
-  const prevMonthTarget = targetsByMonth.find((t) => t.month === prevMonthKey);
   const prevMonthSales = salesByMonth.find((s) => s.month === prevMonthKey);
   const prevRevenue = prevMonthSales?._sum.amount ?? 0;
   const revenueDelta =
     prevRevenue > 0
       ? Math.round(((revenue - prevRevenue) / prevRevenue) * 100)
       : null;
+
+  const targetSumByMonth = new Map<string, number>();
+  for (const row of targetsByMonth) {
+    targetSumByMonth.set(row.month, (targetSumByMonth.get(row.month) ?? 0) + row.amount);
+  }
+
+  const prevMonthTargetAmount = targetSumByMonth.get(prevMonthKey) ?? 0;
   const targetDelta =
-    prevMonthTarget && prevMonthTarget.amount > 0 && target > 0
-      ? Math.round(((target - prevMonthTarget.amount) / prevMonthTarget.amount) * 100)
+    prevMonthTargetAmount > 0 && target > 0
+      ? Math.round(((target - prevMonthTargetAmount) / prevMonthTargetAmount) * 100)
       : null;
 
   const monthKeys = lastMonthKeys(now, 6);
   const salesVsTargetTrend = monthKeys.map((m) => {
-    const t = targetsByMonth.find((x) => x.month === m);
     const s = salesByMonth.find((x) => x.month === m);
     return {
       label: m,
       sales: s?._sum.amount ?? 0,
-      target: t?.amount ?? 0,
+      target: targetSumByMonth.get(m) ?? 0,
     };
   }).reverse();
 

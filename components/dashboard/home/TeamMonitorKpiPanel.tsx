@@ -24,6 +24,8 @@ type TopSellerEntry = {
 export type TeamMonitorPerformance = {
   monthly: { target: number; sales: number; remaining: number; percent: number };
   weekly: { sales: number };
+  hasMonthlyTarget?: boolean;
+  monthlyTargetSar?: number | null;
   hasSalesEntryForToday?: boolean;
   paceDaysPassed?: number;
   todayInSelectedMonth?: boolean;
@@ -256,6 +258,14 @@ export function TeamMonitorKpiPanel({
       </h2>
       <p className="mb-4 max-w-3xl text-xs text-muted">{t('home.teamMonitor.section1Blurb')}</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiTile
+          label={t('home.teamMonitor.monthlyTargetLabel')}
+          value={
+            performance.hasMonthlyTarget
+              ? formatSarInt(performance.monthlyTargetSar ?? performance.monthly.target)
+              : t('home.teamMonitor.noTargetForMonth')
+          }
+        />
         <KpiTile label={t('home.teamMonitor.achievedMtd')} value={formatSarInt(achievedMtd)} />
         <KpiTile label={t('home.teamMonitor.remainingMonthlyTarget')} value={formatSarInt(remMonth)} />
         <KpiTile

@@ -2698,6 +2698,8 @@
       "section4Title": "4 — Reporting",
       "section4Blurb": "Formal reporting views (reporting allocation vs posted). The daily table can switch to operational pace (carry-forward). Weekly required pace columns are operational.",
       "achievedMtd": "Achieved MTD",
+      "monthlyTargetLabel": "Monthly target",
+      "noTargetForMonth": "No target set for this month",
       "remainingMonthlyTarget": "Remaining monthly target",
       "dailyRequiredStayOnTrack": "Daily required to stay on track",
       "weeklyRequiredStayOnTrack": "Weekly required to stay on track",
@@ -3112,7 +3114,13 @@
       "copyLabelAchievementMonthly": "Achievement (Monthly):",
       "copyCloseToDailyTarget": "⚠️ Close to daily target",
       "copyStrongPerformance": "🔥 Strong performance",
-      "copyValueUnavailable": "—"
+      "copyValueUnavailable": "—",
+      "targetPanelTitle": "Monthly targets",
+      "noTargetForMonth": "No target set for this month",
+      "monthlyTargetLabel": "Monthly target",
+      "dailyTargetLabel": "Daily target",
+      "achievementDailyLabel": "Daily achievement %",
+      "achievementMonthlyLabel": "Month-to-date achievement %"
     },
     "importTool": {
       "pageTitle": "Sales import",

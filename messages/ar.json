@@ -2690,6 +2690,8 @@
       "section4Title": "٤ — التقارير",
       "section4Blurb": "جداول تقارير رسمية (توزيع تقارير مقابل المُسجّل). جدول اليوم يدعم التبديل إلى الوتيرة التشغيلية (ترحيل النقص). أعمدة المطلوب الأسبوعي تشغيلية.",
       "achievedMtd": "المحقق حتى تاريخه",
+      "monthlyTargetLabel": "الهدف الشهري",
+      "noTargetForMonth": "لا يوجد هدف محدد لهذا الشهر",
       "remainingMonthlyTarget": "المتبقي من الهدف الشهري",
       "dailyRequiredStayOnTrack": "المطلوب يومياً للبقاء على المسار",
       "weeklyRequiredStayOnTrack": "المطلوب أسبوعياً للبقاء على المسار",
@@ -3104,7 +3106,13 @@
       "copyLabelAchievementMonthly": "الإنجاز (الشهري):",
       "copyCloseToDailyTarget": "⚠️ قريب من الهدف اليومي",
       "copyStrongPerformance": "🔥 أداء قوي",
-      "copyValueUnavailable": "—"
+      "copyValueUnavailable": "—",
+      "targetPanelTitle": "أهداف الشهر",
+      "noTargetForMonth": "لا يوجد هدف محدد لهذا الشهر",
+      "monthlyTargetLabel": "الهدف الشهري",
+      "dailyTargetLabel": "الهدف اليومي",
+      "achievementDailyLabel": "نسبة الإنجاز اليومي",
+      "achievementMonthlyLabel": "نسبة الإنجاز من بداية الشهر"
     },
     "importTool": {
       "pageTitle": "استيراد المبيعات",

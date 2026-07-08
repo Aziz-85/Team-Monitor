@@ -238,12 +238,14 @@ function formatSarLine(n: number): string {
 
 type ScopeBoutiqueDailyMetrics = {
   boutiqueId: string;
+  hasMonthlyTarget: boolean;
   dailyRequiredSar: number;
+  dailyTargetSar: number | null;
   todayAchievedSar: number;
   todayPct: number | null;
+  mtdAchievementPct: number | null;
   dailyProgressPending: boolean;
-  monthTargetSar: number;
-  /** MTD through selected ledger date (inclusive), same month — aligns copy with chosen day. */
+  monthTargetSar: number | null;
   mtdThroughDateSar: number;
 };
 
@@ -284,10 +286,10 @@ function formatDailySummaryForCopy(
       continue;
     }
 
-    const monthT = Math.trunc(scopeDaily.monthTargetSar);
+    const monthT = scopeDaily.monthTargetSar != null ? Math.trunc(scopeDaily.monthTargetSar) : null;
     const mtd = Math.trunc(scopeDaily.mtdThroughDateSar);
     const dailyT = Math.trunc(scopeDaily.dailyRequiredSar);
-    const monthlyKnown = monthT > 0;
+    const monthlyKnown = scopeDaily.hasMonthlyTarget && monthT != null;
     const monthlyMetOrExceeded = monthlyKnown && mtd >= monthT;
 
     if (monthlyMetOrExceeded) {
@@ -617,11 +619,17 @@ function SalesDailyClientImpl({
           typeof pctRaw === 'number' && Number.isFinite(pctRaw) ? Math.trunc(pctRaw) : null;
         setScopeBoutiqueDaily({
           boutiqueId: j.boutiqueId as string,
+          hasMonthlyTarget: !!j.hasMonthlyTarget,
           dailyRequiredSar: Math.trunc(Number(j.dailyRequiredSar) || 0),
+          dailyTargetSar:
+            j.dailyTargetSar == null ? null : Math.trunc(Number(j.dailyTargetSar) || 0),
           todayAchievedSar: Math.trunc(Number(j.todayAchievedSar) || 0),
           todayPct,
+          mtdAchievementPct:
+            j.mtdAchievementPct == null ? null : Math.trunc(Number(j.mtdAchievementPct) || 0),
           dailyProgressPending: !!j.dailyProgressPending,
-          monthTargetSar: Math.trunc(Number(j.monthTargetSar) || 0),
+          monthTargetSar:
+            j.monthTargetSar == null ? null : Math.trunc(Number(j.monthTargetSar) || 0),
           mtdThroughDateSar: Math.trunc(Number(j.mtdThroughDateSar) || 0),
         });
       })
@@ -1197,6 +1205,48 @@ function SalesDailyClientImpl({
             <span className="font-mono tabular-nums text-accent">{date}</span>
           </p>
           <p className="mt-1 text-xs text-muted">{t('sales.dailyLedger.enteringSalesForDate')}</p>
+        </div>
+      )}
+
+      {ledgerDateReady && scopeBoutiqueDaily && (
+        <div className="mb-4 rounded-lg border border-border bg-surface px-4 py-3 shadow-sm">
+          <h3 className="text-sm font-semibold text-foreground">{t('sales.dailyLedger.targetPanelTitle')}</h3>
+          {!scopeBoutiqueDaily.hasMonthlyTarget ? (
+            <p className="mt-2 text-sm text-muted">{t('sales.dailyLedger.noTargetForMonth')}</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.monthlyTargetLabel')}</p>
+                <p className="font-semibold tabular-nums">{formatSarLine(scopeBoutiqueDaily.monthTargetSar ?? 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.dailyTargetLabel')}</p>
+                <p className="font-semibold tabular-nums">
+                  {scopeBoutiqueDaily.dailyTargetSar != null
+                    ? formatSarLine(scopeBoutiqueDaily.dailyTargetSar)
+                    : t('sales.dailyLedger.copyValueUnavailable')}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.achievementDailyLabel')}</p>
+                <p className="font-semibold tabular-nums">
+                  {scopeBoutiqueDaily.dailyProgressPending
+                    ? t('sales.dailyLedger.copyValueUnavailable')
+                    : scopeBoutiqueDaily.todayPct != null
+                      ? `${scopeBoutiqueDaily.todayPct}%`
+                      : t('sales.dailyLedger.copyValueUnavailable')}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.achievementMonthlyLabel')}</p>
+                <p className="font-semibold tabular-nums">
+                  {scopeBoutiqueDaily.mtdAchievementPct != null
+                    ? `${scopeBoutiqueDaily.mtdAchievementPct}%`
+                    : t('sales.dailyLedger.copyValueUnavailable')}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

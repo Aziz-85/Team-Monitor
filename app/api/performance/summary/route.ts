@@ -194,6 +194,8 @@ export async function GET(request: NextRequest) {
     paceDailyRequiredSar: summary.paceDailyRequiredSar,
     paceWeeklyRequiredSar: summary.paceWeeklyRequiredSar,
     remainingMonthTargetSar: summary.remainingMonthTargetSar,
+    hasMonthlyTarget: summary.hasMonthlyTarget,
+    monthlyTargetSar: summary.monthlyTargetSar,
     paceDaysPassed,
     todayInSelectedMonth: summary.todayInSelectedMonth,
     dailyTrajectory: summary.dailyTrajectory,

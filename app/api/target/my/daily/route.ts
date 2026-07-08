@@ -58,13 +58,19 @@ export async function GET(request: NextRequest) {
   ]);
 
   const monthTargetSar = targetRows.reduce((s, r) => s + r.amount, 0);
-  const remainingSar = remainingMonthTargetSar(monthTargetSar, achievedToDateSar);
-  const dailyRequiredSar = dailyRequiredTargetSar(remainingSar, daysRemaining);
+  const hasMonthlyTarget = targetRows.length > 0;
+  const remainingSar = hasMonthlyTarget
+    ? remainingMonthTargetSar(monthTargetSar, achievedToDateSar)
+    : 0;
+  const dailyRequiredSar = hasMonthlyTarget
+    ? dailyRequiredTargetSar(remainingSar, daysRemaining)
+    : 0;
 
   return NextResponse.json({
     month: normMonth,
     date: dateStr,
-    monthTargetSar,
+    hasMonthlyTarget,
+    monthTargetSar: hasMonthlyTarget ? monthTargetSar : null,
     achievedToDateSar,
     remainingSar,
     daysRemaining,

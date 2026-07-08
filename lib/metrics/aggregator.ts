@@ -13,6 +13,7 @@
  * **Sales reads** are composed via `lib/sales/readSalesAggregate.ts` (single internal layer over SalesEntry).
  */
 
+import { lookupBoutiqueMonthlyTarget } from '@/lib/targets/boutiqueMonthlyTargetLookup';
 import { prisma } from '@/lib/db';
 import {
   aggregateSalesEntrySum,
@@ -242,6 +243,7 @@ export type DashboardSalesMetricsResult = {
   currentMonthActual: number;
   completionPct: number;
   remainingGap: number;
+  hasMonthlyTarget: boolean;
   byUserId: Record<string, number>;
 };
 
@@ -250,13 +252,20 @@ export async function getDashboardSalesMetrics(
 ): Promise<DashboardSalesMetricsResult> {
   const monthKey = normalizeMonthKey(input.monthKey);
 
-  const [boutiqueTarget, salesAgg, systemBranchUserId] = await Promise.all([
+  const [boutiqueTargetLookup, salesAgg, systemBranchUserId] = await Promise.all([
     input.employeeOnly && input.userId
-      ? prisma.employeeMonthlyTarget.findFirst({
-          where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
-        })
-      : prisma.boutiqueMonthlyTarget.findFirst({
-          where: { boutiqueId: input.boutiqueId, month: monthKey },
+      ? prisma.employeeMonthlyTarget
+          .findFirst({
+            where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
+          })
+          .then((row) => ({
+            hasTarget: !!row,
+            amount: row?.amount ?? null,
+          }))
+      : lookupBoutiqueMonthlyTarget({
+          boutiqueId: input.boutiqueId,
+          monthKey,
+          routeName: 'getDashboardSalesMetrics',
         }),
     groupSalesByUserForBoutiqueMonth(
       input.boutiqueId,
@@ -266,7 +275,8 @@ export async function getDashboardSalesMetrics(
     getSystemBranchTotalUserId(),
   ]);
 
-  const targetSar = boutiqueTarget?.amount ?? 0;
+  const hasMonthlyTarget = boutiqueTargetLookup.hasTarget;
+  const targetSar = hasMonthlyTarget ? boutiqueTargetLookup.amount ?? 0 : 0;
   const currentMonthTarget = targetSar;
   const byUserId: Record<string, number> = {};
   let currentMonthActual = 0;
@@ -287,6 +297,7 @@ export async function getDashboardSalesMetrics(
     currentMonthActual,
     completionPct,
     remainingGap,
+    hasMonthlyTarget,
     byUserId,
   };
 }
@@ -318,6 +329,8 @@ export type PerformanceSummaryResult = {
   paceDailyRequiredSar: number;
   paceWeeklyRequiredSar: number;
   remainingMonthTargetSar: number;
+  hasMonthlyTarget: boolean;
+  monthlyTargetSar: number | null;
   /** Any SalesEntry row for Riyadh today in this metrics scope. */
   hasSalesEntryForToday: boolean;
   /** Completed business days in month for linear MTD pace (see paceDaysPassedForMonth). */
@@ -386,23 +399,26 @@ export async function getPerformanceSummary(
     employeeCrossBoutique: input.employeeCrossBoutique,
   });
 
-  const [targetRow, targetRowsAll, mtdSales, todaySales, weekSales, salesEntryCountToday] =
+  const [targetRow, targetRowsAll, boutiqueTargetLookup, mtdSales, todaySales, weekSales, salesEntryCountToday] =
     await Promise.all([
     input.employeeOnly && input.userId && !input.employeeCrossBoutique
       ? prisma.employeeMonthlyTarget.findFirst({
           where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
         })
-      : !input.employeeOnly
-        ? prisma.boutiqueMonthlyTarget.findFirst({
-            where: { boutiqueId: input.boutiqueId, month: monthKey },
-          })
-        : null,
+      : null,
     input.employeeCrossBoutique && input.userId
       ? prisma.employeeMonthlyTarget.findMany({
           where: { userId: input.userId, month: monthKey },
           select: { amount: true },
         })
       : null,
+    !input.employeeOnly
+      ? lookupBoutiqueMonthlyTarget({
+          boutiqueId: input.boutiqueId,
+          monthKey,
+          routeName: 'getPerformanceSummary',
+        })
+      : Promise.resolve({ hasTarget: false, amount: null, month: monthKey, boutiqueId: input.boutiqueId }),
     aggregateSalesEntrySum({ ...wherePerf, dateKey: { lte: todayStr } }),
     todayInSelectedMonth
       ? aggregateSalesEntrySum({ ...wherePerf, dateKey: todayStr })
@@ -418,10 +434,22 @@ export async function getPerformanceSummary(
       : Promise.resolve(0),
   ]);
 
+  const hasMonthlyTarget = input.employeeCrossBoutique && targetRowsAll
+    ? targetRowsAll.length > 0
+    : input.employeeOnly && input.userId && !input.employeeCrossBoutique
+      ? !!targetRow
+      : boutiqueTargetLookup.hasTarget;
+
   const monthTarget =
     input.employeeCrossBoutique && targetRowsAll
       ? targetRowsAll.reduce((s, r) => s + r.amount, 0)
-      : (targetRow?.amount ?? 0);
+      : input.employeeOnly && input.userId && !input.employeeCrossBoutique
+        ? targetRow?.amount ?? 0
+        : hasMonthlyTarget
+          ? boutiqueTargetLookup.amount ?? 0
+          : 0;
+
+  const monthlyTargetSar = hasMonthlyTarget ? monthTarget : null;
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
   const targetSnap = computeReportingAndPaceSnapshot({
@@ -459,6 +487,8 @@ export async function getPerformanceSummary(
     paceDailyRequiredSar: targetSnap.paceDailyRequiredSar,
     paceWeeklyRequiredSar: targetSnap.paceWeeklyRequiredSar,
     remainingMonthTargetSar: targetSnap.remainingMonthTargetSar,
+    hasMonthlyTarget,
+    monthlyTargetSar,
     hasSalesEntryForToday,
     paceDaysPassed,
     todayInSelectedMonth,
