@@ -68,7 +68,8 @@ describe('buildBoutiqueTargetsImportTemplate', () => {
     });
     const rows = data.filter((r) => String(r.Month) !== 'Month' && String(r.Month) !== '');
     expect(rows).toHaveLength(12);
-    expect(rows[0]).toMatchObject({ Month: '2026-07', ScopeId: '03', BoutiqueName: 'Dhahran' });
+    expect(rows[0]).toMatchObject({ Month: '2026-01', ScopeId: '03', BoutiqueName: 'Dhahran' });
+    expect(rows[6]).toMatchObject({ Month: '2026-07', ScopeId: '03', BoutiqueName: 'Dhahran' });
     expect(rows.every((r) => r.ScopeId === '03')).toBe(true);
   });
 });

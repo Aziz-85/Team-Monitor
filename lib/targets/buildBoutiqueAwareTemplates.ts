@@ -27,20 +27,9 @@ export type TargetTemplateMeta = {
   generatedBy: string;
 };
 
-function nextMonthKeys(count: number, startMonth: string): string[] {
-  const [y, m] = startMonth.split('-').map((x) => parseInt(x, 10));
-  const out: string[] = [];
-  let year = y;
-  let month = m;
-  for (let i = 0; i < count; i++) {
-    out.push(`${year}-${String(month).padStart(2, '0')}`);
-    month += 1;
-    if (month > 12) {
-      month = 1;
-      year += 1;
-    }
-  }
-  return out;
+function calendarYearMonthKeys(startMonth: string): string[] {
+  const year = parseInt(startMonth.split('-')[0]!, 10);
+  return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
 }
 
 function positionLabel(position: string | null | undefined): string {
@@ -83,7 +72,7 @@ export function targetImportFilename(
   return `target-import-employee-${slug}-${month ?? 'month'}.xlsx`;
 }
 
-/** Boutique targets: 12 months from startMonth, one row per month for current boutique. */
+/** Boutique targets: full calendar year for startMonth's year, one row per month. */
 export async function buildBoutiqueTargetsImportTemplate(input: {
   boutique: TargetsTemplateBoutique;
   startMonth: string;
@@ -92,7 +81,7 @@ export async function buildBoutiqueTargetsImportTemplate(input: {
   const { boutique, startMonth, generatedBy } = input;
   const code = (boutique.code ?? '').trim();
   const name = (boutique.name ?? '').trim();
-  const months = nextMonthKeys(12, startMonth);
+  const months = calendarYearMonthKeys(startMonth);
   const generatedAt = new Date().toISOString();
 
   const existingTargets = await prisma.boutiqueMonthlyTarget.findMany({
@@ -105,7 +94,7 @@ export async function buildBoutiqueTargetsImportTemplate(input: {
   const dataSheet = workbook.addWorksheet(BOUTIQUE_SHEET);
   dataSheet.addRow(BOUTIQUE_HEADERS);
   for (const mk of months) {
-    const target = amountByMonth.get(mk) ?? 0;
+    const target = amountByMonth.has(mk) ? amountByMonth.get(mk)! : '';
     dataSheet.addRow([mk, code, name, target, 'OFFICIAL', '']);
   }
 
@@ -116,13 +105,15 @@ export async function buildBoutiqueTargetsImportTemplate(input: {
     ['boutiqueId', boutique.id],
     ['boutiqueCode', code],
     ['boutiqueName', name],
-    ['startMonth', startMonth],
+    ['calendarYear', String(parseInt(startMonth.split('-')[0]!, 10))],
+    ['referenceMonth', startMonth],
     [],
     ['Instructions:'],
     ['- Edit Target column only (integer SAR, no decimals).'],
     ['- Do not change Month, ScopeId, BoutiqueName, column order, or sheet name.'],
     ['- Sheet name must remain:', BOUTIQUE_SHEET],
-    ['- One row per month for your current boutique.'],
+    ['- One row per calendar month (Jan–Dec) for the template year.'],
+    ['- Leave Target blank for months you are not setting yet.'],
     ['- Source defaults to OFFICIAL; Notes are optional.'],
     [],
     ['Import: POST /api/targets/import/boutiques/preview then /api/targets/import/boutiques/apply'],
