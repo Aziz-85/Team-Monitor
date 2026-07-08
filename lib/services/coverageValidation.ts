@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { rosterForDate } from './roster';
-import { evaluateCoverage } from '@/lib/schedule/coveragePolicy';
+import { evaluateCoverage, evaluateCoverageWithResolvedMins } from '@/lib/schedule/coveragePolicy';
+import { resolveEditorDayCoverage } from '@/lib/boutique-config/editorPolicy';
 import { formatSlotViolationMessage } from '@/lib/schedule/timeCoverageValidation';
 import {
   formatCoverageWarnings,
@@ -86,10 +87,22 @@ export async function validateCoverage(
     where: { dayOfWeek, enabled: true },
     select: { minAM: true, minPM: true },
   });
-  const minAm = rule?.minAM ?? 0;
-  const minPm = rule?.minPM ?? 0;
-
-  const policyIssues = evaluateCoverage({ am: amCount, pm: pmCount }, dayOfWeek, minAm, minPm);
+  let minAm = rule?.minAM ?? 0;
+  let minPm = rule?.minPM ?? 0;
+  let policyIssues;
+  if (options.boutiqueIds?.length === 1) {
+    const boutiqueMins = await resolveEditorDayCoverage(options.boutiqueIds[0], dateKey);
+    minAm = boutiqueMins.minMorning;
+    minPm = boutiqueMins.minEvening;
+    policyIssues = evaluateCoverageWithResolvedMins(
+      { am: amCount, pm: pmCount },
+      boutiqueMins.dayOfWeek,
+      minAm,
+      minPm
+    );
+  } else {
+    policyIssues = evaluateCoverage({ am: amCount, pm: pmCount }, dayOfWeek, minAm, minPm);
+  }
 
   const typeMap: Record<string, ValidationResultType> = {
     AM_ON_FRIDAY: 'AM_ON_FRIDAY',

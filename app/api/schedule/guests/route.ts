@@ -10,6 +10,7 @@ import { assertScheduleEditable, ScheduleLockedError } from '@/lib/guards/schedu
 import { applyOverrideChange } from '@/lib/services/scheduleApply';
 import { createOrExecuteApproval } from '@/lib/services/approvals';
 import { isOverrideShiftForbiddenOnDate } from '@/lib/schedule/shiftRules';
+import { isExternalSupportAllowedForDate } from '@/lib/boutique-config/editorPolicy';
 import { clearCoverageValidationCache } from '@/lib/services/coverageValidation';
 import { requiresApproval } from '@/lib/permissions';
 import { API_ERROR_MESSAGES } from '@/lib/validationErrors';
@@ -51,6 +52,15 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ error: 'weekStart required (YYYY-MM-DD)' }, { status: 400 });
   }
+  const hostBoutiqueId = scope.boutiqueId;
+
+  if (scope.boutiqueIds.length === 1) {
+    const allowed = await isExternalSupportAllowedForDate(hostBoutiqueId, weekStart);
+    if (!allowed) {
+      return NextResponse.json({ guests: [], pendingGuests: [], weekStart });
+    }
+  }
+
   const { first, last } = weekStartToRange(weekStart);
 
   // Include overrides where host = this scope, or boutiqueId null (legacy) with employee from another boutique.
@@ -227,6 +237,17 @@ export async function POST(request: NextRequest) {
   if (!dateStr || !empId) {
     return NextResponse.json({ error: 'date and employeeId (or empId) required' }, { status: 400 });
   }
+
+  if (scope.boutiqueIds.length === 1) {
+    const allowed = await isExternalSupportAllowedForDate(hostBoutiqueId, dateStr);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'External support is disabled for this boutique', code: 'EXTERNAL_SUPPORT_DISABLED' },
+        { status: 403 }
+      );
+    }
+  }
+
   const overrideShift = shiftRaw === 'AM' ? 'MORNING' : shiftRaw === 'PM' ? 'EVENING' : shiftRaw;
   if (!GUEST_SHIFTS.includes(overrideShift as (typeof GUEST_SHIFTS)[number])) {
     return NextResponse.json({ error: 'shift must be AM, PM, MORNING, or EVENING' }, { status: 400 });

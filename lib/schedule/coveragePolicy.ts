@@ -127,6 +127,72 @@ export function isCoverageCompliant(
   return evaluateCoverage(counts, dayOfWeek, ruleMinAm, ruleMinPm).length === 0;
 }
 
+/**
+ * Evaluate coverage using resolved Boutique Configuration mins (no legacy floor of 2).
+ * Used by Schedule Editor when mins are supplied from getBoutiqueConfiguration.
+ */
+export function evaluateCoverageWithResolvedMins(
+  counts: CoverageCounts,
+  dayOfWeek: number,
+  minAm: number,
+  minPm: number
+): CoverageIssue[] {
+  const { am, pm } = counts;
+  const issues: CoverageIssue[] = [];
+
+  if (isFridayDay(dayOfWeek)) {
+    if (am > 0) {
+      issues.push({
+        type: 'AM_ON_FRIDAY',
+        severity: 'critical',
+        message: `Friday is PM-only; AM (${am}) must be 0`,
+        minAm: 0,
+        minPm,
+      });
+    }
+    if (minPm > 0 && pm < minPm) {
+      issues.push({
+        type: 'PM_BELOW_MIN',
+        severity: 'critical',
+        message: `Friday PM (${pm}) below minimum (${minPm})`,
+        minAm: 0,
+        minPm,
+      });
+    }
+    return issues;
+  }
+
+  if (am < minAm) {
+    issues.push({
+      type: 'AM_BELOW_MIN',
+      severity: 'critical',
+      message: `AM (${am}) below minimum (${minAm})`,
+      minAm,
+      minPm,
+    });
+  }
+  if (pm < minPm) {
+    issues.push({
+      type: 'PM_BELOW_MIN',
+      severity: 'critical',
+      message: `PM (${pm}) below minimum (${minPm})`,
+      minAm,
+      minPm,
+    });
+  }
+  if (pmMustBeAtLeastAm(dayOfWeek) && pm < am) {
+    issues.push({
+      type: 'PM_NOT_ABOVE_AM',
+      severity: 'critical',
+      message: `PM (${pm}) must be at least AM (${am})`,
+      minAm,
+      minPm,
+    });
+  }
+
+  return issues;
+}
+
 export const COVERAGE_POLICY_SUMMARY = {
   en: 'Sat–Thu: AM ≥ 2, PM ≥ AM, PM ≥ 2. Friday: PM-only. Split up to 2 per employee/week.',
   ar: 'سبت–خميس: AM ≥ 2، PM ≥ AM، PM ≥ 2. الجمعة: مساءً فقط. Split حتى 2 لكل موظف/أسبوع.',

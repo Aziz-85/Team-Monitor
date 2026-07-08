@@ -58,7 +58,10 @@ export async function GET(request: NextRequest) {
     if (team === 'A' || team === 'B') options.team = team;
   }
 
-  const grid = await getScheduleGridForWeek(weekStart, options);
+  const grid = await getScheduleGridForWeek(weekStart, {
+    ...options,
+    useBoutiqueConfiguration: scheduleScope.boutiqueIds.length === 1,
+  });
   if (canEditSchedule(user!.role) && request.nextUrl.searchParams.get('suggestions') === '1') {
     (grid as Record<string, unknown>).suggestions = buildScheduleSuggestions(grid);
   }

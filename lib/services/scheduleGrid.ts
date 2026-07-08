@@ -27,6 +27,12 @@ import { toRiyadhDateString } from '@/lib/time';
 import { validateTimeCoverageForGrid } from '@/lib/schedule/timeCoverageValidation';
 import { loadSegmentsByOverrideIds } from '@/lib/schedule/shiftOverrideSegments';
 import { findGuestWorkingOverrides } from '@/lib/services/schedulePlanGuests';
+import {
+  resolveEditorWeekPolicy,
+  type EditorWeekPolicy,
+} from '@/lib/boutique-config/editorPolicy';
+
+export type ScheduleGridEditorPolicy = EditorWeekPolicy;
 
 export type DayCountContext = {
   date: string;
@@ -89,6 +95,9 @@ export type GridDay = {
   dayOfWeek: number;
   minAm: number;
   minPm: number;
+  /** From Boutique Configuration when editor policy is active. */
+  fridayPmOnly?: boolean;
+  isRamadan?: boolean;
 };
 
 /** Boutique AM/PM and Rashid AM/PM per day. Only WORK cells count; coverage excluded from boutique. */
@@ -203,6 +212,8 @@ export type ScheduleGridResult = {
   externalCoverageShifts: import('@/lib/schedule/generateSchedule/types').WorkingDayShift[];
   /** Data integrity: e.g. "Friday AM present" when override data is invalid (read-only indicator). */
   integrityWarnings?: string[];
+  /** Resolved Boutique Configuration for the editor week (single-boutique scope). */
+  editorPolicy?: ScheduleGridEditorPolicy;
 };
 
 /**
@@ -218,10 +229,26 @@ export function sortRowsForDisplay(rows: GridRow[]): GridRow[] {
   });
 }
 
+export function buildDayCountContextsFromEditorPolicy(policy: EditorWeekPolicy): DayCountContext[] {
+  return policy.days.map((day) => ({
+    date: day.date,
+    dayOfWeek: day.dayOfWeek,
+    isRamadan: day.isRamadan,
+    operatingPeriods: day.operatingPeriods,
+    maxDailyHours: day.maxDailyHours,
+  }));
+}
+
 /** Saturday = start of week. weekStart must be YYYY-MM-DD of Saturday. */
 export async function getScheduleGridForWeek(
   weekStart: string,
-  options: { empId?: string; team?: string; boutiqueIds?: string[] } = {}
+  options: {
+    empId?: string;
+    team?: string;
+    boutiqueIds?: string[];
+    /** When true and exactly one boutique is in scope, load operating/coverage policy from Boutique Configuration. */
+    useBoutiqueConfiguration?: boolean;
+  } = {}
 ): Promise<ScheduleGridResult> {
   const start = new Date(weekStart + 'T00:00:00Z');
   const day = start.getUTCDay();
@@ -234,13 +261,21 @@ export async function getScheduleGridForWeek(
     weekDates.push(d);
   }
   const dateStrs = weekDates.map((d) => d.toISOString().slice(0, 10));
-  const dayCountContexts = buildDayCountContexts(dateStrs);
+  const boutiqueIds = options.boutiqueIds ?? [];
+  const useBoutiqueConfiguration =
+    options.useBoutiqueConfiguration === true && boutiqueIds.length === 1;
+  let editorPolicy: EditorWeekPolicy | undefined;
+  if (useBoutiqueConfiguration) {
+    editorPolicy = await resolveEditorWeekPolicy(boutiqueIds[0], dateStrs);
+  }
+  const dayCountContexts = editorPolicy
+    ? buildDayCountContextsFromEditorPolicy(editorPolicy)
+    : buildDayCountContexts(dateStrs);
   const firstDate = weekDates[0];
   const lastDate = weekDates[6];
 
   const teamFilter: { team: Team } | undefined =
     options.team === 'A' || options.team === 'B' ? { team: options.team as Team } : undefined;
-  const boutiqueIds = options.boutiqueIds ?? [];
   const baseWhere = buildEmployeeWhereForOperational(boutiqueIds, {
     excludeSystemOnly: true,
   });
@@ -333,13 +368,15 @@ export async function getScheduleGridForWeek(
     const days: GridDay[] = dateStrs.map((date, i) => {
       const d = weekDates[i];
       const dayOfWeek = d.getUTCDay();
-      const isFridayDay = dayOfWeek === FRIDAY_DAY_OF_WEEK;
+      const policyDay = editorPolicy?.days.find((p) => p.date === date);
       return {
         date,
         dayName: '',
         dayOfWeek,
-        minAm: isFridayDay ? 0 : 2,
-        minPm: 2,
+        minAm: policyDay?.minMorning ?? (dayOfWeek === FRIDAY_DAY_OF_WEEK ? 0 : 2),
+        minPm: policyDay?.minEvening ?? 2,
+        fridayPmOnly: policyDay?.fridayPmOnly,
+        isRamadan: policyDay?.isRamadan,
       };
     });
     return {
@@ -350,6 +387,7 @@ export async function getScheduleGridForWeek(
       dayCountContexts,
       timeCoverage: validateTimeCoverageForGrid([], dayCountContexts),
       externalCoverageShifts: [],
+      editorPolicy,
     };
   }
 
@@ -372,10 +410,12 @@ export async function getScheduleGridForWeek(
           select: { empId: true, date: true },
         })
       : Promise.resolve([]),
-    prisma.coverageRule.findMany({
-      where: { enabled: true },
-      select: { dayOfWeek: true, minAM: true, minPM: true },
-    }),
+    editorPolicy
+      ? Promise.resolve([])
+      : prisma.coverageRule.findMany({
+          where: { enabled: true },
+          select: { dayOfWeek: true, minAM: true, minPM: true },
+        }),
   ]);
 
   const overrideByKey = new Map<string, { id: string; overrideShift: string }>();
@@ -555,6 +595,18 @@ export async function getScheduleGridForWeek(
   const days: GridDay[] = dateStrs.map((dateStr, i) => {
     const d = weekDates[i];
     const dayOfWeek = d.getUTCDay();
+    const policyDay = editorPolicy?.days.find((p) => p.date === dateStr);
+    if (policyDay) {
+      return {
+        date: dateStr,
+        dayName: '',
+        dayOfWeek,
+        minAm: policyDay.minMorning,
+        minPm: policyDay.minEvening,
+        fridayPmOnly: policyDay.fridayPmOnly,
+        isRamadan: policyDay.isRamadan,
+      };
+    }
     const rule = ruleByDay.get(dayOfWeek);
     const isFridayDay = dayOfWeek === FRIDAY_DAY_OF_WEEK;
     return {
@@ -570,8 +622,12 @@ export async function getScheduleGridForWeek(
   for (const row of finalRows) {
     for (const cell of row.cells) {
       if (cell.availability !== 'WORK') continue;
+      const policyDay = editorPolicy?.days.find((p) => p.date === cell.date);
       const d = new Date(cell.date + 'T00:00:00Z');
-      if (d.getUTCDay() === FRIDAY_DAY_OF_WEEK && !isRamadan(d)) {
+      const fridayPmOnly = policyDay
+        ? policyDay.fridayPmOnly
+        : d.getUTCDay() === FRIDAY_DAY_OF_WEEK && !isRamadan(d);
+      if (fridayPmOnly) {
         const s = cell.effectiveShift as ShiftType;
         if (s === 'MORNING' || s === 'COVER_RASHID_AM' || s === 'SPLIT') {
           integrityWarnings.push(`Friday AM present: ${row.name} on ${cell.date}`);
@@ -592,5 +648,6 @@ export async function getScheduleGridForWeek(
     timeCoverage,
     externalCoverageShifts,
     integrityWarnings: integrityWarnings.length > 0 ? integrityWarnings : undefined,
+    editorPolicy,
   };
 }

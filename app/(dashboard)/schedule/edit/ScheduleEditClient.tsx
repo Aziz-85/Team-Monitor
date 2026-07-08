@@ -6,7 +6,12 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { LuxuryTable, LuxuryTableHead, LuxuryTh, LuxuryTableBody, LuxuryTd } from '@/components/ui/LuxuryTable';
 import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
-import { computeCountsFromGridRows, type DayCountContext, type GridRow as ServerGridRow } from '@/lib/services/scheduleGrid';
+import {
+  computeCountsFromGridRows,
+  type DayCountContext,
+  type GridRow as ServerGridRow,
+  type ScheduleGridEditorPolicy,
+} from '@/lib/services/scheduleGrid';
 import {
   validateTimeCoverageForGrid,
   buildRowsForTimeCoverageValidation,
@@ -131,7 +136,7 @@ function isFriday(dateStr: string): boolean {
   return d.getUTCDay() === FRIDAY_DAY_OF_WEEK;
 }
 
-/** Friday is PM-only unless the date falls in Ramadan (same rule as grid editor). */
+/** Friday is PM-only unless the date falls in Ramadan (legacy fallback when grid policy is absent). */
 function isFridayPmOnlyDay(
   dateStr: string,
   ramadanRange?: { start: string; end: string } | null
@@ -139,6 +144,48 @@ function isFridayPmOnlyDay(
   if (!isFriday(dateStr)) return false;
   if (ramadanRange && isDateInRamadanRange(new Date(dateStr + 'T12:00:00Z'), ramadanRange)) return false;
   return true;
+}
+
+function gridDayForDate(gridData: GridData | null, dateStr: string): GridDay | undefined {
+  return gridData?.days.find((d) => d.date === dateStr);
+}
+
+function resolveFridayPmOnly(
+  dateStr: string,
+  ramadanRange: { start: string; end: string } | null | undefined,
+  gridData: GridData | null
+): boolean {
+  const day = gridDayForDate(gridData, dateStr);
+  if (day?.fridayPmOnly !== undefined) return day.fridayPmOnly;
+  return isFridayPmOnlyDay(dateStr, ramadanRange);
+}
+
+function isEditorShiftForbidden(
+  dateStr: string,
+  shift: string,
+  gridData: GridData | null,
+  ramadanRange: { start: string; end: string } | null | undefined
+): boolean {
+  if (!resolveFridayPmOnly(dateStr, ramadanRange, gridData)) return false;
+  return isOverrideShiftForbiddenOnDate(new Date(dateStr + 'T12:00:00Z'), shift);
+}
+
+function buildShiftOptionsForDate(
+  date: string,
+  gridData: GridData | null,
+  ramadanRange: { start: string; end: string } | null,
+  t: (key: string) => string,
+  extra?: { forceIncludeSplit?: boolean; includeReset?: boolean; resetLabel?: string }
+) {
+  const day = gridDayForDate(gridData, date);
+  return buildEditorShiftOptions({
+    date,
+    ramadanRange,
+    t,
+    fridayPmOnly: day?.fridayPmOnly,
+    allowBridgeShift: gridData?.editorPolicy?.allowBridgeShift,
+    ...extra,
+  });
 }
 
 function defaultGuestShiftForDate(
@@ -259,7 +306,15 @@ type GridRow = {
   effectiveWeeklyOffDay?: number | 'NONE';
 };
 
-type GridDay = { date: string; dayName: string; dayOfWeek: number; minAm: number; minPm: number };
+type GridDay = {
+  date: string;
+  dayName: string;
+  dayOfWeek: number;
+  minAm: number;
+  minPm: number;
+  fridayPmOnly?: boolean;
+  isRamadan?: boolean;
+};
 
 type ScheduleSuggestion = {
   id: string;
@@ -284,6 +339,8 @@ type GridData = {
   timeCoverage?: { valid: boolean; violations: SlotViolation[] };
   /** Admin only: comp day balance per empId */
   compBalanceByEmpId?: Record<string, number>;
+  /** Resolved Boutique Configuration for single-boutique editor scope. */
+  editorPolicy?: ScheduleGridEditorPolicy;
 };
 
 type MonthData = {
@@ -728,7 +785,22 @@ export function ScheduleEditClient({
       .catch(() => setGridData(null));
   }, [weekStart]);
 
+  const allowExternalSupport = useMemo(
+    () => gridData?.editorPolicy?.allowExternalSupport !== false,
+    [gridData?.editorPolicy?.allowExternalSupport]
+  );
+
+  useEffect(() => {
+    if (gridData?.editorPolicy?.allowExternalSupport === false) {
+      setWeekGuests([]);
+    }
+  }, [gridData?.editorPolicy?.allowExternalSupport, gridData?.weekStart]);
+
   const fetchGuests = useCallback(() => {
+    if (gridData?.editorPolicy?.allowExternalSupport === false) {
+      setWeekGuests([]);
+      return Promise.resolve();
+    }
     const ws = resolveGuestWeekStart(weekStart);
     if (!ws) {
       setToast(
@@ -759,7 +831,13 @@ export function ScheduleEditClient({
         setWeekGuests(unique);
       })
       .catch(() => setWeekGuests([]));
-  }, [weekStart, localPendingGuests]);
+  }, [weekStart, localPendingGuests, gridData?.editorPolicy?.allowExternalSupport, t]);
+
+  useEffect(() => {
+    if (tab !== 'week' || !gridData) return;
+    if (gridData.editorPolicy?.allowExternalSupport === false) return;
+    fetchGuests();
+  }, [tab, gridData, fetchGuests]);
 
   useEffect(() => {
     refetchScopeLabel();
@@ -1222,8 +1300,8 @@ export function ScheduleEditClient({
           const count = displayCounts[i] ?? gridData.counts[i];
           const am = count?.amCount ?? 0;
           const pm = count?.pmCount ?? 0;
-          const effectiveMinAm = day.dayOfWeek === 5 ? 0 : Math.max(day.minAm ?? 2, 2);
-          const effectiveMinPm = Math.max(day.minPm ?? 2, 2);
+          const effectiveMinAm = day.minAm ?? 0;
+          const effectiveMinPm = day.minPm ?? 0;
           const validations: ValidationResult[] = [];
           if (am > pm) validations.push({ type: 'AM_GT_PM', message: `AM (${am}) > PM (${pm})`, amCount: am, pmCount: pm });
           if (effectiveMinAm > 0 && am < effectiveMinAm) {
@@ -1285,10 +1363,7 @@ export function ScheduleEditClient({
   const addPendingEdit = useCallback(
     (empId: string, date: string, newShift: string, row: GridRow, cell: GridCell) => {
       if (cell.availability === 'LEAVE') return;
-      if (
-        isFridayPmOnlyDay(date, ramadanRange) &&
-        isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), newShift)
-      ) {
+      if (isEditorShiftForbidden(date, newShift, gridData, ramadanRange)) {
         setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM and Split Shift are not allowed.');
         setTimeout(() => setToast(null), 6000);
         return;
@@ -1313,7 +1388,7 @@ export function ScheduleEditClient({
         return next;
       });
     },
-    [locale, ramadanRange, t]
+    [locale, ramadanRange, t, gridData]
   );
 
   const applyLockedCellChange = useCallback(
@@ -1343,11 +1418,7 @@ export function ScheduleEditClient({
         }
 
         if (['MORNING', 'EVENING', 'SPLIT', 'NONE'].includes(value)) {
-          if (
-            value !== 'NONE' &&
-            isFridayPmOnlyDay(date, ramadanRange) &&
-            isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), value)
-          ) {
+          if (value !== 'NONE' && isEditorShiftForbidden(date, value, gridData, ramadanRange)) {
             setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only.');
             setTimeout(() => setToast(null), 6000);
             return;
@@ -1396,7 +1467,7 @@ export function ScheduleEditClient({
         setLockedCellSavingKey(null);
       }
     },
-    [fetchGrid, globalReason, ramadanRange, router, t]
+    [fetchGrid, globalReason, ramadanRange, router, t, gridData]
   );
 
   const clearPendingEdit = useCallback((empId: string, date: string) => {
@@ -1509,11 +1580,7 @@ export function ScheduleEditClient({
         }
         const [, date] = key.split('|');
         const edit = pendingEdits.get(key);
-        if (
-          edit &&
-          isFridayPmOnlyDay(date, ramadanRange) &&
-          isOverrideShiftForbiddenOnDate(new Date(date + 'T12:00:00Z'), edit.newShift)
-        ) {
+        if (edit && isEditorShiftForbidden(date, edit.newShift, gridData, ramadanRange)) {
           setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM and Split Shift are not allowed.');
           setTimeout(() => setToast(null), 6000);
           return;
@@ -1525,7 +1592,10 @@ export function ScheduleEditClient({
           setTimeout(() => setToast(null), 6000);
           return;
         }
-        if (isFridayPmOnlyDay(g.date, ramadanRange) && g.shift === 'MORNING') {
+        if (
+          resolveFridayPmOnly(g.date, ramadanRange, gridData) &&
+          (g.shift === 'MORNING' || g.shift === 'SPLIT')
+        ) {
           setToast((t('schedule.fridayPmOnly') as string) ?? 'Friday is PM-only. AM is not allowed.');
           setTimeout(() => setToast(null), 6000);
           return;
@@ -1844,7 +1914,7 @@ export function ScheduleEditClient({
                   🔒 {t('governance.locked') ?? 'Locked'}
                 </span>
               )}
-              {canEdit && !isWeekLocked && (
+              {canEdit && !isWeekLocked && allowExternalSupport && (
                 <button
                   type="button"
                   onClick={() => setAddGuestOpen(true)}
@@ -2325,11 +2395,12 @@ export function ScheduleEditClient({
                                       title={isFriday(cell.date) ? t('schedule.fridayPmOnly') : undefined}
                                     >
                                       {(() => {
-                                        const shiftOptions = buildEditorShiftOptions({
-                                          date: cell.date,
-                                          ramadanRange: ramadanRange ?? null,
-                                          t,
-                                        });
+                                        const shiftOptions = buildShiftOptionsForDate(
+                                          cell.date,
+                                          gridData,
+                                          ramadanRange ?? null,
+                                          t
+                                        );
                                         const options = [...shiftOptions];
                                         if (isEdited || hasOverride) {
                                           options.push({ value: 'RESET', label: t('schedule.resetToBase') ?? 'Reset to Base' });
@@ -2390,7 +2461,8 @@ export function ScheduleEditClient({
                             })}
                           </tr>
                         ))}
-                      {guestsBySource.map(([sourceId, { sourceBoutiqueName, guests: sourceGuests }]) => {
+                      {allowExternalSupport &&
+                        guestsBySource.map(([sourceId, { sourceBoutiqueName, guests: sourceGuests }]) => {
                         const byDate = new Map<string, GuestItem[]>();
                         for (const g of sourceGuests) {
                           const d = typeof g.date === 'string' ? g.date : (g.date as Date)?.toISOString?.()?.slice(0, 10) ?? '';
@@ -2414,11 +2486,12 @@ export function ScheduleEditClient({
                                         typeof g.date === 'string'
                                           ? g.date
                                           : (g.date as Date)?.toISOString?.()?.slice(0, 10) ?? day.date;
-                                      const shiftOptions = buildEditorShiftOptions({
-                                        date: guestDate,
-                                        ramadanRange: ramadanRange ?? null,
-                                        t,
-                                      });
+                                      const shiftOptions = buildShiftOptionsForDate(
+                                        guestDate,
+                                        gridData,
+                                        ramadanRange ?? null,
+                                        t
+                                      );
                                       return (
                                         <div key={g.id} className="flex w-full flex-col gap-0.5">
                                           <span className="truncate text-[10px] font-medium text-foreground">
@@ -2864,7 +2937,7 @@ export function ScheduleEditClient({
         </>
       )}
 
-      {addGuestOpen && (
+      {addGuestOpen && allowExternalSupport && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50" aria-hidden onClick={() => !guestSubmitting && setAddGuestOpen(false)} />
           <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-surface p-4 shadow-lg md:p-6">
@@ -2926,7 +2999,7 @@ export function ScheduleEditClient({
                         ...f,
                         date: nextDate,
                         shift:
-                          isFridayPmOnlyDay(nextDate, ramadanRange) && f.shift === 'MORNING'
+                          resolveFridayPmOnly(nextDate, ramadanRange, gridData) && f.shift === 'MORNING'
                             ? 'EVENING'
                             : f.shift,
                       }));
@@ -2952,19 +3025,21 @@ export function ScheduleEditClient({
                     className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     disabled={guestSubmitting}
                   >
-                    {buildEditorShiftOptions({
-                      date: weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
-                      ramadanRange: ramadanRange ?? null,
-                      t,
-                    }).map((opt) => (
+                    {buildShiftOptionsForDate(
+                      weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
+                      gridData,
+                      ramadanRange ?? null,
+                      t
+                    ).map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
                   </select>
-                  {isFridayPmOnlyDay(
+                  {resolveFridayPmOnly(
                     weekDates.includes(guestForm.date) ? guestForm.date : weekDates[0] ?? '',
-                    ramadanRange
+                    ramadanRange,
+                    gridData
                   ) && (
                     <p className="mt-1 text-xs text-muted">{t('schedule.fridayPmOnly')}</p>
                   )}
@@ -3005,7 +3080,7 @@ export function ScheduleEditClient({
                     return;
                   }
                   const shift =
-                    isFridayPmOnlyDay(date, ramadanRange) && guestForm.shift === 'MORNING'
+                    resolveFridayPmOnly(date, ramadanRange, gridData) && guestForm.shift === 'MORNING'
                       ? 'EVENING'
                       : guestForm.shift;
                   setGuestSubmitting(true);
@@ -3120,7 +3195,9 @@ export function ScheduleEditClient({
           open={proposalReviewOpen}
           weekStart={gridData.weekStart}
           draftGuests={localPendingGuests}
-          onOpenAddGuest={() => setAddGuestOpen(true)}
+          onOpenAddGuest={() => {
+            if (allowExternalSupport) setAddGuestOpen(true);
+          }}
           onClose={() => setProposalReviewOpen(false)}
           onApplied={async () => {
             const guestWeekStart = resolveGuestWeekStart(weekStart);

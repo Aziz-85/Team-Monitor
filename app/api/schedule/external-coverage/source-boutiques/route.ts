@@ -9,6 +9,7 @@ import { requireRole } from '@/lib/auth';
 import { requireScheduleScope } from '@/lib/scope/scheduleScope';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
+import { isExternalSupportAllowedForDate } from '@/lib/boutique-config/editorPolicy';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,11 @@ export async function GET(request: NextRequest) {
     return scopeResult.res;
   }
   const hostBoutiqueId = scopeResult.scope.boutiqueId;
+
+  const allowed = await isExternalSupportAllowedForDate(hostBoutiqueId, new Date().toISOString().slice(0, 10));
+  if (!allowed) {
+    return NextResponse.json({ boutiques: [], hostBoutiqueId });
+  }
 
   const boutiques = await prisma.boutique.findMany({
     where: {

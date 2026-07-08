@@ -30,23 +30,29 @@ export function buildEditorShiftOptions(input: {
   resetLabel?: string;
   /** Keep Split visible when cell already has Split (e.g. fix legacy assignment). */
   forceIncludeSplit?: boolean;
+  /** From Boutique Configuration — Friday PM-only when true. */
+  fridayPmOnly?: boolean;
+  /** From Boutique Configuration — when false, hide Split/bridge option. */
+  allowBridgeShift?: boolean;
 }): ShiftOption[] {
   const { date, ramadanRange, t } = input;
   const ramadanDay = ramadanRange ? isDateInRamadanRange(new Date(date + 'T12:00:00Z'), ramadanRange) : false;
   const friday = isFriday(new Date(date + 'T12:00:00Z'));
+  const pmOnly = input.fridayPmOnly ?? (friday && !ramadanDay);
+  const allowSplit = input.allowBridgeShift !== false;
   const am = shiftT(t, 'amShort');
   const pm = shiftT(t, 'pmShort');
   const split = shiftT(t, 'splitShift');
   const none = shiftT(t, 'none');
 
-  if (friday && !ramadanDay) {
+  if (pmOnly) {
     return [{ value: 'EVENING', label: pm }, { value: 'NONE', label: none }];
   }
 
   const options: ShiftOption[] = [
     { value: 'MORNING', label: am },
     { value: 'EVENING', label: pm },
-    { value: 'SPLIT', label: split },
+    ...(allowSplit || input.forceIncludeSplit ? [{ value: 'SPLIT', label: split }] : []),
     { value: 'NONE', label: none },
   ];
   if (input.includeReset && input.resetLabel) {
