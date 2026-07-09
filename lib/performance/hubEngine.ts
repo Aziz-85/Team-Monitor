@@ -26,6 +26,7 @@ import { buildHubRecommendations } from '@/lib/performance/hubRecommendations';
 import type { HubRecommendation } from '@/lib/performance/hubRecommendations';
 import { buildHubRankings } from '@/lib/performance/hubRankings';
 import type { HubRankings } from '@/lib/performance/hubRankings';
+import { loadHubEmployeeRoster } from '@/lib/performance/hubEmployeeOptions';
 
 function hubProductivityRollup(
   totalAmount: number,
@@ -446,27 +447,14 @@ export async function buildPerformanceHubPayload(input: {
   /* Employee mode */
   const employees: HubEmployeeRow[] = [];
   if (entity === 'employees') {
-    const scopeBoutiques = compareMode === 'boutiques' && boutiqueIds.length > 1 ? boutiqueIds : [boutiqueIds[0]];
-    const users = await prisma.user.findMany({
-      where: {
-        boutiqueId: scopeBoutiques.length === 1 ? scopeBoutiques[0] : { in: scopeBoutiques },
-        disabled: false,
-        role: { in: ['EMPLOYEE', 'ASSISTANT_MANAGER'] },
-        employee: { isNot: null },
-      },
-      select: {
-        id: true,
-        empId: true,
-        boutiqueId: true,
-        employee: { select: { name: true } },
-      },
-      orderBy: { empId: 'asc' },
-    });
+    const scopeBoutiques =
+      compareMode === 'boutiques' && boutiqueIds.length > 1 ? boutiqueIds : [boutiqueIds[0]!];
+    const roster = await loadHubEmployeeRoster(scopeBoutiques);
     const filtered = input.employeeUserId
-      ? users.filter((u) => u.id === input.employeeUserId)
-      : users;
+      ? roster.filter((e) => e.userId === input.employeeUserId)
+      : roster;
 
-    const employeeUserIds = filtered.map((u) => u.id);
+    const employeeUserIds = filtered.map((e) => e.userId);
     const salesByUserId = new Map<
       string,
       { totalAmount: number; totalInvoiceCount: number; totalPieceCount: number }
@@ -495,8 +483,8 @@ export async function buildPerformanceHubPayload(input: {
       }
     }
 
-    for (const u of filtered) {
-      const sales = salesByUserId.get(u.id) ?? {
+    for (const e of filtered) {
+      const sales = salesByUserId.get(e.userId) ?? {
         totalAmount: 0,
         totalInvoiceCount: 0,
         totalPieceCount: 0,
@@ -504,12 +492,17 @@ export async function buildPerformanceHubPayload(input: {
       const a = sales.totalAmount;
       const inv = sales.totalInvoiceCount;
       const pc = sales.totalPieceCount;
-      const tgt = await sumEmployeeReportingTargetForRange(u.boutiqueId, u.id, window.from, window.toExclusive);
+      const tgt = await sumEmployeeReportingTargetForRange(
+        e.boutiqueId,
+        e.userId,
+        window.from,
+        window.toExclusive
+      );
       const perf = calculatePerformance({ target: tgt, sales: a });
       employees.push({
-        userId: u.id,
-        empId: u.empId,
-        name: u.employee?.name ?? u.empId,
+        userId: e.userId,
+        empId: e.empId,
+        name: e.name,
         actualSales: a,
         targetSales: tgt,
         achievementPct: perf.percent,

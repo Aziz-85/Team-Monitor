@@ -17,6 +17,8 @@ import {
   DataTableTh,
   DataTableTd,
 } from '@/components/ui/DataTable';
+import type { HubEmployeeOption } from '@/lib/performance/hubEmployeeOptions';
+import { filterHubEmployeeOptions } from '@/lib/performance/hubEmployeeOptions';
 import type { PerformanceHubPayload } from '@/lib/performance/hubEngine';
 import { formatSarInt } from '@/lib/utils/money';
 
@@ -68,6 +70,7 @@ type Bootstrap = {
   canCompareBoutiques: boolean;
   canCompareRegions: boolean;
   defaultBoutiqueIds: string[];
+  employeeOptions: HubEmployeeOption[];
 };
 
 type Period = 'day' | 'week' | 'month' | 'quarter' | 'half' | 'year';
@@ -130,6 +133,36 @@ export function PerformanceHubClient() {
     if (!boot) return;
     loadData();
   }, [boot, loadData]);
+
+  const employeeScopeBoutiqueIds = useMemo(() => {
+    if (compare === 'boutiques' && boot?.canCompareBoutiques && selectedBoutiques.length > 0) {
+      return selectedBoutiques;
+    }
+    if (selectedBoutiques[0]) return [selectedBoutiques[0]];
+    return boot?.defaultBoutiqueIds ?? [];
+  }, [boot, compare, selectedBoutiques]);
+
+  const scopedEmployeeOptions = useMemo(() => {
+    if (!boot?.employeeOptions?.length) return [];
+    return filterHubEmployeeOptions(boot.employeeOptions, employeeScopeBoutiqueIds);
+  }, [boot?.employeeOptions, employeeScopeBoutiqueIds]);
+
+  const employeeSelectOptions = useMemo(
+    () => [
+      { value: '', label: t('performanceHub.allEmployees') },
+      ...scopedEmployeeOptions.map((e) => ({
+        value: e.userId,
+        label: `${e.name} (${e.empId})`,
+      })),
+    ],
+    [scopedEmployeeOptions, t]
+  );
+
+  useEffect(() => {
+    if (!employeeUserId) return;
+    const stillValid = scopedEmployeeOptions.some((e) => e.userId === employeeUserId);
+    if (!stillValid) setEmployeeUserId('');
+  }, [employeeUserId, scopedEmployeeOptions]);
 
   const boutiqueOptions = useMemo(
     () =>
@@ -319,7 +352,7 @@ export function PerformanceHubClient() {
               label={t('performanceHub.employee')}
               value={employeeUserId}
               onChange={(e) => setEmployeeUserId(e.target.value)}
-              options={[{ value: '', label: t('performanceHub.allEmployees') }]}
+              options={employeeSelectOptions}
             />
           </div>
         ) : null}

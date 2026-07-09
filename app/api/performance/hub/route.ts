@@ -10,6 +10,7 @@ import {
   normalizeCompareMode,
   resolvePerformanceHubContext,
 } from '@/lib/performance/hubScope';
+import { loadHubEmployeeRoster } from '@/lib/performance/hubEmployeeOptions';
 import { toRiyadhDateString, getRiyadhNow } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
 
   const sp = request.nextUrl.searchParams;
   if (sp.get('bootstrap') === '1') {
+    const employeeOptions = await loadHubEmployeeRoster(ctx.allowedBoutiqueIds);
     return NextResponse.json({
       userId: ctx.userId,
       role: ctx.role,
@@ -37,6 +39,7 @@ export async function GET(request: NextRequest) {
       canCompareBoutiques: ctx.canCompareBoutiques,
       canCompareRegions: ctx.canCompareRegions,
       defaultBoutiqueIds: ctx.defaultBoutiqueIds,
+      employeeOptions,
     });
   }
 
