@@ -3142,6 +3142,7 @@
       "statInserts": "إدراج",
       "statUpdates": "تحديث",
       "statSkipped": "خلايا فارغة متخطاة",
+      "statWarnings": "تحذيرات",
       "statUnmapped": "موظفون غير معيّنين",
       "unmappedList": "أعمدة emp غير معيّنة",
       "filterAll": "الكل",
@@ -3152,9 +3153,14 @@
       "noPreviewRows": "لا توجد صفوف لهذا الفلتر.",
       "colDate": "التاريخ",
       "colEmployee": "الموظف",
+      "colAmount": "المبلغ",
+      "colUploadedBoutique": "الفرع المرفوع",
+      "colHistoricalBoutique": "الفرع التاريخي",
+      "colCurrentBoutique": "الفرع الحالي",
       "colCurrent": "المبلغ الحالي",
       "colNew": "المبلغ الجديد",
       "colAction": "الإجراء",
+      "colWarnings": "تحذيرات",
       "colStatus": "الحالة"
     },
     "importTool": {

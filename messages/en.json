@@ -3150,6 +3150,7 @@
       "statInserts": "Inserts",
       "statUpdates": "Updates",
       "statSkipped": "Skipped blanks",
+      "statWarnings": "Warnings",
       "statUnmapped": "Unmapped employees",
       "unmappedList": "Unmapped emp columns",
       "filterAll": "All",
@@ -3160,9 +3161,14 @@
       "noPreviewRows": "No rows match this filter.",
       "colDate": "Date",
       "colEmployee": "Employee",
+      "colAmount": "Amount",
+      "colUploadedBoutique": "Uploaded boutique",
+      "colHistoricalBoutique": "Historical boutique",
+      "colCurrentBoutique": "Current boutique",
       "colCurrent": "Current amount",
       "colNew": "New amount",
       "colAction": "Action",
+      "colWarnings": "Warnings",
       "colStatus": "Status"
     },
     "importTool": {

@@ -268,8 +268,9 @@ export function YearlySalesImportClient() {
             <Stat label={t('sales.yearlyImportPage.statUpdates')} value={preview.previewTotals.updates} warn />
             <Stat label={t('sales.yearlyImportPage.statSkipped')} value={preview.previewTotals.skippedBlanks} />
             <Stat
-              label={t('sales.yearlyImportPage.statUnmapped')}
-              value={preview.previewTotals.unmappedEmployees.length}
+              label={t('sales.yearlyImportPage.statWarnings')}
+              value={preview.previewTotals.warningCount}
+              warn
             />
           </div>
           {preview.previewTotals.unmappedEmployees.length > 0 && (
@@ -298,25 +299,39 @@ export function YearlySalesImportClient() {
                 <DataTableHead>
                   <DataTableTh>{t('sales.yearlyImportPage.colDate')}</DataTableTh>
                   <DataTableTh>{t('sales.yearlyImportPage.colEmployee')}</DataTableTh>
+                  <DataTableTh>{t('sales.yearlyImportPage.colAmount')}</DataTableTh>
+                  <DataTableTh>{t('sales.yearlyImportPage.colUploadedBoutique')}</DataTableTh>
+                  <DataTableTh>{t('sales.yearlyImportPage.colHistoricalBoutique')}</DataTableTh>
+                  <DataTableTh>{t('sales.yearlyImportPage.colCurrentBoutique')}</DataTableTh>
                   <DataTableTh>{t('sales.yearlyImportPage.colCurrent')}</DataTableTh>
                   <DataTableTh>{t('sales.yearlyImportPage.colNew')}</DataTableTh>
                   <DataTableTh>{t('sales.yearlyImportPage.colAction')}</DataTableTh>
-                  <DataTableTh>{t('sales.yearlyImportPage.colStatus')}</DataTableTh>
+                  <DataTableTh>{t('sales.yearlyImportPage.colWarnings')}</DataTableTh>
                 </DataTableHead>
                 <DataTableBody>
                   {filteredRows.map((row, idx) => (
-                    <tr key={`${row.dateKey}-${row.empId}-${idx}`}>
-                      <DataTableTd>{row.dateKey}</DataTableTd>
+                    <tr key={`${row.saleDate}-${row.empId}-${idx}`}>
+                      <DataTableTd>{row.saleDate}</DataTableTd>
                       <DataTableTd>
                         <div className="font-medium">{row.employeeName}</div>
                         <div className="text-xs text-muted">{row.empId}</div>
+                      </DataTableTd>
+                      <DataTableTd>{formatAmount(row.amount)}</DataTableTd>
+                      <DataTableTd className="text-xs">{row.uploadedBoutiqueName ?? row.uploadedBoutiqueId}</DataTableTd>
+                      <DataTableTd className="text-xs">
+                        {row.historicalBoutiqueName ?? row.historicalBoutiqueId ?? '—'}
+                      </DataTableTd>
+                      <DataTableTd className="text-xs">
+                        {row.currentBoutiqueName ?? row.currentBoutiqueId ?? '—'}
                       </DataTableTd>
                       <DataTableTd>{formatAmount(row.currentAmount)}</DataTableTd>
                       <DataTableTd>{formatAmount(row.newAmount)}</DataTableTd>
                       <DataTableTd>
                         <Badge variant={actionBadgeVariant(row.action)}>{row.action}</Badge>
                       </DataTableTd>
-                      <DataTableTd className="text-xs">{row.status}</DataTableTd>
+                      <DataTableTd className="max-w-xs text-xs text-amber-800">
+                        {row.warnings.length > 0 ? row.warnings.join(' ') : '—'}
+                      </DataTableTd>
                     </tr>
                   ))}
                 </DataTableBody>

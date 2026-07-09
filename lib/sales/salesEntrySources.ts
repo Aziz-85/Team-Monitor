@@ -23,6 +23,8 @@ export const SALES_ENTRY_SOURCE = {
   EXCEL_IMPORT: 'EXCEL_IMPORT',
   /** Yearly wide-calendar employee sales import (/api/sales/import/yearly/*). */
   EXCEL_YEARLY_IMPORT: 'EXCEL_YEARLY_IMPORT',
+  /** Boutique-owned yearly import synced from ledger lines. */
+  YEARLY_IMPORT: 'YEARLY_IMPORT',
   MANUAL: 'MANUAL',
   API: 'API',
   /** Admin historical backfill: canonical row insert only via dedicated import route (no silent overwrite). */
