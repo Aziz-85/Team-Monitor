@@ -1,6 +1,6 @@
 /**
  * Executive Insights API: single-boutique scope by default.
- * - Uses resolveOperationalBoutiqueOnly (no global param for insights).
+ * - Uses requireExecutiveApiViewer, which resolves operational boutique only.
  * - Passes boutiqueIds to fetchWeekMetrics and fetchDailyRevenueForWeek.
  * - No scope leak: data filtered at source.
  */
@@ -11,10 +11,10 @@ import * as path from 'path';
 const ROUTE_PATH = path.join(process.cwd(), 'app', 'api', 'executive', 'insights', 'route.ts');
 
 describe('Executive Insights API scope', () => {
-  it('uses resolveOperationalBoutiqueOnly for scope', () => {
+  it('uses the central executive access gate for scope', () => {
     const src = fs.readFileSync(ROUTE_PATH, 'utf-8');
-    expect(src).toContain('resolveOperationalBoutiqueOnly');
-    expect(src).toContain('scopeResult.scope.boutiqueIds');
+    expect(src).toContain('requireExecutiveApiViewer(request, user)');
+    expect(src).toContain('gate.scope.boutiqueIds');
   });
 
   it('passes boutiqueIds to fetchWeekMetrics', () => {

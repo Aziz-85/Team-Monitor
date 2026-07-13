@@ -10,9 +10,10 @@ import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { parseYearlyImportExcel } from '@/lib/sales/parseYearlyImportExcel';
 import { parseYearlyImportReadme } from '@/lib/sales/parseYearlyImportReadme';
 import {
-  buildAssignmentWarnings,
-  resolveEmployeeAssignmentAtDate,
-} from '@/lib/sales/employeeAssignmentAtDate';
+  buildResolutionWarningsForUpload,
+  resolveEmployeeBoutiqueAtDateCached,
+  type EmployeeBoutiqueResolution,
+} from '@/lib/employees/resolveEmployeeBoutiqueAtDate';
 import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
@@ -235,7 +236,7 @@ export async function buildYearlyEmployeeSalesImportPlan(input: {
   let invalidEntries = parseErrors.length;
   let warningCount = 0;
 
-  const assignmentCache = new Map<string, Awaited<ReturnType<typeof resolveEmployeeAssignmentAtDate>>>();
+  const assignmentCache = new Map<string, EmployeeBoutiqueResolution>();
 
   for (const item of queue) {
     const fileKey = `${item.dateKey}|${item.empId}`;
@@ -267,19 +268,13 @@ export async function buildYearlyEmployeeSalesImportPlan(input: {
       continue;
     }
 
-    const assignKey = `${item.empId}|${item.dateKey}`;
-    let assignment = assignmentCache.get(assignKey);
-    if (!assignment) {
-      assignment = await resolveEmployeeAssignmentAtDate(item.empId, item.dateKey);
-      assignmentCache.set(assignKey, assignment);
-    }
+    const resolution = await resolveEmployeeBoutiqueAtDateCached(
+      assignmentCache,
+      item.empId,
+      item.dateKey
+    );
 
-    const warnings = buildAssignmentWarnings({
-      uploadedBoutiqueId: input.boutiqueId,
-      assignment,
-      currentBoutiqueId: mapped.currentBoutiqueId,
-      assignmentSource: assignment.source,
-    });
+    const warnings = buildResolutionWarningsForUpload(resolution, input.boutiqueId);
 
     if (otherBoutiqueByUserDate.has(`${item.dateKey}|${mapped.userId}`)) {
       warnings.push(
@@ -313,8 +308,8 @@ export async function buildYearlyEmployeeSalesImportPlan(input: {
       amount: item.amountSar,
       uploadedBoutiqueId: input.boutiqueId,
       uploadedBoutiqueName: uploadedBoutique?.name ?? null,
-      historicalBoutiqueId: assignment.historicalBoutiqueId,
-      historicalBoutiqueName: assignment.historicalBoutiqueName,
+      historicalBoutiqueId: resolution.historicalBoutiqueId,
+      historicalBoutiqueName: resolution.historicalBoutiqueName,
       currentBoutiqueId: mapped.currentBoutiqueId,
       currentBoutiqueName: mapped.currentBoutiqueName,
       currentAmount: existing?.amount ?? null,
@@ -457,61 +452,11 @@ function emptyDryRun(input: {
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === 'object' && !Array.isArray(value);
-}
+import { yearlySalesApplyPlanSchema } from '@/lib/validation/schemas/salesImport';
 
 export function parseYearlySalesApplyPlan(raw: unknown, boutiqueId: string): YearlySalesApplyPlan | null {
-  if (!isRecord(raw)) return null;
-  if (raw.boutiqueId !== boutiqueId) return null;
-  if (typeof raw.fileName !== 'string' || typeof raw.fileSha256 !== 'string') return null;
-  const writesRaw = raw.writes;
-  if (!Array.isArray(writesRaw)) return null;
-
-  const writes: YearlySalesApplyWrite[] = [];
-  for (const w of writesRaw) {
-    if (!isRecord(w)) return null;
-    if (
-      typeof w.dateKey !== 'string' ||
-      typeof w.dateIso !== 'string' ||
-      typeof w.userId !== 'string' ||
-      typeof w.empId !== 'string' ||
-      typeof w.amount !== 'number' ||
-      (w.action !== 'INSERT' && w.action !== 'UPDATE') ||
-      typeof w.stableKey !== 'string'
-    ) {
-      return null;
-    }
-    writes.push({
-      dateKey: w.dateKey,
-      dateIso: w.dateIso,
-      userId: w.userId,
-      empId: w.empId,
-      employeeName: typeof w.employeeName === 'string' ? w.employeeName : w.empId,
-      amount: w.amount,
-      action: w.action,
-      existingSalesEntryId: typeof w.existingSalesEntryId === 'string' ? w.existingSalesEntryId : null,
-      amountBefore: typeof w.amountBefore === 'number' ? w.amountBefore : null,
-      sourceBefore: typeof w.sourceBefore === 'string' ? w.sourceBefore : null,
-      stableKey: w.stableKey,
-    });
-  }
-
-  const monthRange =
-    isRecord(raw.monthRange) &&
-    typeof raw.monthRange.from === 'string' &&
-    typeof raw.monthRange.to === 'string'
-      ? { from: raw.monthRange.from, to: raw.monthRange.to }
-      : null;
-
-  return {
-    boutiqueId,
-    fileName: raw.fileName,
-    fileSha256: raw.fileSha256,
-    year: typeof raw.year === 'string' ? raw.year : null,
-    monthRange,
-    writes,
-  };
+  const result = yearlySalesApplyPlanSchema(boutiqueId).safeParse(raw);
+  return result.success ? result.data : null;
 }
 
 export async function applyYearlyEmployeeSalesImportPlan(input: {

@@ -4,6 +4,18 @@ import { execSync } from 'child_process';
 const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
 
+function resolveAppEnv() {
+  const explicit = process.env.APP_ENV?.trim().toLowerCase();
+  if (explicit === 'production' || explicit === 'staging' || explicit === 'local') return explicit;
+  return process.env.NODE_ENV === 'production' ? 'production' : 'local';
+}
+
+function getCookiePrefix() {
+  const explicit = process.env.COOKIE_PREFIX?.trim();
+  if (explicit) return explicit.endsWith('_') ? explicit : `${explicit}_`;
+  return resolveAppEnv() === 'staging' ? 'dt_staging_' : 'dt_';
+}
+
 function getGitHash() {
   try {
     return execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: process.cwd() }).trim();
@@ -23,6 +35,8 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: pkg.version || '1.0.0',
     NEXT_PUBLIC_GIT_HASH: getGitHash(),
     NEXT_PUBLIC_BUILD_DATE: new Date().toISOString(),
+    NEXT_PUBLIC_APP_ENV: resolveAppEnv(),
+    NEXT_PUBLIC_COOKIE_PREFIX: getCookiePrefix(),
   },
   async redirects() {
     return [

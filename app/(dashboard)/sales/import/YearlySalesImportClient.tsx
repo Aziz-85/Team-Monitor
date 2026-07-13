@@ -27,6 +27,7 @@ type DryRunResult = {
   applyPlan: YearlySalesApplyPlan;
   canApply: boolean;
   applyBlockReasons: string[];
+  applyBlockedByDuplicate?: boolean;
   boutiqueMismatch: string | null;
   parseErrors: { row: number; colHeader: string; reason: string }[];
 };
@@ -115,7 +116,10 @@ export function YearlySalesImportClient() {
         setApplyPlan(null);
         return;
       }
-      setPreview(data);
+      setPreview({
+        ...data,
+        canApply: Boolean(data.canApply) && !data.applyBlockedByDuplicate,
+      });
       setApplyPlan(data.applyPlan);
     } catch {
       setPreview(null);

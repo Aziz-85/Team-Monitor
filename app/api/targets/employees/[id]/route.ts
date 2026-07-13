@@ -67,19 +67,36 @@ export async function PUT(
   if (typeof body.source === 'string') data.source = body.source.trim() || null;
   if (typeof body.notes === 'string') data.notes = body.notes.trim() || null;
 
-  const updated = await prisma.employeeMonthlyTarget.update({
-    where: { id },
-    data,
-    include: {
-      boutique: { select: { id: true, code: true, name: true } },
-      user: {
-        select: {
-          id: true,
-          empId: true,
-          employee: { select: { name: true } },
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.employeeMonthlyTarget.update({
+      where: { id },
+      data,
+      include: {
+        boutique: { select: { id: true, code: true, name: true } },
+        user: {
+          select: {
+            id: true,
+            empId: true,
+            employee: { select: { name: true } },
+          },
         },
       },
-    },
+    });
+    if (data.amount != null && data.amount !== existing.amount) {
+      await tx.targetChangeAudit.create({
+        data: {
+          actorUserId: scope.userId,
+          boutiqueId: existing.boutiqueId,
+          employeeId: existing.userId,
+          month: existing.month,
+          scope: 'EMPLOYEE_MONTHLY',
+          fromAmount: existing.amount,
+          toAmount: data.amount,
+          reason: body.notes?.trim() || 'Employee target updated via API',
+        },
+      });
+    }
+    return row;
   });
   return NextResponse.json(updated);
 }
@@ -99,6 +116,20 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.employeeMonthlyTarget.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.targetChangeAudit.create({
+      data: {
+        actorUserId: scope.userId,
+        boutiqueId: existing.boutiqueId,
+        employeeId: existing.userId,
+        month: existing.month,
+        scope: 'EMPLOYEE_MONTHLY',
+        fromAmount: existing.amount,
+        toAmount: 0,
+        reason: 'Employee target deleted via API',
+      },
+    });
+    await tx.employeeMonthlyTarget.delete({ where: { id } });
+  });
   return NextResponse.json({ ok: true, deleted: true });
 }

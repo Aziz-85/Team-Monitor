@@ -11,6 +11,10 @@ import { NextResponse } from 'next/server';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { getEmployeeBoutiqueIdForUser } from '@/lib/boutique/resolveOperationalBoutique';
 import { getSessionUser } from '@/lib/auth';
+import {
+  checkBoutiqueAccess,
+  checkBoutiquePermission,
+} from '@/lib/permissions/boutiqueAccess';
 import type { Role } from '@prisma/client';
 
 export type SalesScopeResult = {
@@ -121,16 +125,36 @@ export async function getSalesScope(
     }
   }
 
-  const canImport =
-    (roleStr === 'MANAGER' && !!activeBoutiqueId) ||
-    (isAreaManager && allowedBoutiqueIds.length > 0) ||
-    roleStr === 'ADMIN' ||
-    roleStr === 'SUPER_ADMIN';
+  if (!effectiveBoutiqueId) {
+    return {
+      scope: null,
+      res: NextResponse.json({ error: 'Operational boutique required' }, { status: 403 }),
+    };
+  }
+
+  // Validate all request-derived boutique identifiers against server authority.
+  // ADMIN/SUPER_ADMIN access remains explicit in boutiqueAccess and still
+  // requires the boutique to exist and be active.
+  const access = await checkBoutiqueAccess(user, effectiveBoutiqueId);
+  if (!access.allowed) {
+    return {
+      scope: null,
+      res: NextResponse.json({ error: 'Boutique not in your authorized scope' }, { status: 403 }),
+    };
+  }
+
+  const salesPermission = await checkBoutiquePermission(
+    user,
+    effectiveBoutiqueId,
+    'canManageSales'
+  );
+  const canImport = salesPermission.allowed;
   const canResolveIssues =
-    (roleStr === 'MANAGER' && !!activeBoutiqueId) ||
-    (isAreaManager && allowedBoutiqueIds.length > 0) ||
-    roleStr === 'ADMIN' ||
-    roleStr === 'SUPER_ADMIN';
+    salesPermission.allowed &&
+    (roleStr === 'MANAGER' ||
+      isAreaManager ||
+      roleStr === 'ADMIN' ||
+      roleStr === 'SUPER_ADMIN');
   const canAddManualReturn =
     ((roleStr === 'MANAGER' || roleStr === 'ASSISTANT_MANAGER') && !!activeBoutiqueId) ||
     (isAreaManager && allowedBoutiqueIds.length > 0) ||

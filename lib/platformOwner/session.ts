@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { clearSessionCookie, setSessionCookie, type SessionUser } from '@/lib/auth';
+import { getSessionCookieName } from '@/lib/env';
 import { SESSION_IDLE_MINUTES, SESSION_LAST_SEEN_THROTTLE_MINUTES } from '@/lib/sessionConfig';
 import {
   getEffectiveAccessContext,
@@ -8,7 +9,6 @@ import {
 } from '@/lib/platformOwner/effectiveAccessContext';
 import type { EffectiveAccessContext, PlatformActiveMode, SessionModeState } from '@/lib/platformOwner/types';
 
-const SESSION_COOKIE = 'dt_session';
 const IDLE_MS = SESSION_IDLE_MINUTES * 60 * 1000;
 const THROTTLE_MS = SESSION_LAST_SEEN_THROTTLE_MINUTES * 60 * 1000;
 
@@ -44,7 +44,7 @@ async function loadSessionRow(token: string) {
 /** Authenticated session with platform-owner mode resolution and idle enforcement. */
 export async function getAuthenticatedSession(): Promise<AuthenticatedSession | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token = cookieStore.get(getSessionCookieName())?.value;
   if (!token) return null;
 
   const session = await loadSessionRow(token);

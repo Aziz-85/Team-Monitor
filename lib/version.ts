@@ -3,6 +3,8 @@
  * Injected at build via next.config env (NEXT_PUBLIC_*). Safe for server and client.
  */
 
+import { getAppEnv } from '@/lib/env/appEnv';
+
 export const APP_VERSION =
   typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_APP_VERSION
     ? process.env.NEXT_PUBLIC_APP_VERSION
@@ -20,11 +22,7 @@ export const BUILD_DATE =
 
 /** production | staging | local (from APP_ENV or NODE_ENV). */
 export function getEnvironment(): string {
-  if (typeof process === 'undefined') return 'local';
-  const appEnv = process.env?.APP_ENV;
-  if (appEnv) return appEnv;
-  const nodeEnv = process.env?.NODE_ENV;
-  if (nodeEnv === 'production') return 'production';
-  if (nodeEnv === 'development') return 'local';
-  return nodeEnv || 'local';
+  return getAppEnv();
 }
+
+export { getAppEnv, isStaging, isProduction, isLocal } from '@/lib/env/appEnv';

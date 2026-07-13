@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-
-const LOCALE_COOKIE = 'dt_locale';
+import { getLocaleCookieName, shouldUseSecureCookies } from '@/lib/env';
 const ALLOWED_LOCALES = ['ar', 'en'] as const;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 30; // 30 requests per minute per IP
@@ -42,9 +41,9 @@ export async function POST(request: NextRequest) {
   }
   const cookieStore = await cookies();
   const isHttps = new URL(request.url).protocol === 'https:';
-  const secure = process.env.NODE_ENV === 'production' || isHttps;
+  const secure = shouldUseSecureCookies() || isHttps;
   cookieStore.set({
-    name: LOCALE_COOKIE,
+    name: getLocaleCookieName(),
     value: locale,
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
@@ -57,6 +56,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const cookieStore = await cookies();
-  const locale = cookieStore.get(LOCALE_COOKIE)?.value ?? 'en';
+  const locale = cookieStore.get(getLocaleCookieName())?.value ?? 'en';
   return NextResponse.json({ locale: locale === 'ar' ? 'ar' : 'en' });
 }

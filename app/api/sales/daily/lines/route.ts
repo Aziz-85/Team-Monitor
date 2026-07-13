@@ -6,18 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
 import { assertOperationalBoutiqueId } from '@/lib/guards/assertOperationalBoutique';
 import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
-import { validateSarInteger, reconcileSummary } from '@/lib/sales/reconcile';
-import { recordSalesLedgerAudit } from '@/lib/sales/audit';
-import { syncSummaryToSalesEntry } from '@/lib/sales/syncLedgerToSalesEntry';
-import { formatDateRiyadh, normalizeDateOnlyRiyadh } from '@/lib/time';
-import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
-import { SYSTEM_BRANCH_TOTAL_EMP_ID } from '@/lib/sales/systemBranchTotalConstants';
-import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
+import { validateSarInteger } from '@/lib/sales/reconcile';
+import { recordBoutiqueSale, removeBoutiqueSaleLine } from '@/lib/sales/recordBoutiqueSale';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER', 'AREA_MANAGER'] as const;
@@ -41,12 +35,6 @@ export async function POST(request: NextRequest) {
   if (!boutiqueId || !employeeId) {
     return NextResponse.json({ error: 'boutiqueId and employeeId required' }, { status: 400 });
   }
-  if (employeeId === SYSTEM_BRANCH_TOTAL_EMP_ID) {
-    return NextResponse.json(
-      { error: 'This employee cannot be used on daily sales lines.' },
-      { status: 400 }
-    );
-  }
   if (!amountSarResult.ok) {
     return NextResponse.json({ error: amountSarResult.error }, { status: 400 });
   }
@@ -62,121 +50,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { empId: employeeId },
-    select: { boutiqueId: true },
-  });
-  if (!employee || employee.boutiqueId !== boutiqueId) {
-    return NextResponse.json(
-      { error: 'Employee must belong to this boutique' },
-      { status: 400 }
-    );
-  }
-
-  let summary = await prisma.boutiqueSalesSummary.findUnique({
-    where: { boutiqueId_date: { boutiqueId, date } },
-    include: { lines: true },
-  });
-
-  if (!summary) {
-    summary = await prisma.boutiqueSalesSummary.create({
-      data: {
-        boutiqueId,
-        date,
-        totalSar: 0,
-        status: 'DRAFT',
-        enteredById: user.id,
-      },
-      include: { lines: true },
-    });
-    await recordSalesLedgerAudit({
-      boutiqueId,
-      date,
-      actorId: user.id,
-      action: 'SUMMARY_CREATE',
-      metadata: { totalSar: 0, autoCreated: true },
-    });
-  }
-
-  const amountSar = amountSarResult.value;
-  const dateKey = formatDateRiyadh(normalizeDateOnlyRiyadh(date));
-  if (amountSar > 0) {
-    const sysUid = await getSystemBranchTotalUserId();
-    if (sysUid) {
-      const branchBlock = await prisma.salesEntry.findFirst({
-        where: {
-          boutiqueId,
-          dateKey,
-          userId: sysUid,
-          amount: { gt: 0 },
-          source: SALES_ENTRY_SOURCE.BRANCH_DAILY_TOTAL,
-        },
-        select: { id: true },
-      });
-      if (branchBlock) {
-        return NextResponse.json(
-          {
-            error:
-              'Cannot save employee line because a branch daily total is recorded for this date. Remove or zero the daily total first.',
-          },
-          { status: 409 }
-        );
-      }
-    }
-  }
-
-  const wasLocked = summary.status === 'LOCKED';
-
-  if (wasLocked) {
-    await prisma.boutiqueSalesSummary.update({
-      where: { id: summary.id },
-      data: { status: 'DRAFT', lockedById: null, lockedAt: null },
-    });
-    await recordSalesLedgerAudit({
-      boutiqueId,
-      date,
-      actorId: user.id,
-      action: 'POST_LOCK_EDIT',
-      reason: 'Line upsert after lock; auto-unlock',
-      metadata: { summaryId: summary.id, employeeId, amountSar },
-    });
-  }
-
-  const existingLine = summary.lines.find((l) => l.employeeId === employeeId);
-  if (existingLine) {
-    await prisma.boutiqueSalesLine.update({
-      where: { id: existingLine.id },
-      data: { amountSar, updatedAt: new Date() },
-    });
-  } else {
-    await prisma.boutiqueSalesLine.create({
-      data: {
-        summaryId: summary.id,
-        employeeId,
-        amountSar,
-        source: 'MANUAL',
-      },
-    });
-  }
-
-  await recordSalesLedgerAudit({
+  const result = await recordBoutiqueSale({
     boutiqueId,
     date,
-    actorId: user.id,
-    action: 'LINE_UPSERT',
-    metadata: { employeeId, amountSar, wasLocked },
+    employeeId,
+    amountSar: amountSarResult.value,
+    actorUserId: user.id,
+    requireEmployeeInBoutique: true,
   });
 
-  await syncSummaryToSalesEntry(summary.id, user.id);
+  if (!result.ok) {
+    const status =
+      result.status === 'conflict' ? 409 : result.status === 'validation' ? 400 : 404;
+    return NextResponse.json({ error: result.error }, { status });
+  }
 
-  const recon = await reconcileSummary(summary.id);
   return NextResponse.json({
     ok: true,
-    linesTotal: recon?.linesTotal ?? 0,
-    summaryTotal: recon?.summaryTotal ?? summary.totalSar,
-    diff: recon?.diff ?? 0,
-    canLock: recon?.canLock ?? false,
-    status: recon?.status ?? summary.status,
+    warnings: result.warnings,
+    linesTotal: result.reconcile.linesTotal,
+    summaryTotal: result.reconcile.summaryTotal,
+    diff: result.reconcile.diff,
+    canLock: result.reconcile.canLock,
+    status: result.reconcile.status,
   });
 }
 
@@ -210,56 +106,23 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'You do not have permission to manage sales for this boutique' }, { status: 403 });
   }
 
-  const summary = await prisma.boutiqueSalesSummary.findUnique({
-    where: { boutiqueId_date: { boutiqueId, date } },
-    include: { lines: true },
-  });
-
-  if (!summary) {
-    return NextResponse.json({ error: 'No summary for this boutique and date' }, { status: 404 });
-  }
-
-  const existingLine = summary.lines.find((l) => l.employeeId === employeeId);
-  if (!existingLine) {
-    return NextResponse.json({ error: 'Line not found' }, { status: 404 });
-  }
-
-  const wasLocked = summary.status === 'LOCKED';
-
-  if (wasLocked) {
-    await prisma.boutiqueSalesSummary.update({
-      where: { id: summary.id },
-      data: { status: 'DRAFT', lockedById: null, lockedAt: null },
-    });
-    await recordSalesLedgerAudit({
-      boutiqueId,
-      date,
-      actorId: user.id,
-      action: 'POST_LOCK_EDIT',
-      reason: 'Line delete after lock; auto-unlock',
-      metadata: { summaryId: summary.id, employeeId },
-    });
-  }
-
-  await prisma.boutiqueSalesLine.delete({ where: { id: existingLine.id } });
-
-  await recordSalesLedgerAudit({
+  const result = await removeBoutiqueSaleLine({
     boutiqueId,
     date,
-    actorId: user.id,
-    action: 'LINE_DELETE',
-    metadata: { employeeId, wasLocked },
+    employeeId,
+    actorUserId: user.id,
   });
 
-  await syncSummaryToSalesEntry(summary.id, user.id);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 404 });
+  }
 
-  const recon = await reconcileSummary(summary.id);
   return NextResponse.json({
     ok: true,
-    linesTotal: recon?.linesTotal ?? 0,
-    summaryTotal: recon?.summaryTotal ?? summary.totalSar,
-    diff: recon?.diff ?? 0,
-    canLock: recon?.canLock ?? false,
-    status: recon?.status ?? 'DRAFT',
+    linesTotal: result.reconcile?.linesTotal ?? 0,
+    summaryTotal: result.reconcile?.summaryTotal ?? 0,
+    diff: result.reconcile?.diff ?? 0,
+    canLock: result.reconcile?.canLock ?? false,
+    status: result.reconcile?.status ?? 'DRAFT',
   });
 }

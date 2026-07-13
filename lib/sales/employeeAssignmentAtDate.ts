@@ -1,9 +1,13 @@
 /**
+ * @deprecated Import from `@/lib/employees/resolveEmployeeBoutiqueAtDate` — thin backward-compat shim.
  * Resolve which boutique an employee was assigned to on a calendar date.
- * Used for yearly import validation warnings (not routing).
  */
 
-import { prisma } from '@/lib/db';
+import {
+  resolveEmployeeBoutiqueAtDate,
+  buildResolutionWarningsForUpload,
+  type EmployeeBoutiqueResolution,
+} from '@/lib/employees/resolveEmployeeBoutiqueAtDate';
 
 export type EmployeeAssignmentAtDate = {
   historicalBoutiqueId: string | null;
@@ -12,69 +16,25 @@ export type EmployeeAssignmentAtDate = {
   source: 'assignment' | 'employee_fallback' | 'none';
 };
 
-function dateFromKey(dateKey: string): Date {
-  return new Date(dateKey + 'T00:00:00.000Z');
+function mapSource(
+  resolution: EmployeeBoutiqueResolution
+): EmployeeAssignmentAtDate['source'] {
+  if (resolution.source === 'UNRESOLVED') return 'none';
+  if (resolution.source === 'EMPLOYEE_ASSIGNMENT') return 'assignment';
+  return 'employee_fallback';
 }
 
-/** Active EmployeeAssignment rows covering dateKey (inclusive). */
+/** @deprecated Use `resolveEmployeeBoutiqueAtDate` from `lib/employees`. */
 export async function resolveEmployeeAssignmentAtDate(
   empId: string,
   dateKey: string
 ): Promise<EmployeeAssignmentAtDate> {
-  const onDate = dateFromKey(dateKey);
-  const rows = await prisma.employeeAssignment.findMany({
-    where: {
-      empId,
-      fromDate: { lte: onDate },
-      OR: [{ toDate: null }, { toDate: { gte: onDate } }],
-    },
-    select: {
-      boutiqueId: true,
-      boutique: { select: { id: true, name: true } },
-    },
-  });
-
-  if (rows.length === 0) {
-    const employee = await prisma.employee.findUnique({
-      where: { empId },
-      select: {
-        boutiqueId: true,
-        boutique: { select: { id: true, name: true } },
-      },
-    });
-    if (!employee) {
-      return {
-        historicalBoutiqueId: null,
-        historicalBoutiqueName: null,
-        assignmentCount: 0,
-        source: 'none',
-      };
-    }
-    return {
-      historicalBoutiqueId: employee.boutiqueId,
-      historicalBoutiqueName: employee.boutique?.name ?? null,
-      assignmentCount: 0,
-      source: 'employee_fallback',
-    };
-  }
-
-  if (rows.length === 1) {
-    const row = rows[0]!;
-    return {
-      historicalBoutiqueId: row.boutiqueId,
-      historicalBoutiqueName: row.boutique?.name ?? null,
-      assignmentCount: 1,
-      source: 'assignment',
-    };
-  }
-
-  const uniqueIds = Array.from(new Set(rows.map((r) => r.boutiqueId)));
-  const first = rows[0]!;
+  const resolution = await resolveEmployeeBoutiqueAtDate({ employeeId: empId, dateKey });
   return {
-    historicalBoutiqueId: uniqueIds.length === 1 ? first.boutiqueId : null,
-    historicalBoutiqueName: uniqueIds.length === 1 ? (first.boutique?.name ?? null) : null,
-    assignmentCount: rows.length,
-    source: 'assignment',
+    historicalBoutiqueId: resolution.historicalBoutiqueId,
+    historicalBoutiqueName: resolution.historicalBoutiqueName,
+    assignmentCount: resolution.assignmentCount,
+    source: mapSource(resolution),
   };
 }
 
@@ -84,35 +44,23 @@ export function buildAssignmentWarnings(input: {
   currentBoutiqueId: string | null;
   assignmentSource: EmployeeAssignmentAtDate['source'];
 }): string[] {
-  const warnings: string[] = [];
-
-  if (input.assignment.assignmentCount > 1) {
-    warnings.push(
-      'Employee appears assigned to more than one boutique on this date; sale will remain under uploaded boutique.'
-    );
-  } else if (
-    input.assignmentSource === 'assignment' &&
-    input.assignment.historicalBoutiqueId &&
-    input.assignment.historicalBoutiqueId !== input.uploadedBoutiqueId
-  ) {
-    warnings.push(
-      'Employee assigned to another boutique on this date; sale will remain under uploaded boutique.'
-    );
-  } else if (input.assignmentSource === 'employee_fallback') {
-    warnings.push(
-      'No historical assignment found; used current employee boutique for validation.'
-    );
-  }
-
-  if (
-    input.currentBoutiqueId &&
-    input.currentBoutiqueId !== input.uploadedBoutiqueId &&
-    !warnings.some((w) => w.includes('assigned to another boutique'))
-  ) {
-    warnings.push(
-      'Employee current boutique differs from uploaded boutique; sale will remain under uploaded boutique.'
-    );
-  }
-
-  return warnings;
+  const resolution: EmployeeBoutiqueResolution = {
+    employeeId: '',
+    dateKey: '',
+    currentBoutiqueId: input.currentBoutiqueId,
+    historicalBoutiqueId: input.assignment.historicalBoutiqueId,
+    historicalBoutiqueName: input.assignment.historicalBoutiqueName,
+    source:
+      input.assignmentSource === 'assignment'
+        ? 'EMPLOYEE_ASSIGNMENT'
+        : input.assignmentSource === 'employee_fallback'
+          ? 'CURRENT_EMPLOYEE_BOUTIQUE'
+          : 'UNRESOLVED',
+    assignmentCount: input.assignment.assignmentCount,
+    active: true,
+    isSystemOnly: false,
+    hasUser: true,
+    warnings: [],
+  };
+  return buildResolutionWarningsForUpload(resolution, input.uploadedBoutiqueId);
 }

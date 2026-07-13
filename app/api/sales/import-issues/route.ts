@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { hasCrossBoutiqueAdminBypass } from '@/lib/permissions/boutiqueAccess';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
 
 export async function GET(request: NextRequest) {
@@ -29,7 +30,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
   }
 
-  if (scope.role !== 'ADMIN' && !scope.allowedBoutiqueIds.includes(batch.boutiqueId)) {
+  if (
+    !hasCrossBoutiqueAdminBypass(scope.role) &&
+    !scope.allowedBoutiqueIds.includes(batch.boutiqueId)
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

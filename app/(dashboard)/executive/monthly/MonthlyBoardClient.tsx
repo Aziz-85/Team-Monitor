@@ -30,8 +30,10 @@ type MonthlyData = {
   boutiqueScore: BoutiqueScore;
   salesIntelligence: {
     revenue: number;
-    target: number;
-    achievementPct: number;
+    target: number | null;
+    hasMonthlyTarget: boolean;
+    targetStatus: 'assigned' | 'missing';
+    achievementPct: number | null;
     totalEmployeeTarget: number;
     entryCount: number;
   };
@@ -254,8 +256,8 @@ export function MonthlyBoardClient() {
         <Card title={t('executive.monthly.salesIntelligence')}>
           <ul className="space-y-1 text-sm">
             <li>{t('executive.monthly.salesSar')}: <strong>{data.salesIntelligence.revenue.toLocaleString()}</strong></li>
-            <li>{t('executive.monthly.target')}: <strong>{data.salesIntelligence.target.toLocaleString()}</strong></li>
-            <li>{t('executive.monthly.achievement')}: <strong className="text-[#C6A756]">{data.salesIntelligence.achievementPct}%</strong></li>
+            <li>{t('executive.monthly.target')}: <strong>{data.salesIntelligence.hasMonthlyTarget && data.salesIntelligence.target != null ? data.salesIntelligence.target.toLocaleString() : '—'}</strong></li>
+            <li>{t('executive.monthly.achievement')}: <strong className="text-[#C6A756]">{data.salesIntelligence.achievementPct != null ? `${data.salesIntelligence.achievementPct}%` : '—'}</strong></li>
             <li>{t('executive.monthly.employeeTargets')}: {data.salesIntelligence.totalEmployeeTarget}</li>
             <li>{t('executive.monthly.salesEntriesCount')}: {data.salesIntelligence.entryCount}</li>
           </ul>

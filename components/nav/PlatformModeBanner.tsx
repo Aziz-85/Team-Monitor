@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
+import { readCsrfTokenFromDocument } from '@/components/env/StagingBanner';
 
 type PlatformModeState = {
   isPlatformOwner: boolean;
@@ -12,9 +13,7 @@ type PlatformModeState = {
 };
 
 function readCsrfToken(): string {
-  if (typeof document === 'undefined') return '';
-  const match = document.cookie.match(/(?:^|;\s*)dt_csrf=([^;]+)/);
-  return match?.[1] ? decodeURIComponent(match[1]) : '';
+  return readCsrfTokenFromDocument();
 }
 
 export function PlatformModeBanner() {

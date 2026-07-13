@@ -109,6 +109,7 @@ export function TargetsImportClient() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [applyPlan, setApplyPlan] = useState<{ inserts: unknown[]; updates: unknown[] } | null>(null);
+  const [fileSha256, setFileSha256] = useState<string | null>(null);
   const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('all');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -154,6 +155,7 @@ export function TargetsImportClient() {
     setLoading(true);
     setPreview(null);
     setApplyPlan(null);
+    setFileSha256(null);
     setApplyResult(null);
     setPreviewFilter('all');
     const formData = new FormData();
@@ -167,12 +169,19 @@ export function TargetsImportClient() {
       const data = await res.json();
       setPreview(data);
       setApplyPlan({ inserts: data.inserts ?? [], updates: data.updates ?? [] });
+      setFileSha256(typeof data.fileSha256 === 'string' ? data.fileSha256 : null);
       const totals = data.previewTotals as PreviewTotals | undefined;
       const hasWrites = (totals?.willInsert ?? 0) > 0 || (totals?.willUpdate ?? 0) > 0;
-      setCanImport((totals?.errors ?? data.invalidRows?.length ?? 0) === 0 && hasWrites);
+      const duplicateBlocked = data.applyBlockedByDuplicate === true;
+      setCanImport(
+        !duplicateBlocked &&
+          (totals?.errors ?? data.invalidRows?.length ?? 0) === 0 &&
+          hasWrites
+      );
     } catch {
       setPreview(null);
       setApplyPlan(null);
+      setFileSha256(null);
       setCanImport(false);
     } finally {
       setLoading(false);
@@ -184,6 +193,7 @@ export function TargetsImportClient() {
     setApplying(true);
     const formData = new FormData();
     formData.set('applyPlan', JSON.stringify(applyPlan));
+    if (fileSha256) formData.set('fileSha256', fileSha256);
     const url =
       importType === 'boutique'
         ? '/api/targets/import/boutiques/apply'
@@ -195,6 +205,7 @@ export function TargetsImportClient() {
         setApplyResult({ inserted: data.inserted ?? 0, updated: data.updated ?? 0 });
         setPreview(null);
         setApplyPlan(null);
+        setFileSha256(null);
         setCanImport(false);
         setFile(null);
       } else {

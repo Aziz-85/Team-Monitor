@@ -3,6 +3,8 @@
  * so employees see the same vacations as on the manager /leaves calendar view.
  */
 
+export {};
+
 function nextRequest(fullUrl: string): import('next/server').NextRequest {
   const u = new URL(fullUrl);
   return { url: u.href, nextUrl: u } as unknown as import('next/server').NextRequest;

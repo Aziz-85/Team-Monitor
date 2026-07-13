@@ -8,6 +8,7 @@ import type { Role } from '@prisma/client';
 
 // ---- Prisma mock ------------------------------------------------------------
 type AnyRec = Record<string, unknown>;
+const transactionMock = jest.fn();
 const db = {
   boutique: { findMany: jest.fn(), findUnique: jest.fn() },
   boutiqueConfiguration: { findUnique: jest.fn(), create: jest.fn(), upsert: jest.fn() },
@@ -15,8 +16,9 @@ const db = {
   boutiqueCoveragePolicy: { findMany: jest.fn(), create: jest.fn(), createMany: jest.fn(), deleteMany: jest.fn() },
   boutiqueSpecialOperatingPeriod: { findMany: jest.fn(), createMany: jest.fn(), deleteMany: jest.fn() },
   coverageRule: { findMany: jest.fn() },
-  $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(db)),
+  $transaction: transactionMock,
 };
+transactionMock.mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db));
 jest.mock('@/lib/db', () => ({ prisma: db }));
 
 // ---- Auth mock --------------------------------------------------------------
@@ -112,7 +114,7 @@ describe('backfill', () => {
 
     expect(summary.policiesCopiedFromCoverageRule).toBe(1);
     const copiedCall = db.boutiqueCoveragePolicy.create.mock.calls.find(
-      (c) => (c[0] as { data: { dayOfWeek: number } }).data.dayOfWeek === 1
+      (c: unknown[]) => (c[0] as { data: { dayOfWeek: number } }).data.dayOfWeek === 1
     );
     expect(copiedCall).toBeDefined();
     const data = (copiedCall![0] as { data: { minMorning: number; minEvening: number } }).data;

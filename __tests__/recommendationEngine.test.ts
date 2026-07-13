@@ -69,7 +69,8 @@ describe('generateSmartRecommendations', () => {
   });
 
   it('returns specific external support recommendation for impossible week', () => {
-    const input = makeWeekInput(1, { weeklyOffDay: 'NONE' });
+    // Keep the shortage recoverable enough for an estimated coverage increase.
+    const input = makeWeekInput(2, { weeklyOffDay: 'NONE' });
     const analysis = analyzeScheduleConstraints(input);
     const recs = generateSmartRecommendations({ input, analysis }, 3);
 

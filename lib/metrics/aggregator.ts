@@ -13,7 +13,9 @@
  * **Sales reads** are composed via `lib/sales/readSalesAggregate.ts` (single internal layer over SalesEntry).
  */
 
-import { lookupBoutiqueMonthlyTarget } from '@/lib/targets/boutiqueMonthlyTargetLookup';
+import { getBoutiqueTarget } from '@/lib/targets/getBoutiqueTarget';
+import { getEmployeeTarget } from '@/lib/targets/getEmployeeTarget';
+import type { TargetStatus } from '@/lib/targets/types';
 import { prisma } from '@/lib/db';
 import {
   aggregateSalesEntrySum,
@@ -75,7 +77,12 @@ export type TargetMetricsInput = {
 
 export type TargetMetricsResult = {
   monthKey: string;
+  /** Pace math uses 0 when missing; prefer monthTargetSar for display. */
   monthTarget: number;
+  /** Null when no employee monthly target row exists. */
+  monthTargetSar: number | null;
+  hasMonthlyTarget: boolean;
+  targetStatus: TargetStatus;
   boutiqueTarget: number | null;
   mtdSales: number;
   todaySales: number;
@@ -96,7 +103,8 @@ export type TargetMetricsResult = {
   remaining: number;
   pctDaily: number;
   pctWeek: number;
-  pctMonth: number;
+  /** Null when hasMonthlyTarget is false. */
+  pctMonth: number | null;
   todayStr: string;
   todayInSelectedMonth: boolean;
   /** True when viewing current calendar month in Riyadh and the user has no SalesEntry rows for today. */
@@ -134,20 +142,20 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     input.employeeCrossBoutique ? null : input.boutiqueId
   );
 
-  const [boutiqueTarget, employeeTargetResult, mtdSales, todaySales, weekSales, todayEntryCount] =
+  const [employeeTargetResolved, boutiqueTargetResolved, mtdSales, todaySales, weekSales, todayEntryCount] =
     await Promise.all([
-    prisma.boutiqueMonthlyTarget.findFirst({
-      where: { boutiqueId: input.boutiqueId, month: monthKey },
+    getEmployeeTarget({
+      userId: input.userId,
+      boutiqueId: input.boutiqueId,
+      monthKey,
+      crossBoutique: input.employeeCrossBoutique,
+      routeName: 'getTargetMetrics',
     }),
-    input.employeeCrossBoutique
-      ? prisma.employeeMonthlyTarget.findMany({
-          where: { userId: input.userId, month: monthKey },
-          select: { amount: true },
-        })
-      : prisma.employeeMonthlyTarget.findFirst({
-          where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
-          select: { amount: true, leaveDaysInMonth: true, presenceFactor: true, scheduledDaysInMonth: true },
-        }),
+    getBoutiqueTarget({
+      boutiqueId: input.boutiqueId,
+      monthKey,
+      routeName: 'getTargetMetrics',
+    }),
     aggregateSalesEntrySum({ ...salesWhereBoutique, dateKey: { lte: todayStr } }),
     todayInSelectedMonth
       ? aggregateSalesEntrySum({ ...salesWhereBoutique, dateKey: todayStr })
@@ -163,10 +171,10 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
       : Promise.resolve(0),
   ]);
 
-  const monthTargetSar = input.employeeCrossBoutique
-    ? (Array.isArray(employeeTargetResult) ? employeeTargetResult : []).reduce((s, r) => s + r.amount, 0)
-    : (employeeTargetResult && !Array.isArray(employeeTargetResult) ? employeeTargetResult.amount : 0) ?? 0;
-  const monthTarget = monthTargetSar;
+  const hasMonthlyTarget = employeeTargetResolved.hasMonthlyTarget;
+  const monthTargetSar = employeeTargetResolved.amountSar;
+  const monthTarget = monthTargetSar ?? 0;
+  const targetStatus = employeeTargetResolved.status;
 
   const todayDayOfMonth = todayDateOnly.getUTCDate();
   const targetSnap = computeReportingAndPaceSnapshot({
@@ -189,21 +197,21 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     ? { target: dailyTarget, sales: 0, remaining: dailyTarget, percent: 0 }
     : calculatePerformance({ target: dailyTarget, sales: todaySales });
   const weekPerf = calculatePerformance({ target: weekTarget, sales: weekSales });
-  const monthPerf = calculatePerformance({ target: monthTarget, sales: mtdSales });
+  const monthPerf = hasMonthlyTarget
+    ? calculatePerformance({ target: monthTarget, sales: mtdSales })
+    : null;
   const pctDaily = dailyPerf.percent;
   const pctWeek = weekPerf.percent;
-  const pctMonth = monthPerf.percent;
+  const pctMonth = monthPerf?.percent ?? null;
 
-  const boutiqueTargetSar = boutiqueTarget?.amount ?? null;
-
-  const firstTarget =
-    !input.employeeCrossBoutique && employeeTargetResult && !Array.isArray(employeeTargetResult)
-      ? employeeTargetResult
-      : null;
+  const boutiqueTargetSar = boutiqueTargetResolved.amountSar;
 
   return {
     monthKey,
     monthTarget,
+    monthTargetSar,
+    hasMonthlyTarget,
+    targetStatus,
     boutiqueTarget: boutiqueTargetSar,
     mtdSales,
     todaySales,
@@ -225,9 +233,9 @@ export async function getTargetMetrics(input: TargetMetricsInput): Promise<Targe
     monthlyTargetMet,
     weekRangeLabel,
     daysInMonth,
-    leaveDaysInMonth: firstTarget?.leaveDaysInMonth ?? null,
-    presenceFactor: firstTarget?.presenceFactor ?? null,
-    scheduledDaysInMonth: firstTarget?.scheduledDaysInMonth ?? null,
+    leaveDaysInMonth: employeeTargetResolved.leaveDaysInMonth,
+    presenceFactor: employeeTargetResolved.presenceFactor,
+    scheduledDaysInMonth: employeeTargetResolved.scheduledDaysInMonth,
   };
 }
 
@@ -252,17 +260,15 @@ export async function getDashboardSalesMetrics(
 ): Promise<DashboardSalesMetricsResult> {
   const monthKey = normalizeMonthKey(input.monthKey);
 
-  const [boutiqueTargetLookup, salesAgg, systemBranchUserId] = await Promise.all([
+  const [targetResolved, salesAgg, systemBranchUserId] = await Promise.all([
     input.employeeOnly && input.userId
-      ? prisma.employeeMonthlyTarget
-          .findFirst({
-            where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
-          })
-          .then((row) => ({
-            hasTarget: !!row,
-            amount: row?.amount ?? null,
-          }))
-      : lookupBoutiqueMonthlyTarget({
+      ? getEmployeeTarget({
+          userId: input.userId,
+          boutiqueId: input.boutiqueId,
+          monthKey,
+          routeName: 'getDashboardSalesMetrics',
+        })
+      : getBoutiqueTarget({
           boutiqueId: input.boutiqueId,
           monthKey,
           routeName: 'getDashboardSalesMetrics',
@@ -275,8 +281,8 @@ export async function getDashboardSalesMetrics(
     getSystemBranchTotalUserId(),
   ]);
 
-  const hasMonthlyTarget = boutiqueTargetLookup.hasTarget;
-  const targetSar = hasMonthlyTarget ? boutiqueTargetLookup.amount ?? 0 : 0;
+  const hasMonthlyTarget = targetResolved.hasMonthlyTarget;
+  const targetSar = hasMonthlyTarget ? targetResolved.amountSar ?? 0 : 0;
   const currentMonthTarget = targetSar;
   const byUserId: Record<string, number> = {};
   let currentMonthActual = 0;
@@ -289,7 +295,7 @@ export async function getDashboardSalesMetrics(
   }
 
   const perf = calculatePerformance({ target: currentMonthTarget, sales: currentMonthActual });
-  const completionPct = perf.percent;
+  const completionPct = hasMonthlyTarget ? perf.percent : 0;
   const remainingGap = perf.remaining;
 
   return {
@@ -399,26 +405,24 @@ export async function getPerformanceSummary(
     employeeCrossBoutique: input.employeeCrossBoutique,
   });
 
-  const [targetRow, targetRowsAll, boutiqueTargetLookup, mtdSales, todaySales, weekSales, salesEntryCountToday] =
+  const [employeeTargetResolved, boutiqueTargetResolved, mtdSales, todaySales, weekSales, salesEntryCountToday] =
     await Promise.all([
-    input.employeeOnly && input.userId && !input.employeeCrossBoutique
-      ? prisma.employeeMonthlyTarget.findFirst({
-          where: { boutiqueId: input.boutiqueId, month: monthKey, userId: input.userId },
+    input.employeeOnly && input.userId
+      ? getEmployeeTarget({
+          userId: input.userId,
+          boutiqueId: input.boutiqueId,
+          monthKey,
+          crossBoutique: input.employeeCrossBoutique,
+          routeName: 'getPerformanceSummary',
         })
-      : null,
-    input.employeeCrossBoutique && input.userId
-      ? prisma.employeeMonthlyTarget.findMany({
-          where: { userId: input.userId, month: monthKey },
-          select: { amount: true },
-        })
-      : null,
+      : Promise.resolve(null),
     !input.employeeOnly
-      ? lookupBoutiqueMonthlyTarget({
+      ? getBoutiqueTarget({
           boutiqueId: input.boutiqueId,
           monthKey,
           routeName: 'getPerformanceSummary',
         })
-      : Promise.resolve({ hasTarget: false, amount: null, month: monthKey, boutiqueId: input.boutiqueId }),
+      : Promise.resolve(null),
     aggregateSalesEntrySum({ ...wherePerf, dateKey: { lte: todayStr } }),
     todayInSelectedMonth
       ? aggregateSalesEntrySum({ ...wherePerf, dateKey: todayStr })
@@ -434,20 +438,15 @@ export async function getPerformanceSummary(
       : Promise.resolve(0),
   ]);
 
-  const hasMonthlyTarget = input.employeeCrossBoutique && targetRowsAll
-    ? targetRowsAll.length > 0
-    : input.employeeOnly && input.userId && !input.employeeCrossBoutique
-      ? !!targetRow
-      : boutiqueTargetLookup.hasTarget;
+  const hasMonthlyTarget = input.employeeOnly && input.userId
+    ? employeeTargetResolved?.hasMonthlyTarget ?? false
+    : boutiqueTargetResolved?.hasMonthlyTarget ?? false;
 
-  const monthTarget =
-    input.employeeCrossBoutique && targetRowsAll
-      ? targetRowsAll.reduce((s, r) => s + r.amount, 0)
-      : input.employeeOnly && input.userId && !input.employeeCrossBoutique
-        ? targetRow?.amount ?? 0
-        : hasMonthlyTarget
-          ? boutiqueTargetLookup.amount ?? 0
-          : 0;
+  const monthTarget = hasMonthlyTarget
+    ? (input.employeeOnly && input.userId
+        ? employeeTargetResolved?.amountSar
+        : boutiqueTargetResolved?.amountSar) ?? 0
+    : 0;
 
   const monthlyTargetSar = hasMonthlyTarget ? monthTarget : null;
 

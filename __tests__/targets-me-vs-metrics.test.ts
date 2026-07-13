@@ -3,6 +3,8 @@
  * (/api/me/targets vs /api/metrics/my-target).
  */
 
+export {};
+
 function nextRequest(url: string, search?: Record<string, string>): import('next/server').NextRequest {
   const u = new URL(url);
   if (search) Object.entries(search).forEach(([k, v]) => u.searchParams.set(k, v));
@@ -12,6 +14,9 @@ function nextRequest(url: string, search?: Record<string, string>): import('next
 const minimalMetrics = {
   monthKey: '2026-02',
   monthTarget: 0,
+  monthTargetSar: null as number | null,
+  hasMonthlyTarget: false,
+  targetStatus: 'missing' as const,
   boutiqueTarget: 0,
   todaySales: 0,
   weekSales: 0,
@@ -26,7 +31,7 @@ const minimalMetrics = {
   remaining: 0,
   pctDaily: 0,
   pctWeek: 0,
-  pctMonth: 0,
+  pctMonth: null as number | null,
   daysInMonth: 28,
   todayStr: '2026-02-15',
   todayInSelectedMonth: true,

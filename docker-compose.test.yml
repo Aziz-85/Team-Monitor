@@ -1,0 +1,14 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dhahran_test
+      POSTGRES_PASSWORD: dhahran_test
+      POSTGRES_DB: dhahran_test
+    ports:
+      - '54329:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dhahran_test -d dhahran_test']
+      interval: 3s
+      timeout: 5s
+      retries: 10

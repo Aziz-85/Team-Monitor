@@ -3,6 +3,15 @@
  * Contract: Sales daily write APIs require ADMIN/MANAGER; decimal SAR rejected.
  */
 
+const membershipFindUnique = jest.fn();
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    userBoutiqueMembership: {
+      findUnique: (...args: unknown[]) => membershipFindUnique(...args),
+    },
+  },
+}));
+
 import { validateSarInteger, computeDiff } from '@/lib/sales/reconcile';
 import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 
@@ -64,6 +73,13 @@ describe('Sales daily API contract', () => {
 });
 
 describe('canManageSalesInBoutique (trusted operational boutique)', () => {
+  beforeEach(() => {
+    membershipFindUnique.mockResolvedValue({
+      canAccess: true,
+      canManageSales: true,
+    });
+  });
+
   it('MANAGER with trustedOperationalBoutiqueId = S02 allows target S02', async () => {
     const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', 'S02');
     expect(result).toBe(true);
@@ -81,6 +97,15 @@ describe('canManageSalesInBoutique (trusted operational boutique)', () => {
 
   it('MANAGER with trustedOperationalBoutiqueId empty string denies', async () => {
     const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', '');
+    expect(result).toBe(false);
+  });
+
+  it('MANAGER without canManageSales is denied even in operational boutique', async () => {
+    membershipFindUnique.mockResolvedValue({
+      canAccess: true,
+      canManageSales: false,
+    });
+    const result = await canManageSalesInBoutique('user-id', 'MANAGER', 'S02', 'S02');
     expect(result).toBe(false);
   });
 });

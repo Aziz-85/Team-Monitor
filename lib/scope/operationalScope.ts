@@ -12,6 +12,10 @@ import { getUserAllowedBoutiqueIds } from '@/lib/scope/resolveScope';
 import { resolveEffectiveBoutiqueId } from '@/lib/scope/scopeContext';
 import type { Role } from '@prisma/client';
 import type { SessionUser } from '@/lib/auth';
+import {
+  checkBoutiqueAccess,
+  hasExplicitPlatformAccess,
+} from '@/lib/permissions/boutiqueAccess';
 
 export type OperationalScopeResult = {
   userId: string;
@@ -42,17 +46,30 @@ export async function getTrustedOperationalBoutiqueId(
     return user.boutiqueId ?? null;
   }
 
-  if (role === 'MANAGER' || role === 'ADMIN') return user.boutiqueId ?? null;
-  if (role === 'AREA_MANAGER') {
+  let boutiqueId: string | null = null;
+
+  if (role === 'MANAGER' || role === 'ADMIN') {
+    boutiqueId = user.boutiqueId ?? null;
+  } else if (role === 'AREA_MANAGER') {
     const allowed = await getUserAllowedBoutiqueIds(user.id);
     if (allowed.length === 0) return null;
-    return user.boutiqueId && allowed.includes(user.boutiqueId) ? user.boutiqueId : allowed[0];
-  }
-  if (role === 'SUPER_ADMIN' && request) {
+    boutiqueId =
+      user.boutiqueId && allowed.includes(user.boutiqueId) ? user.boutiqueId : allowed[0];
+  } else if (role === 'SUPER_ADMIN' && request) {
     const scope = await getOperationalScope(request);
-    return scope?.boutiqueId ?? null;
+    boutiqueId = scope?.boutiqueId ?? null;
+  } else {
+    boutiqueId = user.boutiqueId ?? null;
   }
-  return user.boutiqueId ?? null;
+
+  if (!boutiqueId) return null;
+
+  if (!hasExplicitPlatformAccess({ id: user.id, role, isPlatformOwner: auth?.access.isPlatformOwner })) {
+    const access = await checkBoutiqueAccess(user, boutiqueId);
+    if (!access.allowed) return null;
+  }
+
+  return boutiqueId;
 }
 
 /**

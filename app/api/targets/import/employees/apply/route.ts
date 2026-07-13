@@ -4,8 +4,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTargetsImport } from '@/lib/targets/scope';
-import { parseEmployeeApplyPlan } from '@/lib/targets/applyImportPlan';
 import { applyEmployeesImport } from '@/lib/targets/importEmployees';
+import {
+  assertImportApplyAllowed,
+  importScopeKeyForBoutiqueSet,
+  markImportApplied,
+} from '@/lib/imports';
+import {
+  employeeApplyPlanSchema,
+  formForceReprocess,
+  optionalFormSha256,
+  parseApplyPlanFromFormData,
+} from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   const scopeResult = await requireTargetsImport(request);
@@ -13,24 +23,46 @@ export async function POST(request: NextRequest) {
   const scope = scopeResult.scope!;
 
   const formData = await request.formData().catch(() => null);
-  const applyPlanRaw = formData?.get('applyPlan');
-  if (!applyPlanRaw || typeof applyPlanRaw !== 'string') {
-    return NextResponse.json({ error: 'Missing applyPlan from dry run preview' }, { status: 400 });
+  const planResult = parseApplyPlanFromFormData(
+    formData?.get('applyPlan'),
+    employeeApplyPlanSchema(scope.allowedBoutiqueIds)
+  );
+  if (!planResult.ok) return planResult.response;
+
+  const fileSha256 = optionalFormSha256(formData?.get('fileSha256'));
+  const forceReprocess = formForceReprocess(formData?.get('forceReprocess'));
+  const scopeKey = importScopeKeyForBoutiqueSet(scope.allowedBoutiqueIds);
+
+  const gate = await assertImportApplyAllowed({
+    importType: 'TARGETS_EMPLOYEE',
+    scopeKey,
+    fileSha256,
+    forceReprocess,
+    actorUserId: scope.userId,
+    actorRole: scope.role,
+    auditBoutiqueId: scope.allowedBoutiqueIds[0] ?? null,
+  });
+  if (!gate.allowed) {
+    return NextResponse.json(
+      {
+        error: gate.message,
+        reason: gate.reason,
+        duplicateFile: gate.duplicate,
+      },
+      { status: gate.reason === 'DUPLICATE_FILE' ? 409 : 400 }
+    );
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(applyPlanRaw);
-  } catch {
-    return NextResponse.json({ error: 'Invalid applyPlan JSON' }, { status: 400 });
+  const result = await applyEmployeesImport(planResult.data);
+
+  if (fileSha256) {
+    await markImportApplied({
+      importType: 'TARGETS_EMPLOYEE',
+      scopeKey,
+      fileSha256,
+    });
   }
 
-  const applyPlan = parseEmployeeApplyPlan(parsed, scope.allowedBoutiqueIds);
-  if (!applyPlan) {
-    return NextResponse.json({ error: 'Invalid or out-of-scope apply plan' }, { status: 400 });
-  }
-
-  const result = await applyEmployeesImport(applyPlan);
   return NextResponse.json({
     ok: true,
     inserted: result.inserted,

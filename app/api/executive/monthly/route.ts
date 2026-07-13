@@ -1,15 +1,9 @@
 /**
  * Monthly Board Report API — READ ONLY aggregation. MANAGER + ADMIN only.
  * Operational scope: single boutiqueId. All data filtered by boutiqueId + month (Asia/Riyadh).
- * Query: month (YYYY-MM). Optional; defaults to current month.
- * No cache so Daily Sales Ledger updates reflect immediately.
  *
- * **CLASS B — mixed semantics (intentional):**
- * - **BoutiqueSalesSummary / BoutiqueSalesLine:** operational daily ledger; revenue KPI uses reconciliation
- *   (manual lines vs summary totalSar) — not interchangeable with raw SalesEntry totals.
- * - **SalesEntry breakdown:** CLASS A — `groupSalesEntryBySource` + `salesEntryWhereForBoutiqueMonthDateRange`
- *   from `readSalesAggregate` (canonical where; parity with matrix/dashboard when filters match).
- * Do not expect ledger revenue line to equal SalesEntry month sum without understanding sync lag / precedence.
+ * **Phase 5 revenue KPI:** canonical **SalesEntry** month sum (aligned with executive dashboard).
+ * Ledger breakdown remains in `sourceBreakdown` for operational diagnostics only.
  *
  * **Policy A (historical imports):** `HISTORICAL_IMPORT` rows exist only in SalesEntry — not in ledger.
  * Response includes `reconciliationPolicy` — see `docs/historical-ledger-reconciliation.md`.
@@ -20,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import {
+  aggregateSalesEntrySum,
   groupSalesEntryBySource,
   salesEntryWhereForBoutiqueMonthDateRange,
 } from '@/lib/sales/readSalesAggregate';
@@ -29,6 +24,7 @@ import { calculateRiskScore } from '@/lib/executive/risk';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { HISTORICAL_LEDGER_RECONCILIATION_POLICY } from '@/lib/sales/reconciliationPolicy';
 import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
+import { getBoutiqueTarget } from '@/lib/targets/getBoutiqueTarget';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
@@ -60,12 +56,13 @@ export async function GET(request: NextRequest) {
   );
 
   const [
-    boutiqueTarget,
+    boutiqueTargetResolved,
     ledgerAgg,
     ledgerLineCount,
     ledgerLinesBySource,
     salesSample,
     salesBySource,
+    salesEntryRevenue,
     employeeTargets,
     leaveCount,
     approvedLeaveCount,
@@ -77,8 +74,10 @@ export async function GET(request: NextRequest) {
     scoreResult,
     boutique,
   ] = await Promise.all([
-    prisma.boutiqueMonthlyTarget.findFirst({
-      where: { month: monthKey, ...boutiqueFilter },
+    getBoutiqueTarget({
+      boutiqueId: operationalBoutiqueId,
+      monthKey,
+      routeName: 'executive/monthly',
     }),
     prisma.boutiqueSalesSummary.aggregate({
       where: {
@@ -119,6 +118,7 @@ export async function GET(request: NextRequest) {
       take: 3,
     }),
     groupSalesEntryBySource(salesEntryWhereCanonical),
+    aggregateSalesEntrySum(salesEntryWhereCanonical),
     prisma.employeeMonthlyTarget.findMany({
       where: { month: monthKey, ...boutiqueFilter },
       select: { userId: true, amount: true },
@@ -182,16 +182,16 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  // Revenue: prefer MANUAL-source ledger lines; fallback to ledger summary.
-  // If both are empty (common in historical months under Policy A), fallback to SalesEntry total.
   const manualLineRow = ledgerLinesBySource.find((r) => r.source === 'MANUAL');
   const manualLinesTotal = manualLineRow?._sum?.amountSar ?? 0;
   const ledgerSummaryTotal = ledgerAgg._sum.totalSar ?? 0;
-  const salesEntryTotal = salesBySource.reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
-  const revenue =
-    manualLinesTotal > 0 ? manualLinesTotal : ledgerSummaryTotal > 0 ? ledgerSummaryTotal : salesEntryTotal;
-  const target = boutiqueTarget?.amount ?? 0;
-  const achievementPct = target > 0 ? calculatePerformance({ target, sales: revenue }).percent : 0;
+  const revenue = salesEntryRevenue;
+  const hasMonthlyTarget = boutiqueTargetResolved.hasMonthlyTarget;
+  const target = boutiqueTargetResolved.amountSar;
+  const achievementPct =
+    hasMonthlyTarget && target != null
+      ? calculatePerformance({ target, sales: revenue }).percent
+      : null;
   const totalEmployeeTarget = employeeTargets.reduce((s, e) => s + e.amount, 0);
   const zoneCompliancePct =
     zoneRunsCount > 0
@@ -203,7 +203,9 @@ export async function GET(request: NextRequest) {
 
   // Source breakdown for transparency
   const sourceBreakdown = {
+    canonicalSalesEntryTotal: salesEntryRevenue,
     ledgerSummaryTotal,
+    manualLinesTotal,
     ledgerLinesBySource: ledgerLinesBySource.map((r) => ({
       source: r.source,
       total: r._sum.amountSar ?? 0,
@@ -229,8 +231,8 @@ export async function GET(request: NextRequest) {
   // Independent risk score — NOT a copy of boutique performance score
   const riskResult = calculateRiskScore({
     revenue,
-    target,
-    achievementPct,
+    target: target ?? 0,
+    achievementPct: achievementPct ?? 0,
     pendingLeaves: leaveCount,
     approvedLeaves: approvedLeaveCount,
     employeeCount: employeeTargets.length,
@@ -269,6 +271,8 @@ export async function GET(request: NextRequest) {
     salesIntelligence: {
       revenue,
       target,
+      hasMonthlyTarget,
+      targetStatus: boutiqueTargetResolved.status,
       achievementPct,
       totalEmployeeTarget,
       entryCount: salesEntryCount,

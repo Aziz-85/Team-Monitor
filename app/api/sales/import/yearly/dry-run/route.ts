@@ -5,32 +5,42 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireYearlySalesImport } from '@/lib/sales/yearlyImportAccess';
-import { buildYearlyEmployeeSalesImportPlan } from '@/lib/sales/yearlyEmployeeSalesImport';
-
-const ALLOWED_EXTENSIONS = ['.xlsx', '.xlsm'];
+import {
+  buildYearlyEmployeeSalesImportPlan,
+  type YearlyImportDryRunResult,
+} from '@/lib/sales/yearlyEmployeeSalesImport';
+import {
+  importFileFromFormData,
+  importScopeKeyForBoutique,
+  runImportPreview,
+  YEARLY_SALES_UPLOAD,
+} from '@/lib/imports';
 
 export async function POST(request: NextRequest) {
   const auth = await requireYearlySalesImport(request);
   if ('res' in auth) return auth.res;
-  const { boutiqueId } = auth.scope;
+  const { boutiqueId, user } = auth.scope;
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get('file');
-  if (!file || !(file instanceof File)) {
-    return NextResponse.json({ error: 'file required' }, { status: 400 });
-  }
-
-  const fileName = (file.name || '').toLowerCase();
-  if (!ALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext))) {
-    return NextResponse.json({ error: 'Only .xlsx or .xlsm files are allowed.' }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const result = await buildYearlyEmployeeSalesImportPlan({
-    buffer,
+  const previewResult = await runImportPreview<YearlyImportDryRunResult>({
+    importType: 'YEARLY_SALES',
+    scopeKey: importScopeKeyForBoutique(boutiqueId),
     boutiqueId,
-    fileName: file.name || 'import.xlsx',
+    uploadedById: user.id,
+    file: importFileFromFormData(formData),
+    validate: YEARLY_SALES_UPLOAD,
+    parse: async (upload) =>
+      buildYearlyEmployeeSalesImportPlan({
+        buffer: upload.buffer,
+        boutiqueId,
+        fileName: upload.fileName,
+      }),
+    canApply: (result) => result.canApply,
   });
 
-  return NextResponse.json(result);
+  if (!previewResult.ok) {
+    return NextResponse.json({ error: previewResult.error }, { status: previewResult.status });
+  }
+
+  return NextResponse.json(previewResult.result);
 }

@@ -4,13 +4,14 @@
  */
 
 import { cookies } from 'next/headers';
+import { getLocaleCookieName } from '@/lib/env/cookies';
 import { getMessages } from '@/lib/get-messages';
 import { getNested } from '@/lib/i18n/getNested';
 import type { Locale } from '@/lib/i18n';
 
 export async function getRequestLocale(): Promise<Locale> {
   const cookieStore = await cookies();
-  return cookieStore.get('dt_locale')?.value === 'ar' ? 'ar' : 'en';
+  return cookieStore.get(getLocaleCookieName())?.value === 'ar' ? 'ar' : 'en';
 }
 
 /**

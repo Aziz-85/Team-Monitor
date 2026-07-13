@@ -2,6 +2,8 @@
  * Imported BoutiqueMonthlyTarget must surface in sales APIs (not treated as missing/zero).
  */
 
+export {};
+
 function nextRequest(url: string, search?: Record<string, string>): import('next/server').NextRequest {
   const u = new URL(url);
   if (search) Object.entries(search).forEach(([k, v]) => u.searchParams.set(k, v));

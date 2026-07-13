@@ -78,9 +78,16 @@ beforeEach(() => {
   jest.clearAllMocks();
   db.boutique.findUnique.mockResolvedValue({ id: BOUTIQUE_DHAHRAN, name: 'Dhahran' });
   db.employee.findMany.mockResolvedValue(defaultEmployees());
-  db.employee.findUnique.mockResolvedValue({
-    boutiqueId: BOUTIQUE_DHAHRAN,
-    boutique: { id: BOUTIQUE_DHAHRAN, name: 'Dhahran' },
+  db.employee.findUnique.mockImplementation(({ where }: { where: { empId?: string } }) => {
+    const emp = defaultEmployees().find((e) => e.empId === where.empId);
+    if (!emp) return Promise.resolve(null);
+    return Promise.resolve({
+      boutiqueId: emp.boutiqueId,
+      active: true,
+      isSystemOnly: emp.isSystemOnly,
+      boutique: emp.boutique,
+      user: { id: emp.user.id, boutiqueId: emp.boutiqueId },
+    });
   });
   db.employeeAssignment.findMany.mockResolvedValue([]);
   db.salesEntry.findMany.mockResolvedValue([]);

@@ -1,0 +1,82 @@
+# Manual deploy to staging — does not bump version or touch production.
+# Trigger: workflow_dispatch only.
+#
+# Required secrets:
+#   STAGING_SSH_HOST, STAGING_SSH_USER, STAGING_SSH_KEY, STAGING_APP_DIR
+# Optional:
+#   STAGING_SSH_PORT (default 22), STAGING_HEALTHCHECK_URL
+
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+
+env:
+  SSH_PORT: ${{ secrets.STAGING_SSH_PORT || '22' }}
+
+jobs:
+  quality:
+    name: CI quality gate
+    uses: ./.github/workflows/ci.yml
+
+  deploy_staging:
+    name: Deploy to staging
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      HEALTHCHECK_URL: ${{ secrets.STAGING_HEALTHCHECK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          HEALTHCHECK_URL: ${{ secrets.STAGING_HEALTHCHECK_URL }}
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ env.SSH_PORT }}
+          envs: HEALTHCHECK_URL
+          script: |
+            set -e
+            cd ${{ secrets.STAGING_APP_DIR }}
+            git pull
+            npm ci
+            npx prisma migrate deploy
+            export APP_ENV=staging
+            export NODE_ENV=production
+            export GIT_HASH=$(git rev-parse --short HEAD)
+            export BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            export BUILD_COMMIT=$GIT_HASH
+            export BUILD_TIME=$BUILD_DATE
+            export NEXT_PUBLIC_APP_VERSION=$APP_VERSION
+            export NEXT_PUBLIC_GIT_HASH=$GIT_HASH
+            export NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE
+            npm run build
+            if [ -f ecosystem.staging.config.cjs ]; then
+              pm2 reload ecosystem.staging.config.cjs --update-env
+            else
+              pm2 reload ecosystem.config.cjs --update-env
+            fi
+            if [ -n "$HEALTHCHECK_URL" ]; then
+              curl -sf "$HEALTHCHECK_URL" | grep -q '"env":"staging"' || {
+                echo "Staging health check failed: expected env=staging"
+                exit 1
+              }
+            fi
+
+      - name: Smoke check staging health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.STAGING_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ]; then
+            echo "Skip: STAGING_HEALTHCHECK_URL not configured"
+            exit 0
+          fi
+          BODY=$(curl -sf "$HEALTHCHECK_URL")
+          echo "$BODY"
+          echo "$BODY" | grep -q '"env":"staging"' || (echo "Staging health missing env=staging" && exit 1)

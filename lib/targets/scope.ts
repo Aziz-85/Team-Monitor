@@ -18,6 +18,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
+import { checkBoutiqueAccess } from '@/lib/permissions/boutiqueAccess';
 import type { Role } from '@prisma/client';
 
 export type TargetsScopeResult = {
@@ -61,6 +62,13 @@ export async function getTargetsScope(
     const op = await getOperationalScope(request ?? undefined);
     allowedBoutiqueIds = op?.boutiqueIds ?? (user.boutiqueId ? [user.boutiqueId] : []);
   }
+
+  const authorizedBoutiqueIds: string[] = [];
+  for (const boutiqueId of allowedBoutiqueIds) {
+    const access = await checkBoutiqueAccess(user, boutiqueId);
+    if (access.allowed) authorizedBoutiqueIds.push(boutiqueId);
+  }
+  allowedBoutiqueIds = authorizedBoutiqueIds;
 
   const canView = ROLES_VIEW.includes(role);
   const canEdit = ROLES_EDIT.includes(role) && allowedBoutiqueIds.length > 0;

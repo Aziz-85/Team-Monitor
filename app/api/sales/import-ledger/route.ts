@@ -12,24 +12,11 @@ import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { getSalesScope } from '@/lib/sales/ledgerRbac';
 import { coverageForTxn } from '@/lib/coverageForTxn';
 import { parseDateRiyadh, formatDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
+import { isEmployeeAtBoutiqueOnDate } from '@/lib/employees/resolveEmployeeBoutiqueAtDate';
 import type { SalesTxnType, ImportIssueSeverity } from '@prisma/client';
+import { importLedgerBodySchema, parseJsonBody, type ImportLedgerRowInput } from '@/lib/validation';
 
-export type ImportLedgerRow = {
-  empId?: string;
-  employeeId?: string;
-  email?: string;
-  name?: string;
-  date?: string;
-  txnDate?: string;
-  type?: 'SALE' | 'RETURN' | 'EXCHANGE';
-  amount?: number;
-  amountSar?: number;
-  grossAmount?: number;
-  referenceNo?: string;
-  lineNo?: string;
-  originalReference?: string;
-  rowIndex?: number;
-};
+export type ImportLedgerRow = ImportLedgerRowInput;
 
 function normalizeName(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -90,66 +77,32 @@ function toHalalas(value: unknown): number | null {
   return null;
 }
 
-/** Check EmployeeAssignment for txnDate at boutiqueId. */
+/** @deprecated inline check — use isEmployeeAtBoutiqueOnDate from lib/employees */
 async function hasAssignment(
   empId: string,
   boutiqueId: string,
   txnDate: Date
 ): Promise<boolean> {
-  const dateOnly = txnDate;
-  const a = await prisma.employeeAssignment.findFirst({
-    where: {
-      empId,
-      boutiqueId,
-      fromDate: { lte: dateOnly },
-      OR: [{ toDate: null }, { toDate: { gte: dateOnly } }],
-    },
-  });
-  return !!a;
+  return isEmployeeAtBoutiqueOnDate(empId, boutiqueId, formatDateRiyadh(txnDate));
 }
 
 export async function POST(request: NextRequest) {
+  // Authenticate before parsing the body. The requested boutique is validated
+  // in a second scope resolution after it is known.
+  const authScopeResult = await getSalesScope({ request });
+  if (authScopeResult.res) return authScopeResult.res;
+
+  const bodyResult = await parseJsonBody(request, importLedgerBodySchema);
+  if (!bodyResult.ok) return bodyResult.response;
+  const { boutiqueId, periodKey, fileName, fileHash, rows } = bodyResult.data;
+
   const scopeResult = await getSalesScope({
     requireImport: true,
-    requestBoutiqueId: undefined,
+    requestBoutiqueId: boutiqueId,
     request,
   });
   if (scopeResult.res) return scopeResult.res;
   const scope = scopeResult.scope;
-
-  let body: {
-    boutiqueId?: string;
-    periodKey?: string;
-    fileName?: string;
-    fileHash?: string | null;
-    rows?: ImportLedgerRow[];
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const boutiqueId = (body.boutiqueId ?? '').trim();
-  const periodKey = (body.periodKey ?? '').trim();
-  const fileName = (body.fileName ?? 'import').trim();
-  const fileHash = (body.fileHash ?? null) as string | null;
-  const rows = Array.isArray(body.rows) ? body.rows : [];
-
-  if (!boutiqueId || !periodKey) {
-    return NextResponse.json(
-      { error: 'boutiqueId and periodKey are required' },
-      { status: 400 }
-    );
-  }
-
-  // Enforce boutique: MANAGER must use active; ADMIN can pass any
-  if (scope.role !== 'ADMIN' && boutiqueId !== scope.effectiveBoutiqueId) {
-    return NextResponse.json(
-      { error: 'Boutique must match your operational boutique' },
-      { status: 403 }
-    );
-  }
 
   // Verify boutique exists
   const boutique = await prisma.boutique.findUnique({

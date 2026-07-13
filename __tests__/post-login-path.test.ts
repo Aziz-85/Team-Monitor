@@ -8,7 +8,7 @@ import type { Role } from '@/lib/permissions';
 describe('getPostLoginPath', () => {
   const cases: Array<{ role: Role; expected: string }> = [
     { role: 'EMPLOYEE', expected: '/employee' },
-    { role: 'ASSISTANT_MANAGER', expected: '/dashboard' },
+    { role: 'ASSISTANT_MANAGER', expected: '/' },
     { role: 'DEMO_VIEWER', expected: '/dashboard' },
     { role: 'MANAGER', expected: '/' },
     { role: 'ADMIN', expected: '/' },

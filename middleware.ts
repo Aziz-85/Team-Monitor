@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { FEATURES } from '@/lib/featureFlags';
+import { getSessionCookieName } from '@/lib/env/cookies';
 
 const publicPaths = ['/login'];
 const MUTATION_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -104,7 +105,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  const session = request.cookies.get('dt_session')?.value;
+  const session = request.cookies.get(getSessionCookieName())?.value;
 
   // DEMO_VIEWER write-block + fail-closed role verification when a session cookie is present.
   // Runs before /api/auth bypass so POST /api/auth/change-password cannot mutate as demo.

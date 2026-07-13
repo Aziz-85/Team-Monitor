@@ -3,12 +3,12 @@ import * as bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import type { User, Role } from '@prisma/client';
 import { SESSION_IDLE_MINUTES, SESSION_MAX_HOURS, SESSION_LAST_SEEN_THROTTLE_MINUTES } from '@/lib/sessionConfig';
+import { getSessionCookieName, shouldUseSecureCookies } from '@/lib/env';
 import { randomBytes } from 'crypto';
 
-const SESSION_COOKIE = 'dt_session';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: shouldUseSecureCookies(),
   sameSite: 'lax' as const,
   path: '/',
   maxAge: 60 * 60 * SESSION_MAX_HOURS,
@@ -43,7 +43,7 @@ function safeSetCookie(
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
+    const token = cookieStore.get(getSessionCookieName())?.value;
     if (!token) return null;
 
     let session = await prisma.session.findUnique({
@@ -193,9 +193,9 @@ export async function verifyUserPassword(userId: string, plainPassword: string):
 }
 
 export function setSessionCookie(sessionToken: string, options?: { secure?: boolean }) {
-  const secure = options?.secure ?? process.env.NODE_ENV === 'production';
+  const secure = options?.secure ?? shouldUseSecureCookies();
   return {
-    name: SESSION_COOKIE,
+    name: getSessionCookieName(),
     value: sessionToken,
     ...COOKIE_OPTIONS,
     secure,
@@ -204,7 +204,7 @@ export function setSessionCookie(sessionToken: string, options?: { secure?: bool
 
 export function clearSessionCookie() {
   return {
-    name: SESSION_COOKIE,
+    name: getSessionCookieName(),
     value: '',
     ...COOKIE_OPTIONS,
     maxAge: 0,

@@ -184,6 +184,7 @@ model Boutique {
   boutiqueSpecialPeriods        BoutiqueSpecialOperatingPeriod[]
   boutiqueCoveragePolicies      BoutiqueCoveragePolicy[]
   salesMatrixSnapshots          SalesMatrixSnapshot[]
+  importFileRecords             ImportFileRecord[]
 
   @@index([regionId])
   @@index([isActive])
@@ -331,6 +332,7 @@ model User {
   salesMatrixCellAudits         SalesMatrixEditCellAudit[]     @relation("SalesMatrixCellAuditActor")
   salesMatrixActivityLogs       SalesMatrixEditActivityLog[]   @relation("SalesMatrixActivityActor")
   salesMatrixSnapshotsCreated   SalesMatrixSnapshot[]          @relation("SalesMatrixSnapshotCreator")
+  importFileRecordsUploaded     ImportFileRecord[]
 
   @@index([boutiqueId])
 }
@@ -1875,6 +1877,31 @@ model ImportIssue {
 }
 
 // --- KPI Appraisal Layer (Official template + uploads + snapshots) ---
+
+/// Unified import file fingerprint for cross-pipeline duplicate detection (Phase 4).
+model ImportFileRecord {
+  id               String   @id @default(cuid())
+  importType       String
+  scopeKey         String
+  fileSha256       String
+  originalFileName String
+  fileSizeBytes    Int
+  boutiqueId       String?
+  uploadedById     String
+  uploadedAt       DateTime @default(now())
+  status           String   @default("PREVIEW") // PREVIEW | APPLIED | FAILED
+  batchId          String?
+  batchEntityType  String?
+
+  uploadedBy User     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  boutique   Boutique? @relation(fields: [boutiqueId], references: [id], onDelete: SetNull)
+
+  @@unique([importType, scopeKey, fileSha256])
+  @@index([fileSha256])
+  @@index([uploadedAt])
+  @@index([status])
+}
+
 model KpiTemplate {
   id          String   @id @default(cuid())
   code        String   @unique

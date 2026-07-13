@@ -1,7 +1,7 @@
 /**
  * GET/POST /api/admin/sales/repair — Self-heal SalesEntry from Daily Ledger.
  * ADMIN only. Syncs ONLY on real ledger dates (from BoutiqueSalesSummary), not a naive date loop.
- * Query: from=YYYY-MM-DD, to=YYYY-MM-DD, boutiqueId=optional (else all active boutiques).
+ * Query: from=YYYY-MM-DD, to=YYYY-MM-DD, boutiqueId=optional (else trusted operational boutique).
  * Returns: ledgerDatesFound, repairedCount, salesEntrySumAfter, ledgerLinesSum, mismatchDatesAfter, tookMs.
  */
 
@@ -9,8 +9,11 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, getSessionUser } from '@/lib/auth';
+import { requireMutableUser } from '@/lib/auth/index';
 import { prisma } from '@/lib/db';
-import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
+import { checkBoutiqueAccess } from '@/lib/permissions/boutiqueAccess';
+import { getTrustedOperationalBoutiqueId } from '@/lib/scope/operationalScope';
+import { syncSalesProjections } from '@/lib/sales/syncSalesProjections';
 import { formatDateRiyadh, normalizeDateOnlyRiyadh } from '@/lib/time';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -44,6 +47,7 @@ async function runRepair(request: NextRequest) {
   const started = Date.now();
   let user: Awaited<ReturnType<typeof getSessionUser>>;
   try {
+    await requireMutableUser();
     user = await requireRole(['ADMIN']);
   } catch (e) {
     const err = e as { code?: string };
@@ -69,13 +73,17 @@ async function runRepair(request: NextRequest) {
 
   let boutiqueIds: string[];
   if (paramBoutiqueId) {
+    const access = await checkBoutiqueAccess(user, paramBoutiqueId);
+    if (!access.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     boutiqueIds = [paramBoutiqueId];
   } else {
-    const boutiques = await prisma.boutique.findMany({
-      where: { isActive: true },
-      select: { id: true },
-    });
-    boutiqueIds = boutiques.map((b) => b.id);
+    const trustedId = await getTrustedOperationalBoutiqueId(user, request);
+    if (!trustedId) {
+      return NextResponse.json({ error: 'Operational boutique required' }, { status: 403 });
+    }
+    boutiqueIds = [trustedId];
   }
 
   const summariesInRange = await prisma.boutiqueSalesSummary.findMany({
@@ -100,7 +108,7 @@ async function runRepair(request: NextRequest) {
   const warnings: string[] = [];
   let repairedCount = 0;
   for (const { boutiqueId, dateKey } of ledgerDatesToSync) {
-    const result = await syncDailyLedgerToSalesEntry({
+    const result = await syncSalesProjections({
       boutiqueId,
       date: dateKey,
       actorUserId: user.id,

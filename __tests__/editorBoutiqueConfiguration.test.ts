@@ -62,6 +62,7 @@ function baseResolved(overrides: Partial<ResolvedBoutiqueConfiguration> = {}): R
 beforeEach(() => {
   jest.clearAllMocks();
   mockGet.mockImplementation(async (_boutiqueId, when) => {
+    if (!when) throw new Error('Test requires an explicit date');
     const dayOfWeek = when.getUTCDay();
     const policy = defaultCoveragePolicy().map((p) =>
       p.dayOfWeek === 6 ? { ...p, minMorning: 5, minEvening: 3 } : p

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import { getLocaleCookieName } from '@/lib/env/cookies';
 import { getMessages } from '@/lib/get-messages';
 import { getDir } from '@/lib/i18n';
 import type { Locale } from '@/lib/i18n';
+import { StagingBanner } from '@/components/env/StagingBanner';
 import './globals.css';
 import { I18nProvider } from './providers';
 
@@ -15,7 +17,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();
-  const locale: Locale = cookieStore.get('dt_locale')?.value === 'ar' ? 'ar' : 'en';
+  const locale: Locale = cookieStore.get(getLocaleCookieName())?.value === 'ar' ? 'ar' : 'en';
   const messages = await getMessages(locale);
   const dir = getDir(locale);
 
@@ -26,6 +28,7 @@ export default async function RootLayout({
         style={{ background: 'var(--app-bg)', color: 'var(--text)' }}
       >
         <I18nProvider initialLocale={locale} initialMessages={messages}>
+          <StagingBanner />
           <div className="flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
             {children}
           </div>

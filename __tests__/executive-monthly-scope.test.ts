@@ -1,6 +1,6 @@
 /**
  * Executive Monthly API: boutique scoping contract.
- * - GET /api/executive/monthly must use only session operational scope (getOperationalScope).
+ * - GET /api/executive/monthly must use the central executive access gate.
  * - Must NOT accept boutiqueId from client for data scope (SUPER_ADMIN may use ?b= for context; server validates).
  * - All queries (leaves, taskCompletions, sales, targets, etc.) must be scoped by operationalBoutiqueId.
  */
@@ -18,9 +18,10 @@ const ROUTE_PATH = path.join(
 );
 
 describe('Executive Monthly API boutique scoping', () => {
-  it('uses getOperationalScope for boutiqueId (no client boutiqueId for scope)', () => {
+  it('uses central server scope for boutiqueId (no client boutiqueId for scope)', () => {
     const src = fs.readFileSync(ROUTE_PATH, 'utf-8');
-    expect(src).toContain('getOperationalScope(request)');
+    expect(src).toContain('requireExecutiveApiViewer(request, user)');
+    expect(src).toContain('gate.scope.boutiqueId');
     expect(src).toContain('operationalBoutiqueId');
     expect(src).toContain('boutiqueFilter');
     // Must not use searchParams.get("boutiqueId") for data scope

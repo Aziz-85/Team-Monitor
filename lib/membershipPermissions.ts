@@ -62,13 +62,12 @@ export async function canManageSalesInBoutique(
   trustedOperationalBoutiqueId?: string | null
 ): Promise<boolean> {
   if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return true;
-  if (userRole === 'AREA_MANAGER') {
-    return canManageInBoutique(userId, userRole, boutiqueId, 'canManageSales');
-  }
   if (userRole === 'MANAGER') {
     if (trustedOperationalBoutiqueId == null || trustedOperationalBoutiqueId === '') return false;
     if (trustedOperationalBoutiqueId !== boutiqueId) return false;
-    return true;
+    // Operational scope is necessary but not sufficient. The server-side
+    // membership flag is the explicit authority to mutate sales.
+    return canManageInBoutique(userId, userRole, boutiqueId, 'canManageSales');
   }
   return canManageInBoutique(userId, userRole, boutiqueId, 'canManageSales');
 }

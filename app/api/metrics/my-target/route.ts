@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     monthKey: metrics.monthKey,
     monthTarget: metrics.monthTarget,
+    monthTargetSar: metrics.monthTargetSar,
+    hasMonthlyTarget: metrics.hasMonthlyTarget,
+    targetStatus: metrics.targetStatus,
     boutiqueTarget: metrics.boutiqueTarget,
     todaySales: metrics.todaySales,
     weekSales: metrics.weekSales,

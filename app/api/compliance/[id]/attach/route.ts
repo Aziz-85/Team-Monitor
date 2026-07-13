@@ -11,6 +11,7 @@ import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 import { COMPLIANCE_ROLES } from '@/lib/permissions';
+import { checkBoutiqueAccess } from '@/lib/permissions/boutiqueAccess';
 import { writeFile, mkdir, unlink, readFile } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
@@ -36,9 +37,18 @@ const ALLOWED_MIMES = [
 async function checkScopeAndItem(
   request: NextRequest,
   id: string
-): Promise<{ item: { id: string; boutiqueId: string; attachmentFileName: string | null; attachmentStoragePath: string | null } } | NextResponse> {
+): Promise<{
+  item: {
+    id: string;
+    boutiqueId: string;
+    attachmentFileName: string | null;
+    attachmentStoragePath: string | null;
+  };
+  actorUserId: string;
+} | NextResponse> {
+  let user: Awaited<ReturnType<typeof requireRole>>;
   try {
-    await requireRole(COMPLIANCE_ROLES);
+    user = await requireRole(COMPLIANCE_ROLES);
   } catch (e) {
     const err = e as { code?: string };
     if (err.code === 'UNAUTHORIZED') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -58,7 +68,11 @@ async function checkScopeAndItem(
   if (!scope.boutiqueIds.includes(item.boutiqueId)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  return { item };
+  const access = await checkBoutiqueAccess(user, item.boutiqueId);
+  if (!access.allowed) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  return { item, actorUserId: user.id };
 }
 
 /** GET: Download attachment. */
@@ -115,6 +129,7 @@ export async function POST(
   const { id } = await params;
   const result = await checkScopeAndItem(request, id);
   if (result instanceof NextResponse) return result;
+  const { item, actorUserId } = result;
 
   let formData: FormData;
   try {
@@ -162,12 +177,8 @@ export async function POST(
   }
 
   // Remove old file if different path
-  const existing = await prisma.complianceItem.findUnique({
-    where: { id },
-    select: { attachmentStoragePath: true },
-  });
-  if (existing?.attachmentStoragePath && existing.attachmentStoragePath !== storagePath) {
-    const oldPath = path.join(getAttachBaseDir(), existing.attachmentStoragePath);
+  if (item.attachmentStoragePath && item.attachmentStoragePath !== storagePath) {
+    const oldPath = path.join(getAttachBaseDir(), item.attachmentStoragePath);
     if (existsSync(oldPath)) {
       try {
         await unlink(oldPath);
@@ -177,9 +188,24 @@ export async function POST(
     }
   }
 
-  await prisma.complianceItem.update({
-    where: { id },
-    data: { attachmentFileName: fileName, attachmentStoragePath: storagePath },
+  await prisma.$transaction(async (tx) => {
+    await tx.complianceItem.update({
+      where: { id },
+      data: { attachmentFileName: fileName, attachmentStoragePath: storagePath },
+    });
+    await tx.auditLog.create({
+      data: {
+        boutiqueId: item.boutiqueId,
+        module: 'COMPLIANCE',
+        action: 'COMPLIANCE_ATTACHMENT_UPLOADED',
+        actorUserId,
+        entityType: 'ComplianceItem',
+        entityId: id,
+        beforeJson: JSON.stringify({ fileName: item.attachmentFileName }),
+        afterJson: JSON.stringify({ fileName }),
+        reason: 'Attachment uploaded',
+      },
+    });
   });
 
   return NextResponse.json({
@@ -197,7 +223,7 @@ export async function DELETE(
   const { id } = await params;
   const result = await checkScopeAndItem(request, id);
   if (result instanceof NextResponse) return result;
-  const { item } = result;
+  const { item, actorUserId } = result;
 
   if (!item.attachmentStoragePath) {
     return NextResponse.json({ ok: true, message: 'No attachment' });
@@ -212,9 +238,24 @@ export async function DELETE(
     }
   }
 
-  await prisma.complianceItem.update({
-    where: { id },
-    data: { attachmentFileName: null, attachmentStoragePath: null },
+  await prisma.$transaction(async (tx) => {
+    await tx.complianceItem.update({
+      where: { id },
+      data: { attachmentFileName: null, attachmentStoragePath: null },
+    });
+    await tx.auditLog.create({
+      data: {
+        boutiqueId: item.boutiqueId,
+        module: 'COMPLIANCE',
+        action: 'COMPLIANCE_ATTACHMENT_DELETED',
+        actorUserId,
+        entityType: 'ComplianceItem',
+        entityId: id,
+        beforeJson: JSON.stringify({ fileName: item.attachmentFileName }),
+        afterJson: JSON.stringify({ fileName: null }),
+        reason: 'Attachment deleted',
+      },
+    });
   });
 
   return NextResponse.json({ ok: true, message: 'Attachment removed' });

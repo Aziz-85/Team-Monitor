@@ -44,6 +44,7 @@ describe('metrics-crosspage: MTD consistency across aggregator outputs', () => {
       },
       employeeMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 100 }) },
       boutiqueMonthlyTarget: { findFirst: jest.fn().mockResolvedValue({ amount: 500 }) },
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
     };
 
     jest.doMock('@/lib/db', () => ({ prisma: prismaMock }));

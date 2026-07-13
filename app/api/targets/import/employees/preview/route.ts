@@ -4,7 +4,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTargetsImport } from '@/lib/targets/scope';
-import { parseAndValidateEmployees } from '@/lib/targets/importEmployees';
+import {
+  parseAndValidateEmployees,
+  type EmployeePreviewResult,
+} from '@/lib/targets/importEmployees';
+import {
+  importFileFromFormData,
+  importScopeKeyForBoutiqueSet,
+  runImportPreview,
+  TARGETS_EXCEL_UPLOAD,
+} from '@/lib/imports';
 
 export async function POST(request: NextRequest) {
   const scopeResult = await requireTargetsImport(request);
@@ -12,11 +21,22 @@ export async function POST(request: NextRequest) {
   const scope = scopeResult.scope!;
 
   const formData = await request.formData().catch(() => null);
-  const file = formData?.get('file');
-  if (!file || !(file instanceof Blob)) {
-    return NextResponse.json({ error: 'Missing file in FormData' }, { status: 400 });
+  const previewResult = await runImportPreview<EmployeePreviewResult>({
+    importType: 'TARGETS_EMPLOYEE',
+    scopeKey: importScopeKeyForBoutiqueSet(scope.allowedBoutiqueIds),
+    uploadedById: scope.userId,
+    file: importFileFromFormData(formData),
+    validate: TARGETS_EXCEL_UPLOAD,
+    parse: async (upload) =>
+      parseAndValidateEmployees(upload.buffer, scope.allowedBoutiqueIds),
+    canApply: (preview) =>
+      preview.invalidRows.length === 0 &&
+      preview.inserts.length + preview.updates.length > 0,
+  });
+
+  if (!previewResult.ok) {
+    return NextResponse.json({ error: previewResult.error }, { status: previewResult.status });
   }
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const preview = await parseAndValidateEmployees(buffer, scope.allowedBoutiqueIds);
-  return NextResponse.json(preview);
+
+  return NextResponse.json(previewResult.result);
 }

@@ -23,7 +23,11 @@
     "boutique-config:backfill": "ts-node -r tsconfig-paths/register --compiler-options '{\"module\":\"CommonJS\"}' scripts/backfill-boutique-configuration.ts",
     "audit:retention": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/auth-audit-retention.ts",
     "test": "jest --passWithNoTests",
-    "test:smoke": "jest __tests__/leaves-self-requests.test.ts __tests__/post-login-path.test.ts __tests__/targets-me-vs-metrics.test.ts",
+    "test:coverage": "jest --coverage --passWithNoTests",
+    "test:integration": "jest --config jest.integration.config.js --passWithNoTests",
+    "test:smoke": "jest --passWithNoTests __tests__/post-login-path.test.ts __tests__/targets-me-vs-metrics.test.ts __tests__/leaves-self-requests.test.ts __tests__/smoke-auth-login.test.ts __tests__/permissions-scope-regression.test.ts __tests__/demo-viewer-security.test.ts",
+    "test:security": "jest --passWithNoTests __tests__/boutique-access-security.test.ts __tests__/auth-mutation-security.test.ts __tests__/demo-viewer-security.test.ts __tests__/scope-write-security.test.ts __tests__/permissions-scope-regression.test.ts __tests__/import-pipeline.test.ts __tests__/validation.test.ts __tests__/env-validation.test.ts",
+    "ci:local": "npm run db:generate && npm run typecheck && npm run lint && npm run test:coverage && npm run test:smoke && npm run test:security && npm run build",
     "security:audit": "npm audit --audit-level=moderate"
   },
   "prisma": {
@@ -44,7 +48,8 @@
     "react-qr-code": "^2.2.0",
     "recharts": "^3.8.1",
     "sharp": "^0.34.5",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

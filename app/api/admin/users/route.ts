@@ -6,6 +6,12 @@ import { userListWhere } from '@/lib/userListWhere';
 import * as bcrypt from 'bcryptjs';
 import { validatePasswordStrength, GENERIC_PASSWORD_ERROR } from '@/lib/passwordPolicy';
 import type { Role } from '@prisma/client';
+import {
+  parseJsonBody,
+  userCreateSchema,
+  userDeleteQuerySchema,
+  userPatchSchema,
+} from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
@@ -79,20 +85,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const empId = String(body.empId ?? '').trim();
-  const password = String(body.password ?? '');
-  const role = String(body.role ?? 'EMPLOYEE').toUpperCase() as Role;
+  const parsed = await parseJsonBody(request, userCreateSchema);
+  if (!parsed.ok) return parsed.response;
+  const { empId, password, role } = parsed.data;
 
-  if (!empId || !password) {
-    return NextResponse.json({ error: 'Request could not be completed.' }, { status: 400 });
-  }
   const policy = validatePasswordStrength(password, { empId });
   if (!policy.ok) {
     return NextResponse.json({ error: GENERIC_PASSWORD_ERROR }, { status: 400 });
-  }
-  if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'].includes(role)) {
-    return NextResponse.json({ error: 'role must be EMPLOYEE, MANAGER, ASSISTANT_MANAGER, ADMIN, or AREA_MANAGER' }, { status: 400 });
   }
 
   const creatingUser = await getSessionUser();
@@ -122,24 +121,20 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const empId = String(body.empId ?? '').trim();
-  if (!empId) return NextResponse.json({ error: 'empId required' }, { status: 400 });
+  const parsed = await parseJsonBody(request, userPatchSchema);
+  if (!parsed.ok) return parsed.response;
+  const { empId, role, disabled, mustChangePassword, canEditSchedule } = parsed.data;
 
   const update: { role?: Role; disabled?: boolean; mustChangePassword?: boolean; canEditSchedule?: boolean } = {};
-  if (body.role !== undefined) {
-    const role = String(body.role).toUpperCase() as Role;
-    if (!['EMPLOYEE', 'MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'AREA_MANAGER'].includes(role)) {
-      return NextResponse.json({ error: 'invalid role' }, { status: 400 });
-    }
-    update.role = role;
-    if (role === 'ASSISTANT_MANAGER' && body.canEditSchedule === undefined) {
-      update.canEditSchedule = true; // عند التحويل لمساعد مدير: منح صلاحية تعديل الجدول افتراضياً
+  if (role !== undefined) {
+    update.role = role as Role;
+    if (role === 'ASSISTANT_MANAGER' && canEditSchedule === undefined) {
+      update.canEditSchedule = true;
     }
   }
-  if (body.disabled !== undefined) update.disabled = Boolean(body.disabled);
-  if (body.mustChangePassword !== undefined) update.mustChangePassword = Boolean(body.mustChangePassword);
-  if (body.canEditSchedule !== undefined) update.canEditSchedule = Boolean(body.canEditSchedule);
+  if (disabled !== undefined) update.disabled = disabled;
+  if (mustChangePassword !== undefined) update.mustChangePassword = mustChangePassword;
+  if (canEditSchedule !== undefined) update.canEditSchedule = canEditSchedule;
 
   const user = await prisma.user.findUnique({
     where: { empId },
@@ -174,8 +169,13 @@ export async function DELETE(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const empId = searchParams.get('empId')?.trim();
-  if (!empId) return NextResponse.json({ error: 'empId required' }, { status: 400 });
+  const deleteQuery = userDeleteQuerySchema.safeParse({
+    empId: searchParams.get('empId')?.trim() ?? '',
+  });
+  if (!deleteQuery.success) {
+    return NextResponse.json({ error: 'empId required' }, { status: 400 });
+  }
+  const { empId } = deleteQuery.data;
 
   if (session.empId === empId) {
     return NextResponse.json({ error: 'Cannot delete your own user account' }, { status: 400 });

@@ -44,7 +44,9 @@ function setTargetOnRow(buffer: Buffer, excelRow: number, target: number | strin
 
 async function withAccountingZeroRows(buffer: Buffer, excelRows: number[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  await workbook.xlsx.load(
+    buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]
+  );
   const sheet = workbook.getWorksheet(BOUTIQUE_SHEET)!;
   for (const row of excelRows) {
     const cell = sheet.getRow(row).getCell(targetColumnIndex() + 1);

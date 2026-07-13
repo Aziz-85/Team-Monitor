@@ -5,10 +5,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireYearlySalesImport } from '@/lib/sales/yearlyImportAccess';
+import { applyYearlyEmployeeSalesImportPlan } from '@/lib/sales/yearlyEmployeeSalesImport';
 import {
-  applyYearlyEmployeeSalesImportPlan,
-  parseYearlySalesApplyPlan,
-} from '@/lib/sales/yearlyEmployeeSalesImport';
+  assertImportApplyAllowed,
+  importScopeKeyForBoutique,
+  markImportApplied,
+} from '@/lib/imports';
+import {
+  formForceReprocess,
+  parseApplyPlanFromFormData,
+  yearlySalesApplyPlanSchema,
+} from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   const auth = await requireYearlySalesImport(request);
@@ -16,26 +23,47 @@ export async function POST(request: NextRequest) {
   const { user, boutiqueId } = auth.scope;
 
   const formData = await request.formData().catch(() => null);
-  const applyPlanRaw = formData?.get('applyPlan');
-  if (!applyPlanRaw || typeof applyPlanRaw !== 'string') {
-    return NextResponse.json({ error: 'Missing applyPlan from dry run preview' }, { status: 400 });
-  }
+  const planResult = parseApplyPlanFromFormData(
+    formData?.get('applyPlan'),
+    yearlySalesApplyPlanSchema(boutiqueId)
+  );
+  if (!planResult.ok) return planResult.response;
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(applyPlanRaw);
-  } catch {
-    return NextResponse.json({ error: 'Invalid applyPlan JSON' }, { status: 400 });
-  }
+  const plan = planResult.data;
+  const forceReprocess = formForceReprocess(formData?.get('forceReprocess'));
+  const scopeKey = importScopeKeyForBoutique(boutiqueId);
 
-  const plan = parseYearlySalesApplyPlan(parsed, boutiqueId);
-  if (!plan) {
-    return NextResponse.json({ error: 'Invalid or out-of-scope apply plan' }, { status: 400 });
+  const gate = await assertImportApplyAllowed({
+    importType: 'YEARLY_SALES',
+    scopeKey,
+    fileSha256: plan.fileSha256,
+    forceReprocess,
+    actorUserId: user.id,
+    actorRole: user.role,
+    auditBoutiqueId: boutiqueId,
+  });
+  if (!gate.allowed) {
+    return NextResponse.json(
+      {
+        error: gate.message,
+        reason: gate.reason,
+        duplicateFile: gate.duplicate,
+      },
+      { status: gate.reason === 'DUPLICATE_FILE' ? 409 : 400 }
+    );
   }
 
   const result = await applyYearlyEmployeeSalesImportPlan({
     plan,
     actorUserId: user.id,
+  });
+
+  await markImportApplied({
+    importType: 'YEARLY_SALES',
+    scopeKey,
+    fileSha256: plan.fileSha256,
+    batchId: result.batchId,
+    batchEntityType: 'SalesEntryImportBatch',
   });
 
   return NextResponse.json({

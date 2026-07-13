@@ -15,7 +15,7 @@ import { canManageSalesInBoutique } from '@/lib/membershipPermissions';
 import { parseDateRiyadh } from '@/lib/sales/normalizeDateRiyadh';
 import { validateSarInteger } from '@/lib/sales/reconcile';
 import { recordSalesLedgerAudit } from '@/lib/sales/audit';
-import { syncDailyLedgerToSalesEntry } from '@/lib/sales/syncDailyLedgerToSalesEntry';
+import { syncSalesProjections } from '@/lib/sales/syncSalesProjections';
 import type { Role } from '@prisma/client';
 
 const ALLOWED_ROLES = ['ADMIN', 'MANAGER'] as const;
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await syncDailyLedgerToSalesEntry({ boutiqueId, date, actorUserId: user.id });
+  await syncSalesProjections({ boutiqueId, date, actorUserId: user.id });
 
   const summary = await prisma.boutiqueSalesSummary.findUnique({
     where: { boutiqueId_date: { boutiqueId, date } },

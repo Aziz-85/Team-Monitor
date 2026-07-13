@@ -103,7 +103,9 @@ describe('analyzeScheduleConstraints', () => {
   });
 
   it('shows add external support recommendation when missing hours > 0', () => {
-    const input = makeWeekInput(3, { weeklyOffDay: 'NONE' });
+    // Two employees satisfy instantaneous peak headcount but cannot supply all
+    // required staff-hours under the current operating-period policy.
+    const input = makeWeekInput(2, { weeklyOffDay: 'NONE' });
     const result = analyzeScheduleConstraints(input);
 
     expect(result.summary.missingStaffHours).toBeGreaterThan(0);
