@@ -52,7 +52,9 @@ export function ScheduleNextPage({ initialWeekStart }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             weekStart,
-            externalSupport: supportDrafts.filter((d) => d.date && d.employeeName),
+            externalSupport: supportDrafts.filter(
+              (d) => d.date && d.empId && d.employeeName && d.sourceBoutiqueId
+            ),
             rejectedProposalIds: nextRejected,
             seed: nextRejected.length,
           }),
@@ -163,6 +165,7 @@ export function ScheduleNextPage({ initialWeekStart }: Props) {
         <ExternalSupportPrompt
           open
           drafts={supportDrafts}
+          weekDates={weekDates}
           onChange={setSupportDrafts}
           onContinue={() => setStep('ready')}
         />
