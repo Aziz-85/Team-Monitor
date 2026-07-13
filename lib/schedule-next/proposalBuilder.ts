@@ -318,6 +318,11 @@ export function buildScheduleNextProposal(
     if (proposal.status === 'ACCEPTABLE') {
       return proposal;
     }
+    // Under-staffed weeks (e.g. 2 available → NORMAL defers, BRIDGE fills) rarely become
+    // ACCEPTABLE via seed alone; stop after a few tries once we have a usable best.
+    if (proposal.status === 'NEEDS_SUPPORT' && attempt >= 2 && best) {
+      break;
+    }
   }
 
   return best!;

@@ -339,9 +339,14 @@ function logStageFailure(
   availableCount: number,
   slotCount: number
 ): void {
-  const msg = `[schedule-next] ${date}: ${STAGE_LABELS[stage]} failed (available=${availableCount}, slots=${slotCount})`;
+  // slots=0 means the stage intentionally deferred (e.g. NORMAL with 2 staff) — not a real fill failure.
+  const deferred = slotCount === 0;
+  const msg = deferred
+    ? `[schedule-next] ${date}: ${STAGE_LABELS[stage]} deferred (available=${availableCount}, slots=0)`
+    : `[schedule-next] ${date}: ${STAGE_LABELS[stage]} failed (available=${availableCount}, slots=${slotCount})`;
   allocationLog.push(msg);
-  if (process.env.NODE_ENV !== 'test') {
+  // Keep expected NORMAL→BRIDGE cascades out of PM2 warn noise; only warn on real fill failures.
+  if (!deferred && process.env.NODE_ENV !== 'test') {
     console.warn(msg);
   }
 }
@@ -449,9 +454,8 @@ function allocateSingleDay(
       if (failedStages.length) {
         const recovery = `[schedule-next] ${day.date}: recovered via ${STAGE_LABELS[stage]} after failing ${failedStages.map((s) => STAGE_LABELS[s]).join(', ')}`;
         allocationLog.push(recovery);
-        if (process.env.NODE_ENV !== 'test') {
-          console.info(recovery);
-        }
+        // Allocation log still carries the trail for the proposal UI; avoid spamming PM2
+        // (buildScheduleNextProposal may retry up to 10 seeds for the same week).
       }
       break;
     }
