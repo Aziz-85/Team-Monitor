@@ -7,6 +7,7 @@ import type { Locale } from '@/lib/i18n';
 import { StagingBanner } from '@/components/env/StagingBanner';
 import './globals.css';
 import { I18nProvider } from './providers';
+import { getAppTheme } from '@/lib/appTheme';
 
 export const metadata: Metadata = {
   title: 'Team Monitor',
@@ -20,9 +21,10 @@ export default async function RootLayout({
   const locale: Locale = cookieStore.get(getLocaleCookieName())?.value === 'ar' ? 'ar' : 'en';
   const messages = await getMessages(locale);
   const dir = getDir(locale);
+  const theme = await getAppTheme();
 
   return (
-    <html lang={locale} dir={dir} suppressHydrationWarning>
+    <html lang={locale} dir={dir} data-theme={theme} className={theme === 'obsidian' ? 'dark' : undefined} suppressHydrationWarning>
       <body
         className="flex min-h-screen flex-col antialiased overflow-x-hidden"
         style={{ background: 'var(--app-bg)', color: 'var(--text)' }}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { DefaultBoutiquePicker } from '@/components/admin/DefaultBoutiquePicker';
+import { AppThemePicker } from '@/components/admin/AppThemePicker';
 
 type Boutique = { id: string; code: string; name: string };
 
@@ -54,6 +55,10 @@ export function AdminSystemClient() {
 
   return (
     <div className="min-w-0 p-4 md:p-6">
+      <OpsCard title="Theme">
+        <AppThemePicker />
+      </OpsCard>
+      <div className="h-4" />
       <OpsCard title={t('nav.admin.system')}>
         <DefaultBoutiquePicker
           current={current}

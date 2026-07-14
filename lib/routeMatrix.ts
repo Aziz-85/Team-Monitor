@@ -36,6 +36,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   MANAGER: [
     '/',
+    '/design-preview',
     '/approvals',
     '/schedule',
     '/schedule/view',
@@ -84,6 +85,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ADMIN: [
     '/nav',
     '/',
+    '/design-preview',
     '/architecture',
     '/dashboard',
     '/executive',
@@ -167,6 +169,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   AREA_MANAGER: [
     '/nav',
     '/',
+    '/design-preview',
     '/dashboard',
     '/executive',
     '/executive/monthly',
@@ -222,6 +225,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   SUPER_ADMIN: [
     '/nav',
     '/',
+    '/design-preview',
     '/architecture',
     '/dashboard',
     '/company',
