@@ -158,11 +158,11 @@ export function ExecutiveDashboard() {
   const showBranchSections = !isEmployee;
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-6 pb-nav">
+    <div className="dashboard-canvas mx-auto max-w-7xl p-4 md:p-6 pb-nav">
       <PageHeader title={pageTitle} subtitle={t('dashboard.asOfToday')} />
 
       {/* Section 1 — Top 4 cards */}
-      <section className="mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="dashboard-snapshot-grid mb-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {snapshot?.sales && (
           <SalesPerformanceCard
             currentMonthTarget={snapshot.sales.currentMonthTarget}
@@ -232,38 +232,40 @@ export function ExecutiveDashboard() {
         </section>
       )}
 
-      {/* Section 2 — Sales breakdown (branch/manager/admin only) */}
-      {showBranchSections && salesBreakdown && salesBreakdown.length > 0 && (
-        <section className="mb-6">
-          <SalesBreakdownSection employees={salesBreakdown} />
-        </section>
-      )}
+      <div className="dashboard-detail-grid">
+        {/* Section 2 — Sales breakdown (branch/manager/admin only) */}
+        {showBranchSections && salesBreakdown && salesBreakdown.length > 0 && (
+          <section className="dashboard-detail dashboard-detail-sales mb-6">
+            <SalesBreakdownSection employees={salesBreakdown} />
+          </section>
+        )}
 
-      {/* Section 3 — Schedule overview (branch/manager/admin only) */}
-      {showBranchSections && scheduleOverview && (
-        <section className="mb-6">
-          <ScheduleOverviewSection
-            amPmBalanceSummary={scheduleOverview.amPmBalanceSummary}
-            daysOverloaded={scheduleOverview.daysOverloaded ?? []}
-            imbalanceHighlight={scheduleOverview.imbalanceHighlight}
-          />
-        </section>
-      )}
+        {/* Section 3 — Schedule overview (branch/manager/admin only) */}
+        {showBranchSections && scheduleOverview && (
+          <section className="dashboard-detail dashboard-detail-schedule mb-6">
+            <ScheduleOverviewSection
+              amPmBalanceSummary={scheduleOverview.amPmBalanceSummary}
+              daysOverloaded={scheduleOverview.daysOverloaded ?? []}
+              imbalanceHighlight={scheduleOverview.imbalanceHighlight}
+            />
+          </section>
+        )}
 
-      {/* Section 4 — Task integrity (hide for ASSISTANT_MANAGER) */}
-      {rbac.showAntiGaming && taskIntegrity && (
-        <section className="mb-6">
-          <TaskIntegritySection
-            burstFlagsCount={taskIntegrity.burstFlagsCount}
-            sameDayBulkCount={taskIntegrity.sameDayBulkCount}
-            top3SuspiciousUsers={taskIntegrity.top3SuspiciousUsers ?? []}
-          />
-        </section>
-      )}
+        {/* Section 4 — Task integrity (hide for ASSISTANT_MANAGER) */}
+        {rbac.showAntiGaming && taskIntegrity && (
+          <section className="dashboard-detail dashboard-detail-integrity mb-6">
+            <TaskIntegritySection
+              burstFlagsCount={taskIntegrity.burstFlagsCount}
+              sameDayBulkCount={taskIntegrity.sameDayBulkCount}
+              top3SuspiciousUsers={taskIntegrity.top3SuspiciousUsers ?? []}
+            />
+          </section>
+        )}
+      </div>
 
       {/* Section 5 — Team table (branch/manager/admin only) */}
       {showBranchSections && teamTable && teamTable.rows.length > 0 && (
-        <section className="mb-6">
+        <section className="dashboard-team-section mb-6">
           <TeamTableSection rows={teamRowsWithRoleLabel} />
         </section>
       )}

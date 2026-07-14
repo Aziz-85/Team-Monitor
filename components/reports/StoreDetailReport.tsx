@@ -30,7 +30,7 @@ export function StoreDetailReport({ data, meta }: Props) {
     : `${meta.periodLabel} · ${meta.asOfDateKey}`;
 
   return (
-    <section className="space-y-8">
+    <section className="report-section report-store-detail space-y-8">
       <header className="border-b border-slate-200 pb-6">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0F4C3A]">
           Section 1 — Store Detail Report
@@ -157,7 +157,7 @@ export function StoreDetailReport({ data, meta }: Props) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="report-highlight-panel rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900">Team Highlights</h3>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg bg-emerald-50 p-4">

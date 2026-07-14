@@ -16,7 +16,7 @@ export type PageHeaderProps = {
  */
 export function PageHeader({ breadcrumb, title, subtitle, actions }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex min-w-0 flex-wrap items-start justify-between gap-4">
+    <div className="app-page-header mb-6 flex min-w-0 flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
         {breadcrumb != null && (
           <div className="mb-1 text-sm text-muted">{breadcrumb}</div>

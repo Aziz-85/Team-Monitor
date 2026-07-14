@@ -712,7 +712,7 @@ export function ScheduleViewClient({
   }, [gridData, locale]);
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="schedule-workspace schedule-view-workspace p-4 md:p-6">
       <div className="mx-auto max-w-7xl px-3 md:px-4">
         {!fullGrid && (
           <div className="mt-3 mb-4 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground" role="status">
@@ -1218,7 +1218,7 @@ function ScheduleGridView({
   const showCoverageRow = hasCoverageItems(coverageByDay);
   return (
     <>
-      <div className="mt-6 rounded-xl border border-border bg-surface p-4">
+      <div className="schedule-coverage-strip mt-6 rounded-xl border border-border bg-surface p-4">
         <h3 className="mb-3 text-sm font-semibold text-foreground">{t('coverage.title')}</h3>
         <div className="flex flex-wrap items-center gap-3">
           {days.map((day, i) => {
@@ -1249,8 +1249,8 @@ function ScheduleGridView({
           })}
         </div>
       </div>
-      <div className="overflow-hidden">
-        <LuxuryTable>
+      <div className="schedule-table-shell overflow-hidden">
+        <LuxuryTable className="schedule-table">
           <thead>
             <tr className={`${SCHEDULE_UI.headerRow} text-start`}>
               {fullGrid && (

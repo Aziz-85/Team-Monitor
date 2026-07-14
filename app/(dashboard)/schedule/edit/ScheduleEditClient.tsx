@@ -1793,7 +1793,7 @@ export function ScheduleEditClient({
   
 
   return (
-    <div className="min-w-0 overflow-x-hidden p-4 md:p-6">
+    <div className="schedule-workspace schedule-edit-workspace min-w-0 overflow-x-hidden p-4 md:p-6">
       <div className="mx-auto min-w-0 max-w-5xl overflow-x-hidden px-4 md:px-6">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold text-foreground">
