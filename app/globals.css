@@ -127,7 +127,7 @@ body {
 }
 
 .data-table-tbody tr:hover {
-  background-color: rgb(245 244 243 / 0.7);
+  background-color: color-mix(in srgb, var(--surface-subtle) 70%, transparent);
 }
 
 /* Sticky header: shadow when scrolling */
@@ -137,10 +137,10 @@ body {
 
 /* Zebra rows (when DataTable has zebra prop) */
 .data-table-zebra .data-table-tbody tr:nth-child(even) {
-  background-color: rgb(245 244 243 / 0.4);
+  background-color: color-mix(in srgb, var(--surface-subtle) 40%, transparent);
 }
 .data-table-zebra .data-table-tbody tr:nth-child(even):hover {
-  background-color: rgb(245 244 243 / 0.7);
+  background-color: color-mix(in srgb, var(--surface-subtle) 70%, transparent);
 }
 
 /* RTL: flip chevrons/arrows */

@@ -25,7 +25,11 @@ export function AppThemePicker() {
   useEffect(() => {
     fetch('/api/admin/system/theme', { cache: 'no-store' })
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then(data => setTheme(data.theme as AppTheme))
+      .then(data => {
+        const loaded = data.theme as AppTheme;
+        setTheme(loaded);
+        applyTheme(loaded);
+      })
       .catch(() => setError('تعذر تحميل إعداد الثيم'));
   }, []);
 
