@@ -37,7 +37,7 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 hidden min-w-0 border-b border-border bg-surface-elevated md:flex md:items-center md:justify-between md:px-4 md:py-2.5">
+    <header className="app-topbar sticky top-0 z-10 hidden min-w-0 border-b border-border bg-surface-elevated md:flex md:items-center md:justify-between md:px-4 md:py-2.5">
       <div className="min-w-0">
         <Link
           href="/"

@@ -33,6 +33,7 @@ export function DataTable({
 }: DataTableProps) {
   const isAdmin = variant === 'admin';
   const wrapperClass = [
+    'app-data-table',
     tableWrapper,
     stickyHeader ? 'data-table-sticky' : '',
     zebra ? 'data-table-zebra' : '',

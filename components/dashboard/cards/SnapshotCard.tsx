@@ -14,7 +14,7 @@ export function SnapshotCard({
 }) {
   return (
     <CardShell variant="dashboard" className={className}>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+      <h3 className="app-card-title mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
         {title}
       </h3>
       {children}

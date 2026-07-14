@@ -10,7 +10,7 @@ export type CardProps = {
 
 export function Card({ children, className = '' }: CardProps) {
   return (
-    <div className={`${surfacePanel} shadow-sm ${cardPadding} ${className}`.trim()}>
+    <div className={`app-card app-card-generic ${surfacePanel} shadow-sm ${cardPadding} ${className}`.trim()}>
       {children}
     </div>
   );
