@@ -15,6 +15,13 @@ import { SECURITY_ALERT_FAILED_ATTEMPTS_THRESHOLD } from '@/lib/sessionConfig';
 import { validateCsrf } from '@/lib/csrf';
 import { roleRequires2FA, signTwoFactorPendingToken } from '@/lib/twoFactor';
 import { writeAuthAudit } from '@/lib/authAudit';
+import { isTrustedDevicesEnabled } from '@/lib/auth/authFeatureFlags';
+import { decidePostPasswordAuthStep } from '@/lib/auth/authenticationPolicy';
+import {
+  acceptTrustedDeviceToken,
+  getTrustedDeviceCookieName,
+  setTrustedDeviceCookie,
+} from '@/lib/auth/trustedDevices';
 
 const GENERIC_MESSAGE = 'Invalid credentials';
 
@@ -130,6 +137,63 @@ export async function POST(request: NextRequest) {
 
     if (roleRequires2FA(user.role)) {
       try {
+        const cookieStore = await cookies();
+        const trustRaw = cookieStore.get(getTrustedDeviceCookieName())?.value;
+        let trustedDeviceValid = false;
+        let rotatedTrust: { rawToken: string; expiresAt: Date } | null = null;
+
+        if (isTrustedDevicesEnabled() && trustRaw) {
+          const accepted = await acceptTrustedDeviceToken({
+            userId: user.id,
+            rawToken: trustRaw,
+            client,
+          });
+          if (accepted.ok) {
+            trustedDeviceValid = true;
+            rotatedTrust = {
+              rawToken: accepted.rotatedRawToken,
+              expiresAt: accepted.device.expiresAt,
+            };
+          }
+        }
+
+        const decision = decidePostPasswordAuthStep({
+          role: user.role,
+          passwordVerified: true,
+          trustedDeviceValid,
+          hasPasskeys: false,
+          hasAuthenticatorDevice: false,
+          totpEnabled: user.totpEnabled,
+        });
+
+        if (decision.nextStep === 'COMPLETE' && decision.trustedDeviceAccepted) {
+          await clearFailedLogin(user.id);
+          await writeAuthAudit({
+            event: 'LOGIN_SUCCESS',
+            userId: user.id,
+            emailAttempted: empId,
+            metadata: { viaTrustedDevice: true },
+            ...client,
+          });
+          const sessionToken = await createSession(user.id);
+          const isHttps = new URL(request.url).protocol === 'https:';
+          cookieStore.set(setSessionCookie(sessionToken, { secure: isHttps }));
+          if (rotatedTrust) {
+            cookieStore.set(
+              setTrustedDeviceCookie(rotatedTrust.rawToken, rotatedTrust.expiresAt, { secure: isHttps })
+            );
+          }
+          return NextResponse.json({
+            ok: true,
+            empId: user.empId,
+            role: user.role,
+            boutiqueId: user.boutiqueId,
+            boutiqueLabel: user.boutique ? `${user.boutique.name} (${user.boutique.code})` : undefined,
+            mustChangePassword: user.mustChangePassword,
+            trustedDeviceUsed: true,
+          });
+        }
+
         if (!user.totpEnabled) {
           const setupToken = await signTwoFactorPendingToken({ userId: user.id, purpose: '2fa_setup' });
           return NextResponse.json({
@@ -143,6 +207,7 @@ export async function POST(request: NextRequest) {
           ok: false,
           requires2fa: true,
           pendingToken,
+          trustedDevicesEnabled: isTrustedDevicesEnabled(),
         });
       } catch (twoFactorErr) {
         console.error('[auth/login] 2FA token error — check MOBILE_JWT_ACCESS_SECRET', twoFactorErr);

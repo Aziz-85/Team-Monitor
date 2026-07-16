@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole, getSessionUser } from '@/lib/auth';
+import { requireRole, getSessionUser, invalidateAllSessionsForUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { deactivateEmployeeCascade } from '@/lib/services/deactivateEmployeeCascade';
 import { userListWhere } from '@/lib/userListWhere';
@@ -12,7 +12,7 @@ import {
   userDeleteQuerySchema,
   userPatchSchema,
 } from '@/lib/validation';
-
+import { revokeTrustedDevicesForSecurityEvent } from '@/lib/auth/trustedDevices';
 export async function GET(request: NextRequest) {
   let user: Awaited<ReturnType<typeof getSessionUser>>;
   try {
@@ -196,5 +196,10 @@ export async function DELETE(request: NextRequest) {
   await deactivateEmployeeCascade(empId);
   await prisma.user.updateMany({ where: { empId }, data: { disabled: true } });
   await prisma.employee.updateMany({ where: { empId }, data: { active: false } });
+  const disabledUser = await prisma.user.findUnique({ where: { empId }, select: { id: true } });
+  if (disabledUser) {
+    await invalidateAllSessionsForUser(disabledUser.id);
+    await revokeTrustedDevicesForSecurityEvent(disabledUser.id, 'ACCOUNT_DISABLED');
+  }
   return NextResponse.json({ ok: true });
 }

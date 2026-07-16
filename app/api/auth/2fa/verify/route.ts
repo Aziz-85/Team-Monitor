@@ -8,6 +8,8 @@ import { createSession, setSessionCookie } from '@/lib/auth';
 import { clearFailedLogin } from '@/lib/authRateLimit';
 import { writeAuthAudit } from '@/lib/authAudit';
 import { cookies } from 'next/headers';
+import { isTrustedDevicesEnabled, TRUSTED_DEVICE_DEFAULT_DAYS } from '@/lib/auth/authFeatureFlags';
+import { createTrustedDevice, setTrustedDeviceCookie } from '@/lib/auth/trustedDevices';
 
 const GENERIC_MESSAGE = 'Invalid credentials';
 
@@ -22,6 +24,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const pendingToken = String(body.pendingToken ?? '');
     const code = String(body.code ?? '').trim();
+    const trustThisDevice = Boolean(body.trustThisDevice);
+    const trustDays =
+      typeof body.trustDays === 'number' ? body.trustDays : TRUSTED_DEVICE_DEFAULT_DAYS;
 
     if (!pendingToken || !code) {
       return NextResponse.json({ error: GENERIC_MESSAGE }, { status: 400 });
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
       event: 'LOGIN_SUCCESS',
       userId: user.id,
       emailAttempted: user.empId,
-      metadata: { via2fa: true },
+      metadata: { via2fa: true, trustThisDevice: trustThisDevice && isTrustedDevicesEnabled() },
       ...client,
     });
 
@@ -72,6 +77,19 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     const isHttps = new URL(request.url).protocol === 'https:';
     cookieStore.set(setSessionCookie(sessionToken, { secure: isHttps }));
+
+    if (trustThisDevice && isTrustedDevicesEnabled()) {
+      try {
+        const { device, rawToken } = await createTrustedDevice({
+          userId: user.id,
+          client,
+          days: trustDays,
+        });
+        cookieStore.set(setTrustedDeviceCookie(rawToken, device.expiresAt, { secure: isHttps }));
+      } catch (trustErr) {
+        console.error('[auth/2fa/verify] trusted device create failed', trustErr);
+      }
+    }
 
     return NextResponse.json({
       ok: true,

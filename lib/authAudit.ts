@@ -11,7 +11,13 @@ export type AuthAuditEvent =
   | '2FA_FAILED'
   | '2FA_SUCCESS'
   | 'PLATFORM_MODE_ENABLED'
-  | 'PLATFORM_MODE_DISABLED';
+  | 'PLATFORM_MODE_DISABLED'
+  | 'TRUSTED_DEVICE_CREATED'
+  | 'TRUSTED_DEVICE_USED'
+  | 'TRUSTED_DEVICE_ROTATED'
+  | 'TRUSTED_DEVICE_REVOKED'
+  | 'TRUSTED_DEVICES_REVOKED_ALL'
+  | 'TRUSTED_DEVICE_REJECTED';
 
 export async function writeAuthAudit(data: {
   event: AuthAuditEvent;

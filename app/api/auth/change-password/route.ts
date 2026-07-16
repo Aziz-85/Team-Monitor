@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import * as bcrypt from 'bcryptjs';
 import { validateCsrf } from '@/lib/csrf';
 import { validatePasswordStrength, GENERIC_PASSWORD_ERROR } from '@/lib/passwordPolicy';
+import { revokeTrustedDevicesForSecurityEvent } from '@/lib/auth/trustedDevices';
 
 const GENERIC_MESSAGE = 'Request could not be completed.';
 
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
     });
 
     await invalidateAllSessionsForUser(user.id);
+    await revokeTrustedDevicesForSecurityEvent(user.id, 'PASSWORD_CHANGED');
 
     return NextResponse.json({ ok: true });
   } catch (e) {
