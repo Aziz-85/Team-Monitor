@@ -862,7 +862,8 @@
       "scheduleExport": "Schedule Export",
       "exportCenter": "Export Center",
       "storePerformance": "Store performance report"
-    }
+    },
+    "securitySettings": "Security settings"
   },
   "matrixSecureEdit": {
     "title": "Secure monthly matrix (production edits)",
@@ -1437,7 +1438,9 @@
     "secretCopied": "Copied!",
     "twoFactorEnable": "Enable 2FA & sign in",
     "showPassword": "Show password",
-    "hidePassword": "Hide password"
+    "hidePassword": "Hide password",
+    "trustDeviceLabel": "Trust this device for 30 days",
+    "trustDeviceHint": "Do not use this option on shared or public devices."
   },
   "idle": {
     "warning": "You'll be signed out soon due to inactivity. Move the mouse or press a key to stay signed in."
@@ -1901,14 +1904,14 @@
       "slotValidationHint": "Coverage is validated by 30-minute time slots.",
       "externalHint": "External coverage from other branches is manual only (Add External Coverage). The assistant balances boutique staff only.",
       "generating": "Generating plan…",
-      "timeout": "Plan request timed out. Try again.",
+      "timeout": "Plan request timed out after 90 seconds. Check server logs or run database migrations, then try again.",
       "planResult": "Proposed plan summary",
       "coverageValid": "Coverage valid",
       "slotViolations": "Slot violations",
       "splitProposed": "Split proposed",
       "fairnessScore": "Fairness score",
-      "coverageBlocked": "Apply blocked — slot coverage below minimum",
-      "applyAnyway": "Apply anyway (override)",
+      "coverageBlocked": "Apply blocked: time slots below minimum coverage",
+      "applyAnyway": "Apply anyway",
       "tabPlan": "Proposed plan",
       "tabChat": "Ask AI",
       "aiOff": "optional",
@@ -1931,9 +1934,6 @@
       "defaultReason": "Schedule assistant plan",
       "noPlan": "Could not build a plan.",
       "loadFailed": "Could not load the schedule plan. Try again.",
-      "timeout": "Plan request timed out after 90 seconds. Check server logs or run database migrations, then try again.",
-      "coverageBlocked": "Apply blocked: time slots below minimum coverage",
-      "applyAnyway": "Apply anyway",
       "noFixHint": "No automatic fix with boutique staff alone. Add external coverage manually if needed, then reopen the assistant.",
       "chatPlaceholder": "Ask why someone was chosen, or what to do if staff is still short…",
       "chatInput": "Ask about this week's plan…",
@@ -2584,15 +2584,42 @@
     "quickActionsGo": "Open",
     "dailySalesLedgerPinnedHint": "Your daily workflow — jump straight to today’s sales ledger.",
     "quickActions": {
-      "dashboard": { "title": "Home", "hint": "Open your home — overview and shortcuts for your role." },
-      "schedule": { "title": "Schedule", "hint": "View schedule for today and this week." },
-      "tasks": { "title": "Tasks", "hint": "Review and close today’s tasks." },
-      "salesSummary": { "title": "Sales Summary", "hint": "Check boutique sales performance and pace." },
-      "dailySalesLedger": { "title": "Daily Sales Ledger", "hint": "Open today’s sales ledger — enter and lock daily totals." },
-      "inventoryDaily": { "title": "Daily Inventory", "hint": "Run today’s inventory routine." },
-      "targets": { "title": "Targets", "hint": "Track achieved vs remaining targets." },
-      "weeklyReport": { "title": "Weekly Report", "hint": "Review the weekly report board." },
-      "executive": { "title": "Executive Overview", "hint": "Open executive performance overview." }
+      "dashboard": {
+        "title": "Home",
+        "hint": "Open your home — overview and shortcuts for your role."
+      },
+      "schedule": {
+        "title": "Schedule",
+        "hint": "View schedule for today and this week."
+      },
+      "tasks": {
+        "title": "Tasks",
+        "hint": "Review and close today’s tasks."
+      },
+      "salesSummary": {
+        "title": "Sales Summary",
+        "hint": "Check boutique sales performance and pace."
+      },
+      "dailySalesLedger": {
+        "title": "Daily Sales Ledger",
+        "hint": "Open today’s sales ledger — enter and lock daily totals."
+      },
+      "inventoryDaily": {
+        "title": "Daily Inventory",
+        "hint": "Run today’s inventory routine."
+      },
+      "targets": {
+        "title": "Targets",
+        "hint": "Track achieved vs remaining targets."
+      },
+      "weeklyReport": {
+        "title": "Weekly Report",
+        "hint": "Review the weekly report board."
+      },
+      "executive": {
+        "title": "Executive Overview",
+        "hint": "Open executive performance overview."
+      }
     },
     "executive": {
       "heroBehind": "Behind target pace",
@@ -3718,5 +3745,41 @@
     "chartEmployees": "Employee sales (top slice)",
     "chartEmpty": "No chart data for this selection.",
     "insightsTitle": "Management insights"
+  },
+  "securitySettings": {
+    "title": "Account security",
+    "subtitle": "Manage two-factor authentication, trusted devices, and sessions.",
+    "loadError": "Could not load security settings.",
+    "twoFactorTitle": "Two-factor authentication",
+    "twoFactorBody": "Privileged roles use an authenticator app (TOTP). Passkeys and push approval will appear here in later releases.",
+    "passkeysTitle": "Passkeys",
+    "passkeysComingSoon": "Passkey registration will be available in a later release. TOTP remains the secure fallback.",
+    "trustedDevicesTitle": "Trusted devices",
+    "trustedDisabled": "Trusted devices are not enabled on this environment.",
+    "noTrustedDevices": "No trusted devices yet. You can trust a device after entering your authenticator code at sign-in.",
+    "unnamedDevice": "Trusted device",
+    "thisDevice": "This device",
+    "firstTrusted": "First trusted",
+    "lastUsed": "Last used",
+    "lastIp": "Approximate last IP",
+    "expires": "Expires",
+    "rename": "Rename",
+    "revoke": "Revoke",
+    "revokeAll": "Revoke all",
+    "revokeAllConfirm": "Revoke all trusted devices? You will need your authenticator code on the next sign-in from those browsers.",
+    "revokeFailed": "Could not complete that action.",
+    "revokedOne": "Trusted device revoked.",
+    "revokedAll": "All trusted devices revoked.",
+    "renamed": "Device renamed.",
+    "renameFailed": "Could not rename device.",
+    "sessionsTitle": "Active sessions",
+    "noSessions": "No active sessions found.",
+    "currentSession": "Current session",
+    "otherSession": "Other session",
+    "revokeOtherSessions": "Sign out other sessions",
+    "revokeSessionsConfirm": "Sign out all other sessions on this account?",
+    "sessionsRevoked": "Other sessions signed out.",
+    "recoveryTitle": "Recovery methods",
+    "recoveryBody": "Keep your authenticator app available. Recovery codes and emergency SUPER_ADMIN procedures will be documented as passkeys and push approval roll out."
   }
 }

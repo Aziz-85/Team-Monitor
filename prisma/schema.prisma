@@ -333,8 +333,31 @@ model User {
   salesMatrixActivityLogs       SalesMatrixEditActivityLog[]   @relation("SalesMatrixActivityActor")
   salesMatrixSnapshotsCreated   SalesMatrixSnapshot[]          @relation("SalesMatrixSnapshotCreator")
   importFileRecordsUploaded     ImportFileRecord[]
+  trustedAuthDevices            TrustedAuthDevice[]
 
   @@index([boutiqueId])
+}
+
+/// Browser/device trust for skipping TOTP while password session still required. Raw token never stored.
+model TrustedAuthDevice {
+  id              String    @id @default(cuid())
+  userId          String
+  tokenHash       String    @unique
+  deviceName      String?
+  browser         String?
+  operatingSystem String?
+  userAgentHash   String?
+  firstIp         String?
+  lastIp          String?
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime  @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  revokedReason   String?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([userId, revokedAt])
 }
 
 model MobileRefreshToken {

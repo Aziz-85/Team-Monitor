@@ -12,6 +12,7 @@ import { invalidateAllSessionsForUser } from '@/lib/auth';
 import * as bcrypt from 'bcryptjs';
 import type { Role } from '@prisma/client';
 import { validatePasswordStrength, GENERIC_PASSWORD_ERROR } from '@/lib/passwordPolicy';
+import { revokeTrustedDevicesForSecurityEvent } from '@/lib/auth/trustedDevices';
 
 export async function POST(request: NextRequest) {
   let actor: Awaited<ReturnType<typeof getSessionUser>>;
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
   });
 
   await invalidateAllSessionsForUser(targetUser.id);
+  await revokeTrustedDevicesForSecurityEvent(targetUser.id, 'ADMIN_PASSWORD_RESET');
 
   return NextResponse.json({
     ok: true,

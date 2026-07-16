@@ -116,6 +116,13 @@ export function MobileTopBar({
             ) : null}
             <div className="space-y-2">
               <Link
+                href="/settings/security"
+                onClick={closeDrawer}
+                className="flex h-9 items-center rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle"
+              >
+                {t('nav.securitySettings')}
+              </Link>
+              <Link
                 href="/change-password"
                 onClick={closeDrawer}
                 className="flex h-9 items-center rounded-md px-3 text-sm text-foreground hover:bg-surface-subtle"

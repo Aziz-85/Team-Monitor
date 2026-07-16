@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
+  const [trustThisDevice, setTrustThisDevice] = useState(false);
+  const [trustedDevicesEnabled, setTrustedDevicesEnabled] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,6 +80,8 @@ export default function LoginPage() {
       }
       if (data.requires2fa && data.pendingToken) {
         setPendingToken(data.pendingToken);
+        setTrustedDevicesEnabled(Boolean(data.trustedDevicesEnabled));
+        setTrustThisDevice(false);
         setStep('totp');
         return;
       }
@@ -96,7 +100,11 @@ export default function LoginPage() {
     try {
       const res = await authFetch('/api/auth/2fa/verify', {
         method: 'POST',
-        body: JSON.stringify({ pendingToken, code: totpCode }),
+        body: JSON.stringify({
+          pendingToken,
+          code: totpCode,
+          trustThisDevice: trustedDevicesEnabled && trustThisDevice,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -215,6 +223,20 @@ export default function LoginPage() {
               required
               autoComplete="one-time-code"
             />
+            {trustedDevicesEnabled ? (
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={trustThisDevice}
+                  onChange={(e) => setTrustThisDevice(e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">{t('auth.trustDeviceLabel')}</span>
+                  <span className="mt-0.5 block text-xs text-slate-500">{t('auth.trustDeviceHint')}</span>
+                </span>
+              </label>
+            ) : null}
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <button
               type="submit"

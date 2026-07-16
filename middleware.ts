@@ -185,6 +185,8 @@ export const config = {
     '/tasks/:path*',
     '/planner-export',
     '/change-password',
+    '/settings',
+    '/settings/:path*',
     '/admin/:path*',
     '/approvals',
     '/leaves',

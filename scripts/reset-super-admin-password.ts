@@ -21,8 +21,17 @@ async function main() {
     return;
   }
 
+  const user = await prisma.user.findUnique({ where: { empId: 'super_admin' }, select: { id: true } });
+  if (user) {
+    await prisma.session.deleteMany({ where: { userId: user.id } });
+    await prisma.trustedAuthDevice.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date(), revokedReason: 'PASSWORD_RESET_SCRIPT' },
+    });
+  }
+
   console.log('✅ super_admin password reset to: SuperAdmin@123');
-  console.log('   mustChangePassword set to true. You can log in now.');
+  console.log('   mustChangePassword set to true. Sessions and trusted devices cleared.');
 }
 
 main()

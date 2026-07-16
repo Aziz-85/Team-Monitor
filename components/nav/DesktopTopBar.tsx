@@ -78,6 +78,13 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
                 </div>
               )}
               <Link
+                href="/settings/security"
+                onClick={() => setProfileOpen(false)}
+                className="block px-3 py-2 text-sm text-foreground hover:bg-surface-subtle"
+              >
+                {t('nav.securitySettings')}
+              </Link>
+              <Link
                 href="/change-password"
                 onClick={() => setProfileOpen(false)}
                 className="block px-3 py-2 text-sm text-foreground hover:bg-surface-subtle"
