@@ -1901,14 +1901,14 @@
       "slotValidationHint": "Coverage is validated by 30-minute time slots.",
       "externalHint": "External coverage from other branches is manual only (Add External Coverage). The assistant balances boutique staff only.",
       "generating": "Generating plan…",
-      "timeout": "Plan request timed out. Try again.",
+      "timeout": "Plan request timed out after 90 seconds. Check server logs or run database migrations, then try again.",
       "planResult": "Proposed plan summary",
       "coverageValid": "Coverage valid",
       "slotViolations": "Slot violations",
       "splitProposed": "Split proposed",
       "fairnessScore": "Fairness score",
-      "coverageBlocked": "Apply blocked — slot coverage below minimum",
-      "applyAnyway": "Apply anyway (override)",
+      "coverageBlocked": "Apply blocked: time slots below minimum coverage",
+      "applyAnyway": "Apply anyway",
       "tabPlan": "Proposed plan",
       "tabChat": "Ask AI",
       "aiOff": "optional",
@@ -1931,9 +1931,6 @@
       "defaultReason": "Schedule assistant plan",
       "noPlan": "Could not build a plan.",
       "loadFailed": "Could not load the schedule plan. Try again.",
-      "timeout": "Plan request timed out after 90 seconds. Check server logs or run database migrations, then try again.",
-      "coverageBlocked": "Apply blocked: time slots below minimum coverage",
-      "applyAnyway": "Apply anyway",
       "noFixHint": "No automatic fix with boutique staff alone. Add external coverage manually if needed, then reopen the assistant.",
       "chatPlaceholder": "Ask why someone was chosen, or what to do if staff is still short…",
       "chatInput": "Ask about this week's plan…",
@@ -2584,15 +2581,42 @@
     "quickActionsGo": "Open",
     "dailySalesLedgerPinnedHint": "Your daily workflow — jump straight to today’s sales ledger.",
     "quickActions": {
-      "dashboard": { "title": "Home", "hint": "Open your home — overview and shortcuts for your role." },
-      "schedule": { "title": "Schedule", "hint": "View schedule for today and this week." },
-      "tasks": { "title": "Tasks", "hint": "Review and close today’s tasks." },
-      "salesSummary": { "title": "Sales Summary", "hint": "Check boutique sales performance and pace." },
-      "dailySalesLedger": { "title": "Daily Sales Ledger", "hint": "Open today’s sales ledger — enter and lock daily totals." },
-      "inventoryDaily": { "title": "Daily Inventory", "hint": "Run today’s inventory routine." },
-      "targets": { "title": "Targets", "hint": "Track achieved vs remaining targets." },
-      "weeklyReport": { "title": "Weekly Report", "hint": "Review the weekly report board." },
-      "executive": { "title": "Executive Overview", "hint": "Open executive performance overview." }
+      "dashboard": {
+        "title": "Home",
+        "hint": "Open your home — overview and shortcuts for your role."
+      },
+      "schedule": {
+        "title": "Schedule",
+        "hint": "View schedule for today and this week."
+      },
+      "tasks": {
+        "title": "Tasks",
+        "hint": "Review and close today’s tasks."
+      },
+      "salesSummary": {
+        "title": "Sales Summary",
+        "hint": "Check boutique sales performance and pace."
+      },
+      "dailySalesLedger": {
+        "title": "Daily Sales Ledger",
+        "hint": "Open today’s sales ledger — enter and lock daily totals."
+      },
+      "inventoryDaily": {
+        "title": "Daily Inventory",
+        "hint": "Run today’s inventory routine."
+      },
+      "targets": {
+        "title": "Targets",
+        "hint": "Track achieved vs remaining targets."
+      },
+      "weeklyReport": {
+        "title": "Weekly Report",
+        "hint": "Review the weekly report board."
+      },
+      "executive": {
+        "title": "Executive Overview",
+        "hint": "Open executive performance overview."
+      }
     },
     "executive": {
       "heroBehind": "Behind target pace",
@@ -3124,12 +3148,15 @@
       "copyCloseToDailyTarget": "⚠️ Close to daily target",
       "copyStrongPerformance": "🔥 Strong performance",
       "copyValueUnavailable": "—",
-      "targetPanelTitle": "Monthly targets",
+      "targetPanelTitle": "Dynamic daily target",
       "noTargetForMonth": "No target set for this month",
       "monthlyTargetLabel": "Monthly target",
-      "dailyTargetLabel": "Daily target",
+      "dailyTargetLabel": "Daily required",
       "achievementDailyLabel": "Daily achievement %",
-      "achievementMonthlyLabel": "Month-to-date achievement %"
+      "achievementMonthlyLabel": "Month-to-date achievement %",
+      "dynamicDailyHint": "Recalculated from remaining monthly goal ÷ days left (including today).",
+      "remainingMonthLabel": "Remaining monthly",
+      "daysRemainingLabel": "Days remaining"
     },
     "yearlyImportPage": {
       "title": "Import employee sales (yearly)",

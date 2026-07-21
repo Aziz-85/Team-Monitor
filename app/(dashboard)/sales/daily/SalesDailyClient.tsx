@@ -247,6 +247,8 @@ type ScopeBoutiqueDailyMetrics = {
   dailyProgressPending: boolean;
   monthTargetSar: number | null;
   mtdThroughDateSar: number;
+  remainingSar: number;
+  daysRemaining: number;
 };
 
 type DailySummaryCopyLabels = {
@@ -631,6 +633,8 @@ function SalesDailyClientImpl({
           monthTargetSar:
             j.monthTargetSar == null ? null : Math.trunc(Number(j.monthTargetSar) || 0),
           mtdThroughDateSar: Math.trunc(Number(j.mtdThroughDateSar) || 0),
+          remainingSar: Math.trunc(Number(j.remainingSar) || 0),
+          daysRemaining: Math.trunc(Number(j.daysRemaining) || 0),
         });
       })
       .catch(() => {
@@ -1211,20 +1215,27 @@ function SalesDailyClientImpl({
       {ledgerDateReady && scopeBoutiqueDaily && (
         <div className="mb-4 rounded-lg border border-border bg-surface px-4 py-3 shadow-sm">
           <h3 className="text-sm font-semibold text-foreground">{t('sales.dailyLedger.targetPanelTitle')}</h3>
+          <p className="mt-1 text-xs text-muted">{t('sales.dailyLedger.dynamicDailyHint')}</p>
           {!scopeBoutiqueDaily.hasMonthlyTarget ? (
             <p className="mt-2 text-sm text-muted">{t('sales.dailyLedger.noTargetForMonth')}</p>
           ) : (
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
               <div>
                 <p className="text-xs text-muted">{t('sales.dailyLedger.monthlyTargetLabel')}</p>
                 <p className="font-semibold tabular-nums">{formatSarLine(scopeBoutiqueDaily.monthTargetSar ?? 0)}</p>
               </div>
               <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.remainingMonthLabel')}</p>
+                <p className="font-semibold tabular-nums">{formatSarLine(scopeBoutiqueDaily.remainingSar)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted">{t('sales.dailyLedger.daysRemainingLabel')}</p>
+                <p className="font-semibold tabular-nums">{scopeBoutiqueDaily.daysRemaining}</p>
+              </div>
+              <div>
                 <p className="text-xs text-muted">{t('sales.dailyLedger.dailyTargetLabel')}</p>
-                <p className="font-semibold tabular-nums">
-                  {scopeBoutiqueDaily.dailyTargetSar != null
-                    ? formatSarLine(scopeBoutiqueDaily.dailyTargetSar)
-                    : t('sales.dailyLedger.copyValueUnavailable')}
+                <p className="font-semibold tabular-nums text-accent">
+                  {formatSarLine(scopeBoutiqueDaily.dailyRequiredSar)}
                 </p>
               </div>
               <div>

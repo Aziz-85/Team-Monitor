@@ -124,7 +124,10 @@ export async function GET(request: NextRequest) {
     date: dateStr,
     hasMonthlyTarget,
     monthTargetSar,
+    /** Static calendar allocation of month target (reporting only). */
     dailyTargetSar,
+    /** Alias: dynamic daily target from remaining monthly goal ÷ remaining days. */
+    dynamicDailyTargetSar: dailyRequiredSar,
     monthAchievedSar,
     mtdThroughDateSar,
     remainingSar,
