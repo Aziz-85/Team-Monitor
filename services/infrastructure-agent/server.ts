@@ -77,6 +77,20 @@ async function health(app: InfrastructureAppDefinition) {
   } finally { clearTimeout(timer); }
 }
 
+async function serviceStatus(name: 'nginx' | 'postgresql' | 'docker'): Promise<string> {
+  try { const result = await run('systemctl', ['is-active', name]); return result.stdout.trim() || 'unknown'; } catch { return 'unknown'; }
+}
+
+async function systemStatus() {
+  let disk: Record<string, number> | null = null;
+  try {
+    const result = await run('df', ['-Pk', '/']); const columns = result.stdout.trim().split('\n').at(-1)?.trim().split(/\s+/);
+    if (columns && columns.length >= 6) disk = { totalKb: Number(columns[1]), usedKb: Number(columns[2]), availableKb: Number(columns[3]), usedPercent: Number(columns[4].replace('%', '')) };
+  } catch { /* Disk remains unknown. */ }
+  const [nginx, postgresql, docker] = await Promise.all([serviceStatus('nginx'), serviceStatus('postgresql'), serviceStatus('docker')]);
+  return { uptimeSeconds: uptime(), cpuCount: cpus().length, loadAverage: loadavg(), memory: { total: totalmem(), free: freemem() }, disk, services: { nginx, postgresql, docker } };
+}
+
 async function fixedAction(action: 'restart' | 'deploy' | 'backup', app: InfrastructureAppDefinition) {
   const script = `${process.cwd()}/scripts/infrastructure/${action === 'restart' ? 'restart-app' : action === 'deploy' ? 'deploy-app' : 'backup-database'}.sh`;
   return run(script, [app.id]);
@@ -95,7 +109,7 @@ async function handler(req: IncomingMessage, res: ServerResponse) {
     return reply(res, 200, { apps: INFRASTRUCTURE_APPS.map(({ cwd: _cwd, ...app }) => app), requestId }, requestId);
   }
   if (url.pathname === '/v1/system/status' && req.method === 'GET') {
-    return reply(res, 200, { requestId, uptimeSeconds: uptime(), cpuCount: cpus().length, loadAverage: loadavg(), memory: { total: totalmem(), free: freemem() } }, requestId);
+    return reply(res, 200, { requestId, ...(await systemStatus()) }, requestId);
   }
   const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)\/(status|health|logs|restart|deploy|backup)$/);
   if (!match) return reply(res, 404, { error: 'NOT_FOUND', requestId }, requestId);
