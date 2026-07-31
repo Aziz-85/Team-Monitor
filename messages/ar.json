@@ -245,6 +245,7 @@
     "employeeHome": "صفحتي",
     "changePassword": "تغيير كلمة المرور",
     "architectureConsole": "لوحة معمارية النظام",
+    "infrastructure": "البنية التحتية",
     "compliance": "الوثائق الحكومية",
     "platformMode": {
       "branchManager": "وضع مدير الفرع",
@@ -1209,7 +1210,8 @@
       "versionBuild": "الإصدار / البناء",
       "versionBuildDesc": "عرض الإصدار والنشر ومعلومات البناء.",
       "salesIntegrity": "سلامة المبيعات",
-      "salesIntegrityDesc": "فحوصات التطابق على SalesEntry (طبقة القراءة المعتمدة)."
+      "salesIntegrityDesc": "فحوصات التطابق على SalesEntry (طبقة القراءة المعتمدة).",
+      "infrastructureDesc": "مراقبة آمنة للإنتاج وعمليات تشغيل مضبوطة."
     },
     "salesIntegrity": {
       "title": "سلامة المبيعات",
