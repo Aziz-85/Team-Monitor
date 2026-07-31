@@ -113,15 +113,45 @@ export async function GET(
   const bottomMonths = sorted.filter((m) => m.amount > 0).slice(-3).reverse();
 
   let achievementPct: number | null = null;
+  let monthlyTargets = new Map<string, number>();
+  let monthlyProductivity = new Map<string, { invoices: number; pieces: number }>();
   if (empUser) {
     const monthKeys = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-    const targets = await prisma.employeeMonthlyTarget.findMany({
-      where: { userId: empUser.id, month: { in: monthKeys } },
-      select: { amount: true },
-    });
+    const [targets, productivityRows] = await Promise.all([
+      prisma.employeeMonthlyTarget.findMany({
+        where: { userId: empUser.id, boutiqueId: { in: boutiqueIds }, month: { in: monthKeys } },
+        select: { month: true, amount: true },
+      }),
+      prisma.salesEntry.groupBy({
+        by: ['month'],
+        where: { userId: empUser.id, boutiqueId: { in: boutiqueIds }, month: { in: monthKeys } },
+        _sum: { invoiceCount: true, pieceCount: true },
+      }),
+    ]);
+    monthlyTargets = new Map(targets.map((t) => [t.month, t.amount]));
+    monthlyProductivity = new Map(productivityRows.map((r) => [r.month, {
+      invoices: r._sum.invoiceCount ?? 0,
+      pieces: r._sum.pieceCount ?? 0,
+    }]));
     const annualTarget = targets.reduce((s, t) => s + t.amount, 0);
     if (annualTarget > 0) achievementPct = calculatePerformance({ target: annualTarget, sales: total }).percent;
   }
+
+  const monthlyPerformance = monthAmounts.map(({ month, amount }) => {
+    const target = monthlyTargets.get(month) ?? 0;
+    const productivity = monthlyProductivity.get(month) ?? { invoices: 0, pieces: 0 };
+    return {
+      month,
+      sales: amount,
+      target,
+      achievementPct: target > 0 ? calculatePerformance({ target, sales: amount }).percent : null,
+      invoices: productivity.invoices,
+      pieces: productivity.pieces,
+      avt: productivity.invoices > 0 ? amount / productivity.invoices : null,
+      avp: productivity.pieces > 0 ? amount / productivity.pieces : null,
+      upt: productivity.invoices > 0 ? productivity.pieces / productivity.invoices : null,
+    };
+  });
 
   return NextResponse.json({
     year,
@@ -130,6 +160,7 @@ export async function GET(
     annualTotal: total,
     byBoutique: byBoutiqueArr,
     monthlySeries,
+    monthlyPerformance,
     consistencyScore,
     topMonths,
     bottomMonths,

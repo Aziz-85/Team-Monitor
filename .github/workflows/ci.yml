@@ -19,6 +19,22 @@ jobs:
   quality:
     name: Quality gate
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: quality_ci
+          POSTGRES_PASSWORD: quality_ci
+          POSTGRES_DB: quality_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quality_ci -d quality_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://quality_ci:quality_ci@localhost:5432/quality_ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +50,9 @@ jobs:
 
       - name: Prisma generate
         run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
 
       - name: Typecheck
         run: npm run typecheck
@@ -52,8 +71,6 @@ jobs:
 
       - name: Production build
         run: npm run build
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
 
       - name: Upload coverage report
         if: always()

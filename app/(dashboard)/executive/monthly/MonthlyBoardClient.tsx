@@ -1,310 +1,209 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { addMonths, getCurrentMonthKeyRiyadh, parseMonthKey } from '@/lib/time';
-import { useT } from '@/lib/i18n/useT';
+import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
+import { ExecutiveBarChart } from '@/components/executive/ExecutiveBarChart';
+import { formatSarInt } from '@/lib/utils/money';
 
-type BoutiqueScore = {
-  score: number;
-  classification: string;
-  components?: {
-    revenue: number;
-    tasks: number;
-    schedule: number;
-    zone: number;
-    discipline: number;
-  };
+type SnapshotDay = { date: string; netSalesHalalas: number; invoices: number; pieces: number };
+type SnapshotStaff = {
+  empId?: string;
+  name: string;
+  netSalesHalalas: number;
+  invoices: number;
+  pieces: number;
+  targetHalalas?: number;
+  achievementPct?: number;
+};
+type Snapshot = {
+  month: string;
+  branchCode: string;
+  boutiqueTargetHalalas?: number;
+  daily: SnapshotDay[];
+  staff: SnapshotStaff[];
 };
 
-type MonthlyData = {
-  monthKey: string;
-  dataScope?: {
-    boutiqueId: string;
-    boutiqueName: string | null;
-    boutiqueCode: string | null;
-    monthKey: string;
-    salesEntryCount: number;
-    ledgerLineCount?: number;
-  };
-  boutiqueScore: BoutiqueScore;
-  salesIntelligence: {
-    revenue: number;
-    target: number | null;
-    hasMonthlyTarget: boolean;
-    targetStatus: 'assigned' | 'missing';
-    achievementPct: number | null;
-    totalEmployeeTarget: number;
-    entryCount: number;
-  };
-  workforceStability: {
-    pendingLeaves: number;
-    approvedLeavesInPeriod: number;
-    employeeTargetCount: number;
-  };
-  operationalDiscipline: {
-    taskCompletionsInMonth: number;
-    scheduleEditsInMonth: number;
-    zoneRunsTotal: number;
-    zoneCompliancePct: number;
-  };
-  riskScore: {
-    score: number;
-    classification: string;
-    factors: {
-      revenueGap: number;
-      workforceExposure: number;
-      taskIntegrity: number;
-      operationalGaps: number;
-      scheduleVolatility: number;
-    };
-    reasons: string[];
-  };
-};
+const card = 'rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm';
 
-function Card({
-  title,
-  children,
-  className = '',
-}: {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm transition hover:shadow-md ${className}`}
-    >
-      <h2 className="mb-3 text-sm font-medium text-muted">{title}</h2>
-      {children}
-    </div>
-  );
+function safeDiv(a: number, b: number): number | null {
+  return b > 0 ? a / b : null;
 }
 
-function RiskBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-  const color = pct <= 30 ? 'bg-emerald-500' : pct <= 60 ? 'bg-amber-500' : 'bg-red-500';
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="w-28 shrink-0 text-muted">{label}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-subtle">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-8 text-end font-medium text-foreground">{value}</span>
-    </div>
-  );
+function pct(value: number | null): string {
+  return value == null ? '—' : `${value.toFixed(1)}%`;
 }
 
-function isValidMonthKey(value: string): boolean {
-  return parseMonthKey(value) !== null;
+function daysForMonth(monthKey: string): string[] {
+  const [year, month] = monthKey.split('-').map(Number);
+  const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return Array.from({ length: count }, (_, i) => `${monthKey}-${String(i + 1).padStart(2, '0')}`);
+}
+
+function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className={card}>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
+  );
 }
 
 export function MonthlyBoardClient() {
-  const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  const [data, setData] = useState<MonthlyData | null>(null);
+  const monthFromUrl = searchParams.get('month') ?? '';
+  const monthKey = parseMonthKey(monthFromUrl) ? monthFromUrl : getCurrentMonthKeyRiyadh();
+  const [data, setData] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const monthFromUrl = searchParams.get('month') ?? '';
-  const monthKey = isValidMonthKey(monthFromUrl)
-    ? monthFromUrl
-    : getCurrentMonthKeyRiyadh();
-
-  const setMonthInUrl = useCallback(
-    (newMonth: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('month', newMonth);
-      router.push(`${pathname}?${params.toString()}`);
-    },
-    [pathname, router, searchParams]
-  );
+  const setMonth = useCallback((month: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('month', month);
+    router.push(`${pathname}?${params}`);
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
-    if (!isValidMonthKey(monthFromUrl)) {
-      setMonthInUrl(monthKey);
-    }
-  }, [monthFromUrl, monthKey, setMonthInUrl]);
+    if (!parseMonthKey(monthFromUrl)) setMonth(monthKey);
+  }, [monthFromUrl, monthKey, setMonth]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/executive/monthly?month=${encodeURIComponent(monthKey)}`)
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load');
-        return r.json();
+    fetch(`/api/executive/month-snapshot?month=${encodeURIComponent(monthKey)}`, { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Unable to load monthly performance');
+        return r.json() as Promise<Snapshot>;
       })
-      .then(setData)
-      .catch(() => setError(t('executive.monthly.failedToLoad')))
-      .finally(() => setLoading(false));
-  }, [monthKey, t]);
+      .then((value) => { if (!cancelled) setData(value); })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'Unable to load'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [monthKey]);
 
-  const goPrev = () => setMonthInUrl(addMonths(monthKey, -1));
-  const goNext = () => setMonthInUrl(addMonths(monthKey, 1));
-  const goThisMonth = () => setMonthInUrl(getCurrentMonthKeyRiyadh());
+  const model = useMemo(() => {
+    if (!data) return null;
+    const dates = daysForMonth(monthKey);
+    const byDate = new Map(data.daily.map((d) => [d.date, d]));
+    const targetSar = (data.boutiqueTargetHalalas ?? 0) / 100;
+    const dailyTarget = dates.length ? targetSar / dates.length : 0;
+    let cumulative = 0;
+    const daily = dates.map((date, index) => {
+      const source = byDate.get(date);
+      const sales = (source?.netSalesHalalas ?? 0) / 100;
+      cumulative += sales;
+      return {
+        date,
+        day: new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short' }),
+        sales,
+        invoices: source?.invoices ?? 0,
+        pieces: source?.pieces ?? 0,
+        dailyTarget,
+        cumulative,
+        cumulativeTarget: dailyTarget * (index + 1),
+      };
+    });
+    const salesSar = daily.reduce((sum, d) => sum + d.sales, 0);
+    const invoices = daily.reduce((sum, d) => sum + d.invoices, 0);
+    const pieces = daily.reduce((sum, d) => sum + d.pieces, 0);
+    const activeDays = daily.filter((d) => d.sales !== 0 || d.invoices !== 0 || d.pieces !== 0).length;
+    const remaining = Math.max(targetSar - salesSar, 0);
+    const remainingDays = Math.max(dates.length - activeDays, 0);
+    const staff = [...data.staff]
+      .map((s) => ({
+        ...s,
+        sales: s.netSalesHalalas / 100,
+        target: (s.targetHalalas ?? 0) / 100,
+        achievement: s.achievementPct ?? (s.targetHalalas ? (s.netSalesHalalas / s.targetHalalas) * 100 : null),
+        avt: safeDiv(s.netSalesHalalas / 100, s.invoices),
+        avp: safeDiv(s.netSalesHalalas / 100, s.pieces),
+        upt: safeDiv(s.pieces, s.invoices),
+      }))
+      .sort((a, b) => b.sales - a.sales);
+    return { daily, staff, targetSar, dailyTarget, salesSar, invoices, pieces, activeDays, remaining, remainingDays };
+  }, [data, monthKey]);
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-[#E8DFC8] bg-surface p-6 shadow-sm">
-          <p className="text-muted">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading && !model) return <div className="p-8 text-sm text-muted">Loading monthly performance…</div>;
+  if (error) return <div className="m-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>;
+  if (!model || !data) return null;
 
-  if (loading && !data) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center p-6">
-        <p className="text-muted">{t('executive.monthly.loading')}</p>
-      </div>
-    );
-  }
-
-  if (!data) return null;
+  const achievement = safeDiv(model.salesSar * 100, model.targetSar);
+  const avt = safeDiv(model.salesSar, model.invoices);
+  const avp = safeDiv(model.salesSar, model.pieces);
+  const upt = safeDiv(model.pieces, model.invoices);
+  const requiredDaily = safeDiv(model.remaining, model.remainingDays);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold text-foreground">
-          {t('executive.monthly.title')}
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded border border-[#E8DFC8] bg-surface">
-            <button
-              type="button"
-              onClick={goPrev}
-              className="rounded-s border-e border-[#E8DFC8] px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
-              title={t('executive.monthly.previousMonth')}
-              aria-label={t('executive.monthly.previousMonth')}
-            >
-              ◀ {t('executive.monthly.prev')}
-            </button>
-            <label className="sr-only" htmlFor="exec-month-picker">
-              {t('executive.monthly.monthPickerLabel')}
-            </label>
-            <input
-              id="exec-month-picker"
-              type="month"
-              value={monthKey}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (isValidMonthKey(v)) setMonthInUrl(v);
-              }}
-              className="border-0 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#C6A756]"
-            />
-            <button
-              type="button"
-              onClick={goNext}
-              className="rounded-e border-s border-[#E8DFC8] px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
-              title={t('executive.monthly.nextMonth')}
-              aria-label={t('executive.monthly.nextMonth')}
-            >
-              {t('executive.monthly.next')} ▶
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={goThisMonth}
-            className="rounded border border-[#E8DFC8] bg-surface px-3 py-1.5 text-sm text-muted hover:bg-surface-subtle"
-          >
-            {t('executive.monthly.thisMonth')}
-          </button>
+    <main className="mx-auto max-w-screen-2xl space-y-6 p-4 md:p-6 print:p-0">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9A7B28]">{data.branchCode}</p>
+          <h1 className="mt-1 text-2xl font-semibold text-foreground">Monthly Performance</h1>
+          <p className="text-sm text-muted">Boutique results, daily pace and employee contribution in one view.</p>
         </div>
-      </div>
-
-      {data.dataScope && (
-        <div className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-sm text-muted">
-          <strong>{t('executive.monthly.dataScope')}:</strong>{' '}
-          {t('executive.monthly.boutiqueLabel')}: {data.dataScope.boutiqueName ?? data.dataScope.boutiqueId}
-          {data.dataScope.boutiqueCode != null && ` (${data.dataScope.boutiqueCode})`}
-          {' · '}
-          {t('executive.monthly.monthLabel')}: {data.dataScope.monthKey}
-          {' · '}
-          {t('executive.monthly.salesEntries')}: {data.dataScope.salesEntryCount}
-          {' · '}
-          {t('executive.monthly.ledgerLines')}: {data.dataScope.ledgerLineCount ?? '—'}
+        <div className="flex items-center rounded-xl border border-[#E8DFC8] bg-surface shadow-sm print:hidden">
+          <button className="px-3 py-2 text-sm text-muted hover:bg-surface-subtle" onClick={() => setMonth(addMonths(monthKey, -1))}>←</button>
+          <input aria-label="Report month" className="border-x border-[#E8DFC8] bg-transparent px-3 py-2 text-sm" type="month" value={monthKey} onChange={(e) => parseMonthKey(e.target.value) && setMonth(e.target.value)} />
+          <button className="px-3 py-2 text-sm text-muted hover:bg-surface-subtle" onClick={() => setMonth(addMonths(monthKey, 1))}>→</button>
         </div>
-      )}
+      </header>
 
-      {/* Boutique Performance Score */}
-      <div className="rounded-2xl border-2 border-[#E8DFC8] bg-surface p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-medium text-muted">
-          {t('executive.monthly.boutiquePerformanceScore')}
-        </h2>
-        <p className="text-3xl font-semibold text-[#C6A756]">
-          {data.boutiqueScore.score}
-          <span className="ms-2 text-lg font-normal text-muted">
-            ({data.boutiqueScore.classification})
-          </span>
-        </p>
-        {data.boutiqueScore.components && (
-          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
-            <span>{t('executive.monthly.sales')}: {data.boutiqueScore.components.revenue}</span>
-            <span>{t('executive.monthly.tasks')}: {data.boutiqueScore.components.tasks}</span>
-            <span>{t('executive.monthly.schedule')}: {data.boutiqueScore.components.schedule}</span>
-            <span>{t('executive.monthly.zone')}: {data.boutiqueScore.components.zone}</span>
-            <span>{t('executive.monthly.discipline')}: {data.boutiqueScore.components.discipline}</span>
-          </div>
-        )}
-      </div>
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <Kpi label="Net Sales" value={formatSarInt(model.salesSar)} />
+        <Kpi label="Monthly Target" value={model.targetSar ? formatSarInt(model.targetSar) : '—'} />
+        <Kpi label="Achievement" value={pct(achievement)} hint={model.remaining ? `${formatSarInt(model.remaining)} remaining` : 'Target completed'} />
+        <Kpi label="Daily Target" value={model.dailyTarget ? formatSarInt(model.dailyTarget) : '—'} />
+        <Kpi label="Invoices" value={model.invoices ? model.invoices.toLocaleString() : '—'} />
+        <Kpi label="Pieces" value={model.pieces ? model.pieces.toLocaleString() : '—'} />
+        <Kpi label="AVT / AVP" value={`${avt == null ? '—' : formatSarInt(avt)} / ${avp == null ? '—' : formatSarInt(avp)}`} />
+        <Kpi label="UPT" value={upt == null ? '—' : upt.toFixed(2)} hint={requiredDaily == null ? undefined : `${formatSarInt(requiredDaily)} required/day`} />
+      </section>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card title={t('executive.monthly.salesIntelligence')}>
-          <ul className="space-y-1 text-sm">
-            <li>{t('executive.monthly.salesSar')}: <strong>{data.salesIntelligence.revenue.toLocaleString()}</strong></li>
-            <li>{t('executive.monthly.target')}: <strong>{data.salesIntelligence.hasMonthlyTarget && data.salesIntelligence.target != null ? data.salesIntelligence.target.toLocaleString() : '—'}</strong></li>
-            <li>{t('executive.monthly.achievement')}: <strong className="text-[#C6A756]">{data.salesIntelligence.achievementPct != null ? `${data.salesIntelligence.achievementPct}%` : '—'}</strong></li>
-            <li>{t('executive.monthly.employeeTargets')}: {data.salesIntelligence.totalEmployeeTarget}</li>
-            <li>{t('executive.monthly.salesEntriesCount')}: {data.salesIntelligence.entryCount}</li>
-          </ul>
-        </Card>
+      <section className="grid gap-6 xl:grid-cols-2">
+        <div className={card}>
+          <h2 className="mb-4 font-semibold text-foreground">Cumulative Sales vs Target</h2>
+          <ExecutiveLineChart height={280} data={model.daily.map((d) => ({ label: d.date.slice(8), value: d.cumulative }))} targetLine={model.daily.map((d) => d.cumulativeTarget)} valueFormat={formatSarInt} />
+        </div>
+        <div className={card}>
+          <h2 className="mb-4 font-semibold text-foreground">Employee Achievement</h2>
+          <ExecutiveBarChart height={280} data={model.staff.slice(0, 10).map((s) => ({ label: s.name.split(' ')[0], value: s.achievement ?? 0 }))} valueFormat={(n) => `${n.toFixed(0)}%`} />
+        </div>
+      </section>
 
-        <Card title={t('executive.monthly.workforceStability')}>
-          <ul className="space-y-1 text-sm">
-            <li>{t('executive.monthly.pendingLeaves')}: <strong>{data.workforceStability.pendingLeaves}</strong></li>
-            <li>{t('executive.monthly.approvedLeavesInPeriod')}: {data.workforceStability.approvedLeavesInPeriod}</li>
-            <li>{t('executive.monthly.employeesWithTarget')}: {data.workforceStability.employeeTargetCount}</li>
-          </ul>
-        </Card>
+      <section className={card}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div><h2 className="font-semibold text-foreground">Employee Performance</h2><p className="text-xs text-muted">Ranked by net sales for the selected month.</p></div>
+          <span className="rounded-full bg-[#F3EBD7] px-3 py-1 text-xs text-[#725B1D]">{model.staff.length} employees</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-sm">
+            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+              <th className="px-3 py-2">Rank</th><th className="px-3 py-2">Employee</th><th className="px-3 py-2 text-right">Target</th><th className="px-3 py-2 text-right">Sales</th><th className="px-3 py-2 text-right">Achievement</th><th className="px-3 py-2 text-right">Invoices</th><th className="px-3 py-2 text-right">Pieces</th><th className="px-3 py-2 text-right">AVT</th><th className="px-3 py-2 text-right">AVP</th><th className="px-3 py-2 text-right">UPT</th>
+            </tr></thead>
+            <tbody>{model.staff.map((s, index) => <tr key={`${s.empId ?? s.name}-${index}`} className="border-b border-border/70 last:border-0 hover:bg-surface-subtle">
+              <td className="px-3 py-3 font-semibold text-[#9A7B28]">{index + 1}</td><td className="px-3 py-3"><p className="font-medium text-foreground">{s.name}</p><p className="text-xs text-muted">{s.empId ?? '—'}</p></td><td className="px-3 py-3 text-right tabular-nums">{s.target ? formatSarInt(s.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{formatSarInt(s.sales)}</td><td className="px-3 py-3 text-right tabular-nums">{pct(s.achievement)}</td><td className="px-3 py-3 text-right tabular-nums">{s.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.avt == null ? '—' : formatSarInt(s.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{s.avp == null ? '—' : formatSarInt(s.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{s.upt == null ? '—' : s.upt.toFixed(2)}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </section>
 
-        <Card title={t('executive.monthly.operationalDiscipline')}>
-          <ul className="space-y-1 text-sm">
-            <li>{t('executive.monthly.taskCompletions')}: <strong>{data.operationalDiscipline.taskCompletionsInMonth}</strong></li>
-            <li>{t('executive.monthly.scheduleEdits')}: {data.operationalDiscipline.scheduleEditsInMonth}</li>
-            <li>{t('executive.monthly.zoneRuns')}: {data.operationalDiscipline.zoneRunsTotal}</li>
-            <li>{t('executive.monthly.zoneCompliance')}: <strong className="text-[#C6A756]">{data.operationalDiscipline.zoneCompliancePct}%</strong></li>
-          </ul>
-        </Card>
-
-        <Card title={t('executive.monthly.riskScore')}>
-          <p className="text-2xl font-semibold text-[#C6A756]">
-            {data.riskScore.score}
-            <span className="ms-2 text-lg font-normal text-muted">
-              ({data.riskScore.classification})
-            </span>
-          </p>
-          {data.riskScore.factors && (
-            <div className="mt-3 space-y-1.5">
-              <RiskBar label={t('executive.monthly.riskRevenueGap')} value={data.riskScore.factors.revenueGap} max={30} />
-              <RiskBar label={t('executive.monthly.riskWorkforce')} value={data.riskScore.factors.workforceExposure} max={20} />
-              <RiskBar label={t('executive.monthly.riskTaskIntegrity')} value={data.riskScore.factors.taskIntegrity} max={20} />
-              <RiskBar label={t('executive.monthly.riskOperational')} value={data.riskScore.factors.operationalGaps} max={15} />
-              <RiskBar label={t('executive.monthly.riskSchedule')} value={data.riskScore.factors.scheduleVolatility} max={15} />
-            </div>
-          )}
-          {data.riskScore.reasons.length > 0 && (
-            <ul className="mt-3 space-y-0.5 text-xs text-muted">
-              {data.riskScore.reasons.map((r) => (
-                <li key={r}>• {t(`executive.risk.${r}`)}</li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-    </div>
+      <section className={card}>
+        <div className="mb-4"><h2 className="font-semibold text-foreground">Daily Performance</h2><p className="text-xs text-muted">Days without recorded sales remain blank.</p></div>
+        <div className="max-h-[620px] overflow-auto">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead className="sticky top-0 bg-surface"><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted"><th className="px-3 py-2">Date</th><th className="px-3 py-2">Day</th><th className="px-3 py-2 text-right">Sales</th><th className="px-3 py-2 text-right">Daily Target</th><th className="px-3 py-2 text-right">Achievement</th><th className="px-3 py-2 text-right">Invoices</th><th className="px-3 py-2 text-right">Pieces</th><th className="px-3 py-2 text-right">AVT</th><th className="px-3 py-2 text-right">UPT</th></tr></thead>
+            <tbody>{model.daily.map((d) => {
+              const hasData = d.sales !== 0 || d.invoices !== 0 || d.pieces !== 0;
+              return <tr key={d.date} className="border-b border-border/70 last:border-0 hover:bg-surface-subtle"><td className="px-3 py-2 tabular-nums">{d.date}</td><td className="px-3 py-2 text-muted">{d.day}</td><td className="px-3 py-2 text-right font-medium tabular-nums">{hasData ? formatSarInt(d.sales) : ''}</td><td className="px-3 py-2 text-right tabular-nums">{d.dailyTarget ? formatSarInt(d.dailyTarget) : '—'}</td><td className="px-3 py-2 text-right tabular-nums">{hasData ? pct(safeDiv(d.sales * 100, d.dailyTarget)) : ''}</td><td className="px-3 py-2 text-right tabular-nums">{hasData ? d.invoices || '—' : ''}</td><td className="px-3 py-2 text-right tabular-nums">{hasData ? d.pieces || '—' : ''}</td><td className="px-3 py-2 text-right tabular-nums">{hasData && d.invoices ? formatSarInt(d.sales / d.invoices) : ''}</td><td className="px-3 py-2 text-right tabular-nums">{hasData && d.invoices ? (d.pieces / d.invoices).toFixed(2) : ''}</td></tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   );
 }

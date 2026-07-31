@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import {
   calcExpectedMTD,
   calcPaceEOM,
@@ -693,7 +694,14 @@ export function ExecutiveSinglePageClient() {
             {view === 'Investor' && 'Branch-only view'}
           </p>
         </div>
-        <ExecViewTabs value={view} onChange={setView} />
+        <div className="flex flex-wrap items-center gap-2">
+          <nav className="flex items-center rounded-lg border border-border bg-surface p-1 text-xs" aria-label="Performance reports">
+            <Link href="/executive/monthly" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Monthly</Link>
+            <Link href="/reports/daily-performance" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Daily</Link>
+            <Link href="/executive/employees" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Employees</Link>
+          </nav>
+          <ExecViewTabs value={view} onChange={setView} />
+        </div>
       </header>
 
       <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface-subtle/70 px-4 py-2 text-[11px] text-muted">

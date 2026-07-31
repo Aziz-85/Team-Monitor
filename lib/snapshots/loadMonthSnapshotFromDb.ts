@@ -24,22 +24,26 @@ export async function loadMonthSnapshotFromDb(
   const { boutiqueId, branchCode } = input;
   const where = salesEntryWhereForBoutiqueMonth(boutiqueId, month);
 
-  const [dailyRows, staffRows, targetRows] = await Promise.all([
+  const [dailyRows, staffRows, targetRows, boutiqueTarget] = await Promise.all([
     prisma.salesEntry.groupBy({
       by: ['dateKey'],
       where,
-      _sum: { amount: true },
+      _sum: { amount: true, invoiceCount: true, pieceCount: true },
       _count: { id: true },
     }),
     prisma.salesEntry.groupBy({
       by: ['userId'],
       where,
-      _sum: { amount: true },
+      _sum: { amount: true, invoiceCount: true, pieceCount: true },
       _count: { id: true },
     }),
     prisma.employeeMonthlyTarget.findMany({
       where: { boutiqueId, month },
       select: { userId: true, amount: true },
+    }),
+    prisma.boutiqueMonthlyTarget.findUnique({
+      where: { boutiqueId_month: { boutiqueId, month } },
+      select: { amount: true },
     }),
   ]);
 
@@ -47,8 +51,8 @@ export async function loadMonthSnapshotFromDb(
     .map((r) => ({
       date: r.dateKey,
       netSalesHalalas: (r._sum.amount ?? 0) * 100,
-      invoices: r._count.id,
-      pieces: 0,
+      invoices: r._sum.invoiceCount ?? 0,
+      pieces: r._sum.pieceCount ?? 0,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -80,8 +84,9 @@ export async function loadMonthSnapshotFromDb(
       empId: meta?.empId,
       name: meta?.name ?? r.userId.slice(0, 8),
       netSalesHalalas: amountSar * 100,
-      invoices: r._count.id,
-      pieces: 0,
+      invoices: r._sum.invoiceCount ?? 0,
+      pieces: r._sum.pieceCount ?? 0,
+      targetHalalas: targetSar * 100,
       achievementPct: targetSar > 0 ? perf.percent : undefined,
     };
   });
@@ -89,6 +94,7 @@ export async function loadMonthSnapshotFromDb(
   return {
     month,
     branchCode,
+    boutiqueTargetHalalas: (boutiqueTarget?.amount ?? 0) * 100,
     daily,
     staff,
   };

@@ -8,6 +8,7 @@ import { PaceCard } from '@/components/analytics/PaceCard';
 import { ForecastCard } from '@/components/analytics/ForecastCard';
 import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
 import { AdminDataTable, AdminTableHead, AdminTh, AdminTableBody, AdminTd } from '@/components/admin/AdminDataTable';
+import { ExecutiveLineChart } from '@/components/executive/ExecutiveLineChart';
 
 type DetailData = {
   year: string;
@@ -16,6 +17,17 @@ type DetailData = {
   annualTotal: number;
   byBoutique: { boutiqueId: string; boutiqueCode: string; boutiqueName: string; total: number }[];
   monthlySeries: number[];
+  monthlyPerformance: Array<{
+    month: string;
+    sales: number;
+    target: number;
+    achievementPct: number | null;
+    invoices: number;
+    pieces: number;
+    avt: number | null;
+    avp: number | null;
+    upt: number | null;
+  }>;
   consistencyScore: number;
   topMonths: { month: string; amount: number }[];
   bottomMonths: { month: string; amount: number }[];
@@ -114,8 +126,6 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
   if (loading) return <div className="p-4 text-sm text-muted">{t('common.loading')}</div>;
   if (!data) return <div className="p-4 text-sm text-amber-700">{t('executive.employees.error')}</div>;
 
-  const monthLabels = data.monthlySeries.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-
   return (
     <div className="min-w-0 p-4 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -209,22 +219,19 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
       </OpsCard>
 
       <OpsCard title={t('executive.employees.monthlySeries')} className="mb-6">
-        <div className="overflow-x-hidden min-w-0">
-          <table className="w-full table-fixed text-sm">
-            <thead>
-              <tr className="border-b border-border text-foreground">
-                {monthLabels.map((m) => (
-                  <th key={m} className="py-2 px-1 text-center truncate">{m.slice(5)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {data.monthlySeries.map((amt, i) => (
-                  <td key={i} className="py-2 px-1 text-center tabular-nums">{formatSar(amt)}</td>
-                ))}
-              </tr>
-            </tbody>
+        <ExecutiveLineChart
+          height={280}
+          data={data.monthlyPerformance.map((m) => ({ label: m.month.slice(5), value: m.sales }))}
+          targetLine={data.monthlyPerformance.map((m) => m.target)}
+          valueFormat={(n) => `${formatSar(n)} SAR`}
+        />
+      </OpsCard>
+
+      <OpsCard title="Monthly Performance Details" className="mb-6">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted"><th className="px-3 py-2">Month</th><th className="px-3 py-2 text-right">Target</th><th className="px-3 py-2 text-right">Sales</th><th className="px-3 py-2 text-right">Achievement</th><th className="px-3 py-2 text-right">Invoices</th><th className="px-3 py-2 text-right">Pieces</th><th className="px-3 py-2 text-right">AVT</th><th className="px-3 py-2 text-right">AVP</th><th className="px-3 py-2 text-right">UPT</th></tr></thead>
+            <tbody>{data.monthlyPerformance.map((m) => <tr key={m.month} className="border-b border-border/70 last:border-0 hover:bg-surface-subtle"><td className="px-3 py-3 font-medium">{m.month}</td><td className="px-3 py-3 text-right tabular-nums">{m.target ? formatSar(m.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{m.sales ? formatSar(m.sales) : '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.achievementPct == null ? '—' : `${m.achievementPct}%`}</td><td className="px-3 py-3 text-right tabular-nums">{m.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.avt == null ? '—' : formatSar(m.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{m.avp == null ? '—' : formatSar(m.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{m.upt == null ? '—' : m.upt.toFixed(2)}</td></tr>)}</tbody>
           </table>
         </div>
       </OpsCard>
