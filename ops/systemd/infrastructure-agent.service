@@ -1,0 +1,23 @@
+[Unit]
+Description=Local Infrastructure Agent
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/team-monitor
+EnvironmentFile=/etc/app-infrastructure/agent.env
+ExecStart=/usr/bin/npm run infrastructure:agent
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/log/app-infrastructure /var/lib/app-infrastructure /var/backups/app-infrastructure /run/lock/app-infrastructure /var/www/team-monitor /var/www/aquamonitors /var/www/echoes-library
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

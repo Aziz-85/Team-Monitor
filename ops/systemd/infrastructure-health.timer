@@ -1,0 +1,9 @@
+[Unit]
+Description=Run infrastructure health checks every five minutes
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30
+Persistent=true
+[Install]
+WantedBy=timers.target
