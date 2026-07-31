@@ -849,6 +849,7 @@
     "reports": {
       "performanceOverview": "نظرة عامة على الأداء",
       "monthlyPerformance": "الأداء الشهري",
+      "dailyPerformance": "الأداء اليومي",
       "salesSummary": "ملخص المبيعات",
       "salesAnalytics": "تحليلات المبيعات",
       "targets": "الأهداف",

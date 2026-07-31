@@ -7,7 +7,7 @@ export default async function ExecutiveMonthlyPage() {
   if (!gate.ok) redirect(gate.redirect === 'login' ? '/login' : '/dashboard');
 
   return (
-    <div className="min-h-screen bg-[#F8F4E8]">
+    <div className="min-h-screen bg-background text-foreground">
       <MonthlyBoardClient />
     </div>
   );

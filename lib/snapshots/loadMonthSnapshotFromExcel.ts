@@ -29,12 +29,14 @@ export type MonthSnapshotStaffRow = {
   netSalesHalalas: number;
   invoices: number;
   pieces: number;
+  targetHalalas?: number;
   achievementPct?: number;
 };
 
 export type MonthSnapshot = {
   month: string;
   branchCode: string;
+  boutiqueTargetHalalas?: number;
   daily: MonthSnapshotDay[];
   staff: MonthSnapshotStaffRow[];
 };
