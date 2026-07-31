@@ -22,7 +22,7 @@ function discountClass(pct: number | null, target: number): string {
 
 export function TeamPerformanceTable({ rows, discountTargetPct }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="report-team-table overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 bg-slate-50/80 px-5 py-3">
         <h3 className="text-sm font-semibold tracking-tight text-slate-900">
           Sales Team Performance

@@ -11,7 +11,7 @@ export type PanelCardProps = {
 
 export function PanelCard({ title, children, actions }: PanelCardProps) {
   return (
-    <div className={`${surfacePanel} p-5 shadow-sm`.trim()}>
+    <div className={`app-card app-panel-card ${surfacePanel} p-5 shadow-sm`.trim()}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-foreground">{title}</h2>
         {actions != null && <div className="flex items-center gap-2">{actions}</div>}

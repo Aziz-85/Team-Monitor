@@ -30,7 +30,7 @@ export function KpiCard({
 
   return (
     <div
-      className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md ${styles.accent} border-l-4`}
+      className={`report-kpi-card rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md ${styles.accent} border-l-4`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">

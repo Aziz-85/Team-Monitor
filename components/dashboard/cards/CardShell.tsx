@@ -32,7 +32,7 @@ export function CardShell({
   className = '',
 }: CardShellProps) {
   return (
-    <div className={`${VARIANT_STYLES[variant]} ${className}`.trim()}>
+    <div className={`app-card app-card-${variant} ${VARIANT_STYLES[variant]} ${className}`.trim()}>
       {children}
     </div>
   );

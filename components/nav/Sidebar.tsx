@@ -31,7 +31,7 @@ export function Sidebar({
   );
 
   return (
-    <aside className={`hidden h-screen w-56 flex-col bg-surface md:flex xl:w-60 ${isRtl ? 'border-l border-border/40' : 'border-r border-border/40'}`}>
+    <aside className={`app-sidebar hidden h-screen w-56 flex-col bg-surface md:flex xl:w-60 ${isRtl ? 'border-l border-border/40' : 'border-r border-border/40'}`}>
       <div className="flex min-w-0 h-full flex-col">
         <div className="shrink-0 px-4 pb-3 pt-4">
           <SidebarBrandingScope role={role} pathname={pathname} className="" />
