@@ -16,7 +16,15 @@ export async function GET(request: NextRequest, { params }: { params: { appId: s
   const app = getInfrastructureApp(params.appId); if (!app) return NextResponse.json({ error: 'Unknown application' }, { status: 404 });
   if (!infrastructureFlags.dashboard) return NextResponse.json({ error: 'Feature disabled' }, { status: 403 });
   const view = request.nextUrl.searchParams.get('view') || 'status';
-  if (!['status', 'health', 'logs'].includes(view)) return NextResponse.json({ error: 'Invalid view' }, { status: 400 });
+  if (!['status', 'health', 'logs', 'history'].includes(view)) return NextResponse.json({ error: 'Invalid view' }, { status: 400 });
+  if (view === 'history') {
+    const [operations, checks, backups] = await Promise.all([
+      prisma.infrastructureOperation.findMany({ where: { appId: app.id }, orderBy: { createdAt: 'desc' }, take: 20, select: { operationType: true, status: true, requestId: true, startedAt: true, completedAt: true, summary: true, errorCode: true } }),
+      prisma.infrastructureHealthCheck.findMany({ where: { appId: app.id }, orderBy: { checkedAt: 'desc' }, take: 30, select: { status: true, httpStatus: true, responseMs: true, summary: true, checkedAt: true } }),
+      prisma.infrastructureBackupRecord.findMany({ where: { appId: app.id }, orderBy: { createdAt: 'desc' }, take: 20, select: { status: true, requestId: true, fileName: true, sizeBytes: true, checksum: true, startedAt: true, completedAt: true } }),
+    ]);
+    return NextResponse.json({ operations, checks, backups: backups.map((item) => ({ ...item, sizeBytes: item.sizeBytes?.toString() ?? null })) });
+  }
   if (view === 'logs' && !app.logsEnabled) return NextResponse.json({ error: 'Feature disabled' }, { status: 403 });
   const lines = Math.min(500, Math.max(1, Number(request.nextUrl.searchParams.get('lines') || '100') || 100));
   try { return NextResponse.json(await callInfrastructureAgent(`/v1/apps/${app.id}/${view}${view === 'logs' ? `?lines=${lines}` : ''}`)); }
