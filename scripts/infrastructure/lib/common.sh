@@ -53,3 +53,19 @@ check_capacity() {
 health_check() {
   curl --fail --silent --show-error --location --max-time "${INFRASTRUCTURE_HEALTH_TIMEOUT_SECONDS:-10}" --output /dev/null "$(app_health_url "$1")"
 }
+
+wait_for_health() {
+  local app_id="$1"
+  local attempts="${INFRASTRUCTURE_HEALTH_ATTEMPTS:-15}"
+  local delay="${INFRASTRUCTURE_HEALTH_RETRY_DELAY_SECONDS:-2}"
+  local attempt
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
+    if health_check "$app_id"; then
+      log INFO "$app_id health check succeeded on attempt $attempt"
+      return 0
+    fi
+    if ((attempt < attempts)); then sleep "$delay"; fi
+  done
+  log ERROR "$app_id health check failed after $attempts attempts"
+  return 1
+}

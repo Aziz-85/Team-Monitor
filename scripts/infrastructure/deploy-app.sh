@@ -18,5 +18,5 @@ fi
 for script in test lint typecheck; do if node -e "const p=require('./package.json');process.exit(p.scripts?.['$script']?0:1)"; then run npm run "$script"; fi; done
 run npm run build
 run pm2 reload "$(app_pm2 "$app_id")" --update-env
-if $INFRA_DRY_RUN || health_check "$app_id"; then record "$app_id" deploy success; exit 0; fi
+if $INFRA_DRY_RUN || wait_for_health "$app_id"; then record "$app_id" deploy success; exit 0; fi
 log ERROR "health failed; starting controlled rollback"; "$INFRA_ROOT/scripts/infrastructure/rollback-app.sh" "$app_id" "$old_commit"; record "$app_id" deploy rolled_back; exit "$INFRA_EXIT_HEALTH"
