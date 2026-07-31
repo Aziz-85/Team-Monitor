@@ -1,0 +1,19 @@
+[Unit]
+Description=Infrastructure application health checks
+After=network.target
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/team-monitor
+EnvironmentFile=/etc/app-infrastructure/agent.env
+ExecStart=/var/www/team-monitor/scripts/infrastructure/health-check.sh team-monitor
+ExecStart=/var/www/team-monitor/scripts/infrastructure/health-check.sh aquamonitors
+ExecStart=/var/www/team-monitor/scripts/infrastructure/health-check.sh echoes-library
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/app-infrastructure /var/lib/app-infrastructure /run/lock/app-infrastructure
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0027
