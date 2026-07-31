@@ -28,7 +28,8 @@
     "test:smoke": "jest --passWithNoTests __tests__/post-login-path.test.ts __tests__/targets-me-vs-metrics.test.ts __tests__/leaves-self-requests.test.ts __tests__/smoke-auth-login.test.ts __tests__/permissions-scope-regression.test.ts __tests__/demo-viewer-security.test.ts",
     "test:security": "jest --passWithNoTests __tests__/boutique-access-security.test.ts __tests__/auth-mutation-security.test.ts __tests__/demo-viewer-security.test.ts __tests__/scope-write-security.test.ts __tests__/permissions-scope-regression.test.ts __tests__/import-pipeline.test.ts __tests__/validation.test.ts __tests__/env-validation.test.ts",
     "ci:local": "npm run db:generate && npm run typecheck && npm run lint && npm run test:coverage && npm run test:smoke && npm run test:security && npm run build",
-    "security:audit": "npm audit --audit-level=moderate"
+    "security:audit": "npm audit --audit-level=moderate",
+    "infrastructure:agent": "ts-node -r tsconfig-paths/register services/infrastructure-agent/server.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
