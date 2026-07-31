@@ -1,4 +1,3 @@
-/* istanbul ignore file -- presentation-only dashboard; data aggregation is covered server-side. */
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
