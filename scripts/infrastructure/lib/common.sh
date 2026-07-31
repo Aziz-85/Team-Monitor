@@ -12,7 +12,12 @@ INFRA_DRY_RUN=false
 timestamp() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 log() { printf '%s level=%s message=%q\n' "$(timestamp)" "$1" "$2" >&2; }
 die() { local code="$1"; shift; log ERROR "$*"; exit "$code"; }
-cleanup_common() { [[ -n "${INFRA_TMP_DIR:-}" && -d "${INFRA_TMP_DIR:-}" ]] && rm -rf -- "$INFRA_TMP_DIR"; }
+cleanup_common() {
+  if [[ -n "${INFRA_TMP_DIR:-}" && -d "${INFRA_TMP_DIR:-}" ]]; then
+    rm -rf -- "$INFRA_TMP_DIR"
+  fi
+  return 0
+}
 trap cleanup_common EXIT
 trap 'die 70 "failed at line ${LINENO}"' ERR
 
