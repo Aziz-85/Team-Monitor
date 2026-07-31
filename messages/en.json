@@ -245,6 +245,7 @@
     "employeeHome": "My Home",
     "changePassword": "Change Password",
     "architectureConsole": "Architecture Console",
+    "infrastructure": "Infrastructure",
     "compliance": "Government Documents",
     "platformMode": {
       "branchManager": "Branch Manager Mode",
@@ -1209,7 +1210,8 @@
       "versionBuild": "Version / Build",
       "versionBuildDesc": "View version, deploys and build info.",
       "salesIntegrity": "Sales integrity",
-      "salesIntegrityDesc": "Parity checks on SalesEntry (canonical read layer)."
+      "salesIntegrityDesc": "Parity checks on SalesEntry (canonical read layer).",
+      "infrastructureDesc": "Secure production health and controlled operations."
     },
     "salesIntegrity": {
       "title": "Sales integrity",
