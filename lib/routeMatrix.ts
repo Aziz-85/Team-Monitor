@@ -273,6 +273,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/admin/import-center',
     '/admin/historical-import',
     '/admin/administration',
+    '/admin/infrastructure',
     '/admin/audit/login',
     '/admin/boutiques',
     '/admin/regions',
