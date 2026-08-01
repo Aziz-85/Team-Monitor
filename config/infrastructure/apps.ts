@@ -62,7 +62,7 @@ export const INFRASTRUCTURE_APPS: readonly InfrastructureAppDefinition[] = Objec
   {
     id: 'echoes-library', displayName: 'Echoes Library', domain: 'asdaawilayahsa.com',
     cwd: '/var/www/echoes-library', port: 3000, pm2Name: 'echoes-library', runtime: 'node',
-    healthCheckUrl: 'http://127.0.0.1:3000/',
+    healthCheckUrl: 'http://127.0.0.1:3000/api/health',
     deploymentEnabled: actions && infrastructureFlags.deploy,
     restartEnabled: actions && infrastructureFlags.restart,
     logsEnabled: infrastructureFlags.logs,
