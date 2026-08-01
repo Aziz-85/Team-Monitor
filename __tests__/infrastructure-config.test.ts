@@ -22,4 +22,10 @@ describe('infrastructure application registry', () => {
     const app = registry.getInfrastructureApp('team-monitor');
     expect(app?.cwd).toBe('/var/www/team-monitor'); expect(app).not.toHaveProperty('command');
   });
+
+  test('Echoes Library uses its non-redirecting health endpoint', async () => {
+    const registry = await import('@/config/infrastructure/apps');
+    const app = registry.getInfrastructureApp('echoes-library');
+    expect(app?.healthCheckUrl).toBe('http://127.0.0.1:3000/api/health');
+  });
 });
