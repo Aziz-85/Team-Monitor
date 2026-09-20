@@ -12,6 +12,7 @@ export default async function AdminImportSalesPage() {
 
   const canResolve = user.role === 'MANAGER' || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'AREA_MANAGER';
   const canAdminUnlockLedger = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+  const canEditMonthlyMatrix = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
   const canManageDailyTotal =
     user.role === 'MANAGER' ||
     user.role === 'ADMIN' ||
@@ -23,6 +24,7 @@ export default async function AdminImportSalesPage() {
       canResolve={canResolve}
       canAdminUnlockLedger={canAdminUnlockLedger}
       canManageDailyTotal={canManageDailyTotal}
+      canEditMonthlyMatrix={canEditMonthlyMatrix}
     />
   );
 }
