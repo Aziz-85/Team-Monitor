@@ -44,7 +44,7 @@ function baselineNum(m: Record<string, Record<string, number | null>> | undefine
   return typeof v === 'number' ? v : 0;
 }
 
-export function SecureMonthlyMatrixEditClient() {
+export function SecureMonthlyMatrixEditClient({ embedded = false }: { embedded?: boolean }) {
   const { t } = useT();
   const [monthKey, setMonthKey] = useState(() => getCurrentMonthKeyRiyadh());
   const [data, setData] = useState<MatrixData | null>(null);
@@ -500,9 +500,11 @@ export function SecureMonthlyMatrixEditClient() {
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6">
+    <div className={embedded ? 'w-full' : 'mx-auto max-w-[1400px] px-4 py-6'}>
       <h1 className="text-xl font-bold text-foreground">
-        {t('matrixSecureEdit.title') ?? 'Secure matrix edit (production)'}
+        {embedded
+          ? t('sales.monthlyMatrix.title') ?? 'Monthly Sales Matrix'
+          : t('matrixSecureEdit.title') ?? 'Secure matrix edit (production)'}
       </h1>
       <p className="mt-1 text-sm text-muted">
         {t('matrixSecureEdit.subtitle') ??
@@ -556,7 +558,17 @@ export function SecureMonthlyMatrixEditClient() {
         >
           ←
         </button>
-        <span className="font-medium">{monthKey}</span>
+        <label className="flex items-center gap-2">
+          <span className="sr-only">{t('sales.monthlyMatrix.month') ?? 'Month'}</span>
+          <input
+            type="month"
+            value={monthKey}
+            onChange={(event) => {
+              if (event.target.value) onMonthChange(event.target.value);
+            }}
+            className="h-9 rounded border border-border bg-surface px-2 text-sm font-medium text-foreground"
+          />
+        </label>
         <button
           type="button"
           onClick={() => onMonthChange(addMonth(monthKey, 1))}

@@ -110,7 +110,10 @@ export async function getMonthlyMatrixPayload(input: {
     for (const e of activeEmployees) allEmpIds.add(e.empId);
     for (const id of Array.from(employeeIdsFromSales)) allEmpIds.add(id);
     const users = await prisma.user.findMany({
-      where: { empId: { in: Array.from(allEmpIds) }, disabled: false },
+      // Historical rows must remain editable after an employee account is
+      // disabled. Save authorization still limits edits to active scoped users
+      // or users who already have sales in the selected boutique/month.
+      where: { empId: { in: Array.from(allEmpIds) } },
       select: { id: true, empId: true },
     });
     empIdToUserId = new Map(users.map((u) => [u.empId, u.id]));

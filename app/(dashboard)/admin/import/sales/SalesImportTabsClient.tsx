@@ -31,10 +31,12 @@ export function SalesImportTabsClient({
   canResolve,
   canAdminUnlockLedger = false,
   canManageDailyTotal = false,
+  canEditMonthlyMatrix = false,
 }: {
   canResolve: boolean;
   canAdminUnlockLedger?: boolean;
   canManageDailyTotal?: boolean;
+  canEditMonthlyMatrix?: boolean;
 }) {
   const { t } = useT();
   const searchParams = useSearchParams();
@@ -92,7 +94,7 @@ export function SalesImportTabsClient({
               canManageDailyTotal={canManageDailyTotal}
             />
           )}
-          {section === 'monthly' && <MonthlyMatrixPanel />}
+          {section === 'monthly' && <MonthlyMatrixPanel canEdit={canEditMonthlyMatrix} />}
         </div>
       </SectionBlock>
     </PageContainer>
