@@ -2,6 +2,7 @@
 
 import { MonthlySalesMatrixClient } from '@/app/(dashboard)/sales/monthly-matrix/MonthlySalesMatrixClient';
 import { SecureMonthlyMatrixEditClient } from '@/app/(dashboard)/admin/sales/monthly-matrix-secure-edit/SecureMonthlyMatrixEditClient';
+import { BoutiqueSalesRangePanel } from './BoutiqueSalesRangePanel';
 
 /**
  * Keep the read-only matrix for operational roles, while administrators get the
@@ -10,7 +11,8 @@ import { SecureMonthlyMatrixEditClient } from '@/app/(dashboard)/admin/sales/mon
  */
 export function MonthlyMatrixPanel({ canEdit = false }: { canEdit?: boolean }) {
   return (
-    <div className="min-h-0">
+    <div className="min-h-0 space-y-6">
+      <BoutiqueSalesRangePanel />
       {canEdit ? <SecureMonthlyMatrixEditClient embedded /> : <MonthlySalesMatrixClient />}
     </div>
   );
