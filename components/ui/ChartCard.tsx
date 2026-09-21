@@ -14,7 +14,7 @@ type Props = {
 export function ChartCard({ title, subtitle, children, className = '' }: Props) {
   return (
     <div
-      className={`rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md ${className}`}
+      className={`app-card app-chart-card rounded-2xl border border-border bg-surface p-6 shadow-sm transition-shadow hover:shadow-md ${className}`}
     >
       <div className="mb-4">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">{title}</h2>

@@ -62,10 +62,10 @@ export function StoreReportView({ data, printMode = false }: Props) {
   const showYtd = printMode || activeTab === 'ytd';
 
   return (
-    <div id="store-report-print" className="store-report-print mx-auto max-w-7xl">
+    <div id="store-report-print" className="store-report-print report-canvas mx-auto max-w-7xl">
       {!printMode && (
         <>
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+          <div className="report-hero mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0F4C3A]">
                 Executive Report
@@ -136,7 +136,7 @@ export function StoreReportView({ data, printMode = false }: Props) {
         </div>
       )}
 
-      <div className="mt-8 space-y-16">
+      <div className="report-content mt-8 space-y-16">
         {showDetail && <StoreDetailReport data={data.storeDetail} meta={data.meta} />}
         {showYtd && <YtdPerformanceReport data={data.ytdPerformance} meta={data.meta} />}
       </div>

@@ -45,7 +45,7 @@ function YtdBarChart({ title, subtitle, points }: ChartBlockProps) {
   }));
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:break-inside-avoid">
+    <div className="report-chart-card rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:break-inside-avoid">
       <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
       <p className="text-xs text-slate-500">{subtitle}</p>
       <div className="mt-4 print:h-64">
@@ -104,7 +104,7 @@ export function YtdPerformanceReport({ data, meta }: Props) {
   const targetLabel = isMonth ? 'Target YTD' : 'Period Target';
 
   return (
-    <section className="space-y-8">
+    <section className="report-section report-ytd space-y-8">
       <header className="border-b border-slate-200 pb-6">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0F4C3A]">
           {sectionLabel}
@@ -149,7 +149,7 @@ export function YtdPerformanceReport({ data, meta }: Props) {
         />
       </div>
 
-      <div className="rounded-xl border border-[#0F4C3A]/20 bg-gradient-to-br from-white to-[#0F4C3A]/5 p-6 shadow-sm print:break-inside-avoid">
+      <div className="report-executive-snapshot rounded-xl border border-[#0F4C3A]/20 bg-gradient-to-br from-white to-[#0F4C3A]/5 p-6 shadow-sm print:break-inside-avoid">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-[#0F4C3A]">
           Executive Snapshot
         </h3>

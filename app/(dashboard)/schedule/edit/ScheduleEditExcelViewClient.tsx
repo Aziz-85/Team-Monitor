@@ -174,13 +174,13 @@ export function ScheduleEditExcelViewClient({
   const pmCountCell = `${SCHEDULE_UI.pmCountCell} ${SCHEDULE_UI.borderL2}`;
 
   return (
-    <div className="min-w-0 max-w-full" dir="ltr">
+    <div className="schedule-table-shell min-w-0 max-w-full" dir="ltr">
       {showMaxColumnsWarning && (
         <p className="mb-1 text-xs text-amber-700" role="status">
           {t('schedule.maxColumnsReachedWarning')}
         </p>
       )}
-      <table className={`${SCHEDULE_UI.table} ${visibleSlots > 4 ? 'table-fixed' : ''}`}>
+      <table className={`schedule-table ${SCHEDULE_UI.table} ${visibleSlots > 4 ? 'table-fixed' : ''}`}>
         <colgroup>
           <col className={SCHEDULE_COLS.dateExcel} />
           <col className={SCHEDULE_COLS.dayExcel} />

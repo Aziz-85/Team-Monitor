@@ -35,7 +35,7 @@ function toneClass(tone: ExecutiveTone | undefined) {
 }
 
 function withCardBase(className = '') {
-  return `rounded-xl border bg-surface shadow-sm ${className}`.trim();
+  return `executive-card rounded-xl border bg-surface shadow-sm ${className}`.trim();
 }
 
 export type PageContainerProps = {
@@ -48,7 +48,7 @@ export type PageContainerProps = {
 export function PageContainer({ children, className = '', compact = false }: PageContainerProps) {
   return (
     <div
-      className={`mx-auto min-w-0 w-full max-w-7xl ${compact ? 'space-y-4 p-4 md:p-5' : 'space-y-6 p-4 md:p-6'} ${className}`}
+      className={`executive-page mx-auto min-w-0 w-full max-w-7xl ${compact ? 'space-y-4 p-4 md:p-5' : 'space-y-6 p-4 md:p-6'} ${className}`}
     >
       {children}
     </div>
@@ -73,7 +73,7 @@ export function SectionBlock({
   contentClassName = '',
 }: SectionBlockProps) {
   return (
-    <section className={withCardBase(`p-4 md:p-5 ${className}`)}>
+    <section className={withCardBase(`executive-section p-4 md:p-5 ${className}`)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-foreground md:text-lg">{title}</h2>
@@ -104,7 +104,7 @@ export function KPIGrid({ children, cols = 4, className = '' }: KPIGridProps) {
           : cols === 6
             ? 'xl:grid-cols-6'
             : 'xl:grid-cols-4';
-  return <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 ${xlCols} ${className}`}>{children}</div>;
+  return <div className={`executive-kpi-grid grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 ${xlCols} ${className}`}>{children}</div>;
 }
 
 export type InsightGridProps = {
@@ -141,7 +141,7 @@ export function KPIStatCard({
 }: KPIStatCardProps) {
   const c = toneClass(tone);
   return (
-    <article className={withCardBase(`p-4 ${c.ring} ${className}`)}>
+    <article className={withCardBase(`executive-kpi p-4 ${c.ring} ${className}`)}>
       <div className="flex items-start justify-between gap-3">
         <p className={`text-[11px] font-semibold uppercase tracking-[0.12em] ${c.title}`}>{title}</p>
         {icon ? (
@@ -259,4 +259,3 @@ export function EmptyStateBlock({ title, description, icon, className = '' }: Em
     </div>
   );
 }
-

@@ -54,7 +54,7 @@ function ComparisonCard({
   const sigLabel =
     signal === 'good' ? t('salesAnalytics.signalGood') : signal === 'risk' ? t('salesAnalytics.signalRisk') : t('salesAnalytics.signalWatch');
   return (
-    <article className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+    <article className="analytics-comparison-card rounded-xl border border-border bg-surface p-4 shadow-sm">
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <dl className="mt-3 grid gap-2 text-sm">
         <div className="flex justify-between gap-2">
@@ -254,7 +254,7 @@ export function SalesAnalyticsClient() {
   }
 
   return (
-    <PageContainer className="mx-auto max-w-7xl space-y-8 md:space-y-10">
+    <PageContainer className="sales-analytics-page mx-auto max-w-7xl space-y-8 md:space-y-10">
       <SectionBlock
         title={t('salesAnalytics.title')}
         subtitle={t('salesAnalytics.subtitle')}
