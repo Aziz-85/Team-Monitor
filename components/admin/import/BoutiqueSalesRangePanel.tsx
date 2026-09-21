@@ -81,7 +81,15 @@ export function BoutiqueSalesRangePanel() {
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
       {result && (
         <div className="mt-4">
-          <p className="text-xs text-muted">{result.boutiqueLabel} · {result.from} — {result.to}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted">{result.boutiqueLabel} · {result.from} — {result.to}</p>
+            <a
+              href={`/api/sales/boutique-range/export?from=${encodeURIComponent(result.from)}&to=${encodeURIComponent(result.to)}`}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle"
+            >
+              Download Excel
+            </a>
+          </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg bg-surface-subtle p-3"><p className="text-xs text-muted">Net sales</p><p className="text-xl font-semibold tabular-nums">{money(result.totals.salesSar)}</p></div>
             <div className="rounded-lg bg-surface-subtle p-3"><p className="text-xs text-muted">Invoices recorded</p><p className="text-xl font-semibold tabular-nums">{result.totals.invoices.toLocaleString('en-SA')}</p></div>

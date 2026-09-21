@@ -1,4 +1,4 @@
-/** Read-only boutique sales for an inclusive date range, sourced from canonical SalesEntry. */
+/** XLSX export of the same scoped boutique date-range report shown on screen. */
 
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +7,8 @@ import { requireRole } from '@/lib/auth';
 import { requireOperationalBoutique } from '@/lib/scope/requireOperationalBoutique';
 import { validateBoutiqueSalesRange } from '@/lib/sales/boutiqueDateRange';
 import { loadBoutiqueRangeReport } from '@/lib/sales/boutiqueRangeReport';
+import { buildBoutiqueRangeWorkbook } from '@/lib/sales/boutiqueRangeWorkbook';
+import { excelDownloadResponse } from '@/lib/services/reportExportHandlers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +16,6 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
   const scope = await requireOperationalBoutique(request);
   if (!scope.ok) return scope.res;
 
@@ -23,10 +24,12 @@ export async function GET(request: NextRequest) {
   const validationError = validateBoutiqueSalesRange(from, to);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
-  return NextResponse.json(await loadBoutiqueRangeReport({
+  const report = await loadBoutiqueRangeReport({
     boutiqueId: scope.boutiqueId,
     boutiqueLabel: scope.boutiqueLabel,
     from,
     to,
-  }));
+  });
+  const buffer = await buildBoutiqueRangeWorkbook(report);
+  return excelDownloadResponse(buffer, `boutique-sales-${from}-to-${to}.xlsx`);
 }
