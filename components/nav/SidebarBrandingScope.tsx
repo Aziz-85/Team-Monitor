@@ -33,14 +33,23 @@ export function SidebarBrandingScope({
         <Link
           href="/"
           onClick={onTitleClick}
-          className="block min-w-0 truncate text-lg font-semibold text-foreground/90 hover:text-foreground"
+          className="group flex min-w-0 items-center gap-3"
         >
-          {t('nav.appTitle')}
+          <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary text-sm font-black text-white shadow-md">
+            <span className="relative z-10">TM</span>
+            <span className="absolute -bottom-3 -end-3 h-7 w-7 rounded-full bg-accent" aria-hidden />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-bold tracking-tight text-foreground/95 transition-colors group-hover:text-accent">
+              {t('nav.appTitle')}
+            </span>
+            <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">Boutique Operations</span>
+          </span>
         </Link>
       ) : null}
       {showScope ? (
-        <div className={`min-w-0 rounded-xl bg-surface-subtle/70 px-2.5 py-2 ${showAppTitle ? 'mt-3' : ''}`}>
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{t('common.workingOnBoutique')}:</p>
+        <div className={`min-w-0 rounded-2xl border border-border/60 bg-surface px-3 py-2.5 shadow-sm ${showAppTitle ? 'mt-4' : ''}`}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">{t('common.workingOnBoutique')}</p>
           {role === 'SUPER_ADMIN' ? (
             <SuperAdminBoutiqueContextPicker />
           ) : (

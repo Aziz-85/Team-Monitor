@@ -56,7 +56,7 @@ export default async function DashboardLayout({
   const isDemoMode = (user.role as string) === 'DEMO_VIEWER';
 
   return (
-    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background">
+    <div className="app-shell flex min-h-screen min-w-0 overflow-x-hidden bg-background">
       <IdleDetector />
       <Sidebar
         role={navRole}
@@ -84,7 +84,7 @@ export default async function DashboardLayout({
           role={navRole as import('@prisma/client').Role}
           position={user.employee?.position ?? undefined}
         />
-        <main className="flex-1 min-w-0">
+        <main className="relative flex-1 min-w-0">
           <DashboardBreadcrumbBar />
           <RouteGuard role={navRole}>{children}</RouteGuard>
         </main>

@@ -42,11 +42,12 @@ export function ExecutiveKpiCard({
 
   return (
     <div
-      className="rounded-2xl border p-4 shadow-sm transition hover:shadow-md"
+      className="group relative overflow-hidden rounded-card border p-5 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
       style={{ borderColor: EXECUTIVE_CARD_BORDER, backgroundColor: EXECUTIVE_CARD_BG }}
     >
-      <p className="text-sm text-muted">{title}</p>
-      <p className={`text-3xl font-semibold ${colorClass}`}>{value}</p>
+      <span className="absolute inset-x-0 top-0 h-0.5 bg-accent/70" aria-hidden />
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">{title}</p>
+      <p className={`mt-2 text-3xl font-bold tracking-tight ${colorClass}`}>{value}</p>
       {delta != null && delta !== '' && (
         <p className="mt-1 text-xs text-muted">{delta}</p>
       )}

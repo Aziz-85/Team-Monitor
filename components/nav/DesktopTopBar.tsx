@@ -37,11 +37,11 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 hidden min-w-0 border-b border-border bg-surface-elevated md:flex md:items-center md:justify-between md:px-4 md:py-2.5">
+    <header className="app-topbar sticky top-0 z-30 hidden min-w-0 border-b border-border/70 md:flex md:h-14 md:items-center md:justify-between md:px-5">
       <div className="min-w-0">
         <Link
           href="/"
-          className="text-base font-semibold text-foreground hover:text-muted truncate block min-w-0"
+          className="block min-w-0 truncate text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent"
         >
           {t('nav.appTitle')}
         </Link>
@@ -50,7 +50,7 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
         <select
           value={locale}
           onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-          className="h-8 rounded-md border border-border bg-surface px-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+          className="h-9 rounded-xl border border-border/80 bg-surface px-3 text-xs font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label={t('common.language')}
         >
           <option value="en">{t('common.english')}</option>
@@ -60,17 +60,20 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
           <button
             type="button"
             onClick={() => setProfileOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-foreground hover:bg-surface-subtle min-w-0"
+            className="flex min-w-0 items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-border hover:bg-surface"
             aria-expanded={profileOpen}
             aria-haspopup="true"
           >
-            <span className="truncate max-w-[120px]">{name || t('common.name')}</span>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent-soft text-[10px] font-bold text-accent">
+              {(name || t('common.name')).trim().slice(0, 2).toUpperCase()}
+            </span>
+            <span className="truncate max-w-[140px]">{name || t('common.name')}</span>
             <svg className="h-4 w-4 shrink-0 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           {profileOpen && (
-            <div className="absolute end-0 top-full z-20 mt-1 min-w-[160px] rounded-md border border-border bg-surface-elevated py-1 shadow-md">
+            <div className="absolute end-0 top-full z-20 mt-2 min-w-[210px] overflow-hidden rounded-2xl border border-border bg-surface-elevated py-1.5 shadow-lg">
               {role != null && (
                 <div className="border-b border-border px-3 py-2 text-sm text-muted">
                   <span className="font-medium text-foreground">{t('common.role')}:</span>{' '}
