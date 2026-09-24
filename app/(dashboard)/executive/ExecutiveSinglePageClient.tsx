@@ -685,26 +685,30 @@ export function ExecutiveSinglePageClient() {
 
   return (
     <div className="min-w-0 space-y-6">
-      <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+      <header className="relative overflow-hidden rounded-card border border-border/70 bg-surface px-5 py-5 shadow-card md:px-6">
+        <span className="absolute inset-y-0 start-0 w-1 bg-accent" aria-hidden />
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-foreground">Executive</h1>
-          <p className="mt-0.5 text-sm text-muted">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Performance intelligence</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Executive Dashboard</h1>
+          <p className="mt-1 text-sm text-muted">
             {view === 'Executive' && 'Revenue health & hybrid forecast'}
             {view === 'Operator' && 'Employee performance'}
             {view === 'Investor' && 'Branch-only view'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <nav className="flex items-center rounded-lg border border-border bg-surface p-1 text-xs" aria-label="Performance reports">
-            <Link href="/executive/monthly" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Monthly</Link>
-            <Link href="/reports/daily-performance" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Daily</Link>
-            <Link href="/executive/employees" className="rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-subtle hover:text-foreground">Employees</Link>
+          <nav className="flex items-center rounded-xl border border-border/80 bg-surface-subtle/70 p-1 text-xs shadow-sm" aria-label="Performance reports">
+            <Link href="/executive/monthly" className="rounded-lg px-3 py-2 font-medium text-muted transition-colors hover:bg-surface hover:text-accent">Monthly</Link>
+            <Link href="/reports/daily-performance" className="rounded-lg px-3 py-2 font-medium text-muted transition-colors hover:bg-surface hover:text-accent">Daily</Link>
+            <Link href="/executive/employees" className="rounded-lg px-3 py-2 font-medium text-muted transition-colors hover:bg-surface hover:text-accent">Employees</Link>
           </nav>
           <ExecViewTabs value={view} onChange={setView} />
         </div>
+        </div>
       </header>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface-subtle/70 px-4 py-2 text-[11px] text-muted">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border/70 bg-surface/70 px-4 py-2.5 text-[11px] text-muted shadow-sm">
         <span className="shrink-0">
           <span className="font-medium text-muted">Snapshot:</span>{' '}
           {monthSnapshot ? (
