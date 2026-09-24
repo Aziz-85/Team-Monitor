@@ -123,30 +123,34 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
       .catch(() => setMtdAnalytics(null));
   }, [empId, viewMode, role]);
 
-  if (loading) return <div className="p-4 text-sm text-muted">{t('common.loading')}</div>;
-  if (!data) return <div className="p-4 text-sm text-amber-700">{t('executive.employees.error')}</div>;
+  if (loading) return <div className="m-4 app-card p-8 text-center text-sm text-muted">{t('common.loading')}</div>;
+  if (!data) return <div className="m-4 app-card p-8 text-center text-sm text-amber-700">{t('executive.employees.error')}</div>;
 
   return (
-    <div className="min-w-0 p-4 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Link href={`/executive/employees${viewMode === 'global' ? '?global=true' : ''}`} className="text-accent hover:underline text-sm">‹ {t('executive.employees.back')}</Link>
-          <h1 className="text-xl font-semibold text-foreground truncate min-w-0">{data.name}</h1>
+    <div className="mx-auto min-w-0 max-w-screen-2xl space-y-5 p-4 md:p-6">
+      <header className="relative overflow-hidden rounded-card border border-border/70 bg-surface px-5 py-5 shadow-card md:px-6">
+        <span className="absolute inset-y-0 start-0 w-1 bg-accent" aria-hidden />
+        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <Link href={`/executive/employees${viewMode === 'global' ? '?global=true' : ''}`} className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">‹ {t('executive.employees.back')}</Link>
+          <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Employee intelligence · {empId}</p>
+          <h1 className="mt-1 truncate text-2xl font-bold tracking-tight text-foreground">{data.name}</h1>
+          <p className="mt-1 text-sm text-muted">Annual performance, monthly trajectory and transaction quality.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex rounded-lg border border-border bg-surface-subtle p-0.5">
+            <div className="flex rounded-xl border border-border bg-surface-subtle p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('scope')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'scope' ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewScope')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('global')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'global' ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewGlobal')}
               </button>
@@ -155,7 +159,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
           <select
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground shadow-sm"
           >
             {[0, 1, 2, 3].map((i) => {
               const y = new Date().getFullYear() - i;
@@ -163,22 +167,17 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
             })}
           </select>
         </div>
-      </div>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
-        <OpsCard title={t('executive.employees.annualTotal')}>
-          <p className="text-2xl font-semibold text-foreground tabular-nums">{formatSar(data.annualTotal)} SAR</p>
-        </OpsCard>
-        <OpsCard title={t('executive.compare.achPct')}>
-          <p className="text-2xl font-semibold text-foreground tabular-nums">{data.achievementPct != null ? `${data.achievementPct}%` : '—'}</p>
-        </OpsCard>
-        <OpsCard title={t('executive.employees.consistency')}>
-          <p className="text-2xl font-semibold text-foreground tabular-nums">{data.consistencyScore}</p>
-        </OpsCard>
-      </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article className="app-card relative overflow-hidden p-5"><span className="absolute inset-x-0 top-0 h-0.5 bg-accent" /><p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{t('executive.employees.annualTotal')}</p><p className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">{formatSar(data.annualTotal)} <span className="text-sm font-medium text-muted">SAR</span></p></article>
+        <article className="app-card relative overflow-hidden p-5"><span className="absolute inset-x-0 top-0 h-0.5 bg-border" /><p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{t('executive.compare.achPct')}</p><p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${data.achievementPct != null && data.achievementPct >= 100 ? 'text-emerald-700' : 'text-foreground'}`}>{data.achievementPct != null ? `${data.achievementPct}%` : '—'}</p></article>
+        <article className="app-card relative overflow-hidden p-5"><span className="absolute inset-x-0 top-0 h-0.5 bg-border" /><p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{t('executive.employees.consistency')}</p><p className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">{data.consistencyScore}</p></article>
+      </section>
 
       {mtdAnalytics?.employees?.[0] && (
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <PaceCard
             title={t('analytics.monthPaceTitle')}
             pace={mtdAnalytics.employees[0].pace}
@@ -201,7 +200,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
         </div>
       )}
 
-      <OpsCard title={t('executive.employees.byBoutique')} className="mb-6">
+      <OpsCard title={t('executive.employees.byBoutique')}>
         <AdminDataTable>
           <AdminTableHead>
             <AdminTh>{t('executive.compare.boutique')}</AdminTh>
@@ -218,7 +217,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
         </AdminDataTable>
       </OpsCard>
 
-      <OpsCard title={t('executive.employees.monthlySeries')} className="mb-6">
+      <OpsCard title={t('executive.employees.monthlySeries')}>
         <ExecutiveLineChart
           height={280}
           data={data.monthlyPerformance.map((m) => ({ label: m.month.slice(5), value: m.sales }))}
@@ -227,11 +226,11 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
         />
       </OpsCard>
 
-      <OpsCard title="Monthly Performance Details" className="mb-6">
+      <OpsCard title="Monthly Performance Details">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
-            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted"><th className="px-3 py-2">Month</th><th className="px-3 py-2 text-right">Target</th><th className="px-3 py-2 text-right">Sales</th><th className="px-3 py-2 text-right">Achievement</th><th className="px-3 py-2 text-right">Invoices</th><th className="px-3 py-2 text-right">Pieces</th><th className="px-3 py-2 text-right">AVT</th><th className="px-3 py-2 text-right">AVP</th><th className="px-3 py-2 text-right">UPT</th></tr></thead>
-            <tbody>{data.monthlyPerformance.map((m) => <tr key={m.month} className="border-b border-border/70 last:border-0 hover:bg-surface-subtle"><td className="px-3 py-3 font-medium">{m.month}</td><td className="px-3 py-3 text-right tabular-nums">{m.target ? formatSar(m.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{m.sales ? formatSar(m.sales) : '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.achievementPct == null ? '—' : `${m.achievementPct}%`}</td><td className="px-3 py-3 text-right tabular-nums">{m.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.avt == null ? '—' : formatSar(m.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{m.avp == null ? '—' : formatSar(m.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{m.upt == null ? '—' : m.upt.toFixed(2)}</td></tr>)}</tbody>
+            <thead className="bg-surface-subtle/70"><tr className="border-b border-border text-left text-[10px] uppercase tracking-[0.08em] text-muted"><th className="px-3 py-3">Month</th><th className="px-3 py-3 text-right">Target</th><th className="px-3 py-3 text-right">Sales</th><th className="px-3 py-3 text-right">Achievement</th><th className="px-3 py-3 text-right">Invoices</th><th className="px-3 py-3 text-right">Pieces</th><th className="px-3 py-3 text-right">AVT</th><th className="px-3 py-3 text-right">AVP</th><th className="px-3 py-3 text-right">UPT</th></tr></thead>
+            <tbody>{data.monthlyPerformance.map((m) => <tr key={m.month} className="border-b border-border/60 last:border-0 hover:bg-surface-subtle/70"><td className="px-3 py-3 font-semibold">{m.month}</td><td className="px-3 py-3 text-right tabular-nums">{m.target ? formatSar(m.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{m.sales ? formatSar(m.sales) : '—'}</td><td className={`px-3 py-3 text-right font-semibold tabular-nums ${m.achievementPct != null ? (m.achievementPct >= 100 ? 'text-emerald-700' : m.achievementPct >= 80 ? 'text-amber-700' : 'text-red-700') : ''}`}>{m.achievementPct == null ? '—' : `${m.achievementPct}%`}</td><td className="px-3 py-3 text-right tabular-nums">{m.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{m.avt == null ? '—' : formatSar(m.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{m.avp == null ? '—' : formatSar(m.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{m.upt == null ? '—' : m.upt.toFixed(2)}</td></tr>)}</tbody>
           </table>
         </div>
       </OpsCard>
@@ -259,7 +258,7 @@ export function ExecutiveEmployeeDetailClient({ empId }: { empId: string }) {
         </OpsCard>
       </div>
 
-      <OpsCard title={t('kpi.appraisalTab')} className="mt-6">
+      <OpsCard title={t('kpi.appraisalTab')}>
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <label className="text-sm font-medium text-foreground">{t('kpi.periodKey')}:</label>
           <input

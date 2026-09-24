@@ -97,50 +97,53 @@ export function ExecutiveCompareClient() {
   const bottom3 = byAch.slice(-3).reverse();
 
   return (
-    <div className="min-w-0 p-4 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold text-foreground truncate min-w-0">{t('executive.compare.title')}</h1>
+    <div className="mx-auto min-w-0 max-w-screen-2xl space-y-5 p-4 md:p-6">
+      <header className="relative overflow-hidden rounded-card border border-border/70 bg-surface px-5 py-5 shadow-card md:px-6">
+        <span className="absolute inset-y-0 start-0 w-1 bg-accent" aria-hidden />
+        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Network intelligence</p><h1 className="mt-1 truncate text-2xl font-bold tracking-tight text-foreground">{t('executive.compare.title')}</h1><p className="mt-1 text-sm text-muted">Compare boutique achievement, risk and opportunity across the network.</p></div>
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex rounded-lg border border-border bg-surface-subtle p-0.5">
+            <div className="flex rounded-xl border border-border bg-surface-subtle p-1">
               <button
                 type="button"
                 onClick={() => setViewMode('scope')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'scope' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'scope' ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewScope')}
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('global')}
-                className={`rounded-md px-2.5 py-1 text-sm ${viewMode === 'global' ? 'bg-surface text-foreground shadow' : 'text-muted hover:text-foreground'}`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'global' ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}
               >
                 {t('executive.viewGlobal')}
               </button>
             </div>
           )}
-          <button type="button" onClick={prevMonth} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle">
+          <button type="button" aria-label="Previous month" onClick={prevMonth} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm text-foreground shadow-sm hover:bg-surface-subtle">
             ‹
           </button>
-          <span className="text-sm font-medium text-foreground tabular-nums min-w-0 truncate">{month}</span>
-          <button type="button" onClick={nextMonth} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground hover:bg-surface-subtle">
+          <span className="min-w-0 truncate rounded-xl bg-surface-subtle px-3 py-2 text-sm font-bold text-foreground tabular-nums">{month}</span>
+          <button type="button" aria-label="Next month" onClick={nextMonth} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm text-foreground shadow-sm hover:bg-surface-subtle">
             ›
           </button>
         </div>
-      </div>
+        </div>
+      </header>
 
-      {loading && <p className="text-sm text-muted">{t('common.loading')}</p>}
-      {!loading && !data && <p className="text-sm text-amber-700">{t('executive.compare.error')}</p>}
+      {loading && <div className="app-card p-8 text-center text-sm text-muted">{t('common.loading')}</div>}
+      {!loading && !data && <div className="app-card p-8 text-center text-sm text-amber-700">{t('executive.compare.error')}</div>}
 
       {!loading && data && (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mb-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <OpsCard title={t('executive.compare.top3')}>
               <ul className="space-y-2">
                 {top3.map((b, i) => (
                   <li key={b.boutiqueId} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate min-w-0">{i + 1}. {b.name}</span>
-                    <span className="shrink-0 text-emerald-700 font-medium">{b.achievementPct ?? 0}%</span>
+                    <span className="min-w-0 truncate font-medium"><span className="me-2 inline-grid h-6 w-6 place-items-center rounded-lg bg-accent-soft text-[10px] font-bold text-accent">{i + 1}</span>{b.name}</span>
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700">{b.achievementPct ?? 0}%</span>
                   </li>
                 ))}
                 {top3.length === 0 && <li className="text-muted text-sm">{t('executive.compare.noData')}</li>}
@@ -151,7 +154,7 @@ export function ExecutiveCompareClient() {
                 {bottom3.map((b) => (
                   <li key={b.boutiqueId} className="flex items-center justify-between gap-2 text-sm">
                     <span className="truncate min-w-0">{b.name}</span>
-                    <span className="shrink-0 text-amber-700 font-medium">{b.achievementPct ?? 0}%</span>
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 font-bold text-amber-700">{b.achievementPct ?? 0}%</span>
                   </li>
                 ))}
                 {bottom3.length === 0 && <li className="text-muted text-sm">{t('executive.compare.noData')}</li>}
@@ -159,7 +162,7 @@ export function ExecutiveCompareClient() {
             </OpsCard>
           </div>
 
-          <OpsCard title={t('executive.compare.rankingTable')} className="mb-6">
+          <OpsCard title={t('executive.compare.rankingTable')}>
             <AdminDataTable>
               <AdminTableHead>
                 <AdminTh className="w-[20%]">{t('executive.compare.boutique')}</AdminTh>
@@ -196,7 +199,7 @@ export function ExecutiveCompareClient() {
           </OpsCard>
 
           {data.regions.length > 0 && (
-            <OpsCard title={t('executive.compare.regionRollup')} className="mb-6">
+            <OpsCard title={t('executive.compare.regionRollup')}>
               <AdminDataTable>
                 <AdminTableHead>
                   <AdminTh>{t('executive.compare.region')}</AdminTh>

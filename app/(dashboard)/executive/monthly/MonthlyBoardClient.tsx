@@ -25,7 +25,7 @@ type Snapshot = {
   staff: SnapshotStaff[];
 };
 
-const card = 'rounded-2xl border border-[#E8DFC8] bg-surface p-4 shadow-sm';
+const card = 'app-card p-4 md:p-5';
 
 function safeDiv(a: number, b: number): number | null {
   return b > 0 ? a / b : null;
@@ -43,9 +43,10 @@ function daysForMonth(monthKey: string): string[] {
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className={card}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+    <div className="app-card relative overflow-hidden p-4">
+      <span className="absolute inset-x-0 top-0 h-0.5 bg-border" aria-hidden />
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-2 text-xl font-bold tracking-tight tabular-nums text-foreground">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   );
@@ -139,17 +140,20 @@ export function MonthlyBoardClient() {
   const requiredDaily = safeDiv(model.remaining, model.remainingDays);
 
   return (
-    <main className="mx-auto max-w-screen-2xl space-y-6 p-4 md:p-6 print:p-0">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9A7B28]">{data.branchCode}</p>
-          <h1 className="mt-1 text-2xl font-semibold text-foreground">Monthly Performance</h1>
-          <p className="text-sm text-muted">Boutique results, daily pace and employee contribution in one view.</p>
-        </div>
-        <div className="flex items-center rounded-xl border border-[#E8DFC8] bg-surface shadow-sm print:hidden">
-          <button className="px-3 py-2 text-sm text-muted hover:bg-surface-subtle" onClick={() => setMonth(addMonths(monthKey, -1))}>←</button>
-          <input aria-label="Report month" className="border-x border-[#E8DFC8] bg-transparent px-3 py-2 text-sm" type="month" value={monthKey} onChange={(e) => parseMonthKey(e.target.value) && setMonth(e.target.value)} />
-          <button className="px-3 py-2 text-sm text-muted hover:bg-surface-subtle" onClick={() => setMonth(addMonths(monthKey, 1))}>→</button>
+    <main className="mx-auto max-w-screen-2xl space-y-5 p-4 md:p-6 print:p-0">
+      <header className="relative overflow-hidden rounded-card border border-border/70 bg-surface px-5 py-5 shadow-card md:px-6">
+        <span className="absolute inset-y-0 start-0 w-1 bg-accent" aria-hidden />
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">{data.branchCode} · Monthly intelligence</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Monthly Performance</h1>
+            <p className="mt-1 text-sm text-muted">Boutique results, daily pace and employee contribution in one view.</p>
+          </div>
+          <div className="flex items-center overflow-hidden rounded-xl border border-border bg-surface shadow-sm print:hidden">
+            <button aria-label="Previous month" className="h-10 px-3 text-sm text-muted transition-colors hover:bg-surface-subtle hover:text-accent" onClick={() => setMonth(addMonths(monthKey, -1))}>←</button>
+            <input aria-label="Report month" className="h-10 border-x border-border bg-transparent px-3 text-sm font-medium" type="month" value={monthKey} onChange={(e) => parseMonthKey(e.target.value) && setMonth(e.target.value)} />
+            <button aria-label="Next month" className="h-10 px-3 text-sm text-muted transition-colors hover:bg-surface-subtle hover:text-accent" onClick={() => setMonth(addMonths(monthKey, 1))}>→</button>
+          </div>
         </div>
       </header>
 
@@ -166,11 +170,11 @@ export function MonthlyBoardClient() {
 
       <section className="grid gap-6 xl:grid-cols-2">
         <div className={card}>
-          <h2 className="mb-4 font-semibold text-foreground">Cumulative Sales vs Target</h2>
+          <div className="mb-4"><h2 className="text-[15px] font-bold text-foreground">Cumulative Sales vs Target</h2><p className="mt-0.5 text-xs text-muted">Month-to-date performance against planned pace.</p></div>
           <ExecutiveLineChart height={280} data={model.daily.map((d) => ({ label: d.date.slice(8), value: d.cumulative }))} targetLine={model.daily.map((d) => d.cumulativeTarget)} valueFormat={formatSarInt} />
         </div>
         <div className={card}>
-          <h2 className="mb-4 font-semibold text-foreground">Employee Achievement</h2>
+          <div className="mb-4"><h2 className="text-[15px] font-bold text-foreground">Employee Achievement</h2><p className="mt-0.5 text-xs text-muted">Top ten employees compared by target achievement.</p></div>
           <ExecutiveBarChart height={280} data={model.staff.slice(0, 10).map((s) => ({ label: s.name.split(' ')[0], value: s.achievement ?? 0 }))} valueFormat={(n) => `${n.toFixed(0)}%`} />
         </div>
       </section>
@@ -178,15 +182,15 @@ export function MonthlyBoardClient() {
       <section className={card}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div><h2 className="font-semibold text-foreground">Employee Performance</h2><p className="text-xs text-muted">Ranked by net sales for the selected month.</p></div>
-          <span className="rounded-full bg-[#F3EBD7] px-3 py-1 text-xs text-[#725B1D]">{model.staff.length} employees</span>
+          <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">{model.staff.length} employees</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] text-sm">
-            <thead><tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+            <thead className="bg-surface-subtle/70"><tr className="border-b border-border text-left text-[10px] uppercase tracking-[0.08em] text-muted">
               <th className="px-3 py-2">Rank</th><th className="px-3 py-2">Employee</th><th className="px-3 py-2 text-right">Target</th><th className="px-3 py-2 text-right">Sales</th><th className="px-3 py-2 text-right">Achievement</th><th className="px-3 py-2 text-right">Invoices</th><th className="px-3 py-2 text-right">Pieces</th><th className="px-3 py-2 text-right">AVT</th><th className="px-3 py-2 text-right">AVP</th><th className="px-3 py-2 text-right">UPT</th>
             </tr></thead>
-            <tbody>{model.staff.map((s, index) => <tr key={`${s.empId ?? s.name}-${index}`} className="border-b border-border/70 last:border-0 hover:bg-surface-subtle">
-              <td className="px-3 py-3 font-semibold text-[#9A7B28]">{index + 1}</td><td className="px-3 py-3"><p className="font-medium text-foreground">{s.name}</p><p className="text-xs text-muted">{s.empId ?? '—'}</p></td><td className="px-3 py-3 text-right tabular-nums">{s.target ? formatSarInt(s.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{formatSarInt(s.sales)}</td><td className="px-3 py-3 text-right tabular-nums">{pct(s.achievement)}</td><td className="px-3 py-3 text-right tabular-nums">{s.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.avt == null ? '—' : formatSarInt(s.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{s.avp == null ? '—' : formatSarInt(s.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{s.upt == null ? '—' : s.upt.toFixed(2)}</td>
+            <tbody>{model.staff.map((s, index) => <tr key={`${s.empId ?? s.name}-${index}`} className="border-b border-border/60 last:border-0 hover:bg-surface-subtle/70">
+              <td className="px-3 py-3"><span className="inline-grid h-7 w-7 place-items-center rounded-lg bg-surface-subtle text-xs font-bold text-muted">{index + 1}</span></td><td className="px-3 py-3"><p className="font-semibold text-foreground">{s.name}</p><p className="text-xs text-muted">{s.empId ?? '—'}</p></td><td className="px-3 py-3 text-right tabular-nums">{s.target ? formatSarInt(s.target) : '—'}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{formatSarInt(s.sales)}</td><td className={`px-3 py-3 text-right font-semibold tabular-nums ${s.achievement != null ? (s.achievement >= 100 ? 'text-emerald-700' : s.achievement >= 80 ? 'text-amber-700' : 'text-red-700') : ''}`}>{pct(s.achievement)}</td><td className="px-3 py-3 text-right tabular-nums">{s.invoices || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.pieces || '—'}</td><td className="px-3 py-3 text-right tabular-nums">{s.avt == null ? '—' : formatSarInt(s.avt)}</td><td className="px-3 py-3 text-right tabular-nums">{s.avp == null ? '—' : formatSarInt(s.avp)}</td><td className="px-3 py-3 text-right tabular-nums">{s.upt == null ? '—' : s.upt.toFixed(2)}</td>
             </tr>)}</tbody>
           </table>
         </div>
