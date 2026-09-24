@@ -36,6 +36,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   MANAGER: [
     '/',
+    '/analytics/performance-intelligence',
     '/design-preview',
     '/approvals',
     '/schedule',
@@ -61,6 +62,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/reports/export-center',
     '/reports/schedule-export',
     '/sales/summary',
+    '/executive',
   ],
   /** مساعد المدير: مسارات تشغيلية أساسية + الجدول + المهام + الجرد */
   ASSISTANT_MANAGER: [
@@ -85,6 +87,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   ADMIN: [
     '/nav',
+    '/analytics/performance-intelligence',
     '/',
     '/design-preview',
     '/architecture',
@@ -170,6 +173,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   AREA_MANAGER: [
     '/reports/daily-performance',
+    '/analytics/performance-intelligence',
     '/nav',
     '/',
     '/design-preview',
@@ -212,6 +216,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   DEMO_VIEWER: [
     '/nav',
+    '/analytics/performance-intelligence',
     '/dashboard',
     '/executive',
     '/executive/monthly',
@@ -227,6 +232,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   SUPER_ADMIN: [
     '/reports/daily-performance',
+    '/analytics/performance-intelligence',
     '/nav',
     '/',
     '/design-preview',

@@ -27,6 +27,7 @@ const iconPaths: Record<string, ReactNode> = {
   INV_FOLLOW: <><path d="M4 6h10M4 12h8M4 18h7"/><circle cx="17" cy="15" r="4"/><path d="m20 18 2 2"/></>,
   SALES_SUMMARY: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></>,
   SALES_ANALYTICS: <><path d="M3 20h18"/><path d="m5 16 4-5 4 2 6-8"/><circle cx="5" cy="16" r="1"/><circle cx="9" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="19" cy="5" r="1"/></>,
+  PERFORMANCE_INTELLIGENCE: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 16v-4M12 16V8M17 16v-6"/><path d="M6 7h2"/></>,
   PERFORMANCE: <><path d="M4 18 9 13l3 3 7-9"/><path d="M14 7h5v5"/></>,
   EXECUTIVE: <><path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/></>,
   EXECUTIVE_MONTHLY: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 17l2-3 3 2 3-3"/></>,
