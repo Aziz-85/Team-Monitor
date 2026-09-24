@@ -6,7 +6,6 @@ import { useT } from '@/lib/i18n/useT';
 import { getWeekStartSaturday } from '@/lib/utils/week';
 import { ZonesMapDialog } from '@/components/inventory/ZonesMapDialog';
 import { getZoneBadgeClasses } from '@/lib/zones';
-import { TeamMonitorKpiPanel } from '@/components/dashboard/home/TeamMonitorKpiPanel';
 import { CoverageStatusCard } from '@/components/dashboard/home/CoverageStatusCard';
 import { ShiftSnapshotCard } from '@/components/dashboard/home/ShiftSnapshotCard';
 import { KeyHolderCard } from '@/components/dashboard/home/KeyHolderCard';
@@ -14,26 +13,17 @@ import { TasksTodayCard } from '@/components/dashboard/home/TasksTodayCard';
 import { OperationalAlertsCard } from '@/components/dashboard/home/OperationalAlertsCard';
 import { ComplianceExpiryCard } from '@/components/dashboard/home/ComplianceExpiryCard';
 import { CardShell } from '@/components/dashboard/cards/CardShell';
-import { computeForecast, computePaceMetrics } from '@/lib/analytics/performanceLayer';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { formatSarInt } from '@/lib/utils/money';
 import Link from 'next/link';
 import {
   EmptyStateBlock,
-  InsightCard,
   InsightGrid,
-  KPIGrid,
-  KPIStatCard,
   PageContainer,
   RecommendationCard,
   SectionBlock,
 } from '@/components/ui/ExecutiveIntelligence';
-import {
-  attentionSeverity,
-  completionSignal,
-  coverageSignal,
-  paceSignal,
-} from '@/lib/presentation/executiveIntelligence';
+import { paceSignal } from '@/lib/presentation/executiveIntelligence';
 import { useQuickActions } from '@/lib/nav/useQuickActions';
 import { DAILY_SALES_LEDGER_HREF, QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
 import { Button } from '@/components/ui/Button';
@@ -326,32 +316,6 @@ export function HomePageClient({
       });
   }, []);
 
-  const monthSmartLayer = useMemo(() => {
-    if (
-      !performance?.monthly ||
-      performance.daysInMonth == null ||
-      performance.paceDaysPassed == null ||
-      performance.daysInMonth <= 0
-    ) {
-      return null;
-    }
-    const daysPassed = performance.paceDaysPassed;
-    return {
-      pace: computePaceMetrics({
-        actualMTD: performance.monthly.sales,
-        monthlyTarget: performance.monthly.target,
-        totalDaysInMonth: performance.daysInMonth,
-        daysPassed,
-      }),
-      forecast: computeForecast({
-        actualMTD: performance.monthly.sales,
-        monthlyTarget: performance.monthly.target,
-        totalDaysInMonth: performance.daysInMonth,
-        daysPassed,
-      }),
-    };
-  }, [performance]);
-
   const coverageValidation: ValidationResult[] = data?.coverageValidation ?? [];
   const coverageSuggestion = data?.coverageSuggestion ?? null;
   const coverageSuggestionExplanation = data?.coverageSuggestionExplanation;
@@ -396,7 +360,6 @@ export function HomePageClient({
     complianceAlerts.length;
   const tasksTotal = myTodayTasks?.length ?? 0;
   const tasksCompleted = myTodayTasks?.filter((tt) => tt.isCompleted).length ?? 0;
-  const tasksPending = Math.max(0, tasksTotal - tasksCompleted);
   const taskCompletionPct = tasksTotal > 0 ? Math.round((tasksCompleted * 100) / tasksTotal) : 100;
   const weekCoveragePct = Math.round(
     ((7 - Math.min(7, weekCoverageFormatted.totalAffectedDays)) * 100) / 7
@@ -413,50 +376,6 @@ export function HomePageClient({
       behindHint: t('home.executive.paceBehindHint'),
     }
   );
-  const tasksUi = completionSignal(
-    taskCompletionPct,
-    {
-      healthy: t('home.executive.tasksHealthy'),
-      attention: t('home.executive.tasksAttention'),
-      critical: t('home.executive.tasksRisk'),
-      healthyHint: t('home.executive.tasksHealthyHint'),
-      attentionHint: t('home.executive.tasksAttentionHint'),
-      criticalHint: t('home.executive.tasksRiskHint'),
-    }
-  );
-  const coverageUi = coverageSignal(
-    weekCoveragePct,
-    {
-      healthy: t('home.executive.coverageHealthy'),
-      watch: t('home.executive.coverageWatch'),
-      weak: t('home.executive.coverageWeak'),
-      healthyHint: t('home.executive.coverageHealthyHint'),
-      watchHint: t('home.executive.coverageWatchHint'),
-      weakHint: t('home.executive.coverageWeakHint'),
-    }
-  );
-  const attentionUi = attentionSeverity(
-    totalWarnings,
-    {
-      none: t('home.executive.noImmediateIssues'),
-      low: t('home.executive.someAttention'),
-      high: t('home.executive.highAttention'),
-      noneHint: t('home.executive.noImmediateIssuesHint'),
-      lowHint: t('home.executive.someAttentionHint'),
-      highHint: t('home.executive.highAttentionHint'),
-    }
-  );
-  const paceToneForKpi = paceUi.tone === 'warning' || paceUi.tone === 'danger' ? paceUi.tone : 'default';
-  const remainingToneForKpi =
-    (performance?.remainingMonthTargetSar ?? 0) > 0
-      ? paceUi.tone === 'danger'
-        ? 'danger'
-        : 'warning'
-      : 'success';
-  const coverageToneForKpi = coverageUi.tone === 'warning' || coverageUi.tone === 'danger' ? coverageUi.tone : 'default';
-  const taskToneForKpi = tasksUi.tone === 'warning' || tasksUi.tone === 'danger' ? tasksUi.tone : 'default';
-  const attentionToneForKpi = attentionUi.tone === 'warning' || attentionUi.tone === 'danger' ? attentionUi.tone : 'default';
-
   const heroTitle =
     paceUi.tone === 'danger'
       ? t('home.executive.heroBehind')
@@ -469,27 +388,6 @@ export function HomePageClient({
       : paceUi.tone === 'warning'
         ? t('home.executive.heroNearHint')
         : t('home.executive.heroAheadHint');
-  const recommendationCards: Array<{ title: string; message: string; tone: 'warning' | 'danger' | 'info' | 'success' }> = [];
-  if (paceUi.tone === 'danger' || paceUi.tone === 'warning') {
-    recommendationCards.push({
-      title: t('home.executive.recoPaceTitle'),
-      message: t('home.executive.recoPaceMessage'),
-      tone: paceUi.tone,
-    });
-  }
-  if (tasksUi.tone === 'danger' || tasksUi.tone === 'warning') {
-    recommendationCards.push({
-      title: t('home.executive.recoTasksTitle'),
-      message: t('home.executive.recoTasksMessage'),
-      tone: tasksUi.tone,
-    });
-  } else if (coverageUi.tone === 'warning' || coverageUi.tone === 'danger') {
-    recommendationCards.push({
-      title: t('home.executive.recoCoverageTitle'),
-      message: t('home.executive.recoCoverageMessage'),
-      tone: coverageUi.tone,
-    });
-  }
   const todayTasks = data.todayTasks ?? [];
 
   const handleCopyDailySummary = async () => {
@@ -566,10 +464,9 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
     : t('inventory.zoneNotAssignedShort');
 
   return (
-    <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
+    <PageContainer className="overflow-x-hidden space-y-5 md:space-y-6">
       <SectionBlock
         title={t('nav.dashboard')}
-        subtitle={t('home.executiveHeaderSubtitle')}
         rightSlot={
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -599,7 +496,6 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
             onChange={(e) => setDate(e.target.value)}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
           />
-          <p className="text-xs text-muted">{t('home.dateContextHint')}</p>
         </div>
       </SectionBlock>
 
@@ -618,7 +514,7 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         >
           <RecommendationCard
             title={t('home.quickActions.dailySalesLedger.title')}
-            message={t('home.dailySalesLedgerPinnedHint')}
+            message=""
             tone="info"
             className="border-2 border-accent/40 bg-accent/5 p-5 md:p-6 hover:bg-accent/10"
             actionSlot={
@@ -630,7 +526,7 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         </Link>
       )}
 
-      <SectionBlock title={t('home.quickActionsTitle')} subtitle={t('home.quickActionsSubtitle')}>
+      <SectionBlock title={t('home.quickActionsTitle')}>
         <InsightGrid className="gap-4">
           {visibleQuickActions.slice(0, 5).map((a) => (
             <Link
@@ -641,7 +537,7 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
             >
               <RecommendationCard
                 title={t(a.titleKey)}
-                message={t(a.hintKey)}
+                message=""
                 tone="info"
                 className="hover:bg-surface-subtle"
                 actionSlot={<span className="text-xs font-medium text-muted">{t('home.quickActionsGo')}</span>}
@@ -651,81 +547,8 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         </InsightGrid>
       </SectionBlock>
 
-      <SectionBlock title={t('home.executiveKpiTitle')} subtitle={t('home.executiveKpiSubtitle')}>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <KPIStatCard
-            title={t('home.executive.primaryTargetPct')}
-            value={`${Math.max(0, Math.round(pace))}%`}
-            tone={paceToneForKpi}
-            emphasis="strong"
-            trendLabel={paceUi.shortLabel}
-            supportLabel={t('home.executive.primarySignal')}
-          />
-          <KPIStatCard
-            title={t('home.teamMonitor.remainingMonthlyTarget')}
-            value={formatSarInt(performance?.remainingMonthTargetSar ?? 0)}
-            tone={remainingToneForKpi}
-            emphasis="strong"
-            supportLabel={t('home.executive.primarySignal')}
-          />
-        </div>
-        <KPIGrid cols={4} className="mt-3">
-          <KPIStatCard
-            title={t('home.todayTasksTitle')}
-            value={`${tasksCompleted}/${tasksTotal}`}
-            subtitle={t('home.executive.pendingCount').replace('{count}', String(tasksPending))}
-            tone={taskToneForKpi}
-          />
-          <KPIStatCard
-            title={t('home.coverageStatus')}
-            value={`${weekCoveragePct}%`}
-            subtitle={t('coverage.thisWeekDaysNeedAttention').replace('{count}', String(weekSummary.length))}
-            tone={coverageToneForKpi}
-          />
-          <KPIStatCard
-            title={t('home.complianceAlerts')}
-            value={complianceAlerts.length}
-            subtitle={t('home.executive.alertsAndWarnings').replace('{count}', String(totalWarnings))}
-            tone={attentionToneForKpi}
-          />
-          <KPIStatCard
-            title={t('home.teamMonitor.currentWeekAchievedPosted')}
-            value={formatSarInt(performance?.weekly.sales ?? 0)}
-            subtitle={t('home.teamMonitor.riyadhWeekSatFri')}
-            tone="default"
-          />
-        </KPIGrid>
-      </SectionBlock>
-
-      <SectionBlock title={t('home.executiveInsightsTitle')} subtitle={t('home.executiveInsightsSubtitle')}>
-        <InsightGrid className="gap-4">
-          <InsightCard
-            title={t('home.executive.insightPaceTitle')}
-            description={paceUi.shortLabel}
-            tone={paceUi.tone}
-            className="md:col-span-2"
-          />
-          <InsightCard title={t('home.executive.insightTasksTitle')} description={tasksUi.shortLabel} tone={tasksUi.tone} />
-          <InsightCard title={t('home.executive.insightCoverageTitle')} description={coverageUi.shortLabel} tone={coverageUi.tone} />
-          <InsightCard title={t('home.executive.insightAttentionTitle')} description={attentionUi.shortLabel} tone={attentionUi.tone} />
-        </InsightGrid>
-      </SectionBlock>
-
-      <SectionBlock title={t('home.executive.recommendedActionTitle')} subtitle={t('home.executiveRecommendationsSubtitle')}>
-        {recommendationCards.length === 0 ? (
-          <EmptyStateBlock title={t('home.executive.noRecommendationsTitle')} description={t('home.executive.noRecommendationsDesc')} />
-        ) : (
-          <InsightGrid>
-            {recommendationCards.slice(0, 2).map((r, idx) => (
-              <RecommendationCard key={`${r.title}-${idx}`} title={r.title} message={r.message} tone={r.tone} />
-            ))}
-          </InsightGrid>
-        )}
-      </SectionBlock>
-
       <SectionBlock
         title={t('home.executiveOperationalTitle')}
-        subtitle={t('home.executiveOperationalSubtitle')}
         rightSlot={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
@@ -747,12 +570,23 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
       >
         <div className="space-y-6">
           {performance && (
-            <TeamMonitorKpiPanel
-              performance={performance}
-              monthSmartLayer={monthSmartLayer}
-              smartOutlook={performance.smartOutlook ?? null}
-              linearForecastApi={performance.linearForecast ?? null}
-            />
+            <section className="app-card overflow-hidden p-5 md:p-6">
+              <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+                <div className="flex flex-col justify-between gap-5">
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Boutique pulse</p><h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">{paceUi.shortLabel}</h2></div>
+                  <div className="h-3 overflow-hidden rounded-full bg-surface-subtle"><div className={`h-full rounded-full transition-all ${pace >= 100 ? 'bg-emerald-500' : pace >= 80 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.max(0, pace))}%` }} /></div>
+                  <div className="flex flex-wrap gap-2 text-xs"><Link href="/executive/monthly" className="rounded-full bg-accent-soft px-3 py-1.5 font-semibold text-accent">Monthly report</Link><Link href="/reports/daily-performance" className="rounded-full bg-surface-subtle px-3 py-1.5 font-semibold text-foreground">Daily report</Link></div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: t('home.executive.primaryTargetPct'), value: Math.max(0, Math.round(pace)), suffix: '%' },
+                    { label: t('home.todayTasksTitle'), value: taskCompletionPct, suffix: '%' },
+                    { label: t('home.coverageStatus'), value: weekCoveragePct, suffix: '%' },
+                  ].map((item) => <div key={item.label} className="grid place-items-center text-center"><div className="relative grid aspect-square w-full max-w-24 place-items-center rounded-full" style={{ background: `conic-gradient(var(--accent) ${Math.min(100, item.value)}%, var(--surface-subtle) 0)` }}><span className="absolute inset-2 rounded-full bg-surface" /><strong className="relative text-lg tabular-nums text-foreground">{item.value}{item.suffix}</strong></div><span className="mt-2 text-[10px] font-semibold text-muted">{item.label}</span></div>)}
+                </div>
+              </div>
+              {totalWarnings > 0 && <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-900"><span>{totalWarnings} items need attention</span><span className="h-2 w-2 rounded-full bg-amber-500" /></div>}
+            </section>
           )}
 
           {/* Compliance & Expiry */}
