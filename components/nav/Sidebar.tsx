@@ -31,9 +31,9 @@ export function Sidebar({
   );
 
   return (
-    <aside className={`hidden h-screen w-56 flex-col bg-surface md:flex xl:w-60 ${isRtl ? 'border-l border-border/40' : 'border-r border-border/40'}`}>
+    <aside className={`app-sidebar hidden h-screen w-60 flex-col md:flex xl:w-64 ${isRtl ? 'border-l border-border/70' : 'border-r border-border/70'}`}>
       <div className="flex min-w-0 h-full flex-col">
-        <div className="shrink-0 px-4 pb-3 pt-4">
+        <div className="shrink-0 px-4 pb-4 pt-5">
           <SidebarBrandingScope role={role} pathname={pathname} className="" />
         </div>
 
@@ -41,10 +41,15 @@ export function Sidebar({
           <SidebarNavContent role={role} isItemActive={isItemActive} />
         </nav>
 
-        <div className="shrink-0 px-3 pb-4">
-          <div className="rounded-xl bg-surface-subtle/60 px-3 py-2.5">
-            <p className="truncate text-sm font-medium text-foreground/85">{name || t('common.user')}</p>
-            <p className="mt-0.5 truncate text-xs text-muted">{position ? String(position) : role}</p>
+        <div className="shrink-0 border-t border-border/60 px-3 py-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-surface-subtle/70 px-3 py-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-xs font-bold text-white shadow-sm">
+              {(name || t('common.user')).trim().slice(0, 2).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground/90">{name || t('common.user')}</p>
+              <p className="mt-0.5 truncate text-[11px] text-muted">{position ? String(position) : role}</p>
+            </div>
           </div>
         </div>
       </div>

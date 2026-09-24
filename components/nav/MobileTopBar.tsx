@@ -40,22 +40,25 @@ export function MobileTopBar({
   return (
     <>
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 flex min-w-0 max-w-full items-center justify-between overflow-x-clip border-b border-border bg-surface px-3 py-2 md:hidden">
+      <div className="app-topbar sticky top-0 z-30 flex min-w-0 max-w-full items-center justify-between overflow-x-clip border-b border-border/70 px-3 py-2.5 md:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-surface-subtle"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-surface text-foreground shadow-sm hover:bg-surface-subtle"
           aria-label={t('nav.more') ?? 'Menu'}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+        <Link href="/" className="mx-3 min-w-0 flex-1 truncate text-sm font-bold tracking-tight text-foreground">
+          {t('nav.appTitle')}
+        </Link>
+        <div className="flex min-w-0 items-center justify-end gap-2">
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}
-            className="h-8 shrink-0 max-w-[40vw] rounded-md border border-border bg-surface px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            className="h-9 shrink-0 max-w-[32vw] rounded-xl border border-border bg-surface px-2 text-xs font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="en">{t('common.english')}</option>
             <option value="ar">{t('common.arabic')}</option>
@@ -74,7 +77,7 @@ export function MobileTopBar({
 
       {/* Drawer — same nav model as desktop Sidebar */}
       <div
-        className={`fixed inset-y-0 z-50 h-full w-64 max-w-[85vw] bg-surface shadow-lg transition-transform md:hidden ${
+        className={`app-sidebar fixed inset-y-0 z-50 h-full w-72 max-w-[88vw] shadow-lg transition-transform md:hidden ${
           isRtl ? 'right-0' : 'left-0'
         } ${drawerOpen ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'}`}
       >
