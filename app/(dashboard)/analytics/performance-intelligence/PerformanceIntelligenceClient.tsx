@@ -7,8 +7,10 @@ import { formatSarInt } from '@/lib/utils/money';
 
 type Day = { date: string; netSalesHalalas: number; invoices: number; pieces: number };
 type Staff = { empId?: string; name: string; netSalesHalalas: number; invoices: number; pieces: number; targetHalalas?: number; achievementPct?: number };
-type Snapshot = { month: string; branchCode: string; boutiqueTargetHalalas?: number; daily: Day[]; staff: Staff[] };
+type MonthlyPoint = { month: string; netSalesHalalas: number; targetHalalas: number; invoices: number; pieces: number };
+type Snapshot = { from: string; to: string; branchCode: string; targetHalalas: number; monthly: MonthlyPoint[]; daily: Day[]; staff: Staff[] };
 type Tab = 'overview' | 'trends' | 'team' | 'detail';
+type Period = 'month' | 'quarter' | 'half' | 'year' | 'custom';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -21,6 +23,22 @@ const sar = (halalas: number) => halalas / 100;
 const ratio = (a: number, b: number) => b > 0 ? a / b : null;
 const percent = (n: number | null, digits = 1) => n == null ? '—' : `${n.toFixed(digits)}%`;
 const previousYear = (month: string) => `${Number(month.slice(0, 4)) - 1}${month.slice(4)}`;
+
+function resolveRange(anchor: string, period: Period, customFrom: string, customTo: string) {
+  if (period === 'custom' && parseMonthKey(customFrom) && parseMonthKey(customTo) && customFrom <= customTo) return { from: customFrom, to: customTo };
+  const year = anchor.slice(0, 4);
+  const monthNo = Number(anchor.slice(5));
+  if (period === 'year') return { from: `${year}-01`, to: `${year}-12` };
+  if (period === 'half') {
+    const start = monthNo <= 6 ? 1 : 7;
+    return { from: `${year}-${String(start).padStart(2, '0')}`, to: `${year}-${String(start + 5).padStart(2, '0')}` };
+  }
+  if (period === 'quarter') {
+    const start = Math.floor((monthNo - 1) / 3) * 3 + 1;
+    return { from: `${year}-${String(start).padStart(2, '0')}`, to: `${year}-${String(start + 2).padStart(2, '0')}` };
+  }
+  return { from: anchor, to: anchor };
+}
 
 function csvCell(value: string | number) {
   return `"${String(value).replace(/"/g, '""')}"`;
@@ -51,7 +69,7 @@ function Ring({ value, label }: { value: number; label: string }) {
           <span className="text-xl font-bold tabular-nums text-foreground">{value.toFixed(0)}%</span>
         </div>
       </div>
-      <div><p className="text-xs font-bold uppercase tracking-wider text-muted">{label}</p><p className="mt-1 text-sm text-foreground">Monthly target progress</p></div>
+      <div><p className="text-xs font-bold uppercase tracking-wider text-muted">{label}</p><p className="mt-1 text-sm text-foreground">Selected-period target progress</p></div>
     </div>
   );
 }
@@ -80,6 +98,11 @@ export function PerformanceIntelligenceClient() {
   const search = useSearchParams();
   const requestedMonth = search.get('month') ?? '';
   const month = parseMonthKey(requestedMonth) ? requestedMonth : getCurrentMonthKeyRiyadh();
+  const period = (['month', 'quarter', 'half', 'year', 'custom'].includes(search.get('period') ?? '') ? search.get('period') : 'month') as Period;
+  const customFrom = parseMonthKey(search.get('from') ?? '') ? search.get('from')! : month;
+  const customTo = parseMonthKey(search.get('to') ?? '') ? search.get('to')! : month;
+  const range = resolveRange(month, period, customFrom, customTo);
+  const priorRange = { from: previousYear(range.from), to: previousYear(range.to) };
   const activeTab = (tabs.some((t) => t.id === search.get('view')) ? search.get('view') : 'overview') as Tab;
   const employee = search.get('employee') ?? 'all';
   const [current, setCurrent] = useState<Snapshot | null>(null);
@@ -101,8 +124,8 @@ export function PerformanceIntelligenceClient() {
     const controller = new AbortController();
     setLoading(true); setError(null);
     Promise.all([
-      fetch(`/api/executive/month-snapshot?month=${month}`, { cache: 'no-store', signal: controller.signal }),
-      fetch(`/api/executive/month-snapshot?month=${previousYear(month)}`, { cache: 'no-store', signal: controller.signal }),
+      fetch(`/api/analytics/performance-intelligence?from=${range.from}&to=${range.to}`, { cache: 'no-store', signal: controller.signal }),
+      fetch(`/api/analytics/performance-intelligence?from=${priorRange.from}&to=${priorRange.to}`, { cache: 'no-store', signal: controller.signal }),
     ]).then(async ([now, last]) => {
       if (!now.ok) throw new Error('Unable to load performance data');
       setCurrent(await now.json());
@@ -110,17 +133,19 @@ export function PerformanceIntelligenceClient() {
     }).catch((e) => { if (e?.name !== 'AbortError') setError(e instanceof Error ? e.message : 'Unable to load'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [month]);
+  }, [range.from, range.to, priorRange.from, priorRange.to]);
 
   const model = useMemo(() => {
     if (!current) return null;
     const total = current.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0);
     const invoices = current.daily.reduce((s, d) => s + d.invoices, 0);
     const pieces = current.daily.reduce((s, d) => s + d.pieces, 0);
-    const target = sar(current.boutiqueTargetHalalas ?? 0);
+    const target = sar(current.targetHalalas ?? 0);
     const priorTotal = prior?.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0) ?? 0;
     const yoy = priorTotal > 0 ? ((total / priorTotal) - 1) * 100 : null;
-    const cumulative = (days: Day[] | undefined) => { let sum = 0; return (days ?? []).map((d) => (sum += sar(d.netSalesHalalas))); };
+    const seriesRows = period === 'month' ? current.daily : current.monthly;
+    const priorSeriesRows = period === 'month' ? prior?.daily : prior?.monthly;
+    const cumulative = (rows: { netSalesHalalas: number }[] | undefined) => { let sum = 0; return (rows ?? []).map((d) => (sum += sar(d.netSalesHalalas))); };
     const staff = current.staff.map((s) => ({
       ...s,
       sales: sar(s.netSalesHalalas),
@@ -131,11 +156,11 @@ export function PerformanceIntelligenceClient() {
       upt: ratio(s.pieces, s.invoices),
     })).sort((a, b) => b.sales - a.sales);
     const selected = employee === 'all' ? null : staff.find((s) => (s.empId ?? s.name) === employee) ?? null;
-    const elapsed = Math.max(current.daily.filter((d) => d.netSalesHalalas || d.invoices || d.pieces).length, 1);
-    const days = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
-    const forecast = total / elapsed * days;
-    return { total, target, invoices, pieces, priorTotal, yoy, staff, selected, forecast, cumulative: cumulative(current.daily), priorCumulative: cumulative(prior?.daily), achievement: ratio(total * 100, target), avt: ratio(total, invoices), avp: ratio(total, pieces), upt: ratio(pieces, invoices) };
-  }, [current, prior, employee, month]);
+    const activeDays = Math.max(current.daily.filter((d) => d.netSalesHalalas || d.invoices || d.pieces).length, 1);
+    const daysInPeriod = current.monthly.reduce((sum, row) => sum + new Date(Number(row.month.slice(0,4)), Number(row.month.slice(5)), 0).getDate(), 0);
+    const forecast = period === 'month' && month === getCurrentMonthKeyRiyadh() ? total / activeDays * daysInPeriod : total;
+    return { total, target, invoices, pieces, priorTotal, yoy, staff, selected, forecast, cumulative: cumulative(seriesRows), priorCumulative: cumulative(priorSeriesRows), achievement: ratio(total * 100, target), avt: ratio(total, invoices), avp: ratio(total, pieces), upt: ratio(pieces, invoices) };
+  }, [current, prior, employee, month, period]);
 
   const exportCsv = () => {
     if (!current || !model) return;
@@ -144,7 +169,7 @@ export function PerformanceIntelligenceClient() {
     model.staff.forEach((s) => rows.push([s.name, s.empId ?? '', s.target, s.sales, s.achievement ?? '', s.invoices, s.pieces]));
     const blob = new Blob([rows.map((r) => r.map(csvCell).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
-    link.href = url; link.download = `performance-intelligence-${month}.csv`; link.click(); URL.revokeObjectURL(url);
+    link.href = url; link.download = `performance-intelligence-${range.from}-to-${range.to}.csv`; link.click(); URL.revokeObjectURL(url);
   };
 
   if (loading && !model) return <div className="p-8 text-sm text-muted">Loading intelligence workspace…</div>;
@@ -160,11 +185,21 @@ export function PerformanceIntelligenceClient() {
           <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-accent">Live decision workspace · {current.branchCode}</p><h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">Performance Intelligence</h1><p className="mt-1 text-sm text-muted">One visual view for sales, target and team momentum.</p></div>
           <div className="flex flex-wrap items-center gap-2">
             <button className="rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold hover:bg-surface-subtle" onClick={exportCsv}>⇩ Export data</button>
-            <button aria-label="Previous month" className="h-10 rounded-xl border border-border px-3" onClick={() => updateQuery({ month: addMonths(month, -1) })}>←</button>
-            <input aria-label="Report month" type="month" value={month} onChange={(e) => parseMonthKey(e.target.value) && updateQuery({ month: e.target.value })} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-semibold" />
-            <button aria-label="Next month" className="h-10 rounded-xl border border-border px-3" onClick={() => updateQuery({ month: addMonths(month, 1) })}>→</button>
+            <select aria-label="Period type" value={period} onChange={(e) => updateQuery({ period: e.target.value, employee: null })} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-semibold">
+              <option value="month">Monthly</option><option value="quarter">Quarterly</option><option value="half">Half-year</option><option value="year">Annual</option><option value="custom">Custom range</option>
+            </select>
+            {period === 'custom' ? <>
+              <input aria-label="From month" type="month" value={customFrom} onChange={(e) => parseMonthKey(e.target.value) && updateQuery({ from: e.target.value })} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-semibold" />
+              <span className="text-xs text-muted">to</span>
+              <input aria-label="To month" type="month" value={customTo} onChange={(e) => parseMonthKey(e.target.value) && updateQuery({ to: e.target.value })} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-semibold" />
+            </> : <>
+              <button aria-label="Previous period" className="h-10 rounded-xl border border-border px-3" onClick={() => updateQuery({ month: addMonths(month, period === 'year' ? -12 : period === 'half' ? -6 : period === 'quarter' ? -3 : -1) })}>←</button>
+              <input aria-label="Anchor month" type="month" value={month} onChange={(e) => parseMonthKey(e.target.value) && updateQuery({ month: e.target.value })} className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-semibold" />
+              <button aria-label="Next period" className="h-10 rounded-xl border border-border px-3" onClick={() => updateQuery({ month: addMonths(month, period === 'year' ? 12 : period === 'half' ? 6 : period === 'quarter' ? 3 : 1) })}>→</button>
+            </>}
           </div>
         </div>
+        <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-muted"><span className="rounded-full bg-accent-soft px-3 py-1.5 font-bold text-accent">{range.from} → {range.to}</span><span>compared with {priorRange.from} → {priorRange.to}</span></div>
         <nav className="relative mt-5 flex gap-1 overflow-x-auto rounded-xl bg-surface-subtle p-1" aria-label="Intelligence views">
           {tabs.map((tab) => <button key={tab.id} onClick={() => updateQuery({ view: tab.id })} className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${activeTab === tab.id ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}>{tab.label}</button>)}
         </nav>
@@ -173,13 +208,13 @@ export function PerformanceIntelligenceClient() {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Net Sales" value={formatSarInt(model.total)} delta={model.yoy} accent />
         <Metric label="Target Achievement" value={percent(model.achievement)} />
-        <Metric label="Month-end Forecast" value={formatSarInt(model.forecast)} />
+        <Metric label={period === 'month' && month === getCurrentMonthKeyRiyadh() ? 'Month-end Forecast' : 'Target Gap'} value={period === 'month' && month === getCurrentMonthKeyRiyadh() ? formatSarInt(model.forecast) : formatSarInt(model.total-model.target)} />
         <Metric label="YoY Change" value={model.yoy == null ? '—' : `${model.yoy >= 0 ? '+' : ''}${model.yoy.toFixed(1)}%`} />
       </section>
 
       {activeTab === 'overview' && <>
         <section className="grid gap-4 xl:grid-cols-[1.6fr_.8fr]">
-          <article className="app-card p-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">Sales Momentum</h2><p className="text-xs text-muted">Cumulative comparison with {previousYear(month).slice(0,4)}</p></div><Delta value={model.yoy} /></div><SalesArea current={model.cumulative} previous={model.priorCumulative} /></article>
+          <article className="app-card p-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">Sales Momentum</h2><p className="text-xs text-muted">Selected period compared with the same period last year</p></div><Delta value={model.yoy} /></div><SalesArea current={model.cumulative} previous={model.priorCumulative} /></article>
           <article className="app-card flex flex-col justify-between gap-5 p-5"><Ring value={model.achievement ?? 0} label="Achievement" /><div className="grid grid-cols-2 gap-2 border-t border-border pt-4"><div><p className="text-xs text-muted">Remaining</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(Math.max(model.target-model.total,0))}</p></div><div><p className="text-xs text-muted">Forecast gap</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(model.forecast-model.target)}</p></div></div></article>
         </section>
         <section className="grid gap-4 md:grid-cols-3">
@@ -187,11 +222,11 @@ export function PerformanceIntelligenceClient() {
         </section>
       </>}
 
-      {activeTab === 'trends' && <section className="grid gap-4 xl:grid-cols-[1.7fr_.7fr]"><article className="app-card p-5"><h2 className="font-bold">Daily Sales Pattern</h2><p className="mb-4 text-xs text-muted">Click another month above to move through time.</p><SalesArea current={current.daily.map((d)=>sar(d.netSalesHalalas))} previous={prior?.daily.map((d)=>sar(d.netSalesHalalas)) ?? []} /></article><article className="app-card p-5"><h2 className="font-bold">Period Signals</h2><div className="mt-5 space-y-4">{[['Best day', [...current.daily].sort((a,b)=>b.netSalesHalalas-a.netSalesHalalas)[0]], ['Invoices', model.invoices], ['Pieces', model.pieces]].map(([label,value]) => <div key={String(label)} className="border-b border-border pb-4"><p className="text-xs text-muted">{String(label)}</p><p className="mt-1 text-xl font-bold">{typeof value === 'object' ? `${value.date} · ${formatSarInt(sar(value.netSalesHalalas))}` : String(value)}</p></div>)}</div></article></section>}
+      {activeTab === 'trends' && <section className="grid gap-4 xl:grid-cols-[1.7fr_.7fr]"><article className="app-card p-5"><h2 className="font-bold">{period === 'month' ? 'Daily' : 'Monthly'} Sales Pattern</h2><p className="mb-4 text-xs text-muted">The chart changes automatically with the selected analysis period.</p><SalesArea current={(period === 'month' ? current.daily : current.monthly).map((d)=>sar(d.netSalesHalalas))} previous={(period === 'month' ? prior?.daily : prior?.monthly)?.map((d)=>sar(d.netSalesHalalas)) ?? []} /></article><article className="app-card p-5"><h2 className="font-bold">Period Signals</h2><div className="mt-5 space-y-4">{[['Best day', [...current.daily].sort((a,b)=>b.netSalesHalalas-a.netSalesHalalas)[0]], ['Invoices', model.invoices], ['Pieces', model.pieces]].map(([label,value]) => <div key={String(label)} className="border-b border-border pb-4"><p className="text-xs text-muted">{String(label)}</p><p className="mt-1 text-xl font-bold">{typeof value === 'object' && value ? `${value.date} · ${formatSarInt(sar(value.netSalesHalalas))}` : String(value ?? '—')}</p></div>)}</div></article></section>}
 
       {activeTab === 'team' && <section className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]"><article className="app-card p-5"><div className="flex items-center justify-between"><div><h2 className="font-bold">Team Contribution</h2><p className="text-xs text-muted">Select a person to cross-filter the spotlight.</p></div><button onClick={() => updateQuery({ employee: null })} className="text-xs font-semibold text-accent">Clear filter</button></div><div className="mt-5 space-y-3">{model.staff.map((s) => { const key=s.empId??s.name; const share=ratio(s.sales*100,model.total)??0; return <button key={key} onClick={()=>updateQuery({employee:key})} className={`w-full rounded-xl border p-3 text-left transition ${employee===key?'border-accent bg-accent-soft':'border-border hover:bg-surface-subtle'}`}><div className="mb-2 flex justify-between gap-3"><span className="font-semibold">{s.name}</span><span className="font-bold tabular-nums">{formatSarInt(s.sales)}</span></div><div className="h-2 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-accent" style={{width:`${Math.min(share,100)}%`}} /></div><p className="mt-1 text-xs text-muted">{share.toFixed(1)}% contribution · {percent(s.achievement)} target</p></button>})}</div></article><article className="app-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-accent">Employee Spotlight</p>{selectedMetric ? <div className="mt-4"><h2 className="text-2xl font-bold">{selectedMetric.name}</h2><p className="text-sm text-muted">{selectedMetric.empId??'—'}</p><div className="mt-6 grid grid-cols-2 gap-3">{[['Sales',formatSarInt(selectedMetric.sales)],['Achievement',percent(selectedMetric.achievement)],['AVT',selectedMetric.avt?formatSarInt(selectedMetric.avt):'—'],['UPT',selectedMetric.upt?.toFixed(2)??'—']].map(([a,b])=><div key={a} className="rounded-xl bg-surface-subtle p-3"><p className="text-xs text-muted">{a}</p><p className="mt-1 font-bold">{b}</p></div>)}</div></div> : <div className="grid min-h-64 place-items-center text-center text-sm text-muted">Select an employee to reveal their performance profile.</div>}</article></section>}
 
-      {activeTab === 'detail' && <section className="app-card overflow-hidden"><div className="border-b border-border p-5"><h2 className="font-bold">Daily Detail</h2><p className="text-xs text-muted">Official source rows for the selected month.</p></div><div className="max-h-[640px] overflow-auto"><table className="w-full min-w-[760px] text-sm"><thead className="sticky top-0 bg-surface-subtle text-xs uppercase text-muted"><tr><th className="px-4 py-3 text-left">Date</th><th className="px-4 py-3 text-right">Sales</th><th className="px-4 py-3 text-right">Invoices</th><th className="px-4 py-3 text-right">Pieces</th><th className="px-4 py-3 text-right">AVT</th><th className="px-4 py-3 text-right">UPT</th></tr></thead><tbody>{current.daily.map((d)=><tr key={d.date} className="border-t border-border/70 hover:bg-surface-subtle"><td className="px-4 py-3 font-medium">{d.date}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{d.netSalesHalalas?formatSarInt(sar(d.netSalesHalalas)):''}</td><td className="px-4 py-3 text-right">{d.invoices||''}</td><td className="px-4 py-3 text-right">{d.pieces||''}</td><td className="px-4 py-3 text-right">{d.invoices?formatSarInt(sar(d.netSalesHalalas)/d.invoices):''}</td><td className="px-4 py-3 text-right">{d.invoices?(d.pieces/d.invoices).toFixed(2):''}</td></tr>)}</tbody></table></div></section>}
+      {activeTab === 'detail' && <section className="app-card overflow-hidden"><div className="border-b border-border p-5"><h2 className="font-bold">Daily Detail</h2><p className="text-xs text-muted">Official source rows for the selected period.</p></div><div className="max-h-[640px] overflow-auto"><table className="w-full min-w-[760px] text-sm"><thead className="sticky top-0 bg-surface-subtle text-xs uppercase text-muted"><tr><th className="px-4 py-3 text-left">Date</th><th className="px-4 py-3 text-right">Sales</th><th className="px-4 py-3 text-right">Invoices</th><th className="px-4 py-3 text-right">Pieces</th><th className="px-4 py-3 text-right">AVT</th><th className="px-4 py-3 text-right">UPT</th></tr></thead><tbody>{current.daily.map((d)=><tr key={d.date} className="border-t border-border/70 hover:bg-surface-subtle"><td className="px-4 py-3 font-medium">{d.date}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{d.netSalesHalalas?formatSarInt(sar(d.netSalesHalalas)):''}</td><td className="px-4 py-3 text-right">{d.invoices||''}</td><td className="px-4 py-3 text-right">{d.pieces||''}</td><td className="px-4 py-3 text-right">{d.invoices?formatSarInt(sar(d.netSalesHalalas)/d.invoices):''}</td><td className="px-4 py-3 text-right">{d.invoices?(d.pieces/d.invoices).toFixed(2):''}</td></tr>)}</tbody></table></div></section>}
     </main>
   );
 }
