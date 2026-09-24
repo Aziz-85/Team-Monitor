@@ -67,6 +67,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     items: [
       { key: 'SALES_SUMMARY', href: '/sales/summary', labelKey: 'nav.analytics.salesSummary' },
       { key: 'SALES_ANALYTICS', href: '/sales/analytics', labelKey: 'nav.analytics.salesAnalytics' },
+      { key: 'PERFORMANCE_INTELLIGENCE', href: '/analytics/performance-intelligence', labelKey: 'nav.analytics.performanceIntelligence' },
       { key: 'PERFORMANCE', href: '/performance', labelKey: 'nav.analytics.performance' },
       { key: 'EXECUTIVE', href: '/executive', labelKey: 'nav.analytics.executive' },
       { key: 'EXECUTIVE_MONTHLY', href: '/executive/monthly', labelKey: 'nav.analytics.executiveMonthly' },

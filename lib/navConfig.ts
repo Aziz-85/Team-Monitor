@@ -171,6 +171,7 @@ const GROUP_REPORTS: NavGroup = {
   key: 'REPORTS',
   labelKey: 'nav.group.REPORTS',
   items: [
+    item('/analytics/performance-intelligence', 'nav.performanceIntelligence', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER', 'DEMO_VIEWER'], 'CORE'),
     item('/executive', 'nav.reports.performanceOverview', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
     item('/executive/monthly', 'nav.reports.monthlyPerformance', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
     item('/reports/daily-performance', 'nav.reports.dailyPerformance', ['ADMIN', 'SUPER_ADMIN', 'MANAGER', 'AREA_MANAGER'], 'CORE'),
