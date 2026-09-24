@@ -33,13 +33,13 @@ export function DashboardBreadcrumbBar() {
 
   return (
     <div
-      className={`flex min-w-0 flex-wrap items-center gap-2 border-b border-border/60 bg-surface-subtle/50 px-3 py-2 text-sm md:px-4 ${isRtl ? 'flex-row-reverse' : ''}`}
+      className={`flex min-w-0 flex-wrap items-center gap-2 border-b border-border/50 bg-surface/45 px-3 py-2 text-sm backdrop-blur-sm md:px-5 ${isRtl ? 'flex-row-reverse' : ''}`}
     >
       {showBack ? (
         <button
           type="button"
           onClick={handleBack}
-          className="shrink-0 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+          className="shrink-0 rounded-lg border border-border/80 bg-surface px-2.5 py-1 text-xs font-medium text-foreground shadow-sm transition-colors hover:border-accent/40 hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent"
         >
           {isRtl ? `${t('common.back')} →` : `← ${t('common.back')}`}
         </button>
@@ -49,8 +49,8 @@ export function DashboardBreadcrumbBar() {
           {crumbs.map((c, idx) => (
             <li key={`${c.labelKey}-${idx}`} className="flex min-w-0 items-center gap-1.5">
               {idx > 0 ? (
-                <span className="text-border select-none" aria-hidden>
-                  /
+                <span className="select-none text-muted/40" aria-hidden>
+                  {isRtl ? '‹' : '›'}
                 </span>
               ) : null}
               {c.href != null && idx < crumbs.length - 1 ? (

@@ -11,7 +11,7 @@ export function VersionFooter() {
 
   return (
     <footer
-      className="shrink-0 border-t border-border/40 py-2 text-center text-xs text-muted"
+      className="shrink-0 border-t border-border/40 bg-surface/35 py-2 text-center text-[10px] text-muted/80"
       dir="ltr"
     >
       {versionLine}
