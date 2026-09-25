@@ -50,6 +50,7 @@ const PATH_TITLE_KEYS: Array<{ prefix: string; titleKey: string }> = [
   { prefix: '/admin/targets', titleKey: 'nav.drilldown.routes.reports.targetsAdmin.title' },
   { prefix: '/admin/users', titleKey: 'nav.drilldown.routes.admin.users.title' },
   { prefix: '/approvals', titleKey: 'nav.drilldown.routes.schedule.approvals.title' },
+  { prefix: '/analytics/performance-intelligence', titleKey: 'nav.performanceIntelligence' },
   { prefix: '/area/employees', titleKey: 'nav.drilldown.routes.employees.area.title' },
   { prefix: '/area/targets', titleKey: 'nav.drilldown.routes.employees.areaTargets.title' },
   { prefix: '/boutique/leaves', titleKey: 'nav.drilldown.routes.leaves.boutique.title' },
