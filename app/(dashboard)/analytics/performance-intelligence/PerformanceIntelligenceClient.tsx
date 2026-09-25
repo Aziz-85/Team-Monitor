@@ -108,6 +108,18 @@ function YearComparison({ data }: { data: YearPoint[] }) {
   return <div className="mt-4 flex min-h-56 items-end gap-3 overflow-x-auto rounded-xl bg-surface-subtle/60 p-4">{data.map((row) => <div key={row.year} className="flex min-w-20 flex-1 flex-col items-center gap-2"><div className="flex h-40 items-end gap-1.5"><div title={`Sales ${formatSarInt(row.sales)}`} className="w-6 rounded-t-md bg-accent" style={{height:`${Math.max(3,row.sales/max*100)}%`}} /><div title={`Target ${formatSarInt(row.target)}`} className="w-6 rounded-t-md bg-muted/30" style={{height:`${Math.max(3,row.target/max*100)}%`}} /></div><span className="text-xs font-bold">{row.year}</span><span className="text-[10px] text-muted">{row.target ? percent(row.sales/row.target*100,0) : '—'}</span></div>)}</div>;
 }
 
+function PeriodComparison({ current, previous, currentYear, comparisonYear }: { current: MonthlyPoint[]; previous: MonthlyPoint[]; currentYear: string; comparisonYear: string }) {
+  const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+  const rows = months.map((monthNo) => ({
+    monthNo,
+    current: sar(current.find((row) => row.month.endsWith(`-${monthNo}`))?.netSalesHalalas ?? 0),
+    previous: sar(previous.find((row) => row.month.endsWith(`-${monthNo}`))?.netSalesHalalas ?? 0),
+  }));
+  const max = Math.max(...rows.flatMap((row) => [row.current, row.previous]), 1);
+  const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return <div className="mt-5 grid grid-cols-6 gap-2 md:grid-cols-12">{rows.map((row, index) => <div key={row.monthNo} className="group text-center"><div className="flex h-32 items-end justify-center gap-1 rounded-xl bg-surface-subtle/60 px-1.5 pt-3"><div title={`${currentYear}: ${formatSarInt(row.current)}`} className="w-2.5 rounded-t-full bg-accent transition-all group-hover:opacity-80" style={{height:`${Math.max(row.current ? 5 : 0,row.current/max*100)}%`}}/><div title={`${comparisonYear}: ${formatSarInt(row.previous)}`} className="w-2.5 rounded-t-full bg-[#8aa0b8] transition-all group-hover:opacity-80" style={{height:`${Math.max(row.previous ? 5 : 0,row.previous/max*100)}%`}}/></div><p className="mt-2 text-[10px] font-bold text-muted">{labels[index]}</p></div>)}</div>;
+}
+
 export function PerformanceIntelligenceClient() {
   const router = useRouter();
   const pathname = usePathname();
@@ -118,11 +130,15 @@ export function PerformanceIntelligenceClient() {
   const customFrom = parseMonthKey(search.get('from') ?? '') ? search.get('from')! : month;
   const customTo = parseMonthKey(search.get('to') ?? '') ? search.get('to')! : month;
   const range = resolveRange(month, period, customFrom, customTo);
-  const priorRange = { from: previousYear(range.from), to: previousYear(range.to) };
+  const anchorYear = month.slice(0, 4);
+  const requestedComparisonYear = search.get('compareYear') ?? '';
+  const comparisonYear = /^\d{4}$/.test(requestedComparisonYear) && requestedComparisonYear !== anchorYear ? requestedComparisonYear : String(Number(anchorYear) - 1);
+  const priorRange = period === 'year' ? { from: `${comparisonYear}-01`, to: `${comparisonYear}-12` } : { from: previousYear(range.from), to: previousYear(range.to) };
   const currentMonthKey = getCurrentMonthKeyRiyadh();
   const includesCurrentPeriod = range.from <= currentMonthKey && range.to >= currentMonthKey;
   const riyadhDay = Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(8, 10));
-  const priorCutoffDate = new Date(`${previousYear(currentMonthKey)}-${String(riyadhDay).padStart(2, '0')}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  const comparisonCutoffYear = period === 'year' ? comparisonYear : previousYear(currentMonthKey).slice(0, 4);
+  const priorCutoffDate = new Date(`${comparisonCutoffYear}-${currentMonthKey.slice(5)}-${String(riyadhDay).padStart(2, '0')}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   const activeTab = (tabs.some((t) => t.id === search.get('view')) ? search.get('view') : 'overview') as Tab;
   const employee = search.get('employee') ?? 'all';
   const [current, setCurrent] = useState<Snapshot | null>(null);
@@ -148,7 +164,7 @@ export function PerformanceIntelligenceClient() {
     const includesCurrent = range.from <= currentMonth && range.to >= currentMonth;
     const currentDay = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(8, 10);
     const currentSalesTo = includesCurrent ? currentMonth : range.to;
-    const priorSalesTo = includesCurrent ? previousYear(currentMonth) : priorRange.to;
+    const priorSalesTo = includesCurrent ? `${period === 'year' ? comparisonYear : Number(currentMonth.slice(0,4))-1}${currentMonth.slice(4)}` : priorRange.to;
     Promise.all([
       fetch(`/api/analytics/performance-intelligence?from=${range.from}&to=${range.to}&salesTo=${currentSalesTo}&throughDay=${includesCurrent ? currentDay : 31}`, { cache: 'no-store', signal: controller.signal }),
       fetch(`/api/analytics/performance-intelligence?from=${priorRange.from}&to=${priorRange.to}&salesTo=${priorSalesTo}&throughDay=${includesCurrent ? currentDay : 31}`, { cache: 'no-store', signal: controller.signal }),
@@ -161,7 +177,7 @@ export function PerformanceIntelligenceClient() {
     }).catch((e) => { if (e?.name !== 'AbortError') setError(e instanceof Error ? e.message : 'Unable to load'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [range.from, range.to, priorRange.from, priorRange.to]);
+  }, [range.from, range.to, priorRange.from, priorRange.to, comparisonYear, period]);
 
   const model = useMemo(() => {
     if (!current) return null;
@@ -208,6 +224,21 @@ export function PerformanceIntelligenceClient() {
   if (!model || !current) return null;
 
   const selectedMetric = model.selected;
+  const periodStart = new Date(`${range.from}-01T12:00:00Z`);
+  const periodEnd = new Date(Date.UTC(Number(range.to.slice(0,4)), Number(range.to.slice(5)), 0, 12));
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' });
+  const today = new Date(`${todayKey}T12:00:00Z`);
+  const effectiveToday = today < periodStart ? periodStart : today > periodEnd ? periodEnd : today;
+  const totalPeriodDays = Math.max(1, Math.round((periodEnd.getTime()-periodStart.getTime())/86400000)+1);
+  const elapsedDays = Math.max(1, Math.round((effectiveToday.getTime()-periodStart.getTime())/86400000)+1);
+  const remainingDays = Math.max(0, totalPeriodDays-elapsedDays);
+  const remainingTarget = Math.max(0, model.target-model.total);
+  const requiredDailyPace = remainingDays > 0 ? remainingTarget/remainingDays : 0;
+  const periodForecast = includesCurrentPeriod ? model.total/elapsedDays*totalPeriodDays : model.total;
+  const targetGap = periodForecast-model.target;
+  const comparisonLabel = period === 'year' ? comparisonYear : priorRange.from.slice(0,4);
+  const topPerformer = model.staff[0];
+  const supportOpportunity = [...model.staff].filter((s)=>s.target>0).sort((a,b)=>(a.achievement??0)-(b.achievement??0))[0];
   return (
     <main className="relative mx-auto max-w-[1680px] space-y-5 overflow-hidden p-4 md:p-6">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-[radial-gradient(circle_at_78%_8%,color-mix(in_srgb,var(--accent)_16%,transparent),transparent_32%),radial-gradient(circle_at_12%_16%,rgba(45,98,155,.12),transparent_30%)]" />
@@ -222,6 +253,9 @@ export function PerformanceIntelligenceClient() {
             <select aria-label="Period type" value={period} onChange={(e) => updateQuery({ period: e.target.value, employee: null })} className="h-11 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur [color-scheme:dark]">
               <option value="month">Monthly</option><option value="quarter">Quarterly</option><option value="half">Half-year</option><option value="year">Annual</option><option value="custom">Custom range</option>
             </select>
+            {period === 'year' && <select aria-label="Comparison year" value={comparisonYear} onChange={(e)=>updateQuery({compareYear:e.target.value})} className="h-11 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-bold text-white backdrop-blur [color-scheme:dark]">
+              {Array.from(new Set([...yearHistory.map((row)=>row.year), String(Number(anchorYear)-1), String(Number(anchorYear)-2)])).filter((year)=>year!==anchorYear).sort((a,b)=>Number(b)-Number(a)).map((year)=><option key={year} value={year}>vs {year}</option>)}
+            </select>}
             {period === 'custom' ? <>
               <input aria-label="From month" type="month" value={customFrom} onChange={(e) => parseMonthKey(e.target.value) && updateQuery({ from: e.target.value })} className="h-11 rounded-2xl border border-white/15 bg-white/10 px-3 text-sm font-bold text-white [color-scheme:dark]" />
               <span className="text-xs text-white/40">to</span>
@@ -255,6 +289,12 @@ export function PerformanceIntelligenceClient() {
         <section className="grid gap-4 md:grid-cols-3">
           {[['AVT', model.avt == null ? '—' : formatSarInt(model.avt), `${model.invoices} invoices`], ['UPT', model.upt?.toFixed(2) ?? '—', `${model.pieces} pieces`], ['AVP', model.avp == null ? '—' : formatSarInt(model.avp), 'Average value per piece']].map(([a,b,c], i) => <article key={a} className="app-card group relative overflow-hidden rounded-[26px] p-5"><span className="absolute end-4 top-4 text-4xl font-black text-accent/[.06]">0{i+1}</span><p className="text-[10px] font-black uppercase tracking-[.2em] text-accent">{a}</p><p className="mt-4 text-3xl font-black tracking-[-.04em] tabular-nums">{b}</p><p className="mt-2 text-xs text-muted">{c}</p><div className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-accent transition group-hover:scale-x-100" /></article>)}
         </section>
+        <section className="grid gap-4 xl:grid-cols-[.8fr_1.2fr]">
+          <article className="app-card rounded-[28px] p-6"><p className="text-[10px] font-black uppercase tracking-[.2em] text-accent">Target runway</p><h2 className="mt-1 text-lg font-black">What it takes to finish</h2><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Target remaining</p><p className="mt-2 text-xl font-black tabular-nums">{formatSarInt(remainingTarget)}</p></div><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Days remaining</p><p className="mt-2 text-xl font-black tabular-nums">{remainingDays}</p></div><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Required daily pace</p><p className="mt-2 text-xl font-black tabular-nums">{formatSarInt(requiredDailyPace)}</p></div><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-muted">Projected finish</p><p className="mt-2 text-xl font-black tabular-nums">{formatSarInt(periodForecast)}</p></div></div><div className={`mt-4 rounded-2xl border p-4 text-sm font-bold ${targetGap>=0?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-900'}`}>{targetGap>=0?`On the current pace, the boutique is projected to finish ${formatSarInt(targetGap)} above target.`:`The current pace projects a ${formatSarInt(Math.abs(targetGap))} gap. The team needs ${formatSarInt(requiredDailyPace)} per remaining day.`}</div></article>
+          <article className="app-card rounded-[28px] p-6"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-accent">Management readout</p><h2 className="mt-1 text-lg font-black">Team target position</h2></div><p className="text-xs text-muted">Ranked by achievement</p></div><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[620px] text-sm"><thead><tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted"><th className="pb-3 text-left">Employee</th><th className="pb-3 text-right">Sales</th><th className="pb-3 text-right">Target</th><th className="pb-3 text-right">Achieved</th><th className="pb-3 text-right">Remaining</th></tr></thead><tbody>{[...model.staff].sort((a,b)=>(b.achievement??0)-(a.achievement??0)).map((s,i)=><tr key={s.empId??s.name} className="border-b border-border/60"><td className="py-3 font-bold"><span className="me-2 inline-grid h-6 w-6 place-items-center rounded-full bg-surface-subtle text-[10px]">{i+1}</span>{s.name}</td><td className="py-3 text-right font-semibold tabular-nums">{formatSarInt(s.sales)}</td><td className="py-3 text-right tabular-nums text-muted">{s.target?formatSarInt(s.target):'—'}</td><td className="py-3 text-right font-black tabular-nums">{percent(s.achievement)}</td><td className="py-3 text-right tabular-nums">{s.target?formatSarInt(Math.max(s.target-s.sales,0)):'—'}</td></tr>)}</tbody></table></div></article>
+        </section>
+        {period === 'year' && <article className="app-card rounded-[28px] p-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-accent">Year over year</p><h2 className="mt-1 text-xl font-black">{anchorYear} compared with {comparisonLabel}</h2><p className="mt-1 text-xs text-muted">Same-date cutoff is used when the selected year is still in progress.</p></div><div className="flex gap-5 text-xs"><span><i className="me-2 inline-block h-2.5 w-2.5 rounded-full bg-accent"/>{anchorYear}</span><span><i className="me-2 inline-block h-2.5 w-2.5 rounded-full bg-[#8aa0b8]"/>{comparisonLabel}</span></div></div><div className="mt-5 grid gap-3 md:grid-cols-3"><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-xs text-muted">Current sales</p><p className="mt-2 text-2xl font-black">{formatSarInt(model.total)}</p></div><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-xs text-muted">Comparison sales</p><p className="mt-2 text-2xl font-black">{formatSarInt(model.priorTotal)}</p></div><div className="rounded-2xl bg-surface-subtle p-4"><p className="text-xs text-muted">Sales movement</p><p className={`mt-2 text-2xl font-black ${(model.yoy??0)>=0?'text-emerald-700':'text-rose-700'}`}>{model.yoy==null?'—':`${model.yoy>=0?'+':''}${model.yoy.toFixed(1)}%`}</p></div></div><PeriodComparison current={current.monthly} previous={prior?.monthly??[]} currentYear={anchorYear} comparisonYear={comparisonLabel}/></article>}
+        <section className="grid gap-4 md:grid-cols-3"><article className="rounded-[26px] border border-emerald-200 bg-emerald-50 p-5 text-emerald-950"><p className="text-[10px] font-black uppercase tracking-[.18em]">Team win</p><h3 className="mt-2 font-black">{topPerformer?.name??'—'}</h3><p className="mt-1 text-sm leading-6">Leads the period with {topPerformer?formatSarInt(topPerformer.sales):'—'} and {percent(topPerformer?.achievement??null)} target achievement.</p></article><article className="rounded-[26px] border border-amber-200 bg-amber-50 p-5 text-amber-950"><p className="text-[10px] font-black uppercase tracking-[.18em]">Coaching opportunity</p><h3 className="mt-2 font-black">{supportOpportunity?.name??'—'}</h3><p className="mt-1 text-sm leading-6">Currently at {percent(supportOpportunity?.achievement??null)}. A focused recovery plan can close {supportOpportunity?.target?formatSarInt(Math.max(supportOpportunity.target-supportOpportunity.sales,0)):'—'}.</p></article><article className="rounded-[26px] border border-sky-200 bg-sky-50 p-5 text-sky-950"><p className="text-[10px] font-black uppercase tracking-[.18em]">Company talking point</p><h3 className="mt-2 font-black">Performance direction</h3><p className="mt-1 text-sm leading-6">Sales are {model.yoy==null?'not yet comparable':`${Math.abs(model.yoy).toFixed(1)}% ${model.yoy>=0?'ahead of':'behind'} ${comparisonLabel}`}; projected finish is {formatSarInt(periodForecast)}.</p></article></section>
       </>}
 
       {activeTab === 'trends' && <><section className="grid gap-4 xl:grid-cols-[1.7fr_.7fr]"><article className="app-card p-5"><h2 className="font-bold">{model.showDaily || model.selected ? 'Daily' : 'Monthly'} Sales Pattern</h2><p className="mb-4 text-xs text-muted">Hover a point to see its value. Employee selection filters this chart.</p><SalesArea current={(model.selected ? model.selectedDaily : model.showDaily ? current.daily : current.monthly).map((d)=>sar(d.netSalesHalalas))} previous={(model.selected ? prior?.staffDaily.filter((d)=>d.empId===model.selected?.empId) : model.showDaily ? prior?.daily : prior?.monthly)?.map((d)=>sar(d.netSalesHalalas)) ?? []} /></article><article className="app-card p-5"><h2 className="font-bold">Period Signals</h2><div className="mt-5 space-y-4">{[['Best day', [...model.selectedDaily].sort((a,b)=>b.netSalesHalalas-a.netSalesHalalas)[0]], ['Invoices', model.invoices], ['Pieces', model.pieces]].map(([label,value]) => <div key={String(label)} className="border-b border-border pb-4"><p className="text-xs text-muted">{String(label)}</p><p className="mt-1 text-xl font-bold">{typeof value === 'object' && value ? `${value.date} · ${formatSarInt(sar(value.netSalesHalalas))}` : String(value ?? '—')}</p></div>)}</div></article></section><article className="app-card p-5"><h2 className="font-bold">All Years</h2><p className="text-xs text-muted">Annual sales and target comparison across every available year.</p><YearComparison data={yearHistory} /></article></>}
