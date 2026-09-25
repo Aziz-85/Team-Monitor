@@ -113,6 +113,10 @@ export function PerformanceIntelligenceClient() {
   const customTo = parseMonthKey(search.get('to') ?? '') ? search.get('to')! : month;
   const range = resolveRange(month, period, customFrom, customTo);
   const priorRange = { from: previousYear(range.from), to: previousYear(range.to) };
+  const currentMonthKey = getCurrentMonthKeyRiyadh();
+  const includesCurrentPeriod = range.from <= currentMonthKey && range.to >= currentMonthKey;
+  const riyadhDay = Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(8, 10));
+  const priorCutoffDate = new Date(`${previousYear(currentMonthKey)}-${String(riyadhDay).padStart(2, '0')}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   const activeTab = (tabs.some((t) => t.id === search.get('view')) ? search.get('view') : 'overview') as Tab;
   const employee = search.get('employee') ?? 'all';
   const [current, setCurrent] = useState<Snapshot | null>(null);
@@ -220,7 +224,7 @@ export function PerformanceIntelligenceClient() {
             </>}
           </div>
         </div>
-        <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-muted"><span className="rounded-full bg-accent-soft px-3 py-1.5 font-bold text-accent">{range.from} → {range.to}</span><span>compared with {priorRange.from} → {priorRange.to}</span></div>
+        <div className="relative mt-4 flex flex-wrap items-center gap-2 text-xs text-muted"><span className="rounded-full bg-accent-soft px-3 py-1.5 font-bold text-accent">{range.from} → {range.to}</span><span>{includesCurrentPeriod ? `compared through ${priorCutoffDate}` : `compared with ${priorRange.from} → ${priorRange.to}`}</span></div>
         <nav className="relative mt-5 flex gap-1 overflow-x-auto rounded-xl bg-surface-subtle p-1" aria-label="Intelligence views">
           {tabs.map((tab) => <button key={tab.id} onClick={() => updateQuery({ view: tab.id })} className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${activeTab === tab.id ? 'bg-surface text-accent shadow-sm' : 'text-muted hover:text-foreground'}`}>{tab.label}</button>)}
         </nav>
