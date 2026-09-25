@@ -17,6 +17,28 @@ export async function GET(request: NextRequest) {
   const gate = await requireExecutiveApiViewer(request, user);
   if (!gate.ok) return gate.res;
 
+  const boutiqueId = gate.scope.boutiqueId;
+  if (request.nextUrl.searchParams.get('mode') === 'years') {
+    const [sales, targets] = await Promise.all([
+      prisma.salesEntry.groupBy({ by: ['month'], where: { boutiqueId }, _sum: { amount: true } }),
+      prisma.boutiqueMonthlyTarget.findMany({ where: { boutiqueId }, select: { month: true, amount: true } }),
+    ]);
+    const years = new Map<string, { sales: number; target: number }>();
+    sales.forEach((row) => {
+      const year = row.month.slice(0, 4);
+      const value = years.get(year) ?? { sales: 0, target: 0 };
+      value.sales += row._sum.amount ?? 0;
+      years.set(year, value);
+    });
+    targets.forEach((row) => {
+      const year = row.month.slice(0, 4);
+      const value = years.get(year) ?? { sales: 0, target: 0 };
+      value.target += row.amount;
+      years.set(year, value);
+    });
+    return NextResponse.json({ years: Array.from(years.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([year, value]) => ({ year, ...value })) });
+  }
+
   const from = request.nextUrl.searchParams.get('from') ?? '';
   const to = request.nextUrl.searchParams.get('to') ?? '';
   if (!MONTH.test(from) || !MONTH.test(to) || monthIndex(to) < monthIndex(from)) {
@@ -26,12 +48,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Maximum period is 24 months' }, { status: 400 });
   }
 
-  const boutiqueId = gate.scope.boutiqueId;
-  const where = { boutiqueId, month: { gte: from, lte: to } };
-  const [monthlyRows, dailyRows, staffRows, employeeTargets, boutiqueTargets, boutique] = await Promise.all([
+  const requestedSalesTo = request.nextUrl.searchParams.get('salesTo') ?? to;
+  const salesTo = MONTH.test(requestedSalesTo) && requestedSalesTo >= from && requestedSalesTo <= to ? requestedSalesTo : to;
+  const throughDay = Math.min(31, Math.max(1, Number(request.nextUrl.searchParams.get('throughDay')) || 31));
+  const dateKeyLimit = `${salesTo}-${String(throughDay).padStart(2, '0')}`;
+  const where = { boutiqueId, month: { gte: from, lte: salesTo }, dateKey: { lte: dateKeyLimit } };
+  const [monthlyRows, dailyRows, staffRows, staffDailyRows, employeeTargets, boutiqueTargets, boutique] = await Promise.all([
     prisma.salesEntry.groupBy({ by: ['month'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
     prisma.salesEntry.groupBy({ by: ['dateKey'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
     prisma.salesEntry.groupBy({ by: ['userId'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
+    prisma.salesEntry.groupBy({ by: ['userId', 'dateKey'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
     prisma.employeeMonthlyTarget.findMany({ where: { boutiqueId, month: { gte: from, lte: to } }, select: { userId: true, amount: true } }),
     prisma.boutiqueMonthlyTarget.findMany({ where: { boutiqueId, month: { gte: from, lte: to } }, select: { month: true, amount: true } }),
     prisma.boutique.findUnique({ where: { id: boutiqueId }, select: { code: true } }),
@@ -71,6 +97,13 @@ export async function GET(request: NextRequest) {
       };
     }),
     daily: dailyRows.map((row) => ({
+      date: row.dateKey,
+      netSalesHalalas: (row._sum.amount ?? 0) * 100,
+      invoices: row._sum.invoiceCount ?? 0,
+      pieces: row._sum.pieceCount ?? 0,
+    })).sort((a, b) => a.date.localeCompare(b.date)),
+    staffDaily: staffDailyRows.map((row) => ({
+      empId: userMap.get(row.userId)?.empId,
       date: row.dateKey,
       netSalesHalalas: (row._sum.amount ?? 0) * 100,
       invoices: row._sum.invoiceCount ?? 0,

@@ -8,7 +8,9 @@ import { formatSarInt } from '@/lib/utils/money';
 type Day = { date: string; netSalesHalalas: number; invoices: number; pieces: number };
 type Staff = { empId?: string; name: string; netSalesHalalas: number; invoices: number; pieces: number; targetHalalas?: number; achievementPct?: number };
 type MonthlyPoint = { month: string; netSalesHalalas: number; targetHalalas: number; invoices: number; pieces: number };
-type Snapshot = { from: string; to: string; branchCode: string; targetHalalas: number; monthly: MonthlyPoint[]; daily: Day[]; staff: Staff[] };
+type StaffDay = Day & { empId?: string };
+type Snapshot = { from: string; to: string; branchCode: string; targetHalalas: number; monthly: MonthlyPoint[]; daily: Day[]; staffDaily: StaffDay[]; staff: Staff[] };
+type YearPoint = { year: string; sales: number; target: number };
 type Tab = 'overview' | 'trends' | 'team' | 'detail';
 type Period = 'month' | 'quarter' | 'half' | 'year' | 'custom';
 
@@ -55,7 +57,7 @@ function Metric({ label, value, delta, accent = false }: { label: string; value:
     <article className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${accent ? 'border-accent/25 bg-accent text-white' : 'border-border bg-surface'}`}>
       <p className={`text-[10px] font-bold uppercase tracking-[0.14em] ${accent ? 'text-white/70' : 'text-muted'}`}>{label}</p>
       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{value}</p>
-      {delta !== undefined && <p className={`mt-1 text-xs font-semibold ${accent ? 'text-white/80' : ''}`}><Delta value={delta} /></p>}
+      {delta !== undefined && <p className={`mt-1 text-xs font-semibold ${accent ? 'text-white/85' : ''}`}>{accent ? (delta == null ? 'No comparison' : `${delta >= 0 ? '↗' : '↘'} ${Math.abs(delta).toFixed(1)}% vs LY`) : <Delta value={delta} />}</p>}
     </article>
   );
 }
@@ -86,10 +88,18 @@ function SalesArea({ current, previous }: { current: number[]; previous: number[
         {currentPoints && <polygon points={`${pad},${height-pad} ${currentPoints} ${width-pad},${height-pad}`} fill="var(--accent)" opacity=".10" />}
         <polyline points={points(previous)} fill="none" stroke="currentColor" className="text-muted" opacity=".55" strokeWidth="2" strokeDasharray="7 6" />
         <polyline points={currentPoints} fill="none" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {current.map((value, i) => { const x = pad + (i * (width - pad * 2)) / Math.max(current.length - 1, 1); const y = height - pad - (value / max) * (height - pad * 2); return <circle key={i} cx={x} cy={y} r="4" fill="var(--accent)"><title>{formatSarInt(value)}</title></circle>; })}
+        <text x={pad} y={14} fill="currentColor" className="text-muted" fontSize="10">{formatSarInt(max)}</text>
+        <text x={pad} y={height-7} fill="currentColor" className="text-muted" fontSize="10">0</text>
       </svg>
       <div className="flex justify-center gap-5 pb-2 text-xs font-medium text-muted"><span><i className="me-2 inline-block h-0.5 w-5 bg-accent align-middle" />Current year</span><span><i className="me-2 inline-block h-0.5 w-5 bg-muted align-middle" />Previous year</span></div>
     </div>
   );
+}
+
+function YearComparison({ data }: { data: YearPoint[] }) {
+  const max = Math.max(...data.flatMap((row) => [row.sales, row.target]), 1);
+  return <div className="mt-4 flex min-h-56 items-end gap-3 overflow-x-auto rounded-xl bg-surface-subtle/60 p-4">{data.map((row) => <div key={row.year} className="flex min-w-20 flex-1 flex-col items-center gap-2"><div className="flex h-40 items-end gap-1.5"><div title={`Sales ${formatSarInt(row.sales)}`} className="w-6 rounded-t-md bg-accent" style={{height:`${Math.max(3,row.sales/max*100)}%`}} /><div title={`Target ${formatSarInt(row.target)}`} className="w-6 rounded-t-md bg-muted/30" style={{height:`${Math.max(3,row.target/max*100)}%`}} /></div><span className="text-xs font-bold">{row.year}</span><span className="text-[10px] text-muted">{row.target ? percent(row.sales/row.target*100,0) : '—'}</span></div>)}</div>;
 }
 
 export function PerformanceIntelligenceClient() {
@@ -107,6 +117,7 @@ export function PerformanceIntelligenceClient() {
   const employee = search.get('employee') ?? 'all';
   const [current, setCurrent] = useState<Snapshot | null>(null);
   const [prior, setPrior] = useState<Snapshot | null>(null);
+  const [yearHistory, setYearHistory] = useState<YearPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,13 +134,20 @@ export function PerformanceIntelligenceClient() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(null);
+    const currentMonth = getCurrentMonthKeyRiyadh();
+    const includesCurrent = range.from <= currentMonth && range.to >= currentMonth;
+    const currentDay = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(8, 10);
+    const currentSalesTo = includesCurrent ? currentMonth : range.to;
+    const priorSalesTo = includesCurrent ? previousYear(currentMonth) : priorRange.to;
     Promise.all([
-      fetch(`/api/analytics/performance-intelligence?from=${range.from}&to=${range.to}`, { cache: 'no-store', signal: controller.signal }),
-      fetch(`/api/analytics/performance-intelligence?from=${priorRange.from}&to=${priorRange.to}`, { cache: 'no-store', signal: controller.signal }),
-    ]).then(async ([now, last]) => {
+      fetch(`/api/analytics/performance-intelligence?from=${range.from}&to=${range.to}&salesTo=${currentSalesTo}&throughDay=${includesCurrent ? currentDay : 31}`, { cache: 'no-store', signal: controller.signal }),
+      fetch(`/api/analytics/performance-intelligence?from=${priorRange.from}&to=${priorRange.to}&salesTo=${priorSalesTo}&throughDay=${includesCurrent ? currentDay : 31}`, { cache: 'no-store', signal: controller.signal }),
+      fetch('/api/analytics/performance-intelligence?mode=years', { cache: 'no-store', signal: controller.signal }),
+    ]).then(async ([now, last, years]) => {
       if (!now.ok) throw new Error('Unable to load performance data');
       setCurrent(await now.json());
       setPrior(last.ok ? await last.json() : null);
+      setYearHistory(years.ok ? (await years.json()).years ?? [] : []);
     }).catch((e) => { if (e?.name !== 'AbortError') setError(e instanceof Error ? e.message : 'Unable to load'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -137,15 +155,6 @@ export function PerformanceIntelligenceClient() {
 
   const model = useMemo(() => {
     if (!current) return null;
-    const total = current.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0);
-    const invoices = current.daily.reduce((s, d) => s + d.invoices, 0);
-    const pieces = current.daily.reduce((s, d) => s + d.pieces, 0);
-    const target = sar(current.targetHalalas ?? 0);
-    const priorTotal = prior?.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0) ?? 0;
-    const yoy = priorTotal > 0 ? ((total / priorTotal) - 1) * 100 : null;
-    const seriesRows = period === 'month' ? current.daily : current.monthly;
-    const priorSeriesRows = period === 'month' ? prior?.daily : prior?.monthly;
-    const cumulative = (rows: { netSalesHalalas: number }[] | undefined) => { let sum = 0; return (rows ?? []).map((d) => (sum += sar(d.netSalesHalalas))); };
     const staff = current.staff.map((s) => ({
       ...s,
       sales: sar(s.netSalesHalalas),
@@ -156,11 +165,23 @@ export function PerformanceIntelligenceClient() {
       upt: ratio(s.pieces, s.invoices),
     })).sort((a, b) => b.sales - a.sales);
     const selected = employee === 'all' ? null : staff.find((s) => (s.empId ?? s.name) === employee) ?? null;
-    const activeDays = Math.max(current.daily.filter((d) => d.netSalesHalalas || d.invoices || d.pieces).length, 1);
+    const selectedDaily = selected ? current.staffDaily.filter((d) => d.empId === selected.empId) : current.daily;
+    const priorSelected = selected ? prior?.staff.find((s) => s.empId === selected.empId) : null;
+    const total = selected?.sales ?? current.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0);
+    const invoices = selected?.invoices ?? current.daily.reduce((s, d) => s + d.invoices, 0);
+    const pieces = selected?.pieces ?? current.daily.reduce((s, d) => s + d.pieces, 0);
+    const target = selected?.target ?? sar(current.targetHalalas ?? 0);
+    const priorTotal = priorSelected ? sar(priorSelected.netSalesHalalas) : prior?.daily.reduce((s, d) => s + sar(d.netSalesHalalas), 0) ?? 0;
+    const yoy = priorTotal > 0 ? ((total / priorTotal) - 1) * 100 : null;
+    const showDaily = range.from === range.to;
+    const seriesRows = selected ? selectedDaily : showDaily ? current.daily : current.monthly;
+    const priorSeriesRows = priorSelected ? prior?.staffDaily.filter((d) => d.empId === selected?.empId) : showDaily ? prior?.daily : prior?.monthly;
+    const cumulative = (rows: { netSalesHalalas: number }[] | undefined) => { let sum = 0; return (rows ?? []).map((d) => (sum += sar(d.netSalesHalalas))); };
     const daysInPeriod = current.monthly.reduce((sum, row) => sum + new Date(Number(row.month.slice(0,4)), Number(row.month.slice(5)), 0).getDate(), 0);
-    const forecast = period === 'month' && month === getCurrentMonthKeyRiyadh() ? total / activeDays * daysInPeriod : total;
-    return { total, target, invoices, pieces, priorTotal, yoy, staff, selected, forecast, cumulative: cumulative(seriesRows), priorCumulative: cumulative(priorSeriesRows), achievement: ratio(total * 100, target), avt: ratio(total, invoices), avp: ratio(total, pieces), upt: ratio(pieces, invoices) };
-  }, [current, prior, employee, month, period]);
+    const elapsedCalendarDays = Math.max(1, Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }).slice(8, 10)));
+    const forecast = period === 'month' && month === getCurrentMonthKeyRiyadh() ? total / elapsedCalendarDays * daysInPeriod : total;
+    return { total, target, invoices, pieces, priorTotal, yoy, staff, selected, selectedDaily, showDaily, forecast, cumulative: cumulative(seriesRows), priorCumulative: cumulative(priorSeriesRows), achievement: ratio(total * 100, target), avt: ratio(total, invoices), avp: ratio(total, pieces), upt: ratio(pieces, invoices) };
+  }, [current, prior, employee, month, period, range.from, range.to]);
 
   const exportCsv = () => {
     if (!current || !model) return;
@@ -205,28 +226,29 @@ export function PerformanceIntelligenceClient() {
         </nav>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {model.selected && <div className="flex items-center justify-between rounded-xl border border-accent/25 bg-accent-soft px-4 py-2 text-sm"><span>Filtered by <strong>{model.selected.name}</strong></span><button onClick={() => updateQuery({ employee: null })} className="font-bold text-accent">Clear filter ×</button></div>}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Net Sales" value={formatSarInt(model.total)} delta={model.yoy} accent />
         <Metric label="Target Achievement" value={percent(model.achievement)} />
-        <Metric label={period === 'month' && month === getCurrentMonthKeyRiyadh() ? 'Month-end Forecast' : 'Target Gap'} value={period === 'month' && month === getCurrentMonthKeyRiyadh() ? formatSarInt(model.forecast) : formatSarInt(model.total-model.target)} />
+        <Metric label={period === 'month' && month === getCurrentMonthKeyRiyadh() ? 'Month-end Forecast' : model.total >= model.target ? 'Above Target' : 'Remaining'} value={period === 'month' && month === getCurrentMonthKeyRiyadh() ? formatSarInt(model.forecast) : formatSarInt(Math.abs(model.total-model.target))} />
         <Metric label="YoY Change" value={model.yoy == null ? '—' : `${model.yoy >= 0 ? '+' : ''}${model.yoy.toFixed(1)}%`} />
       </section>
 
       {activeTab === 'overview' && <>
         <section className="grid gap-4 xl:grid-cols-[1.6fr_.8fr]">
           <article className="app-card p-5"><div className="mb-3 flex items-center justify-between"><div><h2 className="font-bold">Sales Momentum</h2><p className="text-xs text-muted">Selected period compared with the same period last year</p></div><Delta value={model.yoy} /></div><SalesArea current={model.cumulative} previous={model.priorCumulative} /></article>
-          <article className="app-card flex flex-col justify-between gap-5 p-5"><Ring value={model.achievement ?? 0} label="Achievement" /><div className="grid grid-cols-2 gap-2 border-t border-border pt-4"><div><p className="text-xs text-muted">Remaining</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(Math.max(model.target-model.total,0))}</p></div><div><p className="text-xs text-muted">Forecast gap</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(model.forecast-model.target)}</p></div></div></article>
+          <article className="app-card flex flex-col justify-between gap-5 p-5"><Ring value={model.achievement ?? 0} label="Achievement" /><div className="grid grid-cols-2 gap-2 border-t border-border pt-4"><div><p className="text-xs text-muted">Remaining</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(Math.max(model.target-model.total,0))}</p></div><div><p className="text-xs text-muted">Vs target</p><p className="mt-1 font-bold tabular-nums">{formatSarInt(model.forecast-model.target)}</p></div></div></article>
         </section>
         <section className="grid gap-4 md:grid-cols-3">
           {[['AVT', model.avt == null ? '—' : formatSarInt(model.avt), `${model.invoices} invoices`], ['UPT', model.upt?.toFixed(2) ?? '—', `${model.pieces} pieces`], ['AVP', model.avp == null ? '—' : formatSarInt(model.avp), 'Average value per piece']].map(([a,b,c]) => <article key={a} className="app-card p-5"><p className="text-xs font-bold text-accent">{a}</p><p className="mt-2 text-3xl font-bold tabular-nums">{b}</p><p className="mt-1 text-xs text-muted">{c}</p></article>)}
         </section>
       </>}
 
-      {activeTab === 'trends' && <section className="grid gap-4 xl:grid-cols-[1.7fr_.7fr]"><article className="app-card p-5"><h2 className="font-bold">{period === 'month' ? 'Daily' : 'Monthly'} Sales Pattern</h2><p className="mb-4 text-xs text-muted">The chart changes automatically with the selected analysis period.</p><SalesArea current={(period === 'month' ? current.daily : current.monthly).map((d)=>sar(d.netSalesHalalas))} previous={(period === 'month' ? prior?.daily : prior?.monthly)?.map((d)=>sar(d.netSalesHalalas)) ?? []} /></article><article className="app-card p-5"><h2 className="font-bold">Period Signals</h2><div className="mt-5 space-y-4">{[['Best day', [...current.daily].sort((a,b)=>b.netSalesHalalas-a.netSalesHalalas)[0]], ['Invoices', model.invoices], ['Pieces', model.pieces]].map(([label,value]) => <div key={String(label)} className="border-b border-border pb-4"><p className="text-xs text-muted">{String(label)}</p><p className="mt-1 text-xl font-bold">{typeof value === 'object' && value ? `${value.date} · ${formatSarInt(sar(value.netSalesHalalas))}` : String(value ?? '—')}</p></div>)}</div></article></section>}
+      {activeTab === 'trends' && <><section className="grid gap-4 xl:grid-cols-[1.7fr_.7fr]"><article className="app-card p-5"><h2 className="font-bold">{model.showDaily || model.selected ? 'Daily' : 'Monthly'} Sales Pattern</h2><p className="mb-4 text-xs text-muted">Hover a point to see its value. Employee selection filters this chart.</p><SalesArea current={(model.selected ? model.selectedDaily : model.showDaily ? current.daily : current.monthly).map((d)=>sar(d.netSalesHalalas))} previous={(model.selected ? prior?.staffDaily.filter((d)=>d.empId===model.selected?.empId) : model.showDaily ? prior?.daily : prior?.monthly)?.map((d)=>sar(d.netSalesHalalas)) ?? []} /></article><article className="app-card p-5"><h2 className="font-bold">Period Signals</h2><div className="mt-5 space-y-4">{[['Best day', [...model.selectedDaily].sort((a,b)=>b.netSalesHalalas-a.netSalesHalalas)[0]], ['Invoices', model.invoices], ['Pieces', model.pieces]].map(([label,value]) => <div key={String(label)} className="border-b border-border pb-4"><p className="text-xs text-muted">{String(label)}</p><p className="mt-1 text-xl font-bold">{typeof value === 'object' && value ? `${value.date} · ${formatSarInt(sar(value.netSalesHalalas))}` : String(value ?? '—')}</p></div>)}</div></article></section><article className="app-card p-5"><h2 className="font-bold">All Years</h2><p className="text-xs text-muted">Annual sales and target comparison across every available year.</p><YearComparison data={yearHistory} /></article></>}
 
       {activeTab === 'team' && <section className="grid gap-4 xl:grid-cols-[1.2fr_.8fr]"><article className="app-card p-5"><div className="flex items-center justify-between"><div><h2 className="font-bold">Team Contribution</h2><p className="text-xs text-muted">Select a person to cross-filter the spotlight.</p></div><button onClick={() => updateQuery({ employee: null })} className="text-xs font-semibold text-accent">Clear filter</button></div><div className="mt-5 space-y-3">{model.staff.map((s) => { const key=s.empId??s.name; const share=ratio(s.sales*100,model.total)??0; return <button key={key} onClick={()=>updateQuery({employee:key})} className={`w-full rounded-xl border p-3 text-left transition ${employee===key?'border-accent bg-accent-soft':'border-border hover:bg-surface-subtle'}`}><div className="mb-2 flex justify-between gap-3"><span className="font-semibold">{s.name}</span><span className="font-bold tabular-nums">{formatSarInt(s.sales)}</span></div><div className="h-2 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-accent" style={{width:`${Math.min(share,100)}%`}} /></div><p className="mt-1 text-xs text-muted">{share.toFixed(1)}% contribution · {percent(s.achievement)} target</p></button>})}</div></article><article className="app-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-accent">Employee Spotlight</p>{selectedMetric ? <div className="mt-4"><h2 className="text-2xl font-bold">{selectedMetric.name}</h2><p className="text-sm text-muted">{selectedMetric.empId??'—'}</p><div className="mt-6 grid grid-cols-2 gap-3">{[['Sales',formatSarInt(selectedMetric.sales)],['Achievement',percent(selectedMetric.achievement)],['AVT',selectedMetric.avt?formatSarInt(selectedMetric.avt):'—'],['UPT',selectedMetric.upt?.toFixed(2)??'—']].map(([a,b])=><div key={a} className="rounded-xl bg-surface-subtle p-3"><p className="text-xs text-muted">{a}</p><p className="mt-1 font-bold">{b}</p></div>)}</div></div> : <div className="grid min-h-64 place-items-center text-center text-sm text-muted">Select an employee to reveal their performance profile.</div>}</article></section>}
 
-      {activeTab === 'detail' && <section className="app-card overflow-hidden"><div className="border-b border-border p-5"><h2 className="font-bold">Daily Detail</h2><p className="text-xs text-muted">Official source rows for the selected period.</p></div><div className="max-h-[640px] overflow-auto"><table className="w-full min-w-[760px] text-sm"><thead className="sticky top-0 bg-surface-subtle text-xs uppercase text-muted"><tr><th className="px-4 py-3 text-left">Date</th><th className="px-4 py-3 text-right">Sales</th><th className="px-4 py-3 text-right">Invoices</th><th className="px-4 py-3 text-right">Pieces</th><th className="px-4 py-3 text-right">AVT</th><th className="px-4 py-3 text-right">UPT</th></tr></thead><tbody>{current.daily.map((d)=><tr key={d.date} className="border-t border-border/70 hover:bg-surface-subtle"><td className="px-4 py-3 font-medium">{d.date}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{d.netSalesHalalas?formatSarInt(sar(d.netSalesHalalas)):''}</td><td className="px-4 py-3 text-right">{d.invoices||''}</td><td className="px-4 py-3 text-right">{d.pieces||''}</td><td className="px-4 py-3 text-right">{d.invoices?formatSarInt(sar(d.netSalesHalalas)/d.invoices):''}</td><td className="px-4 py-3 text-right">{d.invoices?(d.pieces/d.invoices).toFixed(2):''}</td></tr>)}</tbody></table></div></section>}
+      {activeTab === 'detail' && <section className="app-card overflow-hidden"><div className="border-b border-border p-5"><h2 className="font-bold">Daily Detail</h2><p className="text-xs text-muted">Official source rows for the selected period{model.selected ? ` · ${model.selected.name}` : ''}.</p></div><div className="max-h-[640px] overflow-auto"><table className="w-full min-w-[760px] text-sm"><thead className="sticky top-0 bg-surface-subtle text-xs uppercase text-muted"><tr><th className="px-4 py-3 text-left">Date</th><th className="px-4 py-3 text-right">Sales</th><th className="px-4 py-3 text-right">Invoices</th><th className="px-4 py-3 text-right">Pieces</th><th className="px-4 py-3 text-right">AVT</th><th className="px-4 py-3 text-right">UPT</th></tr></thead><tbody>{model.selectedDaily.map((d)=><tr key={d.date} className="border-t border-border/70 hover:bg-surface-subtle"><td className="px-4 py-3 font-medium">{d.date}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{d.netSalesHalalas?formatSarInt(sar(d.netSalesHalalas)):''}</td><td className="px-4 py-3 text-right">{d.invoices||''}</td><td className="px-4 py-3 text-right">{d.pieces||''}</td><td className="px-4 py-3 text-right">{d.invoices?formatSarInt(sar(d.netSalesHalalas)/d.invoices):''}</td><td className="px-4 py-3 text-right">{d.invoices?(d.pieces/d.invoices).toFixed(2):''}</td></tr>)}</tbody></table></div></section>}
     </main>
   );
 }
