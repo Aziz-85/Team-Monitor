@@ -18,14 +18,12 @@ import { formatSarInt } from '@/lib/utils/money';
 import Link from 'next/link';
 import {
   EmptyStateBlock,
-  InsightGrid,
   PageContainer,
-  RecommendationCard,
   SectionBlock,
 } from '@/components/ui/ExecutiveIntelligence';
 import { paceSignal } from '@/lib/presentation/executiveIntelligence';
 import { useQuickActions } from '@/lib/nav/useQuickActions';
-import { DAILY_SALES_LEDGER_HREF, QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
+import { QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
 import { Button } from '@/components/ui/Button';
 import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
 import {
@@ -33,6 +31,37 @@ import {
   warningsFromValidationResults,
   warningsFromWeekSummary,
 } from '@/lib/schedule/coverageWarningFormatter';
+import type { QuickActionKey } from '@/lib/nav/quickActions';
+
+function HomeActionIcon({ action }: { action: QuickActionKey }) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  if (action === 'schedule') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>;
+  }
+  if (action === 'tasks') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="m5 7 2 2 4-4M13 7h6M5 15l2 2 4-4m2 2h6" /></svg>;
+  }
+  if (action === 'dailySalesLedger') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="M5 3h14v18H5zM8 7h8m-8 4h3m2 0h3m-8 4h3m2 0h3" /></svg>;
+  }
+  if (action === 'salesSummary' || action === 'executive' || action === 'dashboard') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="M4 19V9m6 10V5m6 14v-7m4 7H2" /></svg>;
+  }
+  if (action === 'targets') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><circle {...common} cx="12" cy="12" r="8" /><circle {...common} cx="12" cy="12" r="3" /><path {...common} d="m14 10 6-6" /></svg>;
+  }
+  if (action === 'inventoryDaily') {
+    return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="m4 8 8-4 8 4-8 4-8-4Zm0 0v8l8 4 8-4V8m-8 4v8" /></svg>;
+  }
+  return <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden><path {...common} d="M4 6h16M4 12h16M4 18h10" /></svg>;
+}
 
 function weekStartFor(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -316,7 +345,10 @@ export function HomePageClient({
       });
   }, []);
 
-  const coverageValidation: ValidationResult[] = data?.coverageValidation ?? [];
+  const coverageValidation = useMemo<ValidationResult[]>(
+    () => data?.coverageValidation ?? [],
+    [data?.coverageValidation]
+  );
   const coverageSuggestion = data?.coverageSuggestion ?? null;
   const coverageSuggestionExplanation = data?.coverageSuggestionExplanation;
 
@@ -465,87 +497,88 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
 
   return (
     <PageContainer className="overflow-x-hidden space-y-5 md:space-y-6">
-      <SectionBlock
-        title={t('nav.dashboard')}
-        rightSlot={
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-200 bg-amber-50 text-amber-800'
-              }`}
-            >
-              {myZoneBadgeText}
-            </span>
-            {myZone && (
-              <button
-                type="button"
-                onClick={() => setZoneDialogOpen(true)}
-                className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-surface-subtle"
-              >
-                {t('inventory.openMap')}
-              </button>
-            )}
-          </div>
-        }
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm font-medium text-muted">{t('common.date')}</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm"
-          />
-        </div>
-      </SectionBlock>
-
-      <RecommendationCard
-        title={heroTitle}
-        message={heroHint}
-        tone={paceUi.tone}
-        className="border-2 p-5 md:p-6"
-      />
-
-      {canOpenDailySalesLedger && (
-        <Link
-          href={DAILY_SALES_LEDGER_HREF}
-          onClick={() => trackQuickAction('dailySalesLedger')}
-          className="block"
-        >
-          <RecommendationCard
-            title={t('home.quickActions.dailySalesLedger.title')}
-            message=""
-            tone="info"
-            className="border-2 border-accent/40 bg-accent/5 p-5 md:p-6 hover:bg-accent/10"
-            actionSlot={
-              <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
-                {t('home.quickActionsGo')}
+      <section className="relative overflow-hidden rounded-[2rem] border border-slate-700/50 bg-[linear-gradient(125deg,#071a31_0%,#0d3151_56%,#0f5a62_125%)] text-white shadow-[0_28px_80px_-38px_rgba(2,16,34,.9)]">
+        <div className="pointer-events-none absolute -end-24 -top-32 h-96 w-96 rounded-full border border-white/10 bg-white/[.035]" />
+        <div className="pointer-events-none absolute bottom-0 start-1/3 h-44 w-44 rounded-full bg-cyan-300/[.06] blur-3xl" />
+        <div className="relative p-5 md:p-7 lg:p-8">
+          <div className="flex flex-col gap-5 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200/80">Boutique command centre</p>
+              <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight md:text-3xl">
+                {boutiqueName || t('nav.dashboard')}
+              </h1>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-200">
+                <span>{heroTitle}</span>
+                <span className="h-1 w-1 rounded-full bg-cyan-300" />
+                <span>{heroHint}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="home-date">{t('common.date')}</label>
+              <input
+                id="home-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-sm text-white shadow-sm outline-none [color-scheme:dark] focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/20"
+              />
+              <span className={`inline-flex h-10 items-center rounded-xl border px-3 text-xs font-semibold ${myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
+                {myZoneBadgeText}
               </span>
-            }
-          />
-        </Link>
-      )}
+              {myZone && (
+                <button type="button" onClick={() => setZoneDialogOpen(true)} className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/15">
+                  {t('inventory.openMap')}
+                </button>
+              )}
+            </div>
+          </div>
 
-      <SectionBlock title={t('home.quickActionsTitle')}>
-        <InsightGrid className="gap-4">
-          {visibleQuickActions.slice(0, 5).map((a) => (
+          <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: t('home.executive.primaryTargetPct'), value: performance ? `${Math.max(0, Math.round(pace))}%` : '—', note: paceUi.shortLabel, accent: 'bg-cyan-300' },
+              { label: t('home.todayTasksTitle'), value: `${tasksCompleted}/${tasksTotal}`, note: `${taskCompletionPct}% complete`, accent: 'bg-emerald-300' },
+              { label: t('home.coverageStatus'), value: `${weekCoveragePct}%`, note: weekCoverageFormatted.totalAffectedDays > 0 ? `${weekCoverageFormatted.totalAffectedDays} days need attention` : t('home.allClear'), accent: 'bg-sky-300' },
+              { label: t('home.operationalAlerts'), value: String(totalWarnings), note: totalWarnings > 0 ? 'Items need attention' : t('home.allClear'), accent: totalWarnings > 0 ? 'bg-amber-300' : 'bg-emerald-300' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[.07] p-4 backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-300">{item.label}</p>
+                  <span className={`h-2 w-2 rounded-full ${item.accent}`} />
+                </div>
+                <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">{item.value}</p>
+                <p className="mt-1 truncate text-xs text-slate-300">{item.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="quick-actions-heading">
+        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Navigate</p>
+            <h2 id="quick-actions-heading" className="mt-1 text-lg font-semibold text-foreground">{t('home.quickActionsTitle')}</h2>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+          {visibleQuickActions.slice(0, 5).map((a, index) => (
             <Link
               key={a.key}
               href={a.href}
               onClick={() => trackQuickAction(a.key)}
-              className="block"
+              className={`group relative min-h-28 overflow-hidden rounded-2xl border p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${index === 0 ? 'border-accent/30 bg-accent text-white' : 'border-border bg-surface text-foreground hover:border-accent/30'}`}
             >
-              <RecommendationCard
-                title={t(a.titleKey)}
-                message=""
-                tone="info"
-                className="hover:bg-surface-subtle"
-                actionSlot={<span className="text-xs font-medium text-muted">{t('home.quickActionsGo')}</span>}
-              />
+              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${index === 0 ? 'bg-white/15 text-white' : 'bg-accent-soft text-accent'}`}>
+                <HomeActionIcon action={a.key} />
+              </span>
+              <div className="mt-4 flex items-end justify-between gap-2">
+                <span className="text-sm font-semibold leading-tight">{t(a.titleKey)}</span>
+                <span className={`text-lg transition-transform group-hover:translate-x-0.5 ${index === 0 ? 'text-white/70' : 'text-muted'}`} aria-hidden>→</span>
+              </div>
             </Link>
           ))}
-        </InsightGrid>
-      </SectionBlock>
+        </div>
+      </section>
 
       <SectionBlock
         title={t('home.executiveOperationalTitle')}
@@ -569,26 +602,6 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         }
       >
         <div className="space-y-6">
-          {performance && (
-            <section className="app-card overflow-hidden p-5 md:p-6">
-              <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-                <div className="flex flex-col justify-between gap-5">
-                  <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Boutique pulse</p><h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">{paceUi.shortLabel}</h2></div>
-                  <div className="h-3 overflow-hidden rounded-full bg-surface-subtle"><div className={`h-full rounded-full transition-all ${pace >= 100 ? 'bg-emerald-500' : pace >= 80 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.max(0, pace))}%` }} /></div>
-                  <div className="flex flex-wrap gap-2 text-xs"><Link href="/executive/monthly" className="rounded-full bg-accent-soft px-3 py-1.5 font-semibold text-accent">Monthly report</Link><Link href="/reports/daily-performance" className="rounded-full bg-surface-subtle px-3 py-1.5 font-semibold text-foreground">Daily report</Link></div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: t('home.executive.primaryTargetPct'), value: Math.max(0, Math.round(pace)), suffix: '%' },
-                    { label: t('home.todayTasksTitle'), value: taskCompletionPct, suffix: '%' },
-                    { label: t('home.coverageStatus'), value: weekCoveragePct, suffix: '%' },
-                  ].map((item) => <div key={item.label} className="grid place-items-center text-center"><div className="relative grid aspect-square w-full max-w-24 place-items-center rounded-full" style={{ background: `conic-gradient(var(--accent) ${Math.min(100, item.value)}%, var(--surface-subtle) 0)` }}><span className="absolute inset-2 rounded-full bg-surface" /><strong className="relative text-lg tabular-nums text-foreground">{item.value}{item.suffix}</strong></div><span className="mt-2 text-[10px] font-semibold text-muted">{item.label}</span></div>)}
-                </div>
-              </div>
-              {totalWarnings > 0 && <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-900"><span>{totalWarnings} items need attention</span><span className="h-2 w-2 rounded-full bg-amber-500" /></div>}
-            </section>
-          )}
-
           {/* Compliance & Expiry */}
           <ComplianceExpiryCard
             alerts={complianceAlerts}
