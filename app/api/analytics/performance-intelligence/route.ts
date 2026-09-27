@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { requireExecutiveApiViewer } from '@/lib/executive/execAccess';
+import { getSystemBranchTotalUserId } from '@/lib/sales/systemBranchTotal';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,11 +54,16 @@ export async function GET(request: NextRequest) {
   const throughDay = Math.min(31, Math.max(1, Number(request.nextUrl.searchParams.get('throughDay')) || 31));
   const dateKeyLimit = `${salesTo}-${String(throughDay).padStart(2, '0')}`;
   const where = { boutiqueId, month: { gte: from, lte: salesTo }, dateKey: { lte: dateKeyLimit } };
+  const systemBranchTotalUserId = await getSystemBranchTotalUserId();
+  const staffWhere = systemBranchTotalUserId
+    ? { ...where, userId: { not: systemBranchTotalUserId } }
+    : where;
+
   const [monthlyRows, dailyRows, staffRows, staffDailyRows, employeeTargets, boutiqueTargets, boutique] = await Promise.all([
     prisma.salesEntry.groupBy({ by: ['month'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
     prisma.salesEntry.groupBy({ by: ['dateKey'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
-    prisma.salesEntry.groupBy({ by: ['userId'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
-    prisma.salesEntry.groupBy({ by: ['userId', 'dateKey'], where, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
+    prisma.salesEntry.groupBy({ by: ['userId'], where: staffWhere, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
+    prisma.salesEntry.groupBy({ by: ['userId', 'dateKey'], where: staffWhere, _sum: { amount: true, invoiceCount: true, pieceCount: true } }),
     prisma.employeeMonthlyTarget.findMany({ where: { boutiqueId, month: { gte: from, lte: to } }, select: { userId: true, amount: true } }),
     prisma.boutiqueMonthlyTarget.findMany({ where: { boutiqueId, month: { gte: from, lte: to } }, select: { month: true, amount: true } }),
     prisma.boutique.findUnique({ where: { id: boutiqueId }, select: { code: true } }),
