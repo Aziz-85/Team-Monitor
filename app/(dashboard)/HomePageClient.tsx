@@ -501,19 +501,19 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
 
   return (
     <PageContainer className="overflow-x-hidden space-y-5 md:space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-slate-700/50 bg-[linear-gradient(125deg,#071a31_0%,#0d3151_56%,#0f5a62_125%)] text-white shadow-[0_28px_80px_-38px_rgba(2,16,34,.9)]">
-        <div className="pointer-events-none absolute -end-24 -top-32 h-96 w-96 rounded-full border border-white/10 bg-white/[.035]" />
-        <div className="pointer-events-none absolute bottom-0 start-1/3 h-44 w-44 rounded-full bg-cyan-300/[.06] blur-3xl" />
+      <section className="relative overflow-hidden rounded-[2rem] border border-border/80 bg-[linear-gradient(135deg,var(--surface)_0%,var(--surface)_52%,var(--surface-subtle)_135%)] text-foreground shadow-[0_24px_70px_-42px_rgba(15,23,42,.35)]">
+        <div className="pointer-events-none absolute -end-24 -top-32 h-96 w-96 rounded-full border border-accent/10 bg-accent/[.035]" />
+        <div className="pointer-events-none absolute bottom-0 start-1/3 h-44 w-44 rounded-full bg-accent/[.06] blur-3xl" />
         <div className="relative p-5 md:p-7 lg:p-8">
-          <div className="flex flex-col gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-6 border-b border-border/70 pb-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200/80">Today at your boutique</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-accent">Today at your boutique</p>
               <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight md:text-3xl">
                 {boutiqueName || t('nav.dashboard')}
               </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-200">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
                 <span>{heroTitle}</span>
-                <span className="h-1 w-1 rounded-full bg-cyan-300" />
+                <span className="h-1 w-1 rounded-full bg-accent" />
                 <span>{heroHint}</span>
               </div>
             </div>
@@ -523,12 +523,12 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
                   <Link
                     href={DAILY_SALES_LEDGER_HREF}
                     onClick={() => trackQuickAction('dailySalesLedger')}
-                    className="group flex min-h-16 items-center gap-3 rounded-2xl bg-cyan-300 px-4 py-3 text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-200"
+                    className="group flex min-h-16 items-center gap-3 rounded-2xl bg-accent px-4 py-3 text-white shadow-lg shadow-accent/20 transition hover:bg-accent/90"
                   >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950/10"><HomeActionIcon action="dailySalesLedger" /></span>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/15"><HomeActionIcon action="dailySalesLedger" /></span>
                     <span className="min-w-0">
                       <strong className="block text-sm font-bold">Daily Sales Ledger</strong>
-                      <span className="block text-[11px] text-slate-700">Enter and review today&apos;s sales</span>
+                      <span className="block text-[11px] text-white/75">Enter and review today&apos;s sales</span>
                     </span>
                     <span className="ms-auto transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
                   </Link>
@@ -536,12 +536,12 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
                 <Link
                   href="/dashboard"
                   onClick={() => trackQuickAction('dashboard')}
-                  className="group flex min-h-16 items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white transition hover:bg-white/15"
+                  className="group flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-foreground shadow-sm transition hover:border-accent/30 hover:bg-surface-subtle"
                 >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10"><HomeActionIcon action="dashboard" /></span>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><HomeActionIcon action="dashboard" /></span>
                   <span className="min-w-0">
                     <strong className="block text-sm font-bold">Open Dashboard</strong>
-                    <span className="block text-[11px] text-slate-300">Explore performance and trends</span>
+                    <span className="block text-[11px] text-muted">Explore performance and trends</span>
                   </span>
                   <span className="ms-auto transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
                 </Link>
@@ -553,33 +553,33 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="h-9 rounded-xl border border-white/15 bg-white/10 px-3 text-xs text-white outline-none [color-scheme:dark] focus:border-cyan-300/70"
+                  className="h-9 rounded-xl border border-border bg-surface px-3 text-xs text-foreground outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/10"
                 />
-                <span className={`inline-flex h-9 items-center rounded-xl border px-3 text-xs font-semibold ${myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
+                <span className={`inline-flex h-9 items-center rounded-xl border px-3 text-xs font-semibold ${myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200'}`}>
                   {myZoneBadgeText}
                 </span>
-                {myZone && <button type="button" onClick={() => setZoneDialogOpen(true)} className="h-9 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/15">{t('inventory.openMap')}</button>}
+                {myZone && <button type="button" onClick={() => setZoneDialogOpen(true)} className="h-9 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground hover:bg-surface-subtle">{t('inventory.openMap')}</button>}
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-5">
             {[
-              { label: t('home.executive.primaryTargetPct'), value: performance ? `${Math.max(0, Math.round(pace))}%` : '—', note: paceUi.shortLabel, accent: 'bg-cyan-300', featured: true },
-              { label: t('home.todayTasksTitle'), value: `${tasksCompleted}/${tasksTotal}`, note: `${taskCompletionPct}% complete`, accent: 'bg-emerald-300', featured: false },
-              { label: t('home.coverageStatus'), value: `${weekCoveragePct}%`, note: weekCoverageFormatted.totalAffectedDays > 0 ? `${weekCoverageFormatted.totalAffectedDays} days need attention` : t('home.allClear'), accent: 'bg-sky-300', featured: false },
-              { label: t('home.operationalAlerts'), value: String(totalWarnings), note: totalWarnings > 0 ? 'Items need attention' : t('home.allClear'), accent: totalWarnings > 0 ? 'bg-amber-300' : 'bg-emerald-300', featured: false },
+              { label: t('home.executive.primaryTargetPct'), value: performance ? `${Math.max(0, Math.round(pace))}%` : '—', note: paceUi.shortLabel, accent: 'bg-accent', featured: true },
+              { label: t('home.todayTasksTitle'), value: `${tasksCompleted}/${tasksTotal}`, note: `${taskCompletionPct}% complete`, accent: 'bg-emerald-500', featured: false },
+              { label: t('home.coverageStatus'), value: `${weekCoveragePct}%`, note: weekCoverageFormatted.totalAffectedDays > 0 ? `${weekCoverageFormatted.totalAffectedDays} days need attention` : t('home.allClear'), accent: 'bg-sky-500', featured: false },
+              { label: t('home.operationalAlerts'), value: String(totalWarnings), note: totalWarnings > 0 ? 'Items need attention' : t('home.allClear'), accent: totalWarnings > 0 ? 'bg-amber-500' : 'bg-emerald-500', featured: false },
             ].map((item) => (
-              <div key={item.label} className={`rounded-2xl border border-white/10 bg-white/[.07] p-4 backdrop-blur-sm ${item.featured ? 'sm:col-span-2 xl:col-span-2' : ''}`}>
+              <div key={item.label} className={`rounded-2xl border border-border/70 bg-surface p-4 shadow-sm ${item.featured ? 'sm:col-span-2 xl:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-300">{item.label}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted">{item.label}</p>
                   <span className={`h-2 w-2 rounded-full ${item.accent}`} />
                 </div>
                 <div className="mt-3 flex items-end gap-4">
                   <p className={`${item.featured ? 'text-4xl md:text-5xl' : 'text-2xl'} font-semibold tabular-nums tracking-tight`}>{item.value}</p>
-                  {item.featured && <div className="mb-2 h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.min(100, Math.max(0, pace))}%` }} /></div>}
+                  {item.featured && <div className="mb-2 h-1.5 flex-1 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, Math.max(0, pace))}%` }} /></div>}
                 </div>
-                <p className="mt-1 truncate text-xs text-slate-300">{item.note}</p>
+                <p className="mt-1 truncate text-xs text-muted">{item.note}</p>
               </div>
             ))}
           </div>
