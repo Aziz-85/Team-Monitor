@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/ExecutiveIntelligence';
 import { paceSignal } from '@/lib/presentation/executiveIntelligence';
 import { useQuickActions } from '@/lib/nav/useQuickActions';
-import { QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
+import { DAILY_SALES_LEDGER_HREF, QUICK_ACTION_DEFS } from '@/lib/nav/quickActions';
 import { Button } from '@/components/ui/Button';
 import { CoverageWarningSummary } from '@/components/schedule/CoverageWarningSummary';
 import {
@@ -191,6 +191,10 @@ export function HomePageClient({
     const rest = quickActions.filter((a) => a.key !== 'dailySalesLedger');
     return [ledgerQuickAction, ...rest].slice(0, 5);
   }, [canOpenDailySalesLedger, ledgerQuickAction, quickActions]);
+  const secondaryQuickActions = useMemo(
+    () => visibleQuickActions.filter((action) => action.key !== 'dailySalesLedger').slice(0, 4),
+    [visibleQuickActions]
+  );
   const [data, setData] = useState<HomeData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [date, setDate] = useState(() => getRiyadhDateKey());
@@ -501,9 +505,9 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         <div className="pointer-events-none absolute -end-24 -top-32 h-96 w-96 rounded-full border border-white/10 bg-white/[.035]" />
         <div className="pointer-events-none absolute bottom-0 start-1/3 h-44 w-44 rounded-full bg-cyan-300/[.06] blur-3xl" />
         <div className="relative p-5 md:p-7 lg:p-8">
-          <div className="flex flex-col gap-5 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200/80">Boutique command centre</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200/80">Today at your boutique</p>
               <h1 className="mt-2 truncate text-2xl font-semibold tracking-tight md:text-3xl">
                 {boutiqueName || t('nav.dashboard')}
               </h1>
@@ -513,39 +517,68 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
                 <span>{heroHint}</span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="sr-only" htmlFor="home-date">{t('common.date')}</label>
-              <input
-                id="home-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-sm text-white shadow-sm outline-none [color-scheme:dark] focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/20"
-              />
-              <span className={`inline-flex h-10 items-center rounded-xl border px-3 text-xs font-semibold ${myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
-                {myZoneBadgeText}
-              </span>
-              {myZone && (
-                <button type="button" onClick={() => setZoneDialogOpen(true)} className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/15">
-                  {t('inventory.openMap')}
-                </button>
-              )}
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[28rem]">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {canOpenDailySalesLedger && (
+                  <Link
+                    href={DAILY_SALES_LEDGER_HREF}
+                    onClick={() => trackQuickAction('dailySalesLedger')}
+                    className="group flex min-h-16 items-center gap-3 rounded-2xl bg-cyan-300 px-4 py-3 text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-200"
+                  >
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950/10"><HomeActionIcon action="dailySalesLedger" /></span>
+                    <span className="min-w-0">
+                      <strong className="block text-sm font-bold">Daily Sales Ledger</strong>
+                      <span className="block text-[11px] text-slate-700">Enter and review today&apos;s sales</span>
+                    </span>
+                    <span className="ms-auto transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard"
+                  onClick={() => trackQuickAction('dashboard')}
+                  className="group flex min-h-16 items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white transition hover:bg-white/15"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10"><HomeActionIcon action="dashboard" /></span>
+                  <span className="min-w-0">
+                    <strong className="block text-sm font-bold">Open Dashboard</strong>
+                    <span className="block text-[11px] text-slate-300">Explore performance and trends</span>
+                  </span>
+                  <span className="ms-auto transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
+                </Link>
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <label className="sr-only" htmlFor="home-date">{t('common.date')}</label>
+                <input
+                  id="home-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="h-9 rounded-xl border border-white/15 bg-white/10 px-3 text-xs text-white outline-none [color-scheme:dark] focus:border-cyan-300/70"
+                />
+                <span className={`inline-flex h-9 items-center rounded-xl border px-3 text-xs font-semibold ${myZone ? getZoneBadgeClasses(myZone.zone) : 'border-amber-300/30 bg-amber-300/10 text-amber-100'}`}>
+                  {myZoneBadgeText}
+                </span>
+                {myZone && <button type="button" onClick={() => setZoneDialogOpen(true)} className="h-9 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/15">{t('inventory.openMap')}</button>}
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-5">
             {[
-              { label: t('home.executive.primaryTargetPct'), value: performance ? `${Math.max(0, Math.round(pace))}%` : '—', note: paceUi.shortLabel, accent: 'bg-cyan-300' },
-              { label: t('home.todayTasksTitle'), value: `${tasksCompleted}/${tasksTotal}`, note: `${taskCompletionPct}% complete`, accent: 'bg-emerald-300' },
-              { label: t('home.coverageStatus'), value: `${weekCoveragePct}%`, note: weekCoverageFormatted.totalAffectedDays > 0 ? `${weekCoverageFormatted.totalAffectedDays} days need attention` : t('home.allClear'), accent: 'bg-sky-300' },
-              { label: t('home.operationalAlerts'), value: String(totalWarnings), note: totalWarnings > 0 ? 'Items need attention' : t('home.allClear'), accent: totalWarnings > 0 ? 'bg-amber-300' : 'bg-emerald-300' },
+              { label: t('home.executive.primaryTargetPct'), value: performance ? `${Math.max(0, Math.round(pace))}%` : '—', note: paceUi.shortLabel, accent: 'bg-cyan-300', featured: true },
+              { label: t('home.todayTasksTitle'), value: `${tasksCompleted}/${tasksTotal}`, note: `${taskCompletionPct}% complete`, accent: 'bg-emerald-300', featured: false },
+              { label: t('home.coverageStatus'), value: `${weekCoveragePct}%`, note: weekCoverageFormatted.totalAffectedDays > 0 ? `${weekCoverageFormatted.totalAffectedDays} days need attention` : t('home.allClear'), accent: 'bg-sky-300', featured: false },
+              { label: t('home.operationalAlerts'), value: String(totalWarnings), note: totalWarnings > 0 ? 'Items need attention' : t('home.allClear'), accent: totalWarnings > 0 ? 'bg-amber-300' : 'bg-emerald-300', featured: false },
             ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[.07] p-4 backdrop-blur-sm">
+              <div key={item.label} className={`rounded-2xl border border-white/10 bg-white/[.07] p-4 backdrop-blur-sm ${item.featured ? 'sm:col-span-2 xl:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-300">{item.label}</p>
                   <span className={`h-2 w-2 rounded-full ${item.accent}`} />
                 </div>
-                <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">{item.value}</p>
+                <div className="mt-3 flex items-end gap-4">
+                  <p className={`${item.featured ? 'text-4xl md:text-5xl' : 'text-2xl'} font-semibold tabular-nums tracking-tight`}>{item.value}</p>
+                  {item.featured && <div className="mb-2 h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.min(100, Math.max(0, pace))}%` }} /></div>}
+                </div>
                 <p className="mt-1 truncate text-xs text-slate-300">{item.note}</p>
               </div>
             ))}
@@ -560,8 +593,8 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
             <h2 id="quick-actions-heading" className="mt-1 text-lg font-semibold text-foreground">{t('home.quickActionsTitle')}</h2>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-          {visibleQuickActions.slice(0, 5).map((a, index) => (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {secondaryQuickActions.map((a, index) => (
             <Link
               key={a.key}
               href={a.href}
@@ -581,7 +614,7 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
       </section>
 
       <SectionBlock
-        title={t('home.executiveOperationalTitle')}
+        title="Today's Operations"
         rightSlot={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
@@ -879,9 +912,6 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
         </div>
       </SectionBlock>
 
-      <SectionBlock title={t('home.executiveSecondaryTitle')} subtitle={t('home.executiveSecondarySubtitle')}>
-        <p className="text-sm text-muted">{t('home.executiveSecondaryHint')}</p>
-      </SectionBlock>
       {zoneDialogOpen && myZone && (
         <>
           <div
