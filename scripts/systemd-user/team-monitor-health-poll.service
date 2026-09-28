@@ -1,0 +1,9 @@
+[Unit]
+Description=Record Team Monitor infrastructure health snapshot
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/team-monitor
+EnvironmentFile=/var/www/team-monitor/.env
+ExecStart=/var/www/team-monitor/scripts/infrastructure/poll-health.sh
