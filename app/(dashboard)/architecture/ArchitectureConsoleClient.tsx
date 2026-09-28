@@ -158,6 +158,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
   }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
+  const highDebtCount = data.technicalDebt.filter((item) => item.severity === 'High').length;
   const filteredRoutes = useMemo(() => {
     return data.routes.filter((route) => {
       const matchesQuery = !normalizedQuery || `${route.route} ${route.title} ${route.module} ${route.permission}`.toLowerCase().includes(normalizedQuery);
@@ -251,7 +252,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
 
           <section aria-label="Architecture summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Live runtime" value={data.systemStatus === 'Healthy' ? 'Operational' : 'Action required'} tone={data.systemStatus} />
-            <StatCard label="Governance" value={`${data.navigationFindings.length} navigation findings`} tone={data.governanceStatus} />
+            <StatCard label="Governance" value={`${data.navigationFindings.length} navigation · ${highDebtCount} high debt`} tone={data.governanceStatus} />
             <StatCard label="System surface" value={`${data.counts.pages} pages · ${data.counts.apis} APIs`} />
             <StatCard label="Data layer" value={`${data.counts.databaseTables} tables · ${data.counts.migrations} migrations`} />
           </section>
