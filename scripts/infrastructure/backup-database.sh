@@ -6,8 +6,9 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"; target="$INFRA_BACKUP_DIR/$app_id/${app_id}_
 case "$app_id" in
   team-monitor)
     require_command pg_dump; require_command node
-    [[ -n "${TEAM_MONITOR_DATABASE_URL:-}" ]] || die "$INFRA_EXIT_CONFIG" "TEAM_MONITOR_DATABASE_URL is required"
-    pg_dump_url="$(node -e '
+    database_url="${TEAM_MONITOR_DATABASE_URL:-${DATABASE_URL:-}}"
+    [[ -n "$database_url" ]] || die "$INFRA_EXIT_CONFIG" "TEAM_MONITOR_DATABASE_URL or DATABASE_URL is required"
+    pg_dump_url="$(TEAM_MONITOR_DATABASE_URL="$database_url" node -e '
       const value = process.env.TEAM_MONITOR_DATABASE_URL || "";
       const url = new URL(value);
       if (url.protocol !== "postgres:" && url.protocol !== "postgresql:") process.exit(2);
@@ -19,7 +20,7 @@ case "$app_id" in
     else
       pg_dump --format=custom --file="$partial" --dbname="$pg_dump_url"
     fi
-    unset pg_dump_url ;;
+    unset database_url pg_dump_url ;;
   aquamonitors)
     require_command docker; [[ -n "${AQUA_POSTGRES_DB:-}" && -n "${AQUA_POSTGRES_USER:-}" ]] || die "$INFRA_EXIT_CONFIG" "Aqua database name and user are required"
     if $INFRA_DRY_RUN; then log INFO "dry-run: docker pg_dump to protected backup file"; else docker exec aquamonitors_db_prod pg_dump --format=custom --username="$AQUA_POSTGRES_USER" --dbname="$AQUA_POSTGRES_DB" >"$partial"; fi ;;
