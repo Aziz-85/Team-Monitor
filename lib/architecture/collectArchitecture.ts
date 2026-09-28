@@ -60,6 +60,7 @@ export type ArchitectureData = {
   generatedAt: string;
   currentUser: { name: string; role: string };
   systemStatus: StatusLevel;
+  governanceStatus: StatusLevel;
   overview: Array<{ label: string; value: string; tone?: StatusLevel }>;
   counts: {
     pages: number;
@@ -96,6 +97,11 @@ export type ArchitectureData = {
   recommendations: Recommendation[];
   searchIndex: SearchItem[];
 };
+
+const PUBLIC_ROUTES = new Set(['/login']);
+const AUTHENTICATED_ROUTES = new Set(['/settings/security', '/sales/my']);
+const ARCHITECTURE_CACHE_TTL_MS = 5 * 60 * 1000;
+let architectureCache: { expiresAt: number; data: ArchitectureData } | null = null;
 
 export type ArchitectureNode = {
   name: string;
@@ -396,6 +402,8 @@ function allNavItems(): NavItem[] {
 }
 
 function permissionLabelForRoute(route: string): string {
+  if (PUBLIC_ROUTES.has(route)) return 'Public';
+  if (AUTHENTICATED_ROUTES.has(route)) return 'Authenticated user';
   const allowed = (Object.keys(ROLE_ROUTES) as Role[]).filter((role) => canAccessRoute(role, route));
   return allowed.length ? allowed.join(', ') : 'Unreachable';
 }
@@ -741,6 +749,21 @@ async function databaseHealth(): Promise<{ status: StatusLevel; latency: string 
 }
 
 export async function collectArchitectureData(user: { name?: string | null; username?: string | null; role: string }): Promise<ArchitectureData> {
+  const cached = architectureCache && architectureCache.expiresAt > Date.now() ? architectureCache.data : null;
+  if (cached) {
+    const currentName = user.name || user.username || 'Current session';
+    return {
+      ...cached,
+      currentUser: { name: currentName, role: user.role },
+      overview: cached.overview.map((item) =>
+        item.label === 'Current User'
+          ? { ...item, value: currentName }
+          : item.label === 'Current Role'
+            ? { ...item, value: user.role }
+            : item
+      ),
+    };
+  }
   const routes = listPageRoutes();
   const apis = listApiRoutes();
   const database = parsePrisma();
@@ -769,8 +792,13 @@ export async function collectArchitectureData(user: { name?: string | null; user
     databaseTables: database.tableCount,
     migrations: database.migrations.length,
   };
-  const systemStatus: StatusLevel =
-    db.status === 'Critical' || navigationFindings.some((f) => f.severity === 'Critical') ? 'Critical' : technicalDebt.some((d) => d.severity === 'High') ? 'Warning' : 'Healthy';
+  // Runtime failures and architecture governance findings are separate signals.
+  const systemStatus: StatusLevel = db.status === 'Critical' ? 'Critical' : 'Healthy';
+  const governanceStatus: StatusLevel = navigationFindings.some((f) => f.severity === 'Critical')
+    ? 'Critical'
+    : navigationFindings.length > 0 || technicalDebt.some((d) => d.severity === 'High')
+      ? 'Warning'
+      : 'Healthy';
   const overview = [
     { label: 'Application Name', value: packageJson.name },
     { label: 'Current Version', value: packageJson.version },
@@ -792,7 +820,7 @@ export async function collectArchitectureData(user: { name?: string | null; user
     { label: 'Total Components', value: String(counts.components) },
   ];
   const health: HealthItem[] = [
-    { name: 'System', status: systemStatus, detail: `${counts.pages} pages and ${counts.apis} API handlers detected.` },
+    { name: 'Runtime', status: systemStatus, detail: db.status === 'Healthy' ? 'Application and database checks are responding.' : 'A live runtime check failed.' },
     { name: 'Database', status: db.status, detail: `Prisma ${database.provider}; latency ${db.latency}.` },
     { name: 'Storage', status: services.find((s) => s.name === 'Storage')?.health === 'Running' ? 'Healthy' : 'Warning', detail: 'Inferred from upload/storage code paths.' },
     { name: 'Authentication', status: 'Healthy', detail: 'Session auth, CSRF, lockout, and 2FA modules are present.' },
@@ -803,10 +831,11 @@ export async function collectArchitectureData(user: { name?: string | null; user
     { name: 'Background Jobs', status: services.find((s) => s.name === 'Background Workers')?.health === 'Running' ? 'Healthy' : 'Warning', detail: 'Worker file detection only.' },
     { name: 'Uploads', status: services.find((s) => s.name === 'Uploads')?.health === 'Running' ? 'Healthy' : 'Warning', detail: 'Upload route detection only.' },
   ];
-  return {
+  const result: ArchitectureData = {
     generatedAt: new Date().toISOString(),
     currentUser: { name: user.name || user.username || 'Current session', role: user.role },
     systemStatus,
+    governanceStatus,
     overview,
     counts,
     architectureTree: buildArchitectureTree(),
@@ -839,4 +868,6 @@ export async function collectArchitectureData(user: { name?: string | null; user
     recommendations: buildRecommendations(technicalDebt, navigationFindings, dependencyGraph),
     searchIndex: buildSearchIndex(routes, apis, modules, database, features),
   };
+  architectureCache = { expiresAt: Date.now() + ARCHITECTURE_CACHE_TTL_MS, data: result };
+  return result;
 }
