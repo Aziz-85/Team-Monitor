@@ -8,7 +8,7 @@
     "prebuild": "prisma generate",
     "build": "next build",
     "prestart": "node -e \"const fs=require('fs'); if(!fs.existsSync('.next/BUILD_ID')){ console.error('\\nError: No production build in .next. Run: npm run build\\n'); process.exit(1); }\"",
-    "start": "next start -H 127.0.0.1 -p 3002",
+    "start": "next start -p 3002",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
