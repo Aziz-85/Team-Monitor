@@ -5,4 +5,5 @@ After=network.target postgresql.service
 [Service]
 Type=oneshot
 WorkingDirectory=/var/www/team-monitor
-ExecStart=/var/www/team-monitor/scripts/db-backup.sh
+EnvironmentFile=/var/www/team-monitor/.env
+ExecStart=/var/www/team-monitor/scripts/infrastructure/backup-database.sh team-monitor

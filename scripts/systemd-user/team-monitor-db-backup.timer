@@ -1,8 +1,8 @@
 [Unit]
-Description=Daily team-monitor DB backup (00:15 UTC = 03:15 Asia/Riyadh)
+Description=Daily Team Monitor database backup at 03:15 server time
 [Timer]
-# Daily at 00:15 UTC (03:15 Riyadh)
-OnCalendar=*-*-* 00:15:00
+OnCalendar=*-*-* 03:15:00
 Persistent=true
+RandomizedDelaySec=5m
 [Install]
 WantedBy=timers.target

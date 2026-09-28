@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll Team Monitor infrastructure health every five minutes
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=5m
+Persistent=true
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target
