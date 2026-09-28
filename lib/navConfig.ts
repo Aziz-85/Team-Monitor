@@ -266,6 +266,8 @@ const GROUP_SYSTEM_ADMIN: NavGroup = {
     item('/admin/audit/login', 'nav.admin.administrationAudit', ['ADMIN', 'SUPER_ADMIN'], 'ADMIN'),
     item('/admin/system', 'nav.admin.administrationSettings', ['ADMIN', 'SUPER_ADMIN'], 'ADMIN'),
     item('/admin/system/version', 'nav.admin.administrationVersion', ['ADMIN', 'SUPER_ADMIN'], 'ADMIN'),
+    item('/admin/system-audit', 'nav.admin.systemAudit', ['ADMIN', 'SUPER_ADMIN'], 'ADMIN', true),
+    item('/admin/sales-integrity', 'admin.salesIntegrity.title', ['ADMIN', 'SUPER_ADMIN'], 'ADMIN', true),
     item('/admin/reset-emp-id', 'nav.admin.resetEmpId', ['ADMIN', 'SUPER_ADMIN'], 'UTILITY'),
     item('/admin/reset-password', 'nav.admin.resetPassword', ['ADMIN', 'SUPER_ADMIN'], 'UTILITY'),
     item('/architecture', 'nav.architectureConsole', ['SUPER_ADMIN', 'ADMIN'], 'ADMIN'),

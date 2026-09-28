@@ -412,7 +412,8 @@ function buildNavigation(routes: ArchitectureRoute[]): { sections: NavigationSec
   const navItems = allNavItems();
   const hrefCounts = new Map<string, number>();
   for (const item of navItems) {
-    const href = item.href.split('?')[0];
+    // Query variants (for example approvals by module) are distinct navigation intents.
+    const href = item.href;
     hrefCounts.set(href, (hrefCounts.get(href) ?? 0) + 1);
   }
   const sidebarSections: NavigationSection[] = getSidebarGroupedSections('SUPER_ADMIN', (k) => k).map((group) => ({
@@ -437,7 +438,29 @@ function buildNavigation(routes: ArchitectureRoute[]): { sections: NavigationSec
         source: 'Hidden Navigation' as const,
       })),
   })).filter((group) => group.items.length);
-  const navHrefs = new Set(navItems.map((item) => item.href.split('?')[0]));
+  const sidebarHrefs = sidebarSections.flatMap((section) => section.items.map((item) => item.href.split('?')[0]));
+  const navHrefs = new Set([...navItems.map((item) => item.href.split('?')[0]), ...sidebarHrefs]);
+  const routeHrefs = new Set(routes.map((route) => route.route));
+  const isRedirectOnly = (route: ArchitectureRoute) => {
+    const source = safeRead(path.join(ROOT, route.file));
+    return source.includes("from 'next/navigation'") && source.includes('redirect(') && !source.includes('<');
+  };
+  const hasNavigableParent = (route: string) => {
+    const parts = route.split('/').filter(Boolean);
+    while (parts.length > 1) {
+      parts.pop();
+      const parent = `/${parts.join('/')}`;
+      if (navHrefs.has(parent) || routeHrefs.has(parent)) return true;
+    }
+    return false;
+  };
+  const intentionallyUnlisted = (route: ArchitectureRoute) =>
+    PUBLIC_ROUTES.has(route.route) ||
+    AUTHENTICATED_ROUTES.has(route.route) ||
+    route.route.startsWith('/nav/') ||
+    route.route.includes('[') ||
+    route.experimental ||
+    isRedirectOnly(route);
   const findings: NavigationFinding[] = [];
   for (const [href, count] of Array.from(hrefCounts.entries())) {
     if (count > 1) findings.push({ type: 'Duplicate Entry', route: href, detail: `${count} navigation entries share this href.`, severity: 'Warning' });
@@ -445,7 +468,12 @@ function buildNavigation(routes: ArchitectureRoute[]): { sections: NavigationSec
   for (const route of routes) {
     if (route.permission === 'Unreachable') {
       findings.push({ type: 'Unreachable Page', route: route.route, detail: 'No role route prefix currently grants access.', severity: 'Critical' });
-    } else if (!navHrefs.has(route.route) && route.route !== '/' && !route.route.includes('[')) {
+    } else if (
+      !navHrefs.has(route.route) &&
+      route.route !== '/' &&
+      !hasNavigableParent(route.route) &&
+      !intentionallyUnlisted(route)
+    ) {
       findings.push({ type: 'Orphan Page', route: route.route, detail: 'Route exists but is not represented in navigation config.', severity: 'Warning' });
     }
   }
