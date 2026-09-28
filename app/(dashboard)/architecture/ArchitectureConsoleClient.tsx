@@ -68,6 +68,10 @@ function csvValue(value: unknown): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+function isDynamicRouteTemplate(href: string | undefined): boolean {
+  return Boolean(href?.includes('['));
+}
+
 function toCsv(rows: Array<Record<string, unknown>>): string {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
@@ -140,6 +144,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
   const [query, setQuery] = useState('');
   const [routeFilter, setRouteFilter] = useState<'all' | 'sidebar' | 'hidden' | 'legacy' | 'experimental' | 'delete'>('all');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [routeLimit, setRouteLimit] = useState(50);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -166,6 +171,8 @@ export function ArchitectureConsoleClient({ data }: Props) {
       return matchesQuery && matchesFilter;
     });
   }, [data.routes, normalizedQuery, routeFilter]);
+
+  useEffect(() => setRouteLimit(50), [normalizedQuery, routeFilter]);
 
   const filteredSearch = useMemo(() => {
     if (!normalizedQuery) return data.searchIndex.slice(0, 30);
@@ -213,15 +220,22 @@ export function ArchitectureConsoleClient({ data }: Props) {
                   Single source of truth for Team Monitor routes, navigation, permissions, APIs, Prisma schema, services, features, health, and technical debt.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border bg-surface-subtle p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">System Status</div>
-                <Badge variant={statusVariant(data.systemStatus)} className="mt-2 text-sm">{data.systemStatus}</Badge>
+              <div className="grid min-w-[220px] grid-cols-2 gap-3 rounded-2xl border border-border bg-surface-subtle p-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Runtime</div>
+                  <Badge variant={statusVariant(data.systemStatus)} className="mt-2 text-sm">{data.systemStatus}</Badge>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted">Governance</div>
+                  <Badge variant={statusVariant(data.governanceStatus)} className="mt-2 text-sm">{data.governanceStatus}</Badge>
+                </div>
               </div>
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                aria-label="Search architecture console"
                 placeholder="Search pages, APIs, modules, database, features, permissions"
                 className="h-11 rounded-xl border border-border bg-surface px-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent"
               />
@@ -235,19 +249,26 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </header>
 
+          <section aria-label="Architecture summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Live runtime" value={data.systemStatus === 'Healthy' ? 'Operational' : 'Action required'} tone={data.systemStatus} />
+            <StatCard label="Governance" value={`${data.navigationFindings.length} navigation findings`} tone={data.governanceStatus} />
+            <StatCard label="System surface" value={`${data.counts.pages} pages · ${data.counts.apis} APIs`} />
+            <StatCard label="Data layer" value={`${data.counts.databaseTables} tables · ${data.counts.migrations} migrations`} />
+          </section>
+
           <Section id="overview" title="System Overview" subtitle="Runtime, repository, project, and current session metadata.">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {data.overview.map((item) => <StatCard key={item.label} label={item.label} value={item.value} tone={item.tone} />)}
             </div>
           </Section>
 
-          <Section id="application-architecture" title="Application Architecture" subtitle="Expandable enterprise architecture map.">
+          <Section id="application-architecture" title="Application Architecture" subtitle="Expandable enterprise architecture map." defaultOpen={false}>
             <ul className="grid gap-4">
               {data.architectureTree.map((node) => <TreeNode key={node.name} node={node} />)}
             </ul>
           </Section>
 
-          <Section id="route-explorer" title="Route Explorer" subtitle="Automatically discovered page routes with navigation and lifecycle flags.">
+          <Section id="route-explorer" title="Route Explorer" subtitle={`${filteredRoutes.length} discovered routes with navigation and lifecycle flags.`} defaultOpen={false}>
             <div className="mb-4 flex flex-wrap gap-2">
               {(['all', 'sidebar', 'hidden', 'legacy', 'experimental', 'delete'] as const).map((filter) => (
                 <button
@@ -273,9 +294,9 @@ export function ArchitectureConsoleClient({ data }: Props) {
                 <DataTableTh>Last Modified</DataTableTh>
               </DataTableHead>
               <DataTableBody>
-                {filteredRoutes.map((route) => (
+                {filteredRoutes.slice(0, routeLimit).map((route) => (
                   <tr key={route.file}>
-                    <DataTableTd truncate><Link className="font-medium text-accent" href={route.route}>{route.route}</Link></DataTableTd>
+                    <DataTableTd truncate>{isDynamicRouteTemplate(route.route) ? <span className="font-medium text-muted" title="Dynamic route template">{route.route}</span> : <Link className="font-medium text-accent" href={route.route}>{route.route}</Link>}</DataTableTd>
                     <DataTableTd truncate>{route.title}</DataTableTd>
                     <DataTableTd>{route.module}</DataTableTd>
                     <DataTableTd truncate>{route.permission}</DataTableTd>
@@ -293,9 +314,16 @@ export function ArchitectureConsoleClient({ data }: Props) {
                 ))}
               </DataTableBody>
             </DataTable>
+            {filteredRoutes.length > routeLimit ? (
+              <div className="mt-4 flex justify-center">
+                <button type="button" onClick={() => setRouteLimit((limit) => limit + 50)} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-subtle">
+                  Load 50 more ({filteredRoutes.length - routeLimit} remaining)
+                </button>
+              </div>
+            ) : null}
           </Section>
 
-          <Section id="navigation-explorer" title="Navigation Explorer" subtitle="Visible sidebar, hidden navigation, orphan pages, duplicates, and unreachable routes.">
+          <Section id="navigation-explorer" title="Navigation Explorer" subtitle="Visible sidebar, hidden navigation, orphan pages, duplicates, and unreachable routes." defaultOpen={false}>
             <div className="grid gap-4 lg:grid-cols-2">
               {data.navigation.map((section) => (
                 <Card key={section.group} className="p-4">
@@ -385,7 +413,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </DataTable>
           </Section>
 
-          <Section id="business-modules" title="Business Modules" subtitle="Owners, stability, dependencies, pages, APIs, components, and database tables.">
+          <Section id="business-modules" title="Business Modules" subtitle="Owners, stability, dependencies, pages, APIs, components, and database tables." defaultOpen={false}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {data.modules.map((module) => (
                 <Card key={module.name} className="p-4">
@@ -442,7 +470,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </DataTable>
           </Section>
 
-          <Section id="dependency-graph" title="Dependency Graph" subtitle="Module dependency graph with circular dependency highlighting.">
+          <Section id="dependency-graph" title="Dependency Graph" subtitle="Module dependency graph with circular dependency highlighting." defaultOpen={false}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {data.dependencyGraph.map((node) => (
                 <Card key={node.module} className={`p-4 ${node.circular ? 'border-amber-300' : ''}`}>
@@ -462,7 +490,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="services" title="Services" subtitle="Platform services inferred from source paths and package dependencies.">
+          <Section id="services" title="Services" subtitle="Code-detected capabilities; these are not live runtime probes." defaultOpen={false}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {data.services.map((service) => (
                 <Card key={service.name} className="p-4">
@@ -476,7 +504,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="feature-registry" title="Feature Registry" subtitle="Major features with version, owner, status, and page bindings.">
+          <Section id="feature-registry" title="Feature Registry" subtitle="Major features with version, owner, status, and page bindings." defaultOpen={false}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {data.features.map((feature) => (
                 <Card key={feature.name} className="p-4">
@@ -505,7 +533,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="code-statistics" title="Code Statistics" subtitle="Project structure counts.">
+          <Section id="code-statistics" title="Code Statistics" subtitle="Project structure counts." defaultOpen={false}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {Object.entries(data.counts).map(([key, value]) => (
                 <StatCard key={key} label={key.replace(/([A-Z])/g, ' $1')} value={String(value)} />
@@ -513,7 +541,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="project-timeline" title="Project Timeline" subtitle="Latest commits, version history, security updates, and architecture changes.">
+          <Section id="project-timeline" title="Project Timeline" subtitle="Latest commits, version history, security updates, and architecture changes." defaultOpen={false}>
             <div className="space-y-2">
               {data.timeline.map((item) => (
                 <div key={`${item.hash}-${item.title}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm">
@@ -541,7 +569,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="developer-toolbox" title="Developer Toolbox" subtitle="Quick actions into key system areas.">
+          <Section id="developer-toolbox" title="Developer Toolbox" subtitle="Quick actions into key system areas." defaultOpen={false}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {data.toolbox.map((action) => (
                 <Link key={action.label} href={action.href} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">
@@ -582,7 +610,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </div>
           </Section>
 
-          <Section id="global-search" title="Search" subtitle="Search pages, components, routes, APIs, database, modules, features, and permissions.">
+          <Section id="global-search" title="Search" subtitle="Search pages, components, routes, APIs, database, modules, features, and permissions." defaultOpen={false}>
             <DataTable>
               <DataTableHead>
                 <DataTableTh>Type</DataTableTh>
@@ -594,7 +622,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
                 {filteredSearch.map((item) => (
                   <tr key={`${item.type}-${item.label}`}>
                     <DataTableTd>{item.type}</DataTableTd>
-                    <DataTableTd truncate>{item.href ? <Link className="text-accent" href={item.href}>{item.label}</Link> : item.label}</DataTableTd>
+                    <DataTableTd truncate>{item.href && !isDynamicRouteTemplate(item.href) ? <Link className="text-accent" href={item.href}>{item.label}</Link> : <span className={item.href ? 'text-muted' : undefined} title={isDynamicRouteTemplate(item.href) ? 'Dynamic route template' : undefined}>{item.label}</span>}</DataTableTd>
                     <DataTableTd>{item.module}</DataTableTd>
                     <DataTableTd truncate>{item.detail}</DataTableTd>
                   </tr>
@@ -603,13 +631,13 @@ export function ArchitectureConsoleClient({ data }: Props) {
             </DataTable>
           </Section>
 
-          <Section id="export-center" title="Export" subtitle="Export architecture report data without secrets or environment values.">
+          <Section id="export-center" title="Export" subtitle="Export architecture report data without secrets or environment values." defaultOpen={false}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <button type="button" onClick={() => window.print()} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Architecture Report PDF</button>
+              <button type="button" onClick={() => window.print()} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Print / Save as PDF</button>
               <button type="button" onClick={exportJson} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Architecture JSON</button>
               <button type="button" onClick={exportRoutes} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Route List CSV</button>
-              <button type="button" onClick={exportPermissions} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Permission Matrix Excel</button>
-              <button type="button" onClick={exportDatabase} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Database Diagram</button>
+              <button type="button" onClick={exportPermissions} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Permission Matrix CSV</button>
+              <button type="button" onClick={exportDatabase} className="rounded-xl border border-border bg-surface-subtle px-4 py-3 text-sm font-medium text-foreground hover:bg-surface">Database Metadata JSON</button>
             </div>
           </Section>
         </main>
@@ -629,6 +657,7 @@ export function ArchitectureConsoleClient({ data }: Props) {
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search architecture console"
               placeholder="Search architecture console"
               className="mt-4 h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm outline-none focus:ring-2 focus:ring-accent"
             />
@@ -638,10 +667,14 @@ export function ArchitectureConsoleClient({ data }: Props) {
                   {label}
                 </a>
               ))}
-              {filteredSearch.slice(0, 12).map((item) => (
-                <Link key={`${item.type}-${item.label}`} href={item.href || '#global-search'} onClick={() => setPaletteOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface-subtle hover:text-foreground">
+              {filteredSearch.slice(0, 12).map((item) => item.href && !isDynamicRouteTemplate(item.href) ? (
+                <Link key={`${item.type}-${item.label}`} href={item.href} onClick={() => setPaletteOpen(false)} className="block rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface-subtle hover:text-foreground">
                   {item.type}: {item.label}
                 </Link>
+              ) : (
+                <div key={`${item.type}-${item.label}`} className="rounded-lg px-3 py-2 text-sm text-muted" title={isDynamicRouteTemplate(item.href) ? 'Dynamic route template' : undefined}>
+                  {item.type}: {item.label}
+                </div>
               ))}
             </div>
           </div>
