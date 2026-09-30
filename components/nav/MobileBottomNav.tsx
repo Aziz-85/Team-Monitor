@@ -51,47 +51,77 @@ export function MobileBottomNav({
   };
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="flex min-h-[48px] items-stretch justify-around gap-0.5 px-0.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_36px_-24px_rgba(15,23,42,.45)] backdrop-blur-xl md:hidden">
+      {moreOpen && rest.length > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true" aria-label={t('nav.more')}>
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
+            onClick={() => setMoreOpen(false)}
+          />
+          <section className="relative max-h-[72dvh] w-full overflow-hidden rounded-t-[28px] border-t border-border bg-surface shadow-[0_-24px_70px_-34px_rgba(15,23,42,.65)]">
+            <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border" />
+            <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[.18em] text-accent">Navigation</p>
+                <h2 className="mt-1 text-lg font-black text-foreground">More destinations</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full border border-border bg-surface-subtle text-lg text-foreground"
+                aria-label="Close navigation menu"
+              >
+                ×
+              </button>
+            </div>
+            <div className="max-h-[calc(72dvh-88px)] overflow-y-auto overscroll-contain px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <ul className="grid grid-cols-2 gap-2">
+                {rest.map((item) => (
+                  <li key={`${item.href}:${item.key}`}>
+                    <Link
+                      href={item.href}
+                      className={`flex min-h-14 items-center rounded-2xl border px-3 py-2.5 text-sm font-bold transition ${
+                        isActive(item.href)
+                          ? 'border-accent/30 bg-accent-soft text-accent'
+                          : 'border-border/70 bg-surface-subtle/60 text-foreground hover:border-accent/25 hover:bg-accent-soft/60'
+                      }`}
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      <span className="line-clamp-2">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      <div className="flex min-h-[58px] items-stretch justify-around gap-1 px-2">
         {primary.map((item) => (
           <Link
             key={`${item.href}:${item.key}`}
             href={item.href}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center px-1 py-1 text-[10px] font-medium leading-tight ${
-              isActive(item.href) ? 'text-accent' : 'text-muted-foreground'
+            className={`relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-bold leading-tight transition ${
+              isActive(item.href) ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <span className="line-clamp-2 w-full text-center">{t(item.key)}</span>
+            {isActive(item.href) ? <span className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-accent" /> : null}
+            <span className="line-clamp-2 w-full text-center">{item.label}</span>
           </Link>
         ))}
         {rest.length > 0 ? (
           <button
             type="button"
             aria-expanded={moreOpen}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 py-1 text-[10px] font-medium text-muted-foreground"
+            className={`relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-bold transition ${moreOpen ? 'text-accent' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={() => setMoreOpen((o) => !o)}
           >
             <span className="line-clamp-2 w-full text-center">{t('nav.more')}</span>
           </button>
         ) : null}
       </div>
-      {moreOpen && rest.length > 0 ? (
-        <div className="max-h-[40vh] overflow-y-auto border-t border-border bg-surface px-2 py-2">
-          <ul className="space-y-0.5">
-            {rest.map((item) => (
-              <li key={`${item.href}:${item.key}`}>
-                <Link
-                  href={item.href}
-                  className="block rounded-lg px-2 py-2 text-sm text-foreground hover:bg-muted/50"
-                  onClick={() => setMoreOpen(false)}
-                >
-                  {t(item.key)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </nav>
   );
 }
