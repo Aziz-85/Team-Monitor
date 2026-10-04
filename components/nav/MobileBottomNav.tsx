@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
-import { getSidebarGroupedSections } from '@/lib/nav/sidebarShellNav';
+import { getSidebarGroupedSections, getSidebarSectionHref } from '@/lib/nav/sidebarShellNav';
 import type { Role } from '@prisma/client';
 
 const PRIMARY_COUNT = 4;
@@ -47,6 +47,7 @@ export function MobileBottomNav({
     const pathOnly = href.split('?')[0] ?? href;
     if (pathname === pathOnly) return true;
     if (pathOnly !== '/' && pathname.startsWith(pathOnly + '/')) return true;
+    if (getSidebarSectionHref(pathname) === pathOnly) return true;
     return false;
   };
 

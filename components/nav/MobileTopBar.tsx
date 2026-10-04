@@ -7,6 +7,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
 import { SidebarBrandingScope } from '@/components/nav/SidebarBrandingScope';
 import { SidebarNavContent } from '@/components/nav/SidebarNavContent';
+import { getSidebarSectionHref } from '@/lib/nav/sidebarShellNav';
 import type { Role, EmployeePosition } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 
@@ -31,7 +32,10 @@ export function MobileTopBar({
   void canApproveWeek;
 
   const isItemActive = useCallback(
-    (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/')),
+    (href: string) => {
+      if (pathname === href || (href !== '/' && pathname.startsWith(href + '/'))) return true;
+      return getSidebarSectionHref(pathname) === href;
+    },
     [pathname]
   );
 

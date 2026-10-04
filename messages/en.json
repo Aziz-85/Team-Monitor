@@ -311,6 +311,7 @@
     },
     "sidebar": {
       "primary": "Primary",
+      "sections": "Sections",
       "entryDailySales": "Entry Daily Sales",
       "team": "Team",
       "operations": "Operations",
@@ -402,6 +403,10 @@
           "title": "Reports",
           "hint": "Executive and target reporting views."
         },
+        "performance": {
+          "title": "Performance Intelligence",
+          "hint": "Interactive boutique, period, and employee performance analysis."
+        },
         "targets": {
           "title": "Targets",
           "hint": "Target planning and tracking."
@@ -431,6 +436,10 @@
         "architecture": {
           "title": "Architecture Console",
           "hint": "Enterprise system overview, routes, permissions, APIs, and health."
+        },
+        "security": {
+          "title": "Security Settings",
+          "hint": "Manage password, trusted devices, and account protection."
         }
       },
       "routes": {
