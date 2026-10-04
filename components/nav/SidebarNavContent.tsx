@@ -12,6 +12,7 @@ import {
 const iconPaths: Record<string, ReactNode> = {
   HOME: <><path d="M3.5 10.5 12 3l8.5 7.5"/><path d="M5.5 9.5V21h13V9.5M9.5 21v-7h5v7"/></>,
   DASHBOARD: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+  ENTRY_DAILY: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="m7 9 3-3 3 2 4-4"/></>,
   EMPLOYEE_HOME: <><circle cx="12" cy="8" r="3.5"/><path d="M5 21c.5-4.3 2.8-6.5 7-6.5s6.5 2.2 7 6.5"/></>,
   SCHEDULE_EDIT: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15h8M8 18h5"/></>,
   SCHEDULE_NEXT: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2M16.5 5.5 19 5l-.5 2.5"/></>,

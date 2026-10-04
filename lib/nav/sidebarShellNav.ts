@@ -22,58 +22,57 @@ type SidebarShellGroupedSection = { key: string; labelKey: string; items: Sideba
 
 const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
   {
-    key: 'home',
-    labelKey: 'nav.groups.home',
+    key: 'quick-access',
+    labelKey: 'nav.sidebar.primary',
     items: [
       { key: 'HOME', href: '/', labelKey: 'nav.home', tier: 'hub' },
       { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard', tier: 'page' },
       { key: 'EMPLOYEE_HOME', href: '/employee', labelKey: 'nav.employeeHome' },
+      { key: 'ENTRY_DAILY', href: '/sales/daily', labelKey: 'nav.sidebar.entryDailySales', tier: 'page' },
     ],
   },
   {
-    key: 'team',
-    labelKey: 'nav.sidebar.team',
+    key: 'sections',
+    labelKey: 'nav.sidebar.sections',
     items: [
       { key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub' },
-      { key: 'SCHEDULE_HUB', href: '/nav/team/schedule', labelKey: 'nav.sidebar.schedule', tier: 'page' },
-      { key: 'EMPLOYEES_HUB', href: '/nav/team/employees', labelKey: 'nav.admin.employees', tier: 'page' },
-      { key: 'LEAVES_HUB', href: '/nav/team/leaves', labelKey: 'nav.leaves', tier: 'page' },
-      { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },
-      { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance' },
-    ],
-  },
-  {
-    key: 'operations',
-    labelKey: 'nav.sidebar.operations',
-    items: [
       { key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub' },
-      { key: 'TASKS_HUB', href: '/nav/operations/tasks', labelKey: 'nav.groups.tasks', tier: 'page' },
-      { key: 'INVENTORY_HUB', href: '/nav/operations/inventory', labelKey: 'nav.groups.inventory', tier: 'page' },
-    ],
-  },
-  {
-    key: 'analytics',
-    labelKey: 'nav.sidebar.analytics',
-    items: [
       { key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics', tier: 'hub' },
-      { key: 'SALES_HUB', href: '/nav/analytics/sales', labelKey: 'nav.group.SALES', tier: 'page' },
-      { key: 'REPORTS_HUB', href: '/nav/analytics/reports', labelKey: 'nav.group.REPORTS', tier: 'page' },
-      { key: 'PERFORMANCE_INTELLIGENCE', href: '/analytics/performance-intelligence', labelKey: 'nav.analytics.performanceIntelligence' },
-      { key: 'TARGETS_HUB', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
-    ],
-  },
-  {
-    key: 'system',
-    labelKey: 'nav.sidebar.system',
-    items: [
       { key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.system', tier: 'hub' },
-      { key: 'ADMIN_HUB', href: '/nav/system/admin', labelKey: 'nav.admin.administrationDashboard', tier: 'page' },
-      { key: 'IMPORTS_HUB', href: '/nav/system/imports', labelKey: 'nav.admin.importDashboard', tier: 'page' },
-      { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
-      { key: 'SECURITY_SETTINGS', href: '/settings/security', labelKey: 'nav.securitySettings' },
     ],
   },
 ];
+
+const SECTION_ROUTE_PREFIXES: Array<{ href: string; prefixes: string[] }> = [
+  {
+    href: '/nav/team',
+    prefixes: ['/nav/team', '/schedule', '/approvals', '/admin/employees', '/area/employees', '/area/targets', '/leaves', '/boutique/leaves', '/compliance', '/admin/control-panel/delegation'],
+  },
+  {
+    href: '/nav/operations',
+    prefixes: ['/nav/operations', '/tasks', '/boutique/tasks', '/inventory', '/sync/planner'],
+  },
+  {
+    href: '/nav/analytics',
+    prefixes: ['/nav/analytics', '/sales', '/reports', '/executive', '/performance', '/analytics', '/targets', '/company', '/kpi', '/me/target', '/admin/sales-edit-requests'],
+  },
+  {
+    href: '/nav/system',
+    prefixes: ['/nav/system', '/admin', '/architecture', '/settings', '/about', '/change-password'],
+  },
+];
+
+function pathMatchesPrefix(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** Resolves every product page to its single top-level navigation branch. */
+export function getSidebarSectionHref(pathname: string): string | null {
+  for (const section of SECTION_ROUTE_PREFIXES) {
+    if (section.prefixes.some((prefix) => pathMatchesPrefix(pathname, prefix))) return section.href;
+  }
+  return null;
+}
 
 export function getSidebarQuickAccess(role: Role, t: (key: string) => string): SidebarShellLink[] {
   const items: SidebarShellLink[] = [];

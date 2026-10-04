@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useT } from '@/lib/i18n/useT';
 import { SidebarBrandingScope } from '@/components/nav/SidebarBrandingScope';
 import { SidebarNavContent } from '@/components/nav/SidebarNavContent';
+import { getSidebarSectionHref } from '@/lib/nav/sidebarShellNav';
 import type { Role, EmployeePosition } from '@prisma/client';
 
 export function Sidebar({
@@ -26,7 +27,10 @@ export function Sidebar({
   void canApproveWeek;
 
   const isItemActive = useCallback(
-    (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/')),
+    (href: string) => {
+      if (pathname === href || (href !== '/' && pathname.startsWith(href + '/'))) return true;
+      return getSidebarSectionHref(pathname) === href;
+    },
     [pathname]
   );
 
