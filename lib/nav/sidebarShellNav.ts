@@ -34,7 +34,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'team',
     labelKey: 'nav.sidebar.team',
     items: [
-      { key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.overview', tier: 'hub' },
+      { key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub' },
       { key: 'SCHEDULE_HUB', href: '/nav/team/schedule', labelKey: 'nav.sidebar.schedule', tier: 'page' },
       { key: 'EMPLOYEES_HUB', href: '/nav/team/employees', labelKey: 'nav.admin.employees', tier: 'page' },
       { key: 'LEAVES_HUB', href: '/nav/team/leaves', labelKey: 'nav.leaves', tier: 'page' },
@@ -46,7 +46,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'operations',
     labelKey: 'nav.sidebar.operations',
     items: [
-      { key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.overview', tier: 'hub' },
+      { key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub' },
       { key: 'TASKS_HUB', href: '/nav/operations/tasks', labelKey: 'nav.groups.tasks', tier: 'page' },
       { key: 'INVENTORY_HUB', href: '/nav/operations/inventory', labelKey: 'nav.groups.inventory', tier: 'page' },
     ],
@@ -55,7 +55,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'analytics',
     labelKey: 'nav.sidebar.analytics',
     items: [
-      { key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.overview', tier: 'hub' },
+      { key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics', tier: 'hub' },
       { key: 'SALES_HUB', href: '/nav/analytics/sales', labelKey: 'nav.group.SALES', tier: 'page' },
       { key: 'REPORTS_HUB', href: '/nav/analytics/reports', labelKey: 'nav.group.REPORTS', tier: 'page' },
       { key: 'PERFORMANCE_INTELLIGENCE', href: '/analytics/performance-intelligence', labelKey: 'nav.analytics.performanceIntelligence' },
@@ -66,7 +66,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'system',
     labelKey: 'nav.sidebar.system',
     items: [
-      { key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.overview', tier: 'hub' },
+      { key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.system', tier: 'hub' },
       { key: 'ADMIN_HUB', href: '/nav/system/admin', labelKey: 'nav.admin.administrationDashboard', tier: 'page' },
       { key: 'IMPORTS_HUB', href: '/nav/system/imports', labelKey: 'nav.admin.importDashboard', tier: 'page' },
       { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
