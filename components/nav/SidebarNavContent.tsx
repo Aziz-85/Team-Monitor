@@ -161,8 +161,6 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
                         >
                           <span className={`text-base transition-transform ${open ? 'rotate-90' : ''} ${isRtl ? 'scale-x-[-1]' : ''}`}>›</span>
                         </button>
-                      ) : item.tier === 'hub' ? (
-                        <span className={`me-3 text-base text-muted ${isRtl ? 'rotate-180' : ''}`}>›</span>
                       ) : null}
                       {branchActive ? <span className={`absolute inset-y-2 ${isRtl ? 'right-0' : 'left-0'} w-0.5 rounded-full bg-accent`} /> : null}
                     </div>
