@@ -7,7 +7,6 @@ const ROUTES = [
   { href: '/leaves', key: 'leaves.manage' },
   { href: '/boutique/leaves', key: 'leaves.boutique' },
   { href: '/admin/control-panel/delegation', key: 'leaves.delegation' },
-  { href: '/compliance', key: 'leaves.compliance' },
 ];
 
 export default async function NavTeamLeavesPage() {

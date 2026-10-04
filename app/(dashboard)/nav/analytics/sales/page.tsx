@@ -13,11 +13,6 @@ const ROUTES = [
   { href: '/sales/leadership-impact', key: 'sales.leadership' },
   { href: '/me/target', key: 'sales.myTarget' },
   { href: '/kpi/upload', key: 'sales.kpi' },
-  { href: '/admin/import/sales', key: 'sales.importAdmin' },
-  { href: '/admin/import/sales', key: 'sales.import' },
-  { href: '/admin/import/monthly-matrix', key: 'sales.importMatrix' },
-  { href: '/admin/import/sales?section=issues', key: 'sales.importIssues' },
-  { href: '/admin/import/monthly-matrix', key: 'sales.monthlyMatrix' },
   { href: '/admin/sales-edit-requests', key: 'sales.editRequests' },
 ];
 

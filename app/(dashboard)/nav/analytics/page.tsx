@@ -5,7 +5,6 @@ import { getDrilldownUser, hrefSetFromGroups } from '@/lib/nav/drilldown';
 const CARDS = [
   { href: '/nav/analytics/sales', gate: '/sales/summary', titleKey: 'analytics.sales.title', hintKey: 'analytics.sales.hint' },
   { href: '/nav/analytics/reports', gate: '/reports/weekly', titleKey: 'analytics.reports.title', hintKey: 'analytics.reports.hint' },
-  { href: '/targets', gate: '/targets', titleKey: 'analytics.targets.title', hintKey: 'analytics.targets.hint' },
   { href: '/company', gate: '/company', titleKey: 'analytics.company.title', hintKey: 'analytics.company.hint' },
 ];
 

@@ -40,6 +40,22 @@ const iconPaths: Record<string, ReactNode> = {
   ADMIN_EMPLOYEES: <><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 21c.4-4 2.4-6 6-6s5.6 2 6 6M15 15c3.5 0 5.5 1.8 6 5"/></>,
   LEAVES: <><path d="M12 21C7 18 5 14 6 9c4 0 7-2 9-6 3 5 3 10 0 14-1 1.5-2 2.5-3 4z"/><path d="M8 17c2-3 4-5 8-8"/></>,
   ADMIN_USERS: <><circle cx="9" cy="8" r="3"/><path d="M3 21c.4-4 2.4-6 6-6 2.4 0 4.1.9 5.1 2.7"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13 17h2M21 17h2"/></>,
+  TEAM_HUB: <><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 21c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c4 0 6.5 2 7 6"/></>,
+  SCHEDULE_HUB: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15h8"/></>,
+  EMPLOYEES_HUB: <><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 21c.4-4 2.4-6 6-6s5.6 2 6 6M15 15c3.5 0 5.5 1.8 6 5"/></>,
+  LEAVES_HUB: <><path d="M12 21C7 18 5 14 6 9c4 0 7-2 9-6 3 5 3 10 0 14-1 1.5-2 2.5-3 4z"/><path d="M8 17c2-3 4-5 8-8"/></>,
+  COMPLIANCE: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/><path d="m15 17 1.5 1.5L20 15"/></>,
+  OPERATIONS_HUB: <><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="8" cy="7" r="1.5"/><circle cx="16" cy="12" r="1.5"/><circle cx="10" cy="17" r="1.5"/></>,
+  TASKS_HUB: <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 1.5 1.5L12 8M8 15l1.5 1.5L12 14M14 9h3M14 15h3"/></>,
+  INVENTORY_HUB: <><path d="m4 8 8-4 8 4-8 4z"/><path d="M4 8v8l8 4 8-4V8M12 12v8"/></>,
+  ANALYTICS_HUB: <><path d="M3 20h18"/><path d="m5 16 4-5 4 2 6-8"/><circle cx="5" cy="16" r="1"/><circle cx="19" cy="5" r="1"/></>,
+  SALES_HUB: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></>,
+  REPORTS_HUB: <><path d="M6 2h9l4 4v16H6z"/><path d="M15 2v5h5M9 12h7M9 16h7"/></>,
+  TARGETS_HUB: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></>,
+  SYSTEM_HUB: <><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.7l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7L10.5 2h-3l-.7 2a7 7 0 0 0-1.7.7l-1.9-.9-2.1 2.1.9 1.9a7 7 0 0 0-.7 1.7L0 10.5v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.7.7l.7 2.3h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.7z" transform="translate(2) scale(.83)"/></>,
+  ADMIN_HUB: <><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></>,
+  IMPORTS_HUB: <><path d="M12 21V9M8 13l4-4 4 4"/><path d="M5 7V3h14v4"/></>,
+  SECURITY_SETTINGS: <><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6z"/><path d="m9 12 2 2 4-4"/></>,
   BOUTIQUE_CONFIGURATION: <><path d="M4 10h16M5 10v10h14V10M3 10l2-6h14l2 6"/><path d="M12 14v3M10.5 15.5h3"/></>,
   ADMIN_IMPORT: <><path d="M12 21V9M8 13l4-4 4 4"/><path d="M5 7V3h14v4"/></>,
   SYNC_PLANNER: <><path d="M20 7h-5V2M4 17h5v5"/><path d="M18.5 5.5A9 9 0 0 0 4 10M5.5 18.5A9 9 0 0 0 20 14"/></>,
@@ -76,6 +92,14 @@ type SidebarNavContentProps = {
 export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNavContentProps) {
   const { t, isRtl } = useT();
   const sections = useMemo(() => getSidebarGroupedSections(role, t), [role, t]);
+  const activeHref = useMemo(
+    () =>
+      sections
+        .flatMap((section) => section.items)
+        .filter((item) => isItemActive(item.href))
+        .sort((a, b) => b.href.length - a.href.length)[0]?.href,
+    [isItemActive, sections]
+  );
 
   const handleClick = () => {
     onNavigate?.();
@@ -91,18 +115,21 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
             </p>
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const active = isItemActive(item.href);
+                const active = item.href === activeHref;
                 return (
                   <li key={item.key} className="min-w-0">
                     <Link
                       href={item.href}
                       onClick={handleClick}
-                      className={`group relative flex min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all ${
-                        active ? 'bg-accent-soft text-accent shadow-sm' : 'text-foreground/75 hover:bg-surface-subtle hover:text-foreground'
+                      className={`group relative flex min-w-0 items-center gap-3 rounded-xl px-3 text-[13px] transition-all ${
+                        item.tier === 'hub' ? 'mb-1 py-3 font-bold' : 'py-2.5 font-medium'
+                      } ${
+                        active ? 'bg-accent-soft text-accent shadow-sm' : item.tier === 'hub' ? 'bg-surface-subtle/60 text-foreground hover:bg-surface-subtle' : 'text-foreground/75 hover:bg-surface-subtle hover:text-foreground'
                       }`}
                     >
                       <SidebarNavIcon itemKey={item.key} active={active} />
                       <span className="min-w-0 truncate">{item.label}</span>
+                      {item.tier === 'hub' ? <span className={`ms-auto text-base text-muted ${isRtl ? 'rotate-180' : ''}`}>›</span> : null}
                       {active ? (
                         <span
                           className={`absolute inset-y-2 ${isRtl ? 'right-0' : 'left-0'} w-0.5 rounded-full bg-accent`}

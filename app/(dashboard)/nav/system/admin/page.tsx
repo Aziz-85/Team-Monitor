@@ -17,9 +17,6 @@ const ROUTES = [
   { href: '/admin/kpi-templates', key: 'admin.kpiTemplates' },
   { href: '/admin/reset-password', key: 'admin.resetPassword' },
   { href: '/admin/reset-emp-id', key: 'admin.resetEmpId' },
-  { href: '/admin/integrations/planner', key: 'admin.planner' },
-  { href: '/admin/integrations/planner/completions', key: 'admin.plannerCompletions' },
-  { href: '/about', key: 'admin.about' },
 ];
 
 export default async function NavSystemAdminPage() {

@@ -8,7 +8,7 @@ import { getSidebarGroupedSections } from '@/lib/nav/sidebarShellNav';
 import type { Role } from '@prisma/client';
 
 const PRIMARY_COUNT = 4;
-const PREFERRED_BOTTOM_HREFS = ['/', '/schedule/view', '/tasks', '/inventory/daily'] as const;
+const PREFERRED_BOTTOM_HREFS = ['/', '/nav/team', '/nav/operations', '/nav/analytics'] as const;
 
 export function MobileBottomNav({
   role,
