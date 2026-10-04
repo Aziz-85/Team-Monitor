@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
@@ -93,14 +93,30 @@ type SidebarNavContentProps = {
 export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNavContentProps) {
   const { t, isRtl } = useT();
   const sections = useMemo(() => getSidebarGroupedSections(role, t), [role, t]);
+  const allItems = useMemo(
+    () => sections.flatMap((section) => section.items.flatMap((item) => [item, ...(item.children ?? [])])),
+    [sections]
+  );
   const activeHref = useMemo(
     () =>
-      sections
-        .flatMap((section) => section.items)
+      allItems
         .filter((item) => isItemActive(item.href))
         .sort((a, b) => b.href.length - a.href.length)[0]?.href,
-    [isItemActive, sections]
+    [allItems, isItemActive]
   );
+  const activeParentKey = useMemo(
+    () => sections.flatMap((section) => section.items).find((item) => item.children?.some((child) => child.href === activeHref))?.key,
+    [activeHref, sections]
+  );
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!activeParentKey) return;
+    setExpanded((current) => {
+      if (current.has(activeParentKey)) return current;
+      return new Set([...Array.from(current), activeParentKey]);
+    });
+  }, [activeParentKey]);
 
   const handleClick = () => {
     onNavigate?.();
@@ -117,26 +133,58 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active = item.href === activeHref;
+                const branchActive = active || Boolean(item.children?.some((child) => child.href === activeHref));
+                const open = expanded.has(item.key) || branchActive;
                 return (
                   <li key={item.key} className="min-w-0">
-                    <Link
-                      href={item.href}
-                      onClick={handleClick}
-                      className={`group relative flex min-w-0 items-center gap-3 rounded-xl px-3 text-[13px] transition-all ${
-                        item.tier === 'hub' ? 'mb-1 py-3 font-bold' : 'py-2.5 font-medium'
-                      } ${
-                        active ? 'bg-accent-soft text-accent shadow-sm' : item.tier === 'hub' ? 'bg-surface-subtle/60 text-foreground hover:bg-surface-subtle' : 'text-foreground/75 hover:bg-surface-subtle hover:text-foreground'
-                      }`}
-                    >
-                      <SidebarNavIcon itemKey={item.key} active={active} />
-                      <span className="min-w-0 truncate">{item.label}</span>
-                      {item.tier === 'hub' ? <span className={`ms-auto text-base text-muted ${isRtl ? 'rotate-180' : ''}`}>›</span> : null}
-                      {active ? (
-                        <span
-                          className={`absolute inset-y-2 ${isRtl ? 'right-0' : 'left-0'} w-0.5 rounded-full bg-accent`}
-                        />
+                    <div className={`group relative flex min-w-0 items-center rounded-xl transition-all ${branchActive ? 'bg-accent-soft text-accent' : item.tier === 'hub' ? 'bg-surface-subtle/60 text-foreground hover:bg-surface-subtle' : 'text-foreground/75 hover:bg-surface-subtle hover:text-foreground'}`}>
+                      <Link
+                        href={item.href}
+                        onClick={handleClick}
+                        className={`flex min-w-0 flex-1 items-center gap-3 px-3 text-[13px] ${item.tier === 'hub' ? 'py-3 font-bold' : 'py-2.5 font-medium'}`}
+                      >
+                        <SidebarNavIcon itemKey={item.key} active={branchActive} />
+                        <span className="min-w-0 truncate">{item.label}</span>
+                      </Link>
+                      {item.children?.length ? (
+                        <button
+                          type="button"
+                          aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
+                          aria-expanded={open}
+                          onClick={() => setExpanded((current) => {
+                            const next = new Set(current);
+                            if (next.has(item.key)) next.delete(item.key);
+                            else next.add(item.key);
+                            return next;
+                          })}
+                          className="me-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface hover:text-foreground"
+                        >
+                          <span className={`text-base transition-transform ${open ? 'rotate-90' : ''} ${isRtl ? 'scale-x-[-1]' : ''}`}>›</span>
+                        </button>
+                      ) : item.tier === 'hub' ? (
+                        <span className={`me-3 text-base text-muted ${isRtl ? 'rotate-180' : ''}`}>›</span>
                       ) : null}
-                    </Link>
+                      {branchActive ? <span className={`absolute inset-y-2 ${isRtl ? 'right-0' : 'left-0'} w-0.5 rounded-full bg-accent`} /> : null}
+                    </div>
+                    {item.children?.length && open ? (
+                      <ul className={`relative mt-1 space-y-0.5 pb-1 ${isRtl ? 'mr-5 border-r pr-3' : 'ml-5 border-l pl-3'} border-border/70`}>
+                        {item.children.map((child) => {
+                          const childActive = child.href === activeHref;
+                          return (
+                            <li key={child.key}>
+                              <Link
+                                href={child.href}
+                                onClick={handleClick}
+                                className={`flex min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12px] font-medium transition ${childActive ? 'bg-accent-soft text-accent' : 'text-foreground/70 hover:bg-surface-subtle hover:text-foreground'}`}
+                              >
+                                <SidebarNavIcon itemKey={child.key} active={childActive} />
+                                <span className="min-w-0 truncate">{child.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
                   </li>
                 );
               })}
