@@ -90,6 +90,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     items: [
       { key: 'ADMIN_EMPLOYEES', href: '/admin/employees', labelKey: 'nav.admin.employees' },
       { key: 'LEAVES', href: '/leaves', labelKey: 'nav.leaves' },
+      { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance' },
       { key: 'ADMIN_USERS', href: '/admin/users', labelKey: 'nav.admin.users' },
     ],
   },
