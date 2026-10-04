@@ -14,10 +14,10 @@ import { canAccessRoute } from '@/lib/permissions';
 
 export const ENTRY_DAILY_SALES_SIDEBAR_ROLES = APP_SHELL_ENTRY_DAILY_ROLES;
 
-export type SidebarShellLink = { key: string; label: string; href: string; tier?: 'hub' | 'page'; icon?: 'architecture' };
+export type SidebarShellLink = { key: string; label: string; href: string; tier?: 'hub' | 'page'; icon?: 'architecture'; children?: SidebarShellLink[] };
 export type SidebarShellGroup = { key: string; label: string; items: SidebarShellLink[] };
 
-type SidebarShellGroupedItem = { key: string; href: string; labelKey: string; tier?: 'hub' | 'page'; icon?: 'architecture' };
+type SidebarShellGroupedItem = { key: string; href: string; labelKey: string; tier?: 'hub' | 'page'; icon?: 'architecture'; children?: SidebarShellGroupedItem[] };
 type SidebarShellGroupedSection = { key: string; labelKey: string; items: SidebarShellGroupedItem[] };
 
 const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
@@ -35,10 +35,43 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'sections',
     labelKey: 'nav.sidebar.sections',
     items: [
-      { key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub' },
-      { key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub' },
-      { key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics', tier: 'hub' },
-      { key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.system', tier: 'hub' },
+      {
+        key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub',
+        children: [
+          { key: 'SCHEDULE_HUB', href: '/nav/team/schedule', labelKey: 'nav.sidebar.schedule' },
+          { key: 'EMPLOYEES_HUB', href: '/nav/team/employees', labelKey: 'nav.admin.employees' },
+          { key: 'LEAVES_HUB', href: '/nav/team/leaves', labelKey: 'nav.leaves' },
+          { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },
+          { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance' },
+        ],
+      },
+      {
+        key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub',
+        children: [
+          { key: 'TASKS_HUB', href: '/nav/operations/tasks', labelKey: 'nav.groups.tasks' },
+          { key: 'INVENTORY_HUB', href: '/nav/operations/inventory', labelKey: 'nav.groups.inventory' },
+          { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
+        ],
+      },
+      {
+        key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics', tier: 'hub',
+        children: [
+          { key: 'SALES_HUB', href: '/nav/analytics/sales', labelKey: 'nav.group.SALES' },
+          { key: 'PERFORMANCE_INTELLIGENCE', href: '/analytics/performance-intelligence', labelKey: 'nav.analytics.performanceIntelligence' },
+          { key: 'REPORTS_HUB', href: '/nav/analytics/reports', labelKey: 'nav.group.REPORTS' },
+          { key: 'TARGETS_HUB', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
+          { key: 'COMPANY', href: '/company', labelKey: 'nav.group.COMPANY' },
+        ],
+      },
+      {
+        key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.system', tier: 'hub',
+        children: [
+          { key: 'ADMIN_HUB', href: '/nav/system/admin', labelKey: 'nav.admin.administrationDashboard' },
+          { key: 'IMPORTS_HUB', href: '/nav/system/imports', labelKey: 'nav.admin.importDashboard' },
+          { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
+          { key: 'SECURITY_SETTINGS', href: '/settings/security', labelKey: 'nav.securitySettings' },
+        ],
+      },
     ],
   },
 ];
@@ -96,16 +129,25 @@ export function getAppShellEntryDaily() {
 }
 
 export function getSidebarGroupedSections(role: Role, t: (key: string) => string): SidebarShellGroup[] {
+  const mapItem = (item: SidebarShellGroupedItem): SidebarShellLink | null => {
+    if (!canAccessRoute(role, item.href)) return null;
+    const children = item.children
+      ?.map(mapItem)
+      .filter((child): child is SidebarShellLink => child !== null);
+    return {
+      key: item.key,
+      href: item.href,
+      label: t(item.labelKey),
+      tier: item.tier,
+      icon: item.icon,
+      children: children?.length ? children : undefined,
+    };
+  };
+
   return SIDEBAR_GROUPS.map((section) => {
     const items = section.items
-      .filter((item) => canAccessRoute(role, item.href))
-      .map((item) => ({
-        key: item.key,
-        href: item.href,
-        label: t(item.labelKey),
-        tier: item.tier,
-        icon: item.icon,
-      }));
+      .map(mapItem)
+      .filter((item): item is SidebarShellLink => item !== null);
     return { key: section.key, label: t(section.labelKey), items };
   }).filter((section) => section.items.length > 0);
 }
