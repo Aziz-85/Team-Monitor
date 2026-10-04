@@ -16,7 +16,6 @@ const ROUTES = [
   { href: '/targets/boutiques', key: 'reports.targetsBoutiques' },
   { href: '/targets/employees', key: 'reports.targetsEmployees' },
   { href: '/targets/import', key: 'reports.targetsImport' },
-  { href: '/company', key: 'reports.company' },
 ];
 
 export default async function NavAnalyticsReportsPage() {
