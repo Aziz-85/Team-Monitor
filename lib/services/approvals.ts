@@ -1,13 +1,14 @@
 /**
  * Sprint 2B: Approvals workflow.
- * ASSISTANT_MANAGER => PENDING only (create ApprovalRequest, do not apply).
- * MANAGER/ADMIN => auto-apply via perform(), no ApprovalRequest.
+ * ASSISTANT_MANAGER => applies schedule edits directly in their boutique scope,
+ * but other governed modules remain PENDING.
+ * MANAGER/ADMIN/SUPER_ADMIN => auto-apply via perform(), no ApprovalRequest.
  */
 
 import { prisma } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth';
-import { canAutoApprove } from '@/lib/permissions';
+import { canApplyWithoutApproval } from '@/lib/permissions';
 
 export type ApprovalModule = 'SCHEDULE' | 'TEAM' | 'INVENTORY';
 
@@ -16,7 +17,7 @@ export type CreateOrExecuteResult =
   | { status: 'PENDING_APPROVAL'; requestId: string };
 
 /**
- * If user can auto-approve, runs perform() and returns APPLIED.
+ * If the role/module combination can apply directly, runs perform() and returns APPLIED.
  * Otherwise creates ApprovalRequest(PENDING), logs APPROVAL_REQUEST_CREATED, returns PENDING_APPROVAL.
  */
 export async function createOrExecuteApproval(options: {
@@ -32,7 +33,7 @@ export async function createOrExecuteApproval(options: {
 }): Promise<CreateOrExecuteResult> {
   const { user, module, actionType, payload, effectiveDate, weekStart, boutiqueId, perform } = options;
 
-  if (canAutoApprove(user.role)) {
+  if (canApplyWithoutApproval(user.role, module)) {
     const result = await perform();
     return { status: 'APPLIED', result };
   }

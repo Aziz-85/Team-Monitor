@@ -3,7 +3,7 @@
  * Server enforces via requireRole; these tests verify permission helpers and contract.
  */
 
-import { canEditSchedule } from '@/lib/permissions';
+import { canApplyWithoutApproval, canEditSchedule } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
 describe('RBAC schedule', () => {
@@ -17,6 +17,15 @@ describe('RBAC schedule', () => {
 
   it('ASSISTANT_MANAGER can edit schedule', () => {
     expect(canEditSchedule('ASSISTANT_MANAGER')).toBe(true);
+  });
+
+  it('ASSISTANT_MANAGER schedule changes apply directly', () => {
+    expect(canApplyWithoutApproval('ASSISTANT_MANAGER', 'SCHEDULE')).toBe(true);
+  });
+
+  it('ASSISTANT_MANAGER still needs approval outside schedule', () => {
+    expect(canApplyWithoutApproval('ASSISTANT_MANAGER', 'TEAM')).toBe(false);
+    expect(canApplyWithoutApproval('ASSISTANT_MANAGER', 'INVENTORY')).toBe(false);
   });
 
   it('ADMIN can edit schedule', () => {

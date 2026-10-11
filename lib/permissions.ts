@@ -48,6 +48,15 @@ export function canAutoApprove(role: Role): boolean {
   return role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
 }
 
+/**
+ * Whether an operational change can be applied immediately.
+ * Assistant managers may edit the schedule directly inside their resolved
+ * boutique scope, but still require approval for team and inventory changes.
+ */
+export function canApplyWithoutApproval(role: Role, module: string): boolean {
+  return canAutoApprove(role) || (role === 'ASSISTANT_MANAGER' && module === 'SCHEDULE');
+}
+
 export function requiresApproval(role: Role): boolean {
   return role === 'ASSISTANT_MANAGER';
 }
