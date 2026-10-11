@@ -17,7 +17,15 @@ export const ENTRY_DAILY_SALES_SIDEBAR_ROLES = APP_SHELL_ENTRY_DAILY_ROLES;
 export type SidebarShellLink = { key: string; label: string; href: string; tier?: 'hub' | 'page'; icon?: 'architecture'; children?: SidebarShellLink[] };
 export type SidebarShellGroup = { key: string; label: string; items: SidebarShellLink[] };
 
-type SidebarShellGroupedItem = { key: string; href: string; labelKey: string; tier?: 'hub' | 'page'; icon?: 'architecture'; children?: SidebarShellGroupedItem[] };
+type SidebarShellGroupedItem = {
+  key: string;
+  href: string;
+  labelKey: string;
+  tier?: 'hub' | 'page';
+  icon?: 'architecture';
+  roles?: Role[];
+  children?: SidebarShellGroupedItem[];
+};
 type SidebarShellGroupedSection = { key: string; labelKey: string; items: SidebarShellGroupedItem[] };
 
 const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
@@ -38,26 +46,26 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
       {
         key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub',
         children: [
-          { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor' },
+          { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor', roles: ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
           { key: 'SCHEDULE_VIEW', href: '/schedule/view', labelKey: 'nav.scheduleView' },
-          { key: 'SCHEDULE_NEXT', href: '/schedule/next', labelKey: 'nav.scheduleNext' },
-          { key: 'ADMIN_EMPLOYEES', href: '/admin/employees', labelKey: 'nav.admin.employees' },
-          { key: 'LEAVES', href: '/leaves', labelKey: 'nav.leaves' },
-          { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },
-          { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance' },
+          { key: 'SCHEDULE_NEXT', href: '/schedule/next', labelKey: 'nav.scheduleNext', roles: ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+          { key: 'ADMIN_EMPLOYEES', href: '/admin/employees', labelKey: 'nav.admin.employees', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
+          { key: 'LEAVES', href: '/leaves', labelKey: 'nav.leaves', roles: ['MANAGER', 'ASSISTANT_MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
+          { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
+          { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
         ],
       },
       {
         key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub',
         children: [
           { key: 'TASKS', href: '/tasks', labelKey: 'nav.tasks' },
-          { key: 'TASK_SETUP', href: '/tasks/setup', labelKey: 'tasks.setup' },
-          { key: 'TASK_MONITOR', href: '/tasks/monitor', labelKey: 'tasks.monitorNav' },
+          { key: 'TASK_SETUP', href: '/tasks/setup', labelKey: 'tasks.setup', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+          { key: 'TASK_MONITOR', href: '/tasks/monitor', labelKey: 'tasks.monitorNav', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
           { key: 'INV_DAILY', href: '/inventory/daily', labelKey: 'nav.inventoryDaily' },
-          { key: 'INV_HISTORY', href: '/inventory/daily/history', labelKey: 'nav.inventoryDailyHistory' },
+          { key: 'INV_HISTORY', href: '/inventory/daily/history', labelKey: 'nav.inventoryDailyHistory', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
           { key: 'INV_ZONES', href: '/inventory/zones', labelKey: 'nav.inventoryZones' },
-          { key: 'INV_FOLLOW', href: '/inventory/follow-up', labelKey: 'nav.inventoryFollowUp' },
-          { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
+          { key: 'INV_FOLLOW', href: '/inventory/follow-up', labelKey: 'nav.inventoryFollowUp', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+          { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
         ],
       },
       {
@@ -141,6 +149,7 @@ export function getAppShellEntryDaily() {
 
 export function getSidebarGroupedSections(role: Role, t: (key: string) => string): SidebarShellGroup[] {
   const mapItem = (item: SidebarShellGroupedItem): SidebarShellLink | null => {
+    if (item.roles && !item.roles.includes(role)) return null;
     if (role === 'ASSISTANT_MANAGER' && item.key === 'EMPLOYEE_HOME') return null;
     const resolvedItem =
       role === 'ASSISTANT_MANAGER' && item.key === 'HOME'

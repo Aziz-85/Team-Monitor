@@ -26,6 +26,31 @@ describe('Assistant Manager home navigation', () => {
     const team = links.find((item) => item.key === 'TEAM_HUB');
     expect(team?.children?.some((item) => item.href === '/schedule/edit')).toBe(true);
     expect(team?.children?.some((item) => item.href === '/schedule/view')).toBe(true);
+    expect(team?.children?.some((item) => item.href === '/leaves')).toBe(true);
+    expect(team?.children?.some((item) => item.href === '/approvals')).toBe(false);
+    expect(team?.children?.some((item) => item.href === '/compliance')).toBe(false);
     expect(team?.children?.some((item) => item.href === '/nav/team/schedule')).toBe(false);
+
+    const operations = links.find((item) => item.key === 'OPERATIONS_HUB');
+    expect(operations?.children?.map((item) => item.href)).toEqual([
+      '/tasks',
+      '/inventory/daily',
+      '/inventory/zones',
+    ]);
+  });
+
+  it('does not expose management pages to employees through broad route prefixes', () => {
+    const sections = getSidebarGroupedSections('EMPLOYEE', translate);
+    const links = sections.flatMap((section) => section.items);
+
+    const team = links.find((item) => item.key === 'TEAM_HUB');
+    expect(team?.children?.map((item) => item.href)).toEqual(['/schedule/view']);
+
+    const operations = links.find((item) => item.key === 'OPERATIONS_HUB');
+    expect(operations?.children?.map((item) => item.href)).toEqual([
+      '/tasks',
+      '/inventory/daily',
+      '/inventory/zones',
+    ]);
   });
 });
