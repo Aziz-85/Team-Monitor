@@ -15,11 +15,17 @@ describe('Assistant Manager home navigation', () => {
   });
 
   it('uses /employee for Home without rendering a duplicate employee-home link', () => {
-    const links = getSidebarGroupedSections('ASSISTANT_MANAGER', translate).flatMap(
+    const sections = getSidebarGroupedSections('ASSISTANT_MANAGER', translate);
+    const links = sections.flatMap(
       (section) => section.items
     );
 
     expect(links.find((item) => item.key === 'HOME')?.href).toBe('/employee');
     expect(links.some((item) => item.key === 'EMPLOYEE_HOME')).toBe(false);
+
+    const team = links.find((item) => item.key === 'TEAM_HUB');
+    expect(team?.children?.some((item) => item.href === '/schedule/edit')).toBe(true);
+    expect(team?.children?.some((item) => item.href === '/schedule/view')).toBe(true);
+    expect(team?.children?.some((item) => item.href === '/nav/team/schedule')).toBe(false);
   });
 });
