@@ -1,15 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { OpsCard } from '@/components/ui/OpsCard';
-import { ShiftCard } from '@/components/ui/ShiftCard';
 import { useT } from '@/lib/i18n/useT';
 import { formatSarInt } from '@/lib/utils/money';
-import { getPerformanceBgClass } from '@/lib/performanceColors';
 import { PaceCard } from '@/components/analytics/PaceCard';
 import { ForecastCard } from '@/components/analytics/ForecastCard';
 import type { ForecastMetrics, PaceMetrics } from '@/lib/analytics/performanceLayer';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
+import {
+  EmptyStateBlock,
+  KPIGrid,
+  KPIStatCard,
+  PageContainer,
+  RecommendationCard,
+  SectionBlock,
+} from '@/components/ui/ExecutiveIntelligence';
 
 type EmployeeHomeData = {
   date: string;
@@ -220,90 +225,78 @@ export function EmployeeHomeClient() {
     );
   }
 
+  const monthlyRemaining = targetsData
+    ? targetsData.remainingMonthTargetSar ?? Math.max(0, targetsData.monthlyTarget - targetsData.mtdSales)
+    : 0;
+  const paceTone = targetsData?.monthlyTargetMet
+    ? 'success'
+    : (targetsData?.mtdPct ?? 0) >= 90
+      ? 'default'
+      : (targetsData?.mtdPct ?? 0) >= 70
+        ? 'warning'
+        : 'danger';
+  const inputClass =
+    'w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15';
+
   return (
-    <div className="w-full min-w-0 max-w-full p-4 md:p-6">
-      <div className="mx-auto w-full min-w-0 max-w-4xl">
-        <div className="mb-4 min-w-0">
-          <label className="me-2 text-base font-medium text-foreground">{t('common.date')}</label>
+    <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
+      <SectionBlock
+        title={t('nav.employeeHome')}
+        subtitle={t('home.targetsTodayOnlySubtitle')}
+        rightSlot={
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-sm">
+            <label htmlFor="employee-home-date" className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {t('common.date')}
+            </label>
           <input
+            id="employee-home-date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full min-w-0 rounded border border-border px-3 py-2 text-base sm:w-auto"
+            className="bg-transparent text-sm font-medium text-foreground outline-none"
           />
-        </div>
-
-        {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
-          <div className="mb-4 min-w-0">
-            <p className="mb-2 text-xs text-muted">{t('home.targetsTodayOnlySubtitle')}</p>
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-            <OpsCard title={t('home.dailyTargetCard')} className="!p-3">
-              <p className="text-sm text-muted">
-                {t('targets.dailyRequiredPace')}:{' '}
-                {targetsData.monthlyTargetMet
-                  ? t('home.dailyPaceNotApplicableMet')
-                  : formatSarInt(targetsData.todayTarget)}{' '}
-                · {t('targets.reportingDailyShort')}: {formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} ·{' '}
-                {t('home.sales')}: {formatSarInt(targetsData.todaySales)}
-              </p>
-              {targetsData.dailyAchievementPending ? (
-                <p className="mt-2 text-sm text-muted">{t('targets.dailyAchievementPending')}</p>
-              ) : targetsData.monthlyTargetMet ? (
-                <>
-                  <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                    {t('home.dailyPaceMetBecauseMonthlyMet')}
-                  </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {t('home.mtdAchievedVsMonthlyTarget')
-                      .replace('{mtd}', formatSarInt(targetsData.mtdSales))
-                      .replace('{target}', formatSarInt(targetsData.monthlyTarget))}
-                  </p>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
-                    <div className="h-full w-full rounded-full bg-emerald-600" />
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                    {t('home.dailyPaceStatusMet')}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
-                    <div
-                      className={`h-full rounded-full ${targetsData.todayPct > 100 ? getPerformanceBgClass(targetsData.todayPct) : 'bg-accent'}`}
-                      style={{ width: `${Math.min(100, Math.max(0, targetsData.todayPct))}%` }}
-                    />
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.todayPct)}%</p>
-                </>
-              )}
-            </OpsCard>
-            <OpsCard title={t('home.monthlyProgressCard')} className="!p-3">
-              <p className="text-sm text-muted">
-                {t('home.target')}: {formatSarInt(targetsData.monthlyTarget)} · MTD: {formatSarInt(targetsData.mtdSales)} ·{' '}
-                {t('targets.remainingMonthlyTarget')}:{' '}
-                {formatSarInt(
-                  targetsData.remainingMonthTargetSar ?? Math.max(0, targetsData.monthlyTarget - targetsData.mtdSales)
-                )}
-              </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-subtle">
-                <div
-                  className={`h-full rounded-full ${targetsData.mtdPct > 100 ? getPerformanceBgClass(targetsData.mtdPct) : 'bg-emerald-600'}`}
-                  style={{ width: `${Math.min(100, Math.max(0, targetsData.mtdPct))}%` }}
-                />
-              </div>
-              <p className="mt-1 text-sm font-medium text-foreground">{Math.round(targetsData.mtdPct)}%</p>
-              {targetsData.monthlyTargetMet && (
-                <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                  {t('home.monthlyTargetAchievedBadge')}
-                </p>
-              )}
-            </OpsCard>
-            </div>
           </div>
-        )}
+        }
+      >
+        <RecommendationCard
+          title={targetsData?.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : t('home.monthlyProgressCard')}
+          message={`${Math.round(targetsData?.mtdPct ?? 0)}% · ${t('targets.remainingMonthlyTarget')}: ${formatSarInt(monthlyRemaining)}`}
+          tone={paceTone}
+          className="border-2 p-5 md:p-6"
+        />
+      </SectionBlock>
 
-        {selfAnalytics?.employees?.[0] && (
-          <div className="mb-4 grid min-w-0 gap-4 md:grid-cols-2">
+      {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
+        <SectionBlock title={t('home.monthlyProgressCard')} subtitle={t('home.targetsTodayOnlySubtitle')}>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <KPIStatCard
+              title={t('home.monthlyProgressCard')}
+              value={`${Math.round(targetsData.mtdPct)}%`}
+              subtitle={`${formatSarInt(targetsData.mtdSales)} / ${formatSarInt(targetsData.monthlyTarget)}`}
+              tone={paceTone}
+              emphasis="strong"
+              trendLabel={targetsData.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : undefined}
+            />
+            <KPIStatCard
+              title={t('targets.remainingMonthlyTarget')}
+              value={formatSarInt(monthlyRemaining)}
+              subtitle={t('targets.dailyRequiredPace')}
+              tone={monthlyRemaining > 0 ? 'warning' : 'success'}
+              emphasis="strong"
+            />
+          </div>
+          <KPIGrid cols={4} className="mt-3">
+            <KPIStatCard title={t('home.sales')} value={formatSarInt(targetsData.todaySales)} subtitle={`${Math.round(targetsData.todayPct)}%`} tone={targetsData.todayPct >= 100 ? 'success' : 'default'} />
+            <KPIStatCard title={t('home.dailyTargetCard')} value={formatSarInt(targetsData.todayTarget)} subtitle={targetsData.dailyAchievementPending ? t('targets.dailyAchievementPending') : t('targets.dailyRequiredPace')} tone="default" />
+            <KPIStatCard title={t('targets.reportingDailyShort')} value={formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} tone="default" />
+            <KPIStatCard title="MTD Sales" value={formatSarInt(targetsData.mtdSales)} tone={paceTone} />
+          </KPIGrid>
+        </SectionBlock>
+      )}
+
+      {selfAnalytics?.employees?.[0] && (
+        <SectionBlock title={t('analytics.monthPaceTitle')} subtitle={t('analytics.projectionOnly')}>
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
             <PaceCard
               title={t('analytics.monthPaceTitle')}
               pace={selfAnalytics.employees[0].pace}
@@ -315,7 +308,6 @@ export function EmployeeHomeClient() {
                 onTrack: t('analytics.onTrack'),
                 behind: t('analytics.behind'),
               }}
-              className="!p-3"
             />
             <ForecastCard
               title={t('analytics.monthForecastTitle')}
@@ -323,26 +315,34 @@ export function EmployeeHomeClient() {
               rolling7={null}
               disclaimer={t('analytics.projectionOnly')}
               rollingTitle={t('analytics.forecastRolling7')}
-              className="!p-3"
             />
           </div>
-        )}
+        </SectionBlock>
+      )}
 
-        <OpsCard title="My Sales" className="mb-4">
-          <p className="mb-2 text-sm text-muted">Enter daily sales (SAR). Zero is valid.</p>
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="min-w-0 sm:w-auto">
-                <label className="me-1 text-xs text-muted">Date</label>
+      <SectionBlock
+        title="My Sales"
+        subtitle="Enter today's sales and keep your monthly progress current. Zero is a valid entry."
+        rightSlot={
+          <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+            Daily entry
+          </span>
+        }
+      >
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(280px,.75fr)]">
+          <div className="rounded-2xl border border-border bg-surface-subtle/50 p-4 md:p-5">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
+                Date
                 <input
                   type="date"
                   value={salesEntryDate}
                   onChange={(e) => setSalesEntryDate(e.target.value)}
-                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-auto"
+                  className={`${inputClass} mt-2`}
                 />
-              </div>
-              <div className="min-w-0 sm:w-auto">
-                <label className="me-1 text-xs text-muted">Amount (SAR)</label>
+              </label>
+              <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
+                Amount (SAR)
                 <input
                   type="number"
                   min={0}
@@ -350,21 +350,11 @@ export function EmployeeHomeClient() {
                   value={salesEntryAmount}
                   onChange={(e) => setSalesEntryAmount(e.target.value)}
                   placeholder="0"
-                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                  className={`${inputClass} mt-2`}
                 />
-              </div>
-              <button
-                type="button"
-                disabled={salesEntrySaving}
-                onClick={saveSalesEntry}
-                className="w-full rounded bg-accent px-3 py-1.5 text-sm text-white disabled:opacity-50 sm:w-auto"
-              >
-                {salesEntrySaving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-            <div className="flex min-w-0 flex-wrap items-end gap-4">
-              <div className="min-w-0 sm:w-auto">
-                <label className="me-1 text-xs text-muted">{t('home.salesInvoicesLabel')}</label>
+              </label>
+              <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
+                {t('home.salesInvoicesLabel')}
                 <input
                   name="invoiceCount"
                   type="number"
@@ -372,12 +362,12 @@ export function EmployeeHomeClient() {
                   step={1}
                   value={salesEntryInvoiceCount}
                   onChange={(e) => setSalesEntryInvoiceCount(e.target.value)}
-                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                  className={`${inputClass} mt-2`}
                   placeholder=""
                 />
-              </div>
-              <div className="min-w-0 sm:w-auto">
-                <label className="me-1 text-xs text-muted">{t('home.salesPiecesLabel')}</label>
+              </label>
+              <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
+                {t('home.salesPiecesLabel')}
                 <input
                   name="pieceCount"
                   type="number"
@@ -385,76 +375,111 @@ export function EmployeeHomeClient() {
                   step={1}
                   value={salesEntryPieceCount}
                   onChange={(e) => setSalesEntryPieceCount(e.target.value)}
-                  className="w-full min-w-0 rounded border border-border px-2 py-1.5 text-sm sm:w-28"
+                  className={`${inputClass} mt-2`}
                   placeholder=""
                 />
-              </div>
+              </label>
             </div>
+            <button
+              type="button"
+              disabled={salesEntrySaving}
+              onClick={saveSalesEntry}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              {salesEntrySaving ? 'Saving…' : 'Save sales entry'}
+            </button>
+            {salesEntryError && <p className="mt-3 text-sm font-medium text-rose-600">{salesEntryError}</p>}
+            {salesEntryInfo && !salesEntryError && (
+              <p className="mt-3 text-sm font-medium text-amber-700 dark:text-amber-400">{salesEntryInfo}</p>
+            )}
           </div>
-          {salesEntryError && <p className="mt-2 text-sm text-red-600">{salesEntryError}</p>}
-          {salesEntryInfo && !salesEntryError && (
-            <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">{salesEntryInfo}</p>
-          )}
-          <p className="mt-2 text-xs text-muted">Last 7 entries:</p>
-          <ul className="mt-1 list-inside list-disc ps-4 text-sm text-foreground">
-            {lastEntries.length === 0 && <li>—</li>}
-            {lastEntries.map((e) => (
-              <li key={e.id} className="break-words">
-                {e.date}: {formatSarInt(e.amount)}
-                {(e.invoiceCount != null || e.pieceCount != null) && (
-                  <span className="text-muted">
-                    {' '}
-                    (
-                    {e.invoiceCount != null ? `${e.invoiceCount} ${t('home.salesInvoicesLabel')}` : ''}
-                    {e.invoiceCount != null && e.pieceCount != null ? ' · ' : ''}
-                    {e.pieceCount != null ? `${e.pieceCount} ${t('home.salesPiecesLabel')}` : ''}
-                    )
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </OpsCard>
-
-        <div className="grid min-w-0 gap-4 md:grid-cols-2">
-          <ShiftCard variant="morning" title={t('schedule.morning')}>
-            {data.todaySchedule.am ? (
-              <p className="text-base">You are on shift</p>
+          <div className="rounded-2xl border border-border bg-surface p-4 md:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Last 7 entries</p>
+            {lastEntries.length === 0 ? (
+              <EmptyStateBlock title="No recent entries" description="Your saved sales will appear here." className="mt-3 border-0 bg-surface-subtle/60" />
             ) : (
-              <p className="text-base text-muted">Off</p>
+              <div className="mt-3 divide-y divide-border">
+                {lastEntries.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{entry.date}</p>
+                      {(entry.invoiceCount != null || entry.pieceCount != null) && (
+                        <p className="mt-0.5 truncate text-xs text-muted">
+                          {entry.invoiceCount != null ? `${entry.invoiceCount} ${t('home.salesInvoicesLabel')}` : ''}
+                          {entry.invoiceCount != null && entry.pieceCount != null ? ' · ' : ''}
+                          {entry.pieceCount != null ? `${entry.pieceCount} ${t('home.salesPiecesLabel')}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <p className="shrink-0 text-sm font-bold tabular-nums text-foreground">{formatSarInt(entry.amount)}</p>
+                  </div>
+                ))}
+              </div>
             )}
-          </ShiftCard>
-          <ShiftCard variant="evening" title={t('schedule.evening')}>
-            {data.todaySchedule.pm ? (
-              <p className="text-base">You are on shift</p>
-            ) : (
-              <p className="text-base text-muted">Off</p>
-            )}
-          </ShiftCard>
+          </div>
         </div>
+      </SectionBlock>
 
-        <OpsCard title={t('tasks.today')} className="mt-6">
-          <ul className="list-disc space-y-1 ps-4">
-            {data.todayTasks.map((t) => (
-              <li key={t.taskName} className="break-words">
-                {t.taskName} <span className="text-muted">({t.reason})</span>
-              </li>
-            ))}
-            {data.todayTasks.length === 0 && <li className="text-muted">—</li>}
-          </ul>
-        </OpsCard>
+      <SectionBlock title="Today's operation" subtitle="Your shift status and assigned work in one view.">
+        <KPIGrid cols={2}>
+          <KPIStatCard
+            title={t('schedule.morning')}
+            value={data.todaySchedule.am ? 'On shift' : 'Off'}
+            subtitle={data.todaySchedule.am ? 'Scheduled for the morning shift' : 'No morning shift assigned'}
+            tone={data.todaySchedule.am ? 'success' : 'default'}
+          />
+          <KPIStatCard
+            title={t('schedule.evening')}
+            value={data.todaySchedule.pm ? 'On shift' : 'Off'}
+            subtitle={data.todaySchedule.pm ? 'Scheduled for the evening shift' : 'No evening shift assigned'}
+            tone={data.todaySchedule.pm ? 'info' : 'default'}
+          />
+        </KPIGrid>
+        <div className="mt-4 rounded-2xl border border-border bg-surface-subtle/50 p-4 md:p-5">
+          <h3 className="text-sm font-semibold text-foreground">{t('tasks.today')}</h3>
+          {data.todayTasks.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">No tasks assigned for today.</p>
+          ) : (
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {data.todayTasks.map((task) => (
+                <div key={task.taskName} className="rounded-xl border border-border bg-surface px-4 py-3 shadow-sm">
+                  <p className="text-sm font-semibold text-foreground">{task.taskName}</p>
+                  <p className="mt-1 text-xs text-muted">{task.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </SectionBlock>
 
-        <OpsCard title={t('schedule.week')} className="mt-6">
-          <p className="mb-2 text-base text-muted">{t('schedule.morning')}</p>
-          <p className="mb-2 text-base break-words">
-            {data.weekRoster.am.map((e) => e.name).join(', ') || '—'}
-          </p>
-          <p className="mb-2 text-base text-muted">{t('schedule.evening')}</p>
-          <p className="text-base break-words">
-            {data.weekRoster.pm.map((e) => e.name).join(', ') || '—'}
-          </p>
-        </OpsCard>
-      </div>
-    </div>
+      <SectionBlock title={t('schedule.week')} subtitle="The team roster for the selected week.">
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[
+            { label: t('schedule.morning'), people: data.weekRoster.am, tone: 'border-amber-200/80 bg-amber-50/50 dark:border-amber-800/50 dark:bg-amber-950/10' },
+            { label: t('schedule.evening'), people: data.weekRoster.pm, tone: 'border-sky-200/80 bg-sky-50/50 dark:border-sky-800/50 dark:bg-sky-950/10' },
+          ].map((shift) => (
+            <article key={shift.label} className={`rounded-2xl border p-4 md:p-5 ${shift.tone}`}>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-foreground">{shift.label}</h3>
+                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold tabular-nums text-muted shadow-sm">
+                  {shift.people.length}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {shift.people.length === 0 ? (
+                  <span className="text-sm text-muted">No employees assigned.</span>
+                ) : (
+                  shift.people.map((employee) => (
+                    <span key={employee.empId} className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground shadow-sm">
+                      {employee.name}
+                    </span>
+                  ))
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </SectionBlock>
+    </PageContainer>
   );
 }
