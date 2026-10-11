@@ -65,6 +65,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   /** مساعد المدير: مسارات تشغيلية أساسية + الجدول + المهام + الجرد */
   ASSISTANT_MANAGER: [
     '/',
+    '/employee',
     '/schedule',
     '/schedule/view',
     '/schedule/edit',
