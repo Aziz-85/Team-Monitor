@@ -152,10 +152,9 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
                           aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
                           aria-expanded={open}
                           onClick={() => setExpanded((current) => {
-                            const next = new Set(current);
-                            if (next.has(item.key)) next.delete(item.key);
-                            else next.add(item.key);
-                            return next;
+                            // Accordion behavior keeps a long navigation tree
+                            // scannable: one workspace is expanded at a time.
+                            return current.has(item.key) ? new Set() : new Set([item.key]);
                           })}
                           className="me-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface hover:text-foreground"
                         >

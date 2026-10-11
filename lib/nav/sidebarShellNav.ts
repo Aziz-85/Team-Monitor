@@ -38,9 +38,11 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
       {
         key: 'TEAM_HUB', href: '/nav/team', labelKey: 'nav.sidebar.team', tier: 'hub',
         children: [
-          { key: 'SCHEDULE_HUB', href: '/nav/team/schedule', labelKey: 'nav.sidebar.schedule' },
-          { key: 'EMPLOYEES_HUB', href: '/nav/team/employees', labelKey: 'nav.admin.employees' },
-          { key: 'LEAVES_HUB', href: '/nav/team/leaves', labelKey: 'nav.leaves' },
+          { key: 'SCHEDULE_EDIT', href: '/schedule/edit', labelKey: 'nav.scheduleEditor' },
+          { key: 'SCHEDULE_VIEW', href: '/schedule/view', labelKey: 'nav.scheduleView' },
+          { key: 'SCHEDULE_NEXT', href: '/schedule/next', labelKey: 'nav.scheduleNext' },
+          { key: 'ADMIN_EMPLOYEES', href: '/admin/employees', labelKey: 'nav.admin.employees' },
+          { key: 'LEAVES', href: '/leaves', labelKey: 'nav.leaves' },
           { key: 'APPROVALS', href: '/approvals', labelKey: 'nav.approvals' },
           { key: 'COMPLIANCE', href: '/compliance', labelKey: 'nav.compliance' },
         ],
@@ -48,28 +50,37 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
       {
         key: 'OPERATIONS_HUB', href: '/nav/operations', labelKey: 'nav.sidebar.operations', tier: 'hub',
         children: [
-          { key: 'TASKS_HUB', href: '/nav/operations/tasks', labelKey: 'nav.groups.tasks' },
-          { key: 'INVENTORY_HUB', href: '/nav/operations/inventory', labelKey: 'nav.groups.inventory' },
+          { key: 'TASKS', href: '/tasks', labelKey: 'nav.tasks' },
+          { key: 'TASK_SETUP', href: '/tasks/setup', labelKey: 'tasks.setup' },
+          { key: 'TASK_MONITOR', href: '/tasks/monitor', labelKey: 'tasks.monitorNav' },
+          { key: 'INV_DAILY', href: '/inventory/daily', labelKey: 'nav.inventoryDaily' },
+          { key: 'INV_HISTORY', href: '/inventory/daily/history', labelKey: 'nav.inventoryDailyHistory' },
+          { key: 'INV_ZONES', href: '/inventory/zones', labelKey: 'nav.inventoryZones' },
+          { key: 'INV_FOLLOW', href: '/inventory/follow-up', labelKey: 'nav.inventoryFollowUp' },
           { key: 'SYNC_PLANNER', href: '/sync/planner', labelKey: 'nav.syncPlanner' },
         ],
       },
       {
         key: 'ANALYTICS_HUB', href: '/nav/analytics', labelKey: 'nav.sidebar.analytics', tier: 'hub',
         children: [
-          { key: 'SALES_HUB', href: '/nav/analytics/sales', labelKey: 'nav.group.SALES' },
+          { key: 'SALES_SUMMARY', href: '/sales/summary', labelKey: 'nav.analytics.salesSummary' },
+          { key: 'SALES_ANALYTICS', href: '/sales/analytics', labelKey: 'nav.analytics.salesAnalytics' },
           { key: 'PERFORMANCE_INTELLIGENCE', href: '/analytics/performance-intelligence', labelKey: 'nav.analytics.performanceIntelligence' },
-          { key: 'REPORTS_HUB', href: '/nav/analytics/reports', labelKey: 'nav.group.REPORTS' },
-          { key: 'TARGETS_HUB', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
-          { key: 'COMPANY', href: '/company', labelKey: 'nav.group.COMPANY' },
+          { key: 'EXECUTIVE', href: '/executive', labelKey: 'nav.analytics.executive' },
+          { key: 'ADMIN_TARGETS', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
+          { key: 'MY_TARGET', href: '/me/target', labelKey: 'nav.myTarget' },
+          { key: 'EXPORT_CENTER', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter' },
         ],
       },
       {
         key: 'SYSTEM_HUB', href: '/nav/system', labelKey: 'nav.sidebar.system', tier: 'hub',
         children: [
-          { key: 'ADMIN_HUB', href: '/nav/system/admin', labelKey: 'nav.admin.administrationDashboard' },
-          { key: 'IMPORTS_HUB', href: '/nav/system/imports', labelKey: 'nav.admin.importDashboard' },
+          { key: 'BOUTIQUE_CONFIGURATION', href: '/admin/boutique-configuration', labelKey: 'nav.admin.boutiqueConfiguration' },
+          { key: 'ADMIN_USERS', href: '/admin/users', labelKey: 'nav.admin.users' },
+          { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
           { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
           { key: 'SECURITY_SETTINGS', href: '/settings/security', labelKey: 'nav.securitySettings' },
+          { key: 'CHANGE_PASSWORD', href: '/change-password', labelKey: 'nav.changePassword' },
         ],
       },
     ],
@@ -135,13 +146,17 @@ export function getSidebarGroupedSections(role: Role, t: (key: string) => string
       role === 'ASSISTANT_MANAGER' && item.key === 'HOME'
         ? { ...item, href: '/employee' }
         : item;
-    if (!canAccessRoute(role, resolvedItem.href)) return null;
     const children = resolvedItem.children
       ?.map(mapItem)
       .filter((child): child is SidebarShellLink => child !== null);
+    const canOpenItem = canAccessRoute(role, resolvedItem.href);
+    if (!canOpenItem && !children?.length) return null;
     return {
       key: resolvedItem.key,
-      href: resolvedItem.href,
+      // A role may have access to useful children without access to the optional
+      // overview hub. In that case the branch stays visible and opens its first
+      // permitted destination instead of disappearing completely.
+      href: canOpenItem ? resolvedItem.href : children![0].href,
       label: t(resolvedItem.labelKey),
       tier: resolvedItem.tier,
       icon: resolvedItem.icon,
