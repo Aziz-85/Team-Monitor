@@ -8,6 +8,12 @@ describe('Assistant Manager home navigation', () => {
     expect(canAccessRoute('ASSISTANT_MANAGER', '/employee')).toBe(true);
   });
 
+  it('allows the team navigation branch that contains the schedule editor', () => {
+    expect(canAccessRoute('ASSISTANT_MANAGER', '/nav/team')).toBe(true);
+    expect(canAccessRoute('ASSISTANT_MANAGER', '/nav/team/schedule')).toBe(true);
+    expect(canAccessRoute('ASSISTANT_MANAGER', '/schedule/edit')).toBe(true);
+  });
+
   it('uses /employee for Home without rendering a duplicate employee-home link', () => {
     const links = getSidebarGroupedSections('ASSISTANT_MANAGER', translate).flatMap(
       (section) => section.items
