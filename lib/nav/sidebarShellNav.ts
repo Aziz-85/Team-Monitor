@@ -129,7 +129,16 @@ export function getAppShellEntryDaily() {
 export function getSidebarGroupedSections(role: Role, t: (key: string) => string): SidebarShellGroup[] {
   return SIDEBAR_GROUPS.map((section) => {
     const items = section.items
-      .filter((item) => canAccessRoute(role, item.href))
+      .map((item) => {
+        if (role === 'ASSISTANT_MANAGER' && item.key === 'HOME') {
+          return { ...item, href: '/employee' };
+        }
+        return item;
+      })
+      .filter((item) => {
+        if (role === 'ASSISTANT_MANAGER' && item.key === 'EMPLOYEE_HOME') return false;
+        return canAccessRoute(role, item.href);
+      })
       .map((item) => ({
         key: item.key,
         href: item.href,
