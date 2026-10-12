@@ -59,7 +59,10 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 429) setError(t('auth.tooManyAttempts'));
+        if (res.status === 400) setError(t('auth.missingCredentials'));
+        else if (res.status === 401) setError(t('auth.invalidCredentials'));
+        else if (res.status === 403) setError(t('auth.accountAccessUnavailable'));
+        else if (res.status === 429) setError(t('auth.tooManyAttempts'));
         else if (res.status >= 500) setError(t('auth.serverError'));
         else setError(t('auth.loginFailed'));
         return;
@@ -108,7 +111,9 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(t('auth.loginFailed'));
+        if (res.status === 429) setError(t('auth.tooManyAttempts'));
+        else if (res.status >= 500) setError(t('auth.serverError'));
+        else setError(t('auth.invalidVerificationCode'));
         return;
       }
       finishLogin(data);
@@ -130,7 +135,8 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(t('auth.loginFailed'));
+        if (res.status >= 500) setError(t('auth.serverError'));
+        else setError(t('auth.invalidVerificationCode'));
         return;
       }
       finishLogin(data);
