@@ -86,6 +86,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
           { key: 'BOUTIQUE_CONFIGURATION', href: '/admin/boutique-configuration', labelKey: 'nav.admin.boutiqueConfiguration' },
           { key: 'ADMIN_USERS', href: '/admin/users', labelKey: 'nav.admin.users' },
           { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
+          { key: 'LOGIN_ACTIVITY', href: '/admin/audit/login', labelKey: 'nav.admin.loginAudit', roles: ['ADMIN', 'SUPER_ADMIN'] },
           { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
           { key: 'SECURITY_SETTINGS', href: '/settings/security', labelKey: 'nav.securitySettings' },
           { key: 'CHANGE_PASSWORD', href: '/change-password', labelKey: 'nav.changePassword' },
