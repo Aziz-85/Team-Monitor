@@ -53,4 +53,20 @@ describe('Assistant Manager home navigation', () => {
       '/inventory/zones',
     ]);
   });
+
+  it('shows login activity to administrators only', () => {
+    const adminLinks = getSidebarGroupedSections('ADMIN', translate)
+      .flatMap((section) => section.items)
+      .find((item) => item.key === 'SYSTEM_HUB')?.children;
+    const assistantLinks = getSidebarGroupedSections('ASSISTANT_MANAGER', translate)
+      .flatMap((section) => section.items)
+      .find((item) => item.key === 'SYSTEM_HUB')?.children;
+    const employeeLinks = getSidebarGroupedSections('EMPLOYEE', translate)
+      .flatMap((section) => section.items)
+      .find((item) => item.key === 'SYSTEM_HUB')?.children;
+
+    expect(adminLinks?.some((item) => item.href === '/admin/audit/login')).toBe(true);
+    expect(assistantLinks?.some((item) => item.href === '/admin/audit/login')).toBe(false);
+    expect(employeeLinks?.some((item) => item.href === '/admin/audit/login')).toBe(false);
+  });
 });
