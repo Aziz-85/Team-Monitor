@@ -86,18 +86,29 @@ export function TasksPageClient({ role }: { role: Role }) {
   const toggleCompletion = useCallback(
     (taskId: string, action: 'done' | 'undo', dueDate?: string, assigneeEmpId?: string | null) => {
       if (updatingId) return;
-      setUpdatingId(taskId);
+      const occurrenceId = `${taskId}:${dueDate ?? ''}:${assigneeEmpId ?? ''}`;
+      const nextCompleted = action === 'done';
+      const previousTasks = tasks;
+      setUpdatingId(occurrenceId);
+      setTasks((current) =>
+        current.map((task) =>
+          task.taskId === taskId && task.dueDate === dueDate && task.assigneeEmpId === assigneeEmpId
+            ? { ...task, isCompleted: nextCompleted }
+            : task
+        )
+      );
       fetch('/api/tasks/completion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, action, dueDate, assigneeEmpId: assigneeEmpId ?? undefined }),
       })
         .then((r) => {
-          if (r.ok) fetchList();
+          if (!r.ok) setTasks(previousTasks);
         })
+        .catch(() => setTasks(previousTasks))
         .finally(() => setUpdatingId(null));
     },
-    [updatingId, fetchList]
+    [updatingId, tasks]
   );
 
   const todayStr = (() => {
@@ -343,7 +354,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                           {canToggle && (
                             <button
                               type="button"
-                              disabled={!!updatingId}
+                              disabled={updatingId === `${row.taskId}:${row.dueDate}:${row.assigneeEmpId ?? ''}`}
                               onClick={() => toggleCompletion(row.taskId, row.isCompleted ? 'undo' : 'done', row.dueDate, row.assigneeEmpId)}
                               className={
                                 row.isCompleted
@@ -351,7 +362,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                                   : 'rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50'
                               }
                             >
-                              {updatingId === row.taskId ? '...' : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
+                              {updatingId === `${row.taskId}:${row.dueDate}:${row.assigneeEmpId ?? ''}` ? '...' : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
                             </button>
                           )}
                           {canSeeAllAssigned && (
