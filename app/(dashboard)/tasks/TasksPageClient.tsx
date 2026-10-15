@@ -35,7 +35,6 @@ export function TasksPageClient({ role }: { role: Role }) {
   const [searchDebounced, setSearchDebounced] = useState('');
 
   const [tasks, setTasks] = useState<TaskListRow[]>([]);
-  const [launchDate, setLaunchDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -66,9 +65,8 @@ export function TasksPageClient({ role }: { role: Role }) {
     setLoading(true);
     fetch(`/api/tasks/list?${params}`, { cache: 'no-store' })
       .then((r) => r.json().catch(() => null))
-      .then((data: { tasks?: TaskListRow[]; launchDate?: string } | null) => {
+      .then((data: { tasks?: TaskListRow[] } | null) => {
         setTasks(Array.isArray(data?.tasks) ? data.tasks : []);
-        setLaunchDate(data?.launchDate ?? null);
       })
       .catch(() => setTasks([]))
       .finally(() => setLoading(false));
@@ -167,17 +165,12 @@ export function TasksPageClient({ role }: { role: Role }) {
           <div className="grid items-center gap-5 md:grid-cols-[1fr_auto]">
             <div>
               <span className="inline-flex rounded-full border border-violet-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-violet-700">
-                {isArabic ? 'تقدم المهام' : 'Execution progress'}
+                {isArabic ? 'تقدمك اليوم' : 'Your progress today'}
               </span>
               <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-                {isArabic ? 'حوّل خطتك اليومية إلى إنجاز واضح' : 'Turn today’s plan into visible progress'}
+                {isArabic ? 'أنجز مهامك وحافظ على تقدمك' : 'Complete your tasks and keep the momentum going'}
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{motivation}</p>
-              {launchDate && (
-                <p className="mt-3 text-xs font-medium text-violet-700">
-                  {isArabic ? `يبدأ التقييم العادل من ${launchDate} — ولا تُحتسب أي مهام سابقة.` : `Fair scoring starts ${launchDate}. Earlier tasks are not counted.`}
-                </p>
-              )}
             </div>
             <div
               className="grid h-28 w-28 place-items-center rounded-full p-[9px] shadow-inner"
