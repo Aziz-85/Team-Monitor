@@ -41,6 +41,7 @@ const iconPaths: Record<string, ReactNode> = {
   ADMIN_EMPLOYEES: <><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 21c.4-4 2.4-6 6-6s5.6 2 6 6M15 15c3.5 0 5.5 1.8 6 5"/></>,
   LEAVES: <><path d="M12 21C7 18 5 14 6 9c4 0 7-2 9-6 3 5 3 10 0 14-1 1.5-2 2.5-3 4z"/><path d="M8 17c2-3 4-5 8-8"/></>,
   ADMIN_USERS: <><circle cx="9" cy="8" r="3"/><path d="M3 21c.4-4 2.4-6 6-6 2.4 0 4.1.9 5.1 2.7"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13 17h2M21 17h2"/></>,
+  ROLE_PREVIEW: <><circle cx="8" cy="8" r="3"/><path d="M2.5 19c.5-3.8 2.3-5.8 5.5-5.8 2.2 0 3.8.9 4.7 2.6"/><path d="M15 7h6M18 4v6"/><rect x="13" y="13" width="8" height="7" rx="2"/><path d="M15.5 16.5h3"/></>,
   TEAM_HUB: <><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2.5 21c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 15c4 0 6.5 2 7 6"/></>,
   SCHEDULE_HUB: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 15h8"/></>,
   EMPLOYEES_HUB: <><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 21c.4-4 2.4-6 6-6s5.6 2 6 6M15 15c3.5 0 5.5 1.8 6 5"/></>,
