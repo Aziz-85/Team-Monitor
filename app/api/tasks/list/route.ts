@@ -9,6 +9,7 @@ import {
   getSaturdayWeekYmdKeysForAnchor,
 } from '@/lib/tasks/taskListDates';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
+import { getTaskTrackingLaunchDate } from '@/lib/tasks/taskTrackingPolicy';
 export type TaskListRow = {
   taskId: string;
   title: string;
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
   const empId = scope.empId;
 
   const { dateStr } = getRiyadhTaskListToday();
+  const launchDate = await getTaskTrackingLaunchDate();
   const isManagerOrAdmin = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
   /** Defaults match /tasks/monitor (this week) and manager view (all assignees). */
   const period = request.nextUrl.searchParams.get('period') ?? 'week';
@@ -49,6 +51,11 @@ export async function GET(request: NextRequest) {
     const week = getSaturdayWeekYmdKeysForAnchor(dateStr);
     const set = new Set<string>([...overdue, dateStr, ...week]);
     dateStrs = Array.from(set).sort();
+  }
+  dateStrs = dateStrs.filter((day) => day >= launchDate);
+
+  if (dateStrs.length === 0) {
+    return NextResponse.json({ tasks: [], dateStr, launchDate });
   }
 
   const tasks = await prisma.task.findMany({
@@ -141,5 +148,5 @@ export async function GET(request: NextRequest) {
     return a.title.localeCompare(b.title);
   });
 
-  return NextResponse.json({ tasks: rows, dateStr });
+  return NextResponse.json({ tasks: rows, dateStr, launchDate });
 }

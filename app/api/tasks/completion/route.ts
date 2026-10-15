@@ -4,6 +4,7 @@ import { requireOperationalScope } from '@/lib/scope/operationalScope';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { getRiyadhDateKey } from '@/lib/dates/riyadhDate';
 import { normalizeDateOnlyRiyadh } from '@/lib/time';
+import { getTaskTrackingLaunchDate } from '@/lib/tasks/taskTrackingPolicy';
 
 type ToggleAction = 'done' | 'undo';
 
@@ -44,6 +45,13 @@ export async function POST(request: NextRequest) {
   }
   if (dueDateStr > todayStr) {
     return NextResponse.json({ error: 'Future tasks cannot be completed yet' }, { status: 400 });
+  }
+  const launchDate = await getTaskTrackingLaunchDate();
+  if (dueDateStr < launchDate) {
+    return NextResponse.json(
+      { error: `Task tracking starts on ${launchDate}; earlier dates are not scored` },
+      { status: 400 }
+    );
   }
 
   const task = await prisma.task.findFirst({

@@ -7,6 +7,7 @@ import { filterOperationalEmployees } from '@/lib/systemUsers';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
 import { getRiyadhNow, getWeekRangeForDate } from '@/lib/time';
 import type { Role } from '@prisma/client';
+import { getTaskTrackingLaunchDate } from '@/lib/tasks/taskTrackingPolicy';
 
 type TaskRow = {
   title: string;
@@ -59,7 +60,10 @@ export async function GET(request: NextRequest) {
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setUTCDate(weekEndDate.getUTCDate() + 6);
 
-  const dateRange = iterateDates(weekStartDate, weekEndDate);
+  const launchDate = await getTaskTrackingLaunchDate();
+  const dateRange = iterateDates(weekStartDate, weekEndDate).filter(
+    (date) => date.toISOString().slice(0, 10) >= launchDate
+  );
 
   const tasks = await prisma.task.findMany({
     where: { active: true, boutiqueId },

@@ -14,6 +14,7 @@ import {
   getSaturdayWeekYmdKeysForAnchor,
 } from '@/lib/tasks/taskListDates';
 import type { Role } from '@prisma/client';
+import { getTaskTrackingLaunchDate } from '@/lib/tasks/taskTrackingPolicy';
 
 export const dynamic = 'force-dynamic';
 
@@ -165,6 +166,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { dateStr } = getRiyadhTaskListToday();
+  const launchDate = await getTaskTrackingLaunchDate();
   const params = request.nextUrl.searchParams;
   const dateRange = params.get('dateRange') ?? 'week';
   const customStart = params.get('start') ?? dateStr;
@@ -194,6 +196,20 @@ export async function GET(request: NextRequest) {
     dateStrs = getMonthYmdKeysForAnchorDay(dateStr);
   } else {
     dateStrs = getCustomDates(customStart, customEnd);
+  }
+  dateStrs = dateStrs.filter((day) => day >= launchDate);
+
+  if (dateStrs.length === 0) {
+    return NextResponse.json({
+      dateStr,
+      launchDate,
+      employees: [],
+      summary: { completed: 0, pending: 0, overdue: 0, suspicious: 0 },
+      completedTasks: [],
+      pendingTasks: [],
+      employeeStats: [],
+      suspiciousBursts: [],
+    });
   }
 
   const rangeStart = new Date(dateStrs[0] + 'T00:00:00Z');
@@ -395,6 +411,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     dateStr,
+    launchDate,
     employees: employees.map((e) => ({ empId: e.empId, name: e.name, nameAr: e.nameAr ?? null })),
     summary: {
       completed: completedRows.length,
