@@ -84,20 +84,13 @@ type HomeData = {
   coverageSuggestion?: CoverageSuggestion | null;
   coverageSuggestionExplanation?: string;
   todayTasks: Array<{
+    taskId: string;
     taskName: string;
     assignedTo: string | null;
+    isCompleted: boolean;
     reason: string;
     reasonNotes: string[];
   }>;
-};
-
-type MyTodayTask = {
-  id: string;
-  title: string;
-  dueDate: string;
-  isCompleted: boolean;
-  completedAt?: string | null;
-  kind: 'task' | 'inventory';
 };
 
 type PerformanceSummary = {
@@ -183,10 +176,6 @@ export function HomePageClient({
     suggestion?: { empId: string; employeeName: string } | null;
   }>>([]);
   const [applyingSuggestion, setApplyingSuggestion] = useState(false);
-  const [myTodayTasks, setMyTodayTasks] = useState<MyTodayTask[] | null>(null);
-  const [myTodayTasksLoading, setMyTodayTasksLoading] = useState(false);
-  const [myTodayTasksError, setMyTodayTasksError] = useState<string | null>(null);
-  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [zoneDialogOpen, setZoneDialogOpen] = useState(false);
   const [performance, setPerformance] = useState<PerformanceSummary | null>(null);
   const [complianceAlerts, setComplianceAlerts] = useState<Array<{
@@ -207,9 +196,6 @@ export function HomePageClient({
 
   useEffect(() => {
     let cancelled = false;
-    setMyTodayTasksLoading(true);
-    setMyTodayTasksError(null);
-
     const perfP = fetch('/api/performance/summary')
       .then((r) => r.json())
       .then((d: PerformanceSummary) => {
@@ -220,26 +206,7 @@ export function HomePageClient({
         if (!cancelled) setPerformance(null);
       });
 
-    const tasksP = fetch('/api/tasks/my-today')
-      .then((r) => r.json().catch(() => null))
-      .then((json: { tasks?: MyTodayTask[]; error?: string } | null) => {
-        if (cancelled) return;
-        if (!json || !Array.isArray(json.tasks)) {
-          setMyTodayTasks([]);
-          if (json?.error) setMyTodayTasksError(json.error);
-          return;
-        }
-        setMyTodayTasks(json.tasks);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setMyTodayTasks([]);
-        setMyTodayTasksError('Failed to load');
-      });
-
-    Promise.all([perfP, tasksP]).finally(() => {
-      if (!cancelled) setMyTodayTasksLoading(false);
-    });
+    void perfP;
 
     return () => {
       cancelled = true;
@@ -394,8 +361,8 @@ export function HomePageClient({
     (todayCoverageFormatted.totalAffectedDays > 0 ? 1 : 0) +
     (weekCoverageFormatted.totalAffectedDays > 0 ? 1 : 0) +
     complianceAlerts.length;
-  const tasksTotal = myTodayTasks?.length ?? 0;
-  const tasksCompleted = myTodayTasks?.filter((tt) => tt.isCompleted).length ?? 0;
+  const tasksTotal = data.todayTasks.length;
+  const tasksCompleted = data.todayTasks.filter((task) => task.isCompleted).length;
   const tasksPending = Math.max(0, tasksTotal - tasksCompleted);
   const taskCompletionPct = tasksTotal > 0 ? Math.round((tasksCompleted * 100) / tasksTotal) : 100;
   const weekCoveragePct = Math.round(
@@ -815,60 +782,22 @@ ${t('sales.dailyLedger.copyLabelAchievementDaily')} ${performance.daily.percent}
             />
             <TasksTodayCard
               title={t('home.todayTasksTitle')}
-              total={myTodayTasks?.length ?? 0}
-              completed={myTodayTasks?.filter((t) => t.isCompleted).length ?? 0}
-              pending={myTodayTasks ? myTodayTasks.length - myTodayTasks.filter((t) => t.isCompleted).length : 0}
-              loading={myTodayTasksLoading}
-              error={myTodayTasksError}
+              total={tasksTotal}
+              completed={tasksCompleted}
+              pending={tasksPending}
+              loading={false}
+              error={null}
               emptyLabel={t('home.noTasksToday')}
               doneLabel={t('tasks.done')}
             >
-              {myTodayTasks?.map((task) => (
-                <li key={task.id} className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-foreground">{task.title}</span>
+              {todayTasks.map((task) => (
+                <li key={task.taskId} className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-foreground">{task.taskName}</span>
+                  {task.assignedTo && <span className="text-muted">→ {task.assignedTo}</span>}
                   {task.isCompleted && (
                     <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                       {t('tasks.done')}
                     </span>
-                  )}
-                  {task.kind === 'task' && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (updatingTaskId) return;
-                        const action = task.isCompleted ? 'undo' : 'done';
-                        setUpdatingTaskId(task.id);
-                        try {
-                          const res = await fetch('/api/tasks/completion', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ taskId: task.id, action }),
-                          });
-                          if (res.ok) {
-                            const next = await fetch('/api/tasks/my-today')
-                              .then((r) => r.json().catch(() => null))
-                              .catch(() => null);
-                            if (next && Array.isArray(next.tasks)) {
-                              setMyTodayTasks(next.tasks as MyTodayTask[]);
-                            }
-                          }
-                        } finally {
-                          setUpdatingTaskId(null);
-                        }
-                      }}
-                      disabled={updatingTaskId === task.id}
-                      className={
-                        task.isCompleted
-                          ? 'rounded-lg border border-border bg-surface px-3 py-1 text-sm font-medium text-foreground hover:bg-surface-subtle disabled:opacity-50'
-                          : 'rounded-lg bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
-                      }
-                    >
-                      {updatingTaskId === task.id
-                        ? t('common.loading')
-                        : task.isCompleted
-                          ? t('tasks.undo')
-                          : t('tasks.markDone')}
-                    </button>
                   )}
                 </li>
               ))}

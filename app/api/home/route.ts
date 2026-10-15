@@ -62,12 +62,40 @@ export async function GET(request: NextRequest) {
 
     const runnable = tasks.filter((task) => tasksRunnableOnDate(task, date));
     const assignments = await Promise.all(runnable.map((task) => assignTaskOnDate(task, date)));
+    const assignedEmpIds = Array.from(
+      new Set(assignments.map((assignment) => assignment.assignedEmpId).filter((empId): empId is string => Boolean(empId)))
+    );
+    const assignedUsers = assignedEmpIds.length
+      ? await prisma.user.findMany({
+          where: { empId: { in: assignedEmpIds } },
+          select: { id: true, empId: true },
+        })
+      : [];
+    const userIdByEmpId = new Map(
+      assignedUsers.flatMap((user) => (user.empId ? [[user.empId, user.id] as const] : []))
+    );
+    const completions = runnable.length
+      ? await prisma.taskCompletion.findMany({
+          where: {
+            taskId: { in: runnable.map((task) => task.id) },
+            userId: { in: assignedUsers.map((user) => user.id) },
+            dueDate: date,
+            undoneAt: null,
+          },
+          select: { taskId: true, userId: true },
+        })
+      : [];
+    const completionKeys = new Set(
+      completions.map((completion) => `${completion.taskId}:${completion.userId}`)
+    );
     const todayTasks = runnable.map((task, i) => {
       const a = assignments[i]!;
+      const assignedUserId = a.assignedEmpId ? userIdByEmpId.get(a.assignedEmpId) : undefined;
       return {
         taskId: task.id,
         taskName: task.name,
         assignedTo: a.assignedName ?? a.assignedEmpId,
+        isCompleted: assignedUserId ? completionKeys.has(`${task.id}:${assignedUserId}`) : false,
         reason: a.reason,
         reasonNotes: a.reasonNotes,
       };
