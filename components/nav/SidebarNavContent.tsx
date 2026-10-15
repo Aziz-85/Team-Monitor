@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
@@ -109,13 +109,15 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
     [activeHref, sections]
   );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const previousActiveParentRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!activeParentKey) return;
-    setExpanded((current) => {
-      if (current.has(activeParentKey)) return current;
-      return new Set([...Array.from(current), activeParentKey]);
-    });
+    // Open the relevant branch when navigation moves to a different subject.
+    // Do not immediately reopen it when the user deliberately collapses the
+    // branch while remaining on one of its pages.
+    if (previousActiveParentRef.current === activeParentKey) return;
+    previousActiveParentRef.current = activeParentKey;
+    setExpanded(activeParentKey ? new Set([activeParentKey]) : new Set());
   }, [activeParentKey]);
 
   const handleClick = () => {
@@ -134,28 +136,40 @@ export function SidebarNavContent({ role, isItemActive, onNavigate }: SidebarNav
               {section.items.map((item) => {
                 const active = item.href === activeHref;
                 const branchActive = active || Boolean(item.children?.some((child) => child.href === activeHref));
-                const open = expanded.has(item.key) || branchActive;
+                const open = expanded.has(item.key);
+                const toggleBranch = () => setExpanded((current) =>
+                  current.has(item.key) ? new Set() : new Set([item.key])
+                );
                 return (
                   <li key={item.key} className="min-w-0">
                     <div className={`group relative flex min-w-0 items-center rounded-xl transition-all ${branchActive ? 'bg-accent-soft text-accent' : item.tier === 'hub' ? 'bg-surface-subtle/60 text-foreground hover:bg-surface-subtle' : 'text-foreground/75 hover:bg-surface-subtle hover:text-foreground'}`}>
-                      <Link
-                        href={item.href}
-                        onClick={handleClick}
-                        className={`flex min-w-0 flex-1 items-center gap-3 px-3 text-[13px] ${item.tier === 'hub' ? 'py-3 font-bold' : 'py-2.5 font-medium'}`}
-                      >
-                        <SidebarNavIcon itemKey={item.key} active={branchActive} />
-                        <span className="min-w-0 truncate">{item.label}</span>
-                      </Link>
+                      {item.children?.length ? (
+                        <button
+                          type="button"
+                          aria-label={item.label}
+                          aria-expanded={open}
+                          onClick={toggleBranch}
+                          className={`flex min-w-0 flex-1 items-center gap-3 px-3 text-start text-[13px] ${item.tier === 'hub' ? 'py-3 font-bold' : 'py-2.5 font-medium'}`}
+                        >
+                          <SidebarNavIcon itemKey={item.key} active={branchActive} />
+                          <span className="min-w-0 truncate">{item.label}</span>
+                        </button>
+                      ) : (
+                        <Link
+                          href={item.href}
+                          onClick={handleClick}
+                          className={`flex min-w-0 flex-1 items-center gap-3 px-3 text-[13px] ${item.tier === 'hub' ? 'py-3 font-bold' : 'py-2.5 font-medium'}`}
+                        >
+                          <SidebarNavIcon itemKey={item.key} active={branchActive} />
+                          <span className="min-w-0 truncate">{item.label}</span>
+                        </Link>
+                      )}
                       {item.children?.length ? (
                         <button
                           type="button"
                           aria-label={`${open ? 'Collapse' : 'Expand'} ${item.label}`}
                           aria-expanded={open}
-                          onClick={() => setExpanded((current) => {
-                            // Accordion behavior keeps a long navigation tree
-                            // scannable: one workspace is expanded at a time.
-                            return current.has(item.key) ? new Set() : new Set([item.key]);
-                          })}
+                          onClick={toggleBranch}
                           className="me-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted hover:bg-surface hover:text-foreground"
                         >
                           <span className={`text-base transition-transform ${open ? 'rotate-90' : ''} ${isRtl ? 'scale-x-[-1]' : ''}`}>›</span>
