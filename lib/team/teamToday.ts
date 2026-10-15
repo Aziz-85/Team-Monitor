@@ -5,7 +5,6 @@
 
 import { prisma } from '@/lib/db';
 import {
-  addDays,
   normalizeDateOnlyRiyadh,
   toRiyadhDateString,
   getRiyadhNow,
@@ -53,7 +52,6 @@ export async function getTeamToday(
   dateStr: string
 ): Promise<TeamTodayResult> {
   const dayStart = normalizeDateOnlyRiyadh(dateStr);
-  const dayEnd = addDays(dayStart, 1);
 
   const [employeesRaw, roster, salesByUser, completionsByUser, tasksWithPlans] = await Promise.all([
     prisma.employee.findMany({
@@ -76,7 +74,7 @@ export async function getTeamToday(
     prisma.taskCompletion.findMany({
       where: {
         undoneAt: null,
-        completedAt: { gte: dayStart, lt: dayEnd },
+        dueDate: dayStart,
         task: { boutiqueId },
       },
       select: { userId: true },

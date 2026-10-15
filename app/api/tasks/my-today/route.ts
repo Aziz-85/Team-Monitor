@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         taskId: { in: assignedToday.map((t) => t.id) },
+        dueDate: date,
       },
     });
 
@@ -116,4 +117,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ date: dateStr, tasks: tasksWithStatus });
 }
-

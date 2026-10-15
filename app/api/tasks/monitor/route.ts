@@ -46,7 +46,7 @@ export type EmployeeStatRow = {
   pending: number;
   overdue: number;
   completionRate: number;
-  onTimeRate: number;
+  onTimeRate: number | null;
   avgDelayMinutes: number | null;
 };
 
@@ -214,11 +214,11 @@ export async function GET(request: NextRequest) {
   });
 
   const taskIds = tasks.map((t) => t.id);
-  const completionWhereBase: { taskId: { in: string[] }; undoneAt: null; completedAt?: { gte: Date } } = {
+  const completionWhereBase: { taskId: { in: string[] }; undoneAt: null; dueDate: { gte: Date; lte: Date } } = {
     taskId: { in: taskIds },
     undoneAt: null,
+    dueDate: { gte: rangeStart, lte: rangeEnd },
   };
-  if (minCompletedAt) completionWhereBase.completedAt = { gte: minCompletedAt };
 
   const completions =
     taskIds.length > 0
@@ -227,13 +227,14 @@ export async function GET(request: NextRequest) {
           include: { user: { select: { empId: true } } },
         })
       : [];
-  const completionByTaskEmp = new Map<string, { completedAt: Date }>();
+  const completionByTaskEmpDate = new Map<string, { completedAt: Date; dueDate: Date }>();
   for (const c of completions) {
-    completionByTaskEmp.set(`${c.taskId}:${c.user.empId}`, { completedAt: c.completedAt });
+    const dueDateKey = c.dueDate.toISOString().slice(0, 10);
+    completionByTaskEmpDate.set(`${c.taskId}:${c.user.empId}:${dueDateKey}`, { completedAt: c.completedAt, dueDate: c.dueDate });
   }
 
   const burstCompletedGte = minCompletedAt && minCompletedAt.getTime() > rangeStart.getTime() ? minCompletedAt : rangeStart;
-  type CompletionForBurst = { taskId: string; userId: string; completedAt: Date; task: { name: string }; user: { empId: string } };
+  type CompletionForBurst = { taskId: string; userId: string; dueDate: Date; completedAt: Date; task: { name: string }; user: { empId: string } };
   const completionsForBurst: CompletionForBurst[] =
     taskIds.length > 0
       ? await prisma.taskCompletion.findMany({
@@ -279,7 +280,7 @@ export async function GET(request: NextRequest) {
           c.task.name === t.title &&
           c.completedAt.toISOString() === t.completedAt
       );
-      if (comp) suspiciousSet.add(`${comp.taskId}:${comp.user.empId}`);
+      if (comp) suspiciousSet.add(`${comp.taskId}:${comp.user.empId}:${comp.dueDate.toISOString().slice(0, 10)}`);
     }
   }
 
@@ -291,15 +292,11 @@ export async function GET(request: NextRequest) {
       if (!tasksRunnableOnDate(task, date)) continue;
       const a = await assignTaskOnDate(task, date);
       const type = task.taskSchedules[0]?.type ?? 'DAILY';
-      const comp = a.assignedEmpId ? completionByTaskEmp.get(`${task.id}:${a.assignedEmpId}`) : null;
-      const taskEmpKey = a.assignedEmpId ? `${task.id}:${a.assignedEmpId}` : '';
+      const comp = a.assignedEmpId ? completionByTaskEmpDate.get(`${task.id}:${a.assignedEmpId}:${dateStrItem}`) : null;
+      const taskEmpKey = a.assignedEmpId ? `${task.id}:${a.assignedEmpId}:${dateStrItem}` : '';
       const inSuspiciousSet = !!taskEmpKey && suspiciousSet.has(taskEmpKey);
-      const completedAtInRange =
-        comp != null &&
-        comp.completedAt.getTime() >= rangeStart.getTime() &&
-        comp.completedAt.getTime() <= rangeEnd.getTime();
       const completedAtNotBeforeDue = comp != null && comp.completedAt.getTime() >= dueDateStart.getTime();
-      const isValidCompletion = !!(comp != null && completedAtNotBeforeDue && completedAtInRange);
+      const isValidCompletion = !!(comp != null && completedAtNotBeforeDue);
       const isSuspiciousBurst = !!(comp != null && inSuspiciousSet);
       const status: 'done' | 'pending' | 'suspicious' =
         comp != null && isValidCompletion && !isSuspiciousBurst
@@ -376,7 +373,7 @@ export async function GET(request: NextRequest) {
   for (const [eid, s] of Array.from(empStats.entries())) {
     if (eid === '__unassigned__') continue;
     const completionRate = s.assigned > 0 ? Math.round((s.completed / s.assigned) * 100) : 0;
-    const onTimeRate = s.completed > 0 ? Math.round((s.onTimeCount / s.completed) * 100) : 100;
+    const onTimeRate = s.completed > 0 ? Math.round((s.onTimeCount / s.completed) * 100) : null;
     const avgDelayMinutes = s.delayCount > 0 ? Math.round(s.delaySum / s.delayCount) : null;
     employeeStats.push({
       empId: eid,

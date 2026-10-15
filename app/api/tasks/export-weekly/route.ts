@@ -106,11 +106,26 @@ export async function GET(request: NextRequest) {
           where: {
             taskId: { in: taskIds },
             undoneAt: null,
+            dueDate: {
+              gte: new Date(`${rows[0]!.dueDate}T00:00:00Z`),
+              lte: new Date(`${rows[rows.length - 1]!.dueDate}T00:00:00Z`),
+            },
           },
         })
       : [];
-  const doneTaskIds = new Set(doneCompletions.map((c) => c.taskId));
-  const openRows = rows.filter((r) => !doneTaskIds.has(r.taskId));
+  const doneOccurrences = new Set(
+    doneCompletions.map((c) => `${c.taskId}:${c.userId}:${c.dueDate.toISOString().slice(0, 10)}`)
+  );
+  const userIdByEmpId = new Map(
+    (await prisma.user.findMany({
+      where: { empId: { in: rows.map((r) => r.empId).filter((v): v is string => !!v) } },
+      select: { id: true, empId: true },
+    })).map((u) => [u.empId, u.id])
+  );
+  const openRows = rows.filter((r) => {
+    const userId = r.empId ? userIdByEmpId.get(r.empId) : null;
+    return !userId || !doneOccurrences.has(`${r.taskId}:${userId}:${r.dueDate}`);
+  });
 
   if (openRows.length === 0) {
     return NextResponse.json({ error: 'No open tasks in this week' }, { status: 404 });
@@ -164,4 +179,3 @@ export async function GET(request: NextRequest) {
     },
   });
 }
-

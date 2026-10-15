@@ -1175,14 +1175,16 @@ model TaskCompletion {
   id          String   @id @default(cuid())
   taskId      String
   userId      String
+  dueDate     DateTime @db.Date
   completedAt DateTime
   undoneAt    DateTime?
 
   task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([taskId, userId])
+  @@unique([taskId, userId, dueDate])
   @@index([userId])
+  @@index([dueDate])
 }
 
 model AuditLog {

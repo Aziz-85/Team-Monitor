@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
 
     const todayTasks: { done: number; total: number } = { done: 0, total: 0 };
     const completionsToday = await prisma.taskCompletion.findMany({
-      where: { userId: user.id, undoneAt: null, completedAt: { gte: new Date(todayStr + 'T00:00:00Z'), lte: new Date(todayStr + 'T23:59:59.999Z') } },
+      where: { userId: user.id, undoneAt: null, dueDate: new Date(todayStr + 'T00:00:00Z') },
     });
     const runnableToday = tasks.filter((task) => tasksRunnableOnDate(task, now));
     const todayAssignments = await Promise.all(runnableToday.map((task) => assignTaskOnDate(task, now)));
@@ -353,9 +353,9 @@ export async function GET(request: NextRequest) {
           where: {
             taskId: { in: taskIds },
             undoneAt: null,
-            completedAt: { gte: rangeStart, lte: rangeEnd },
+            dueDate: { gte: rangeStart, lte: rangeEnd },
           },
-          select: { taskId: true, userId: true, completedAt: true },
+          select: { taskId: true, userId: true, dueDate: true, completedAt: true },
         })
       : [];
 
@@ -382,7 +382,10 @@ export async function GET(request: NextRequest) {
       totalWeekly++;
       const assignedUserId = a.assignedEmpId ? empIdToUserId.get(a.assignedEmpId) : null;
       const comp = completionsInWeek.find(
-        (c) => c.taskId === task.id && (assignedUserId ? c.userId === assignedUserId : false)
+        (c) =>
+          c.taskId === task.id &&
+          (assignedUserId ? c.userId === assignedUserId : false) &&
+          c.dueDate.toISOString().slice(0, 10) === dateStr
       );
       if (comp) completed++;
       else if (isPast) overdue++;

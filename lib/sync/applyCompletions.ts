@@ -38,18 +38,20 @@ export async function applyPlannerCompletions(
       skipped++;
       continue;
     }
+    const dueDate = new Date(`${dueNorm}T00:00:00Z`);
     const existing = await prisma.taskCompletion.findUnique({
-      where: { taskId_userId: { taskId: site.taskId, userId } },
+      where: { taskId_userId_dueDate: { taskId: site.taskId, userId, dueDate } },
     });
     if (existing && !existing.undoneAt) {
       skipped++;
       continue;
     }
     await prisma.taskCompletion.upsert({
-      where: { taskId_userId: { taskId: site.taskId, userId } },
+      where: { taskId_userId_dueDate: { taskId: site.taskId, userId, dueDate } },
       create: {
         taskId: site.taskId,
         userId,
+        dueDate,
         completedAt: now,
       },
       update: { completedAt: now, undoneAt: null },

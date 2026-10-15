@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     prisma.taskCompletion.count({
       where: {
         undoneAt: null,
-        completedAt: { gte: monthStart, lt: monthEnd },
+        dueDate: { gte: monthStart, lt: monthEnd },
         task: { boutiqueId: operationalBoutiqueId },
       },
     }),

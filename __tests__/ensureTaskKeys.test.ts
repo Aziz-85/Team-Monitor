@@ -39,7 +39,7 @@ describe('ensureTaskKeys (Approve Week backfill)', () => {
       },
     } as unknown as Pick<PrismaClient, 'task'>;
 
-    const result = await ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT);
+    const result = await ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT, 'boutique-1');
 
     expect(result).toEqual({ backfilled: 1, totalInScope: 1, remainingNull: 0 });
     expect(updates).toHaveLength(1);
@@ -56,7 +56,7 @@ describe('ensureTaskKeys (Approve Week backfill)', () => {
       },
     } as unknown as Pick<PrismaClient, 'task'>;
 
-    const result = await ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT);
+    const result = await ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT, 'boutique-1');
 
     expect(result).toEqual({ backfilled: 0, totalInScope: 1, remainingNull: 0 });
     expect(mockTx.task.update).not.toHaveBeenCalled();
@@ -72,7 +72,7 @@ describe('ensureTaskKeys (Approve Week backfill)', () => {
       },
     } as unknown as Pick<PrismaClient, 'task'>;
 
-    await expect(ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT)).rejects.toThrow(
+    await expect(ensureTaskKeysForApprovedWeekWithTx(mockTx, WEEK_SAT, 'boutique-1')).rejects.toThrow(
       /taskKey=null/
     );
   });
@@ -87,8 +87,11 @@ describe('ensureTaskKeys (Approve Week backfill)', () => {
       },
     } as unknown as Pick<PrismaClient, 'task'>;
 
-    const inScope = await getTasksInScopeForWeek(mockTx, WEEK_SAT);
+    const inScope = await getTasksInScopeForWeek(mockTx, WEEK_SAT, 'boutique-1');
 
+    expect(mockTx.task.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { active: true, boutiqueId: 'boutique-1' } })
+    );
     expect(inScope.map((t) => t.id)).toEqual(['in']);
   });
 });

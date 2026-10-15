@@ -23,11 +23,12 @@ type TaskWithRelations = Awaited<
  */
 export async function getTasksInScopeForWeek(
   client: Pick<PrismaClient, 'task'>,
-  weekStart: string
+  weekStart: string,
+  boutiqueId: string
 ): Promise<TaskWithRelations[]> {
   const start = new Date(weekStart + 'T00:00:00Z');
   const tasks = await client.task.findMany({
-    where: { active: true },
+    where: { active: true, boutiqueId },
     include: { taskSchedules: true, taskPlans: true },
   });
   return tasks.filter((task) => {
@@ -53,14 +54,15 @@ export type EnsureTaskKeysResult = {
  */
 export async function ensureTaskKeysForApprovedWeekWithTx(
   tx: Pick<PrismaClient, 'task'>,
-  weekStart: string
+  weekStart: string,
+  boutiqueId: string
 ): Promise<EnsureTaskKeysResult> {
   const start = new Date(weekStart + 'T00:00:00Z');
   const year = start.getUTCFullYear();
   const weekNum = getWeekIndexInYear(start) + 1;
   const quarter = getQuarter(year, start.getUTCMonth() + 1);
 
-  const tasksInWeek = await getTasksInScopeForWeek(tx, weekStart);
+  const tasksInWeek = await getTasksInScopeForWeek(tx, weekStart, boutiqueId);
   const totalInScope = tasksInWeek.length;
 
   const withoutKey = tasksInWeek
@@ -101,7 +103,7 @@ export async function ensureTaskKeysForApprovedWeekWithTx(
  * Idempotent: existing taskKeys are not changed.
  * Delegates to ensureTaskKeysForApprovedWeekWithTx(prisma, weekStart).
  */
-export async function ensureTaskKeysForApprovedWeek(weekStart: string): Promise<number> {
-  const result = await ensureTaskKeysForApprovedWeekWithTx(prisma, weekStart);
+export async function ensureTaskKeysForApprovedWeek(weekStart: string, boutiqueId: string): Promise<number> {
+  const result = await ensureTaskKeysForApprovedWeekWithTx(prisma, weekStart, boutiqueId);
   return result.backfilled;
 }

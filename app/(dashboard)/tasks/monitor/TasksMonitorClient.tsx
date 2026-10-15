@@ -68,7 +68,7 @@ type EmployeeStatRow = {
   pending: number;
   overdue: number;
   completionRate: number;
-  onTimeRate: number;
+  onTimeRate: number | null;
   avgDelayMinutes: number | null;
 };
 
@@ -463,7 +463,7 @@ export function TasksMonitorClient() {
                       <LuxuryTd>{row.pending}</LuxuryTd>
                       <LuxuryTd>{row.overdue}</LuxuryTd>
                       <LuxuryTd>{row.completionRate}%</LuxuryTd>
-                      <LuxuryTd>{row.onTimeRate}%</LuxuryTd>
+                      <LuxuryTd>{row.onTimeRate == null ? '—' : `${row.onTimeRate}%`}</LuxuryTd>
                       <LuxuryTd>
                         {row.avgDelayMinutes != null && row.avgDelayMinutes !== 0
                           ? `${row.avgDelayMinutes}m`

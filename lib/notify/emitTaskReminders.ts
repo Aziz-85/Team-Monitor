@@ -73,7 +73,12 @@ export async function emitTaskReminders(todayKsa?: Date): Promise<{ dueSoon: num
       });
       if (!user) continue;
       const completion = await prisma.taskCompletion.findFirst({
-        where: { taskId: task.id, userId: user.id, undoneAt: null },
+        where: {
+          taskId: task.id,
+          userId: user.id,
+          dueDate: new Date(`${todayStr}T00:00:00Z`),
+          undoneAt: null,
+        },
       });
       if (completion) continue;
       await emitEvent('TASK_OVERDUE', {

@@ -72,11 +72,17 @@ export async function GET(request: NextRequest) {
           where: {
             taskId: { in: taskIds },
             ...(canSeeAll ? {} : { userId }),
+            dueDate: {
+              gte: new Date(`${dateStrs[0]}T00:00:00Z`),
+              lte: new Date(`${dateStrs[dateStrs.length - 1]}T00:00:00Z`),
+            },
           },
         })
       : [];
   const completedByTaskUser = new Set(
-    completions.filter((c) => c.undoneAt == null).map((c) => `${c.taskId}::${c.userId}`)
+    completions
+      .filter((c) => c.undoneAt == null)
+      .map((c) => `${c.taskId}::${c.userId}::${c.dueDate.toISOString().slice(0, 10)}`)
   );
 
   const empIdToUserId = new Map<string, string>();
@@ -106,7 +112,7 @@ export async function GET(request: NextRequest) {
         ? (canSeeAll ? empIdToUserId.get(assigneeEmpId) : (assigneeEmpId === empId ? userId : undefined))
         : undefined;
       const isCompleted = assigneeUserId
-        ? completedByTaskUser.has(`${task.id}::${assigneeUserId}`)
+        ? completedByTaskUser.has(`${task.id}::${assigneeUserId}::${dateStrItem}`)
         : false;
 
       if (statusFilter === 'open' && isCompleted) continue;

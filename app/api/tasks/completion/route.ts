@@ -35,7 +35,16 @@ export async function POST(request: NextRequest) {
 
   const { dateStr: todayStr } = getTodayDateInKsa();
   const dueDateStr = body?.dueDate ?? todayStr;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDateStr)) {
+    return NextResponse.json({ error: 'Invalid due date' }, { status: 400 });
+  }
   const dueDate = new Date(`${dueDateStr}T00:00:00Z`);
+  if (Number.isNaN(dueDate.getTime()) || dueDate.toISOString().slice(0, 10) !== dueDateStr) {
+    return NextResponse.json({ error: 'Invalid due date' }, { status: 400 });
+  }
+  if (dueDateStr > todayStr) {
+    return NextResponse.json({ error: 'Future tasks cannot be completed yet' }, { status: 400 });
+  }
 
   const task = await prisma.task.findFirst({
     where: { id: taskId, boutiqueId },
@@ -81,14 +90,16 @@ export async function POST(request: NextRequest) {
   if (action === 'done') {
     const completion = await prisma.taskCompletion.upsert({
       where: {
-        taskId_userId: {
+        taskId_userId_dueDate: {
           taskId,
           userId: targetUserId,
+          dueDate,
         },
       },
       create: {
         taskId,
         userId: targetUserId,
+        dueDate,
         completedAt: now,
         undoneAt: null,
       },
@@ -109,9 +120,10 @@ export async function POST(request: NextRequest) {
   try {
     const completion = await prisma.taskCompletion.update({
       where: {
-        taskId_userId: {
+        taskId_userId_dueDate: {
           taskId,
           userId: targetUserId,
+          dueDate,
         },
       },
       data: {
@@ -132,4 +144,3 @@ export async function POST(request: NextRequest) {
     });
   }
 }
-

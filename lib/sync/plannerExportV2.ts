@@ -75,7 +75,7 @@ export async function getPlannerV2RowsForWeek(
   const status = await getWeekStatus(weekStart, boutiqueId);
   if (status?.status !== 'APPROVED') throw new Error('Week not approved');
 
-  const tasksInScope = await getTasksInScopeForWeek(prisma, weekStart);
+  const tasksInScope = await getTasksInScopeForWeek(prisma, weekStart, boutiqueId);
   const withNullKey = tasksInScope.filter((t) => !t.taskKey);
   if (withNullKey.length > 0) {
     throw new Error(
@@ -87,7 +87,7 @@ export async function getPlannerV2RowsForWeek(
   const start = new Date(weekStart + 'T00:00:00Z');
 
   const tasks = await prisma.task.findMany({
-    where: { active: true },
+    where: { active: true, boutiqueId },
     include: {
       taskSchedules: true,
       taskPlans: {
@@ -100,7 +100,7 @@ export async function getPlannerV2RowsForWeek(
     },
   });
   const employees = await prisma.employee.findMany({
-    where: { active: true },
+    where: { active: true, boutiqueId },
     select: { empId: true, name: true, email: true },
   });
   const emailByEmpId = Object.fromEntries(employees.map((e) => [e.empId, e.email ?? '']));

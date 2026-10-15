@@ -61,15 +61,25 @@ export async function getSiteStateForPeriod(
   }
 
   const tasks = await prisma.task.findMany({
-    where: { active: true },
+    where: { active: true, boutiqueId },
     include: {
       taskSchedules: true,
       taskPlans: { include: { primary: true, backup1: true, backup2: true } },
-      completions: { where: { undoneAt: null }, select: { userId: true, completedAt: true } },
+      completions: {
+        where: {
+          undoneAt: null,
+          dueDate: {
+            gte: new Date(`${dateStrs[0]}T00:00:00Z`),
+            lte: new Date(`${dateStrs[dateStrs.length - 1]}T00:00:00Z`),
+          },
+        },
+        select: { userId: true, dueDate: true, completedAt: true },
+      },
     },
   });
 
   const users = await prisma.user.findMany({
+    where: { employee: { boutiqueId } },
     select: { id: true, empId: true },
   });
   const empIdByUserId = Object.fromEntries(users.map((u) => [u.id, u.empId]));
@@ -80,7 +90,11 @@ export async function getSiteStateForPeriod(
       if (!task.taskKey) continue;
       if (!tasksRunnableOnDate(task, date)) continue;
       const a = await assignTaskOnDate(task, date);
-      const completion = task.completions.find((c) => empIdByUserId[c.userId] === a.assignedEmpId);
+      const completion = task.completions.find(
+        (c) =>
+          empIdByUserId[c.userId] === a.assignedEmpId &&
+          c.dueDate.toISOString().slice(0, 10) === dateStr
+      );
       const siteDone = !!completion;
       const siteCompletedAt = completion ? completion.completedAt.toISOString() : null;
       out.push({
