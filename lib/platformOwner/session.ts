@@ -8,6 +8,7 @@ import {
   resolveSessionActiveMode,
 } from '@/lib/platformOwner/effectiveAccessContext';
 import type { EffectiveAccessContext, PlatformActiveMode, SessionModeState } from '@/lib/platformOwner/types';
+import { applyRolePreview, type RolePreviewState } from '@/lib/rolePreview';
 
 const IDLE_MS = SESSION_IDLE_MINUTES * 60 * 1000;
 const THROTTLE_MS = SESSION_LAST_SEEN_THROTTLE_MINUTES * 60 * 1000;
@@ -16,6 +17,7 @@ export type AuthenticatedSession = {
   user: SessionUser & { isPlatformOwner: boolean };
   session: SessionModeState;
   access: EffectiveAccessContext;
+  preview: RolePreviewState | null;
 };
 
 async function safeSetCookie(args: ReturnType<typeof setSessionCookie> | ReturnType<typeof clearSessionCookie>): Promise<void> {
@@ -102,13 +104,17 @@ export async function getAuthenticatedSession(): Promise<AuthenticatedSession | 
     await prisma.session.update({ where: { id: session.id }, data: updates }).catch(() => {});
   }
 
-  const sessionUser = user as SessionUser & { isPlatformOwner: boolean };
-  sessionUser.isPlatformOwner = Boolean(user.isPlatformOwner);
+  const baseSessionUser = user as SessionUser & { isPlatformOwner: boolean };
+  baseSessionUser.isPlatformOwner = Boolean(user.isPlatformOwner);
+  const previewResult = await applyRolePreview(baseSessionUser);
+  const sessionUser = previewResult.user as SessionUser & { isPlatformOwner: boolean };
+  sessionUser.isPlatformOwner = previewResult.preview ? false : Boolean(user.isPlatformOwner);
 
   return {
     user: sessionUser,
     session: sessionState,
     access: getEffectiveAccessContext(sessionUser, sessionState),
+    preview: previewResult.preview,
   };
 }
 

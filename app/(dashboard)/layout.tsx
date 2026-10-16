@@ -12,6 +12,7 @@ import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
 import { VersionFooter } from '@/components/auth/VersionFooter';
+import { RolePreviewBanner } from '@/components/nav/RolePreviewBanner';
 import { getEffectiveAccessForBoutique } from '@/lib/rbac/effectiveAccess';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 
@@ -66,6 +67,7 @@ export default async function DashboardLayout({
         canApproveWeek={canApproveWeek}
       />
       <div className="flex flex-1 min-w-0 flex-col">
+        {auth.preview ? <RolePreviewBanner preview={auth.preview} /> : null}
         {isDemoMode && (
           <div className="shrink-0 bg-amber-100 border-b border-amber-300 px-3 py-2 text-center text-sm font-semibold text-amber-900">
             DEMO MODE — READ ONLY

@@ -13,7 +13,7 @@ type EmployeeOption = {
   position: EmployeePosition | null;
   boutiqueId: string;
   boutique: { name: string; code: string };
-  user: { role: Role; disabled: boolean } | null;
+  user: { id: string; role: Role; disabled: boolean } | null;
 };
 
 type BoutiqueOption = { id: string; code: string; name: string };
@@ -32,12 +32,15 @@ function roleLabel(role: Role, rtl: boolean) {
   return meta ? (rtl ? meta.ar : meta.en) : role;
 }
 
-export function RolePreviewCenterClient({ employees, boutiques }: { employees: EmployeeOption[]; boutiques: BoutiqueOption[] }) {
+export function RolePreviewCenterClient({ employees, boutiques, enabled }: { employees: EmployeeOption[]; boutiques: BoutiqueOption[]; enabled: boolean }) {
   const { t, isRtl } = useT();
-  const [role, setRole] = useState<Role>('EMPLOYEE');
-  const [employeeId, setEmployeeId] = useState(employees[0]?.empId ?? '');
+  const firstPreviewEmployee = employees.find((employee) => employee.user && PREVIEW_ROLES.includes(employee.user.role)) ?? employees[0];
+  const [role, setRole] = useState<Role>(firstPreviewEmployee?.user && PREVIEW_ROLES.includes(firstPreviewEmployee.user.role) ? firstPreviewEmployee.user.role : 'EMPLOYEE');
+  const [employeeId, setEmployeeId] = useState(firstPreviewEmployee?.empId ?? '');
   const selectedEmployee = employees.find((employee) => employee.empId === employeeId) ?? null;
   const [boutiqueIds, setBoutiqueIds] = useState<string[]>(selectedEmployee ? [selectedEmployee.boutiqueId] : boutiques[0] ? [boutiques[0].id] : []);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const sections = useMemo(() => getSidebarGroupedSections(role, t), [role, t]);
   const visiblePages = useMemo(
     () => sections.flatMap((section) => section.items.flatMap((item) => item.children?.length ? item.children : [item])),
@@ -53,6 +56,29 @@ export function RolePreviewCenterClient({ employees, boutiques }: { employees: E
     const employee = employees.find((item) => item.empId === empId);
     if (!employee) return;
     setBoutiqueIds([employee.boutiqueId]);
+    if (employee.user && PREVIEW_ROLES.includes(employee.user.role)) setRole(employee.user.role);
+  };
+
+  const startPreview = async () => {
+    if (!selectedEmployee?.user || !enabled) return;
+    setStarting(true);
+    setStartError(null);
+    try {
+      const response = await fetch('/api/admin/role-preview/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedEmployee.user.id, role, boutiqueIds }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStartError(typeof data.error === 'string' ? data.error : 'Could not start preview.');
+        return;
+      }
+      const destination = role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER' ? '/employee' : '/';
+      window.location.assign(destination);
+    } finally {
+      setStarting(false);
+    }
   };
 
   const chooseRole = (nextRole: Role) => {
@@ -106,6 +132,17 @@ export function RolePreviewCenterClient({ employees, boutiques }: { employees: E
             {boutiques.map((boutique) => <label key={boutique.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-subtle"><input type={role === 'AREA_MANAGER' ? 'checkbox' : 'radio'} checked={boutiqueIds.includes(boutique.id)} onChange={() => toggleBoutique(boutique.id)} /><span>{boutique.name} ({boutique.code})</span></label>)}
           </div>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-2xl border border-accent/25 bg-accent-soft/50 p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-bold text-foreground">{isRtl ? 'تشغيل منظور الموظف الفعلي' : 'Launch the employee’s real view'}</p>
+          <p className="mt-1 text-xs text-muted">{isRtl ? 'سيطبق صلاحيات الحساب وبياناته على الموقع كاملًا. جميع عمليات الحفظ ستبقى محظورة.' : 'Applies the account’s permissions and data across the entire site. All write actions remain blocked.'}</p>
+          {!enabled ? <p className="mt-2 text-xs font-bold text-rose-700">ROLE_PREVIEW_ENABLED is not enabled in this environment.</p> : null}
+          {selectedEmployee && !selectedEmployee.user ? <p className="mt-2 text-xs font-bold text-amber-700">{isRtl ? 'هذا الموظف لا يملك حساب دخول مرتبطًا.' : 'This employee has no linked login account.'}</p> : null}
+          {startError ? <p className="mt-2 text-xs font-bold text-rose-700">{startError}</p> : null}
+        </div>
+        <button type="button" onClick={startPreview} disabled={!enabled || !selectedEmployee?.user || selectedEmployee.user.disabled || starting} className="shrink-0 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-45">{starting ? '…' : (isRtl ? 'ابدأ المعاينة الفعلية' : 'Start live preview')}</button>
       </section>
 
       {areaNeedsScope ? <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">{isRtl ? 'اختر بوتيكين على الأقل حتى تختبر المقارنات ونطاق مدير المنطقة بصورة واقعية.' : 'Select at least two boutiques to test area comparisons and scope realistically.'}</div> : null}

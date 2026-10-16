@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
+import { isRolePreviewEnabled } from '@/lib/rolePreview';
 import { prisma } from '@/lib/db';
 import { RolePreviewCenterClient } from './RolePreviewCenterClient';
 
@@ -17,7 +18,7 @@ export default async function RolePreviewCenterPage() {
         nameAr: true,
         position: true,
         boutiqueId: true,
-        user: { select: { role: true, disabled: true } },
+        user: { select: { id: true, role: true, disabled: true } },
         boutique: { select: { name: true, code: true } },
       },
       orderBy: [{ boutique: { code: 'asc' } }, { name: 'asc' }],
@@ -29,5 +30,5 @@ export default async function RolePreviewCenterPage() {
     }),
   ]);
 
-  return <RolePreviewCenterClient employees={employees} boutiques={boutiques} />;
+  return <RolePreviewCenterClient employees={employees} boutiques={boutiques} enabled={isRolePreviewEnabled()} />;
 }
