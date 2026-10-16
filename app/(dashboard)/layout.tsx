@@ -42,6 +42,12 @@ export default async function DashboardLayout({
       })
     : null;
   const navRole = auth.access.effectiveRole as import('@prisma/client').Role;
+  // During a role preview the selected role is authoritative. In particular,
+  // do not let the target account's real job position make an EMPLOYEE preview
+  // look like an Assistant Manager or Manager session in the shell.
+  const navPosition = auth.preview && navRole === 'EMPLOYEE'
+    ? null
+    : (user.employee?.position ?? undefined);
   const canEditSchedule =
     auth.access.globalScope
       ? true
@@ -62,7 +68,7 @@ export default async function DashboardLayout({
       <Sidebar
         role={navRole}
         name={user.employee?.name ?? undefined}
-        position={user.employee?.position ?? undefined}
+        position={navPosition}
         canEditSchedule={canEditSchedule}
         canApproveWeek={canApproveWeek}
       />
@@ -77,14 +83,14 @@ export default async function DashboardLayout({
         <MobileTopBar
           role={navRole}
           name={user.employee?.name ?? undefined}
-          position={user.employee?.position ?? undefined}
+          position={navPosition}
           canEditSchedule={canEditSchedule}
           canApproveWeek={canApproveWeek}
         />
         <DesktopTopBar
           name={user.employee?.name ?? undefined}
           role={navRole as import('@prisma/client').Role}
-          position={user.employee?.position ?? undefined}
+          position={navPosition}
         />
         <main className="flex-1 min-w-0">
           <DashboardBreadcrumbBar />
