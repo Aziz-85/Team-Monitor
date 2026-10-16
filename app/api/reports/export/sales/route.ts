@@ -12,8 +12,11 @@ import {
   parseQueryBool,
 } from '@/lib/services/reportExportHandlers';
 import { resolveSimpleDateRange } from '@/lib/services/reportExportCommon';
+import { requireRole } from '@/lib/auth';
+import type { Role } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
+const EXPORT_ROLES: Role[] = ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'];
 
 async function resolveSalesBoutiques(
   request: NextRequest,
@@ -66,6 +69,14 @@ async function resolveSalesBoutiques(
 }
 
 async function handleExport(request: NextRequest, source: URLSearchParams | Record<string, unknown>) {
+  try {
+    await requireRole(EXPORT_ROLES);
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as { code?: string }).code === 'UNAUTHORIZED' ? 'Unauthorized' : 'Forbidden' },
+      { status: (error as { code?: string }).code === 'UNAUTHORIZED' ? 401 : 403 }
+    );
+  }
   const startDate = getQueryString(source, 'startDate');
   const endDate = getQueryString(source, 'endDate');
   const range = resolveSimpleDateRange(startDate, endDate);

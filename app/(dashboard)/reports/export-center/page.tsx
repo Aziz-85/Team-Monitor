@@ -11,8 +11,6 @@ import { ExportCenterClient } from './ExportCenterClient';
 import type { Role } from '@prisma/client';
 
 const SALES_EXPORT_ROLES: Role[] = [
-  'EMPLOYEE',
-  'ASSISTANT_MANAGER',
   'MANAGER',
   'ADMIN',
   'SUPER_ADMIN',
@@ -28,6 +26,7 @@ export default async function ExportCenterPage({
   if (!user) redirect('/login');
 
   const role = user.role as Role;
+  if (!SALES_EXPORT_ROLES.includes(role)) redirect('/employee');
   const canSchedule = SCHEDULE_EXPORT_ROLES.includes(role);
   const canSales = SALES_EXPORT_ROLES.includes(role);
   const canTasks = SCHEDULE_EXPORT_ROLES.includes(role);

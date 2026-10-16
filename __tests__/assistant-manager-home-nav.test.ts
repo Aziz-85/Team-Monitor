@@ -83,4 +83,14 @@ describe('Assistant Manager home navigation', () => {
     expect(systemLinksFor('ASSISTANT_MANAGER')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
     expect(systemLinksFor('EMPLOYEE')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
   });
+
+  it('limits the export center to boutique and platform leadership', () => {
+    expect(canAccessRoute('EMPLOYEE', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('ASSISTANT_MANAGER', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('DEMO_VIEWER', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('MANAGER', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('AREA_MANAGER', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('ADMIN', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('SUPER_ADMIN', '/reports/export-center')).toBe(true);
+  });
 });

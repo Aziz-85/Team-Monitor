@@ -77,7 +77,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
           { key: 'EXECUTIVE', href: '/executive', labelKey: 'nav.analytics.executive' },
           { key: 'ADMIN_TARGETS', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
           { key: 'MY_TARGET', href: '/me/target', labelKey: 'nav.myTarget' },
-          { key: 'EXPORT_CENTER', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter' },
+          { key: 'EXPORT_CENTER', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
         ],
       },
       {

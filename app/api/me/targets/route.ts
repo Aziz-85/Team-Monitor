@@ -11,6 +11,7 @@ import { getSessionUser } from '@/lib/auth';
 import { resolveMetricsScope } from '@/lib/metrics/scope';
 import { getTargetMetrics } from '@/lib/metrics/aggregator';
 import { formatMonthKey, normalizeMonthKey } from '@/lib/time';
+import { prisma } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
@@ -31,6 +32,11 @@ export async function GET(request: NextRequest) {
     userId: scope.userId,
     monthKey,
     employeeCrossBoutique: scope.employeeOnly ?? true,
+  });
+  const salesActivity = await prisma.salesEntry.aggregate({
+    where: { userId: user.id, month: monthKey },
+    _sum: { invoiceCount: true, pieceCount: true },
+    _count: { id: true },
   });
 
   return NextResponse.json({
@@ -60,6 +66,9 @@ export async function GET(request: NextRequest) {
     dailyAchievementPending: metrics.dailyAchievementPending,
     monthlyTargetMet: metrics.monthlyTargetMet,
     weekRangeLabel: metrics.weekRangeLabel,
+    invoiceCount: salesActivity._sum.invoiceCount ?? 0,
+    pieceCount: salesActivity._sum.pieceCount ?? 0,
+    salesDays: salesActivity._count.id,
     leaveDaysInMonth: metrics.leaveDaysInMonth,
     presenceFactor: metrics.presenceFactor,
     scheduledDaysInMonth: metrics.scheduledDaysInMonth,

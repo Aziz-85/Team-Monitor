@@ -31,8 +31,6 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/daily',
     '/inventory/zones',
     '/change-password',
-    '/reports/export-center',
-    '/reports/schedule-export',
   ],
   MANAGER: [
     '/',
@@ -81,8 +79,6 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/zones',
     '/inventory/follow-up',
     '/change-password',
-    '/reports/export-center',
-    '/reports/schedule-export',
     '/sales/summary',
   ],
   ADMIN: [
@@ -222,8 +218,6 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/executive/compare',
     '/executive/employees',
     '/schedule/view',
-    '/reports/export-center',
-    '/reports/schedule-export',
     '/kpi/upload',
     '/about',
     '/change-password',

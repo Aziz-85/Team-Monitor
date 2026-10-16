@@ -12,7 +12,6 @@ import {
   KPIGrid,
   KPIStatCard,
   PageContainer,
-  RecommendationCard,
   SectionBlock,
 } from '@/components/ui/ExecutiveIntelligence';
 
@@ -39,7 +38,11 @@ export function EmployeeHomeClient() {
     remainingMonthTargetSar?: number;
     dailyAchievementPending?: boolean;
     monthlyTargetMet?: boolean;
+    invoiceCount?: number;
+    pieceCount?: number;
+    salesDays?: number;
   } | null>(null);
+  const [taskSnapshot, setTaskSnapshot] = useState<Array<{ id: string; title: string; isCompleted: boolean; kind: 'task' | 'inventory' }>>([]);
 
   const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
   const [salesEntryAmount, setSalesEntryAmount] = useState<string>('');
@@ -142,6 +145,9 @@ export function EmployeeHomeClient() {
             remainingMonthTargetSar?: number;
             dailyAchievementPending?: boolean;
             monthlyTargetMet?: boolean;
+            invoiceCount?: number;
+            pieceCount?: number;
+            salesDays?: number;
           }) => {
             if (d && typeof d.todayTarget === 'number') {
               setTargetsData({
@@ -156,6 +162,9 @@ export function EmployeeHomeClient() {
                 remainingMonthTargetSar: d.remainingMonthTargetSar,
                 dailyAchievementPending: d.dailyAchievementPending === true,
                 monthlyTargetMet: d.monthlyTargetMet === true,
+                invoiceCount: d.invoiceCount ?? 0,
+                pieceCount: d.pieceCount ?? 0,
+                salesDays: d.salesDays ?? 0,
               });
             }
           }
@@ -182,6 +191,9 @@ export function EmployeeHomeClient() {
           remainingMonthTargetSar?: number;
           dailyAchievementPending?: boolean;
           monthlyTargetMet?: boolean;
+          invoiceCount?: number;
+          pieceCount?: number;
+          salesDays?: number;
         }) => {
         if (d && typeof d.todayTarget === 'number') {
           setTargetsData({
@@ -196,11 +208,21 @@ export function EmployeeHomeClient() {
             remainingMonthTargetSar: d.remainingMonthTargetSar,
             dailyAchievementPending: d.dailyAchievementPending === true,
             monthlyTargetMet: d.monthlyTargetMet === true,
+            invoiceCount: d.invoiceCount ?? 0,
+            pieceCount: d.pieceCount ?? 0,
+            salesDays: d.salesDays ?? 0,
           });
         }
       }
       )
       .catch(() => setTargetsData(null));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/tasks/my-today', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { tasks: [] }))
+      .then((payload: { tasks?: Array<{ id: string; title: string; isCompleted: boolean; kind: 'task' | 'inventory' }> }) => setTaskSnapshot(payload.tasks ?? []))
+      .catch(() => setTaskSnapshot([]));
   }, []);
 
   useEffect(() => {
@@ -228,71 +250,39 @@ export function EmployeeHomeClient() {
   const monthlyRemaining = targetsData
     ? targetsData.remainingMonthTargetSar ?? Math.max(0, targetsData.monthlyTarget - targetsData.mtdSales)
     : 0;
-  const paceTone = targetsData?.monthlyTargetMet
-    ? 'success'
-    : (targetsData?.mtdPct ?? 0) >= 90
-      ? 'default'
-      : (targetsData?.mtdPct ?? 0) >= 70
-        ? 'warning'
-        : 'danger';
   const inputClass =
     'w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15';
+  const achievement = Math.max(0, Math.min(100, Math.round(targetsData?.mtdPct ?? 0)));
+  const completedTasks = taskSnapshot.filter((task) => task.isCompleted).length;
+  const taskPercent = taskSnapshot.length > 0 ? Math.round((completedTasks / taskSnapshot.length) * 100) : 0;
 
   return (
     <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
-      <SectionBlock
-        title={t('nav.employeeHome')}
-        subtitle={t('home.targetsTodayOnlySubtitle')}
-        rightSlot={
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-sm">
-            <label htmlFor="employee-home-date" className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('common.date')}
-            </label>
-          <input
-            id="employee-home-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-transparent text-sm font-medium text-foreground outline-none"
-          />
+      <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(125deg,#0a2342_0%,#12466a_58%,#0d766e_125%)] p-5 text-white shadow-[0_28px_70px_-36px_rgba(5,25,55,.9)] md:p-7">
+        <div className="pointer-events-none absolute -end-20 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" />
+        <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-start">
+          <div><p className="text-xs font-bold uppercase tracking-[.22em] text-cyan-200">My performance</p><h1 className="mt-2 text-3xl font-bold">Keep the momentum moving</h1><p className="mt-2 max-w-xl text-sm text-slate-200">Every sale and completed task moves you closer to your monthly goal.</p></div>
+          <label className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold backdrop-blur"><span>Date</span><input id="employee-home-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-sm text-white outline-none [color-scheme:dark]" /></label>
+        </div>
+        <div className="relative mt-6 grid gap-4 lg:grid-cols-[220px_1fr]">
+          <div className="flex items-center justify-center rounded-3xl border border-white/10 bg-white/[.07] p-5">
+            <div className="relative grid h-36 w-36 place-items-center rounded-full" style={{ background: `conic-gradient(#5eead4 ${achievement * 3.6}deg, rgba(255,255,255,.12) 0deg)` }}><div className="grid h-28 w-28 place-items-center rounded-full bg-[#0d3152]"><div className="text-center"><p className="text-3xl font-black">{achievement}%</p><p className="text-[10px] uppercase tracking-widest text-slate-300">Target</p></div></div></div>
           </div>
-        }
-      >
-        <RecommendationCard
-          title={targetsData?.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : t('home.monthlyProgressCard')}
-          message={`${Math.round(targetsData?.mtdPct ?? 0)}% · ${t('targets.remainingMonthlyTarget')}: ${formatSarInt(monthlyRemaining)}`}
-          tone={paceTone}
-          className="border-2 p-5 md:p-6"
-        />
-      </SectionBlock>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Month sales', formatSarInt(targetsData?.mtdSales ?? 0), 'Actual achievement'],
+              ['Personal target', formatSarInt(targetsData?.monthlyTarget ?? 0), `${formatSarInt(monthlyRemaining)} remaining`],
+              ['Invoices', String(targetsData?.invoiceCount ?? 0), `${targetsData?.salesDays ?? 0} selling days`],
+              ['Pieces sold', String(targetsData?.pieceCount ?? 0), (targetsData?.invoiceCount ?? 0) > 0 ? `${((targetsData?.pieceCount ?? 0) / (targetsData?.invoiceCount ?? 1)).toFixed(1)} UPT` : 'UPT —'],
+            ].map(([label, value, hint]) => <article key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-4 backdrop-blur"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-slate-300">{label}</p><p className="mt-3 text-2xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-slate-300">{hint}</p></article>)}
+          </div>
+        </div>
+      </section>
 
-      {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
-        <SectionBlock title={t('home.monthlyProgressCard')} subtitle={t('home.targetsTodayOnlySubtitle')}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <KPIStatCard
-              title={t('home.monthlyProgressCard')}
-              value={`${Math.round(targetsData.mtdPct)}%`}
-              subtitle={`${formatSarInt(targetsData.mtdSales)} / ${formatSarInt(targetsData.monthlyTarget)}`}
-              tone={paceTone}
-              emphasis="strong"
-              trendLabel={targetsData.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : undefined}
-            />
-            <KPIStatCard
-              title={t('targets.remainingMonthlyTarget')}
-              value={formatSarInt(monthlyRemaining)}
-              subtitle={t('targets.dailyRequiredPace')}
-              tone={monthlyRemaining > 0 ? 'warning' : 'success'}
-              emphasis="strong"
-            />
-          </div>
-          <KPIGrid cols={4} className="mt-3">
-            <KPIStatCard title={t('home.sales')} value={formatSarInt(targetsData.todaySales)} subtitle={`${Math.round(targetsData.todayPct)}%`} tone={targetsData.todayPct >= 100 ? 'success' : 'default'} />
-            <KPIStatCard title={t('home.dailyTargetCard')} value={formatSarInt(targetsData.todayTarget)} subtitle={targetsData.dailyAchievementPending ? t('targets.dailyAchievementPending') : t('targets.dailyRequiredPace')} tone="default" />
-            <KPIStatCard title={t('targets.reportingDailyShort')} value={formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} tone="default" />
-            <KPIStatCard title="MTD Sales" value={formatSarInt(targetsData.mtdSales)} tone={paceTone} />
-          </KPIGrid>
-        </SectionBlock>
-      )}
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
+        <article className="rounded-3xl border border-border bg-surface p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">Today&apos;s mission</p><h2 className="mt-1 text-xl font-bold text-foreground">Tasks & execution</h2></div><div className="text-end"><p className="text-2xl font-black text-foreground">{completedTasks}/{taskSnapshot.length}</p><p className="text-xs text-muted">completed</p></div></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-emerald-400 transition-all" style={{ width: `${taskPercent}%` }} /></div><div className="mt-4 grid gap-2 sm:grid-cols-2">{taskSnapshot.length === 0 ? <p className="text-sm text-muted">No tasks assigned for today.</p> : taskSnapshot.map((task) => <div key={task.id} className={`flex items-center gap-3 rounded-xl border p-3 ${task.isCompleted ? 'border-emerald-200 bg-emerald-50/70' : 'border-border bg-surface-subtle/60'}`}><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${task.isCompleted ? 'bg-emerald-500 text-white' : 'bg-white text-muted shadow-sm'}`}>{task.isCompleted ? '✓' : '○'}</span><div><p className="text-sm font-semibold text-foreground">{task.title}</p><p className="text-xs text-muted">{task.kind === 'inventory' ? 'Daily operation' : 'Assigned task'}</p></div></div>)}</div></article>
+        <article className="rounded-3xl border border-border bg-surface p-5 shadow-sm"><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">Today</p><h2 className="mt-1 text-xl font-bold text-foreground">Daily pulse</h2><div className="mt-5 space-y-4"><div><div className="flex justify-between text-sm"><span className="text-muted">Sales</span><strong>{formatSarInt(targetsData?.todaySales ?? 0)}</strong></div><div className="mt-2 h-2 rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(100, targetsData?.todayPct ?? 0)}%` }} /></div></div><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl bg-surface-subtle p-3"><p className="text-xs text-muted">Daily target</p><p className="mt-1 font-bold">{formatSarInt(targetsData?.todayTarget ?? 0)}</p></div><div className="rounded-2xl bg-surface-subtle p-3"><p className="text-xs text-muted">Task progress</p><p className="mt-1 font-bold">{taskPercent}%</p></div></div></div></article>
+      </section>
 
       {selfAnalytics?.employees?.[0] && (
         <SectionBlock title={t('analytics.monthPaceTitle')} subtitle={t('analytics.projectionOnly')}>
