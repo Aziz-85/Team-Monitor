@@ -115,6 +115,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/') &&
     MUTATION_METHODS.includes(request.method?.toUpperCase() ?? 'GET') &&
     pathname !== '/api/admin/role-preview/session' &&
+    pathname !== '/api/locale' &&
     pathname !== DEMO_LOGOUT_PATH
   ) {
     return NextResponse.json({ error: 'Role preview is read-only. Exit preview to make changes.' }, { status: 403 });

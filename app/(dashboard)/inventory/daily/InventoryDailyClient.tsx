@@ -232,10 +232,10 @@ export function InventoryDailyClient() {
   return (
     <div className="p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-5">
-        <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(125deg,#0b2240,#164d69_62%,#16756d)] p-5 text-white shadow-[0_28px_70px_-38px_rgba(5,25,55,.9)] md:p-7">
+        <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(125deg,#0a2342_0%,#12466a_58%,#0d766e_125%)] p-5 text-white shadow-[0_28px_70px_-36px_rgba(5,25,55,.9)] md:p-7">
           <div className="pointer-events-none absolute -end-16 -top-20 h-64 w-64 rounded-full border border-white/10 bg-white/5" />
           <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <div><p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-200">Daily operation</p><h1 className="mt-2 text-3xl font-bold">Inventory handover</h1><p className="mt-2 max-w-xl text-sm text-slate-200">One clear owner, one daily check, and a visible completion trail.</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-200">{t('inventory.heroEyebrow')}</p><h1 className="mt-2 text-3xl font-bold">{t('inventory.heroTitle')}</h1><p className="mt-2 max-w-xl text-sm text-slate-200">{t('inventory.heroSubtitle')}</p></div>
             <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
@@ -253,7 +253,7 @@ export function InventoryDailyClient() {
           )}
             </div>
           </div>
-          {!loading && run ? <div className="relative mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Assigned to</p><p className="mt-2 text-lg font-bold">{run.assigneeName ?? '—'}</p>{run.isMe ? <p className="mt-1 text-xs text-emerald-200">Your turn today</p> : null}</div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Status</p><div className="mt-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${effective === 'COMPLETED' ? 'bg-emerald-400' : effective === 'LATE' ? 'bg-rose-400' : 'bg-amber-300'}`} /><p className="text-lg font-bold">{statusLabel}</p></div></div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Assignment</p><p className="mt-2 text-lg font-bold">{run.assignmentSource === 'QUEUE' ? t('inventory.sourceQueue') : run.assignmentSource === 'ROTATION' ? t('inventory.sourceRotation') : run.assignmentSource === 'UNASSIGNED' ? t('inventory.sourceUnassigned') : '—'}</p></div></div> : null}
+          {!loading && run ? <div className="relative mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.assignedTo')}</p><p className="mt-2 text-lg font-bold">{run.assigneeName ?? '—'}</p>{run.isMe ? <p className="mt-1 text-xs text-emerald-200">{t('inventory.yourTurnToday')}</p> : null}</div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.status')}</p><div className="mt-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${effective === 'COMPLETED' ? 'bg-emerald-400' : effective === 'LATE' ? 'bg-rose-400' : 'bg-amber-300'}`} /><p className="text-lg font-bold">{statusLabel}</p></div></div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.assignment')}</p><p className="mt-2 text-lg font-bold">{run.assignmentSource === 'QUEUE' ? t('inventory.sourceQueue') : run.assignmentSource === 'ROTATION' ? t('inventory.sourceRotation') : run.assignmentSource === 'UNASSIGNED' ? t('inventory.sourceUnassigned') : '—'}</p></div></div> : null}
         </section>
 
         <div className="flex flex-wrap items-center gap-3">

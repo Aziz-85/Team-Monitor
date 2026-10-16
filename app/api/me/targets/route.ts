@@ -33,11 +33,24 @@ export async function GET(request: NextRequest) {
     monthKey,
     employeeCrossBoutique: scope.employeeOnly ?? true,
   });
-  const salesActivity = await prisma.salesEntry.aggregate({
-    where: { userId: user.id, month: monthKey },
-    _sum: { invoiceCount: true, pieceCount: true },
-    _count: { id: true },
-  });
+  const [salesActivity, boutiqueSalesActivity] = await Promise.all([
+    prisma.salesEntry.aggregate({
+      where: { userId: user.id, month: monthKey },
+      _sum: { invoiceCount: true, pieceCount: true },
+      _count: { id: true },
+    }),
+    prisma.salesEntry.aggregate({
+      where: {
+        boutiqueId: scope.effectiveBoutiqueId,
+        month: monthKey,
+        dateKey: { lte: metrics.todayStr },
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+  const boutiqueMtdSales = boutiqueSalesActivity._sum.amount ?? 0;
+  const boutiqueTarget = metrics.boutiqueTarget ?? 0;
+  const boutiquePct = boutiqueTarget > 0 ? Math.round((boutiqueMtdSales * 1000) / boutiqueTarget) / 10 : 0;
 
   return NextResponse.json({
     monthKey: metrics.monthKey,
@@ -46,6 +59,9 @@ export async function GET(request: NextRequest) {
     hasMonthlyTarget: metrics.hasMonthlyTarget,
     targetStatus: metrics.targetStatus,
     boutiqueTarget: metrics.boutiqueTarget,
+    boutiqueMtdSales,
+    boutiquePct,
+    boutiqueRemaining: Math.max(0, boutiqueTarget - boutiqueMtdSales),
     todaySales: metrics.todaySales,
     weekSales: metrics.weekSales,
     mtdSales: metrics.mtdSales,

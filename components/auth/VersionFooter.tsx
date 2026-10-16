@@ -5,18 +5,23 @@ import { getBuildId } from '@/lib/server/getBuildId';
 export function VersionFooter() {
   const buildId = getBuildId();
   const env = getEnvironment();
-  const versionLine = GIT_HASH
-    ? `Server: v${APP_VERSION} (${GIT_HASH})`
-    : `Server: v${APP_VERSION}`;
+  const versionLine = GIT_HASH ? `v${APP_VERSION} · ${GIT_HASH}` : `v${APP_VERSION}`;
+  const technicalDetails = [
+    `Team Monitor ${versionLine}`,
+    env !== 'production' ? `Environment: ${env}` : null,
+    buildId ? `Build: ${buildId}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <footer
-      className="shrink-0 border-t border-border/40 py-2 text-center text-xs text-muted"
+      className="shrink-0 border-t border-border/30 px-4 py-2 text-center text-[11px] text-muted/75"
       dir="ltr"
+      title={technicalDetails}
     >
-      {versionLine}
-      {env !== 'production' ? <span className="mt-0.5 block capitalize">Env: {env}</span> : null}
-      {buildId ? <span className="mt-0.5 block">Build: {buildId}</span> : null}
+      <span className="font-medium">Team Monitor</span>
+      <span aria-hidden="true"> · </span>
+      <span>{versionLine}</span>
+      {env !== 'production' ? <span className="ms-1 rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold uppercase text-amber-800">{env}</span> : null}
     </footer>
   );
 }
