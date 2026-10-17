@@ -20,6 +20,7 @@ import { logAudit } from '@/lib/audit';
 import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { parseOptionalNonNegativeInt } from '@/lib/sales/parseOptionalSalesMetrics';
+import { getLeadershipUserIdsForBoutique, notifyUsers } from '@/lib/notify/inApp';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -248,6 +249,15 @@ export async function POST(request: NextRequest) {
       }
     }
   }
+
+  const employee = await prisma.employee.findUnique({ where: { empId: employeeId }, select: { name: true } });
+  const managerIds = await getLeadershipUserIdsForBoutique(scopeId, roleUser.id);
+  await notifyUsers({
+    userIds: managerIds,
+    title: 'Sales entry added',
+    body: `${employee?.name ?? employeeId} recorded ${salesSar.toLocaleString('en-US')} SAR for ${dateKey}.`,
+    linkPath: `/sales/daily?date=${dateKey}`,
+  });
 
   return NextResponse.json({
     ok: true,

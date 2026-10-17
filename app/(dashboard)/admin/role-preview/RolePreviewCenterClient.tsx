@@ -74,7 +74,7 @@ export function RolePreviewCenterClient({ employees, boutiques, enabled }: { emp
         setStartError(typeof data.error === 'string' ? data.error : 'Could not start preview.');
         return;
       }
-      const destination = role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER' ? '/employee' : '/';
+      const destination = role === 'AREA_MANAGER' ? '/area' : role === 'EMPLOYEE' || role === 'ASSISTANT_MANAGER' ? '/employee' : '/';
       window.location.assign(destination);
     } finally {
       setStarting(false);

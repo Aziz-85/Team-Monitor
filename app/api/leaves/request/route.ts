@@ -7,6 +7,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getUserAllowedBoutiqueIds } from '@/lib/scope/resolveScope';
 import type { LeaveType } from '@prisma/client';
+import { getLeadershipUserIdsForBoutique, notifyUsers } from '@/lib/notify/inApp';
 
 const LEAVE_TYPES: LeaveType[] = ['ANNUAL', 'EXHIBITION', 'SICK', 'OTHER_BRANCH', 'EMERGENCY', 'OTHER'];
 
@@ -59,6 +60,16 @@ export async function POST(request: NextRequest) {
       boutique: { select: { code: true, name: true } },
     },
   });
+
+  if (submitNow) {
+    const managerIds = await getLeadershipUserIdsForBoutique(boutiqueId, user.id);
+    await notifyUsers({
+      userIds: managerIds,
+      title: 'New leave request',
+      body: `${user.employee?.name ?? user.empId} submitted a ${type.toLowerCase().replaceAll('_', ' ')} leave request from ${startDateStr} to ${endDateStr}.`,
+      linkPath: '/leaves',
+    });
+  }
 
   return NextResponse.json(created);
 }

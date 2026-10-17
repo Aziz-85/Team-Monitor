@@ -845,6 +845,7 @@
     "boutiqueLeaves": "Boutique leave requests",
     "boutiqueTasks": "Boutique tasks",
     "area": {
+      "overview": "Area Overview",
       "employees": "Employees (Global)",
       "targets": "Targets (Global)"
     },
@@ -3820,6 +3821,26 @@
     "chartEmployees": "Employee sales (top slice)",
     "chartEmpty": "No chart data for this selection.",
     "insightsTitle": "Management insights"
+  },
+  "areaDashboard": {
+    "eyebrow": "Area command center", "title": "All boutiques. One clear view.", "subtitle": "Live regional sales, targets, team capacity and items requiring your attention.", "openNotifications": "Open notifications", "areaSales": "Area sales", "areaTarget": "Area target", "achievement": "Achievement", "remaining": "Remaining", "pendingLeaves": "Pending leaves", "ranking": "Boutique ranking", "performanceByBoutique": "Performance by boutique", "detailedComparison": "Detailed comparison", "employees": "employees", "invoices": "invoices", "pieces": "pieces", "actionQueue": "Action queue", "needsAttention": "Needs attention", "pendingLeaveRequests": "Pending leave requests", "openApprovals": "Open approvals", "regionalTools": "Regional tools", "employeesAcross": "Employees across boutiques", "targetControl": "Area target control", "performanceIntelligence": "Performance intelligence"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "center": "Communication center",
+    "subtitle": "Operational updates, approvals and messages for your scope.",
+    "unread": "unread",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications yet.",
+    "viewAll": "View all notifications",
+    "send": "Send an announcement",
+    "subject": "Notification title",
+    "message": "Write a short, clear message",
+    "sendNow": "Send now",
+    "sentTo": "Sent to",
+    "history": "Notification history",
+    "allBoutiques": "All boutiques in my area",
+    "previewReadOnly": "Sending is hidden in role preview because this environment is read-only."
   },
   "securitySettings": {
     "title": "Account security",

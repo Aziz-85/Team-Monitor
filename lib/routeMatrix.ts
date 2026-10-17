@@ -31,6 +31,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/daily',
     '/inventory/zones',
     '/change-password',
+    '/notifications',
   ],
   MANAGER: [
     '/',
@@ -53,6 +54,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/follow-up',
     '/admin/employees',
     '/change-password',
+    '/notifications',
     '/reports/weekly',
     '/reports/daily-performance',
     '/reports/store',
@@ -79,6 +81,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/inventory/zones',
     '/inventory/follow-up',
     '/change-password',
+    '/notifications',
     '/sales/summary',
   ],
   ADMIN: [
@@ -166,10 +169,13 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
     '/compliance',
     '/about',
     '/change-password',
+    '/notifications',
   ],
   AREA_MANAGER: [
     '/reports/daily-performance',
     '/nav',
+    '/area',
+    '/notifications',
     '/',
     '/design-preview',
     '/dashboard',
@@ -225,6 +231,8 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   SUPER_ADMIN: [
     '/reports/daily-performance',
     '/nav',
+    '/area',
+    '/notifications',
     '/',
     '/design-preview',
     '/architecture',
@@ -322,6 +330,7 @@ export function canAccessRoute(role: Role, pathname: string): boolean {
  */
 export function getPostLoginPath(role: Role): string {
   if (role === 'EMPLOYEE') return '/employee';
+  if (role === 'AREA_MANAGER') return '/area';
   if (canAccessRoute(role, '/')) return '/';
   if (canAccessRoute(role, '/dashboard')) return '/dashboard';
   if (canAccessRoute(role, '/employee')) return '/employee';

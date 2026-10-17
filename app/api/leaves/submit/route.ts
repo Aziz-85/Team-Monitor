@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { writeLeaveAudit } from '@/lib/leaveAudit';
+import { getLeadershipUserIdsForBoutique, notifyUsers } from '@/lib/notify/inApp';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -36,6 +37,13 @@ export async function POST(request: NextRequest) {
     boutiqueId: req.boutiqueId,
     beforeJson: before,
     afterJson: JSON.stringify({ status: 'SUBMITTED' }),
+  });
+  const managerIds = await getLeadershipUserIdsForBoutique(req.boutiqueId, user.id);
+  await notifyUsers({
+    userIds: managerIds,
+    title: 'New leave request',
+    body: `${user.employee?.name ?? user.empId} submitted a ${req.type.toLowerCase().replaceAll('_', ' ')} leave request.`,
+    linkPath: '/leaves',
   });
 
   return NextResponse.json({ ok: true, status: 'SUBMITTED' });

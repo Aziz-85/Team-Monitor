@@ -6,6 +6,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useI18n } from '@/app/providers';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
 import type { Role, EmployeePosition } from '@prisma/client';
+import { NotificationBell } from '@/components/nav/NotificationBell';
 
 export type DesktopTopBarProps = {
   /** User display name (e.g. from user.employee?.name) */
@@ -47,6 +48,7 @@ export function DesktopTopBar({ name, role, position }: DesktopTopBarProps) {
         </Link>
       </div>
       <div className="flex shrink-0 items-center gap-3">
+        <NotificationBell />
         <select
           value={locale}
           onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}

@@ -9,6 +9,7 @@ import { SidebarBrandingScope } from '@/components/nav/SidebarBrandingScope';
 import { SidebarNavContent } from '@/components/nav/SidebarNavContent';
 import type { Role, EmployeePosition } from '@prisma/client';
 import { getRoleDisplayLabel } from '@/lib/roleLabel';
+import { NotificationBell } from '@/components/nav/NotificationBell';
 
 export function MobileTopBar({
   role,
@@ -52,6 +53,7 @@ export function MobileTopBar({
           </svg>
         </button>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <NotificationBell />
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value as 'en' | 'ar')}

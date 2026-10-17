@@ -33,8 +33,9 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'quick-access',
     labelKey: 'nav.sidebar.primary',
     items: [
-      { key: 'HOME', href: '/', labelKey: 'nav.home', tier: 'hub' },
-      { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard', tier: 'page' },
+      { key: 'AREA_OVERVIEW', href: '/area', labelKey: 'nav.area.overview', tier: 'hub', roles: ['AREA_MANAGER'] },
+      { key: 'HOME', href: '/', labelKey: 'nav.home', tier: 'hub', roles: ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+      { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard', tier: 'page', roles: ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
       { key: 'EMPLOYEE_HOME', href: '/employee', labelKey: 'nav.employeeHome' },
       { key: 'ENTRY_DAILY', href: '/sales/daily', labelKey: 'nav.sidebar.entryDailySales', tier: 'page' },
     ],

@@ -845,6 +845,7 @@
     "boutiqueLeaves": "طلبات إجازات الفرع",
     "boutiqueTasks": "مهام الفرع",
     "area": {
+      "overview": "نظرة المنطقة",
       "employees": "الموظفون (عالمي)",
       "targets": "الأهداف (عالمي)"
     },
@@ -3820,6 +3821,26 @@
     "chartEmployees": "مبيعات الموظفين (جزء أعلى)",
     "chartEmpty": "لا بيانات للرسم لهذا الاختيار.",
     "insightsTitle": "رؤى إدارية"
+  },
+  "areaDashboard": {
+    "eyebrow": "مركز قيادة المنطقة", "title": "كل البوتيكات في رؤية واحدة واضحة", "subtitle": "المبيعات والأهداف وطاقة الفريق والعناصر التي تحتاج تدخلك مباشرة.", "openNotifications": "فتح التنبيهات", "areaSales": "مبيعات المنطقة", "areaTarget": "هدف المنطقة", "achievement": "التحقيق", "remaining": "المتبقي", "pendingLeaves": "إجازات معلقة", "ranking": "ترتيب البوتيكات", "performanceByBoutique": "الأداء حسب البوتيك", "detailedComparison": "مقارنة تفصيلية", "employees": "موظف", "invoices": "فاتورة", "pieces": "قطعة", "actionQueue": "قائمة الإجراءات", "needsAttention": "يحتاج الانتباه", "pendingLeaveRequests": "طلبات الإجازة المعلقة", "openApprovals": "فتح الموافقات", "regionalTools": "أدوات المنطقة", "employeesAcross": "الموظفون عبر البوتيكات", "targetControl": "التحكم بأهداف المنطقة", "performanceIntelligence": "ذكاء الأداء"
+  },
+  "notifications": {
+    "title": "التنبيهات",
+    "center": "مركز التواصل",
+    "subtitle": "التحديثات التشغيلية والموافقات والرسائل ضمن نطاقك.",
+    "unread": "غير مقروء",
+    "markAllRead": "تحديد الكل كمقروء",
+    "empty": "لا توجد تنبيهات حتى الآن.",
+    "viewAll": "عرض جميع التنبيهات",
+    "send": "إرسال إعلان",
+    "subject": "عنوان التنبيه",
+    "message": "اكتب رسالة قصيرة وواضحة",
+    "sendNow": "إرسال الآن",
+    "sentTo": "تم الإرسال إلى",
+    "history": "سجل التنبيهات",
+    "allBoutiques": "جميع بوتيكات منطقتي",
+    "previewReadOnly": "تم إخفاء الإرسال في معاينة الأدوار لأن هذا الوضع للقراءة فقط."
   },
   "securitySettings": {
     "title": "أمان الحساب",
