@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 import { canViewFullSchedule } from '@/lib/permissions';
 import { getRamadanRange } from '@/lib/time/ramadan';
+import { canExportScheduleAudit } from '@/lib/services/scheduleFullExport';
 import { ScheduleViewClient } from './ScheduleViewClient';
 
 export default async function ScheduleViewPage() {
@@ -12,6 +13,7 @@ export default async function ScheduleViewPage() {
   return (
     <ScheduleViewClient
       fullGrid={fullGrid}
+      canExportSchedule={canExportScheduleAudit(user.role)}
       ramadanRange={ramadanRange}
     />
   );

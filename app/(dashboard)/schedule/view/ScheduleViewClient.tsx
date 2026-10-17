@@ -206,9 +206,11 @@ function parseViewParam(view: string | null): ViewMode {
 
 export function ScheduleViewClient({
   fullGrid,
+  canExportSchedule,
   ramadanRange,
 }: {
   fullGrid: boolean;
+  canExportSchedule: boolean;
   ramadanRange?: { start: string; end: string } | null;
 }) {
   const { t, locale } = useT();
@@ -720,7 +722,7 @@ export function ScheduleViewClient({
           </div>
         )}
         {/* Week/Month scope + view mode tabs */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-sm">
           <div className="inline-flex h-9 rounded-lg border border-border bg-surface-subtle p-0.5" role="tablist" aria-label={t('schedule.week') ?? 'Week'}>
             <button
               type="button"
@@ -802,7 +804,7 @@ export function ScheduleViewClient({
         </div>
 
         {/* schedule-header: left = week nav + title + badges, right = stat pills */}
-        <div className="schedule-header mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="schedule-header mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             {timeScope === 'week' && (
               <>
@@ -838,7 +840,7 @@ export function ScheduleViewClient({
                   className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   aria-label={t('schedule.week')}
                 />
-                {timeScope === 'week' && (
+                {timeScope === 'week' && canExportSchedule && (
                   <Link
                     href={`/reports/export-center?category=schedule&weekStart=${encodeURIComponent(weekStart)}`}
                     className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
@@ -1095,7 +1097,7 @@ export function ScheduleViewClient({
         )}
 
         {timeScope === 'week' && gridData && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-surface px-3 py-2.5 text-xs shadow-sm">
             <span className="font-medium text-muted">{t('schedule.coverage') ?? 'Shifts'}:</span>
             <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-2 py-1 font-medium text-accent">
               <span className="h-4 w-4 rounded-full bg-sky-200" aria-hidden />

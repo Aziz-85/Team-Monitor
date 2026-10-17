@@ -45,6 +45,12 @@ export function EmployeeHomeClient() {
     boutiqueMtdSales?: number;
     boutiquePct?: number;
     boutiqueRemaining?: number;
+    annualYear?: number;
+    annualTarget?: number;
+    annualSales?: number;
+    annualPct?: number;
+    annualRemaining?: number;
+    annualTargetMonths?: number;
   } | null>(null);
   const [taskSnapshot, setTaskSnapshot] = useState<Array<{ id: string; title: string; isCompleted: boolean; kind: 'task' | 'inventory' }>>([]);
 
@@ -156,6 +162,12 @@ export function EmployeeHomeClient() {
             boutiqueMtdSales?: number;
             boutiquePct?: number;
             boutiqueRemaining?: number;
+            annualYear?: number;
+            annualTarget?: number;
+            annualSales?: number;
+            annualPct?: number;
+            annualRemaining?: number;
+            annualTargetMonths?: number;
           }) => {
             if (d && typeof d.todayTarget === 'number') {
               setTargetsData({
@@ -177,6 +189,12 @@ export function EmployeeHomeClient() {
                 boutiqueMtdSales: d.boutiqueMtdSales ?? 0,
                 boutiquePct: d.boutiquePct ?? 0,
                 boutiqueRemaining: d.boutiqueRemaining ?? 0,
+                annualYear: d.annualYear,
+                annualTarget: d.annualTarget ?? 0,
+                annualSales: d.annualSales ?? 0,
+                annualPct: d.annualPct ?? 0,
+                annualRemaining: d.annualRemaining ?? 0,
+                annualTargetMonths: d.annualTargetMonths ?? 0,
               });
             }
           }
@@ -210,6 +228,12 @@ export function EmployeeHomeClient() {
           boutiqueMtdSales?: number;
           boutiquePct?: number;
           boutiqueRemaining?: number;
+          annualYear?: number;
+          annualTarget?: number;
+          annualSales?: number;
+          annualPct?: number;
+          annualRemaining?: number;
+          annualTargetMonths?: number;
         }) => {
         if (d && typeof d.todayTarget === 'number') {
           setTargetsData({
@@ -231,6 +255,12 @@ export function EmployeeHomeClient() {
             boutiqueMtdSales: d.boutiqueMtdSales ?? 0,
             boutiquePct: d.boutiquePct ?? 0,
             boutiqueRemaining: d.boutiqueRemaining ?? 0,
+            annualYear: d.annualYear,
+            annualTarget: d.annualTarget ?? 0,
+            annualSales: d.annualSales ?? 0,
+            annualPct: d.annualPct ?? 0,
+            annualRemaining: d.annualRemaining ?? 0,
+            annualTargetMonths: d.annualTargetMonths ?? 0,
           });
         }
       }
@@ -313,6 +343,23 @@ export function EmployeeHomeClient() {
           </div>
         </div>
         <div className="mt-5 flex items-center gap-3"><div className="h-3 flex-1 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full bg-gradient-to-r from-sky-600 to-emerald-500 transition-all" style={{ width: `${Math.min(100, Math.max(0, targetsData?.boutiquePct ?? 0))}%` }} /></div><span className="min-w-[3.5rem] text-end text-sm font-black tabular-nums text-foreground">{(targetsData?.boutiquePct ?? 0).toFixed(1)}%</span></div>
+      </section>
+
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 shadow-sm md:p-6">
+        <div className="pointer-events-none absolute -end-20 -top-24 h-60 w-60 rounded-full bg-sky-500/[.06]" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center">
+          <div className="flex items-center gap-4 xl:w-[36%]">
+            <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#0ea5e9 ${Math.min(100, Math.max(0, targetsData?.annualPct ?? 0)) * 3.6}deg, var(--surface-subtle) 0deg)` }}>
+              <div className="grid h-[88px] w-[88px] place-items-center rounded-full bg-surface"><div className="text-center"><p className="text-2xl font-black text-foreground">{(targetsData?.annualPct ?? 0).toFixed(1)}%</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">{targetsData?.annualYear ?? new Date().getFullYear()}</p></div></div>
+            </div>
+            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-sky-700 dark:text-sky-300">{t('home.employeeAnnualPerformance')}</p><h2 className="mt-1 text-xl font-bold text-foreground">{t('home.employeeAnnualTargetTitle')}</h2><p className="mt-1 text-sm text-muted">{t('home.employeeAnnualMonthsDefined').replace('{count}', String(targetsData?.annualTargetMonths ?? 0))}</p></div>
+          </div>
+          <div className="grid flex-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-surface-subtle/55 p-4"><p className="text-xs text-muted">{t('home.employeeAnnualTarget')}</p><p className="mt-2 text-xl font-bold tabular-nums text-foreground">{formatSarInt(targetsData?.annualTarget ?? 0)}</p></div>
+            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20"><p className="text-xs text-emerald-700 dark:text-emerald-300">{t('home.employeeAnnualAchieved')}</p><p className="mt-2 text-xl font-bold tabular-nums text-emerald-900 dark:text-emerald-100">{formatSarInt(targetsData?.annualSales ?? 0)}</p></div>
+            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/20"><p className="text-xs text-amber-700 dark:text-amber-300">{t('home.employeeAnnualRemaining')}</p><p className="mt-2 text-xl font-bold tabular-nums text-amber-950 dark:text-amber-100">{formatSarInt(targetsData?.annualRemaining ?? 0)}</p><p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{Math.max(0, 100 - (targetsData?.annualPct ?? 0)).toFixed(1)}% {t('home.employeeRemainingPct')}</p></div>
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">

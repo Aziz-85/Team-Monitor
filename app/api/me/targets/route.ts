@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
     monthKey,
     employeeCrossBoutique: scope.employeeOnly ?? true,
   });
-  const [salesActivity, boutiqueSalesActivity] = await Promise.all([
+  const selectedYear = monthKey.slice(0, 4);
+  const yearStart = `${selectedYear}-01-01`;
+  const yearEnd = `${selectedYear}-12-31`;
+  const annualSalesCutoff = metrics.todayStr.startsWith(selectedYear) ? metrics.todayStr : yearEnd;
+  const [salesActivity, boutiqueSalesActivity, annualTargetActivity, annualSalesActivity] = await Promise.all([
     prisma.salesEntry.aggregate({
       where: { userId: user.id, month: monthKey },
       _sum: { invoiceCount: true, pieceCount: true },
@@ -47,10 +51,25 @@ export async function GET(request: NextRequest) {
       },
       _sum: { amount: true },
     }),
+    prisma.employeeMonthlyTarget.aggregate({
+      where: { userId: user.id, month: { startsWith: selectedYear } },
+      _sum: { amount: true },
+      _count: { id: true },
+    }),
+    prisma.salesEntry.aggregate({
+      where: {
+        userId: user.id,
+        dateKey: { gte: yearStart, lte: annualSalesCutoff },
+      },
+      _sum: { amount: true },
+    }),
   ]);
   const boutiqueMtdSales = boutiqueSalesActivity._sum.amount ?? 0;
   const boutiqueTarget = metrics.boutiqueTarget ?? 0;
   const boutiquePct = boutiqueTarget > 0 ? Math.round((boutiqueMtdSales * 1000) / boutiqueTarget) / 10 : 0;
+  const annualTarget = annualTargetActivity._sum.amount ?? 0;
+  const annualSales = annualSalesActivity._sum.amount ?? 0;
+  const annualPct = annualTarget > 0 ? Math.round((annualSales * 1000) / annualTarget) / 10 : 0;
 
   return NextResponse.json({
     monthKey: metrics.monthKey,
@@ -62,6 +81,12 @@ export async function GET(request: NextRequest) {
     boutiqueMtdSales,
     boutiquePct,
     boutiqueRemaining: Math.max(0, boutiqueTarget - boutiqueMtdSales),
+    annualYear: Number(selectedYear),
+    annualTarget,
+    annualSales,
+    annualPct,
+    annualRemaining: Math.max(0, annualTarget - annualSales),
+    annualTargetMonths: annualTargetActivity._count.id,
     todaySales: metrics.todaySales,
     weekSales: metrics.weekSales,
     mtdSales: metrics.mtdSales,
