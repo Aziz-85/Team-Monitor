@@ -9,6 +9,7 @@ import { canManageLeavesInBoutique } from '@/lib/membershipPermissions';
 import { evaluateLeaveApproval } from '@/lib/leaveRules';
 import { writeLeaveAudit } from '@/lib/leaveAudit';
 import type { Role } from '@prisma/client';
+import { getLeadershipUserIdsForBoutique, notifyUsers } from '@/lib/notify/inApp';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -58,6 +59,13 @@ export async function POST(request: NextRequest) {
     beforeJson: JSON.stringify({ status: req.status }),
     afterJson: after,
     reason,
+  });
+  const leadershipIds = await getLeadershipUserIdsForBoutique(req.boutiqueId, user.id);
+  await notifyUsers({
+    userIds: leadershipIds,
+    title: 'Leave request escalated',
+    body: `A ${req.type.toLowerCase().replaceAll('_', ' ')} leave request requires final review.`,
+    linkPath: '/leaves',
   });
 
   return NextResponse.json({ ok: true, escalated: true, reasons: evaluation.reasons });

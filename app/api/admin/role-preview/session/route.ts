@@ -7,8 +7,23 @@ import { encodeRolePreviewConfig, isRolePreviewEnabled, type PreviewRole } from 
 const PREVIEW_ROLES: PreviewRole[] = ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'AREA_MANAGER'];
 
 function isLocalRequest(request: NextRequest) {
-  const host = request.nextUrl.hostname.toLowerCase();
-  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  // `next dev` can reconstruct request.nextUrl from an application/base URL,
+  // so its hostname is not always the address the browser actually used.
+  // Development mode is local-only for this feature and still requires the
+  // explicit ROLE_PREVIEW_ENABLED flag plus an ADMIN/SUPER_ADMIN session.
+  if (process.env.NODE_ENV === 'development') return true;
+
+  const candidates = [
+    request.nextUrl.hostname,
+    request.headers.get('host')?.split(':')[0],
+    request.headers.get('x-forwarded-host')?.split(':')[0],
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase().replace(/^\[|\]$/g, ''));
+
+  return candidates.some((host) =>
+    host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0'
+  );
 }
 
 function cookie(value: string, maxAge: number) {

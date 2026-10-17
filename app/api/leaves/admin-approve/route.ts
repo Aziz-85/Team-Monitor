@@ -7,6 +7,7 @@ import { getSessionUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { evaluateLeaveApproval } from '@/lib/leaveRules';
 import { writeLeaveAudit } from '@/lib/leaveAudit';
+import { notifyUsers } from '@/lib/notify/inApp';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -53,6 +54,12 @@ export async function POST(request: NextRequest) {
     beforeJson: before,
     afterJson: after,
     reason,
+  });
+  await notifyUsers({
+    userIds: [req.userId],
+    title: 'Leave request approved',
+    body: `Your ${req.type.toLowerCase().replaceAll('_', ' ')} leave request received final approval.`,
+    linkPath: '/leaves',
   });
 
   return NextResponse.json({ ok: true, status: 'APPROVED_ADMIN' });

@@ -35,6 +35,7 @@ export const ROLE_ROUTES: Record<Role, string[]> = {
   ],
   MANAGER: [
     '/',
+    '/dashboard',
     '/design-preview',
     '/approvals',
     '/schedule',

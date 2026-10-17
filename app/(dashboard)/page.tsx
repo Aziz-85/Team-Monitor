@@ -4,6 +4,7 @@ import { canAccessRoute, getPostLoginPath } from '@/lib/permissions';
 import { resolveNavRoleForSession } from '@/lib/rbac/effectiveAccess';
 import { getMyActiveZoneAssignmentForCurrentQuarter } from '@/lib/services/inventoryZones';
 import { HomePageClient } from './HomePageClient';
+import { ManagerDashboard } from '@/components/dashboard/ManagerDashboard';
 
 const DAILY_LEDGER_ROLES = ['ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] as const;
 
@@ -18,6 +19,10 @@ export default async function HomePage() {
   });
   if (!canAccessRoute(navRole, '/')) {
     redirect(getPostLoginPath(navRole));
+  }
+  if (navRole === 'AREA_MANAGER') redirect('/area');
+  if (navRole === 'MANAGER') {
+    return <ManagerDashboard boutiqueId={user.boutiqueId} boutiqueName={user.boutique?.name ?? 'Boutique'} />;
   }
 
   const myZone = await getMyActiveZoneAssignmentForCurrentQuarter(user.id);

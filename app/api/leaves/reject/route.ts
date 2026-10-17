@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db';
 import { canManageLeavesInBoutique } from '@/lib/membershipPermissions';
 import { writeLeaveAudit } from '@/lib/leaveAudit';
 import type { Role } from '@prisma/client';
+import { notifyUsers } from '@/lib/notify/inApp';
 
 const SUBMITTED_OR_DRAFT = ['SUBMITTED', 'DRAFT'];
 
@@ -48,6 +49,14 @@ export async function POST(request: NextRequest) {
     beforeJson: before,
     afterJson: JSON.stringify({ status: 'REJECTED', rejectionReason: reason }),
     reason,
+  });
+  await notifyUsers({
+    userIds: [req.userId],
+    title: 'Leave request declined',
+    body: reason?.trim()
+      ? `Your leave request was declined. Reason: ${reason.trim()}`
+      : 'Your leave request was declined. Open the leave page for details.',
+    linkPath: '/leaves',
   });
 
   return NextResponse.json({ ok: true, status: 'REJECTED' });

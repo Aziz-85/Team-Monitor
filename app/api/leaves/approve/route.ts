@@ -12,6 +12,7 @@ import { isAdminOrSuperAdmin } from '@/lib/rbac';
 import { evaluateLeaveApproval } from '@/lib/leaveRules';
 import { writeLeaveAudit } from '@/lib/leaveAudit';
 import type { Role } from '@prisma/client';
+import { notifyUsers } from '@/lib/notify/inApp';
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUser();
@@ -94,6 +95,12 @@ export async function POST(request: NextRequest) {
     beforeJson: before,
     afterJson: after,
     reason,
+  });
+  await notifyUsers({
+    userIds: [req.userId],
+    title: 'Leave request approved',
+    body: `Your ${req.type.toLowerCase().replaceAll('_', ' ')} leave request has been approved.`,
+    linkPath: '/leaves',
   });
 
   return NextResponse.json({ ok: true, status: newStatus });

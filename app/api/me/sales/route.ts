@@ -15,6 +15,7 @@ import { upsertCanonicalSalesEntry } from '@/lib/sales/upsertSalesEntry';
 import { SALES_ENTRY_SOURCE } from '@/lib/sales/salesEntrySources';
 import { salesEntryWhereForUserMonth } from '@/lib/sales/readSalesAggregate';
 import { parseOptionalNonNegativeInt } from '@/lib/sales/parseOptionalSalesMetrics';
+import { getLeadershipUserIdsForBoutique, notifyUsers } from '@/lib/notify/inApp';
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser();
@@ -186,6 +187,13 @@ export async function POST(request: NextRequest) {
         userId: user.id,
       },
     },
+  });
+  const leadershipIds = await getLeadershipUserIdsForBoutique(employeeBoutiqueId, user.id);
+  await notifyUsers({
+    userIds: leadershipIds,
+    title: 'Sales entry added',
+    body: `${user.employee?.name ?? user.empId} recorded ${Math.round(amount).toLocaleString('en-US')} SAR for ${dateKey}.`,
+    linkPath: '/sales/summary',
   });
   return NextResponse.json(entry);
 }
