@@ -69,4 +69,28 @@ describe('Assistant Manager home navigation', () => {
     expect(assistantLinks?.some((item) => item.href === '/admin/audit/login')).toBe(false);
     expect(employeeLinks?.some((item) => item.href === '/admin/audit/login')).toBe(false);
   });
+
+  it('shows the role preview center to administrators only', () => {
+    const systemLinksFor = (role: Parameters<typeof getSidebarGroupedSections>[0]) =>
+      getSidebarGroupedSections(role, translate)
+        .flatMap((section) => section.items)
+        .find((item) => item.key === 'SYSTEM_HUB')?.children;
+
+    expect(systemLinksFor('ADMIN')?.some((item) => item.href === '/admin/role-preview')).toBe(true);
+    expect(systemLinksFor('SUPER_ADMIN')?.some((item) => item.href === '/admin/role-preview')).toBe(true);
+    expect(systemLinksFor('MANAGER')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
+    expect(systemLinksFor('AREA_MANAGER')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
+    expect(systemLinksFor('ASSISTANT_MANAGER')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
+    expect(systemLinksFor('EMPLOYEE')?.some((item) => item.href === '/admin/role-preview')).toBe(false);
+  });
+
+  it('limits the export center to boutique and platform leadership', () => {
+    expect(canAccessRoute('EMPLOYEE', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('ASSISTANT_MANAGER', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('DEMO_VIEWER', '/reports/export-center')).toBe(false);
+    expect(canAccessRoute('MANAGER', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('AREA_MANAGER', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('ADMIN', '/reports/export-center')).toBe(true);
+    expect(canAccessRoute('SUPER_ADMIN', '/reports/export-center')).toBe(true);
+  });
 });

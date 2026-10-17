@@ -11,7 +11,7 @@ import { whereBoutiqueStrict } from '@/lib/scope/whereStrict';
 import { calculatePerformance } from '@/lib/performance/performanceEngine';
 import { rosterForDate } from '@/lib/services/roster';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
-import { normalizeMonthKey, toRiyadhDateString } from '@/lib/time';
+import { normalizeMonthKey } from '@/lib/time';
 
 const BURST_WINDOW_MS = 3 * 60 * 1000;
 const BURST_MIN_TASKS = 4;
@@ -147,10 +147,10 @@ export async function calculateBoutiqueScore(
     prisma.taskCompletion.findMany({
       where: {
         undoneAt: null,
-        completedAt: { gte: monthStart, lt: monthEndExclusive },
+        dueDate: { gte: monthStart, lt: monthEndExclusive },
         task: boutiqueFilter,
       },
-      select: { taskId: true, userId: true, completedAt: true },
+      select: { taskId: true, userId: true, dueDate: true, completedAt: true },
     }),
     prisma.plannerTaskCompletion.findMany({
       where: {
@@ -210,8 +210,8 @@ export async function calculateBoutiqueScore(
       const assignedUserId = a.assignedEmpId ? empIdToUserId.get(a.assignedEmpId) : null;
       const comp = completionsInMonth.find((c) => {
         if (c.taskId !== task.id) return false;
-        if (assignedUserId) return c.userId === assignedUserId;
-        return toRiyadhDateString(c.completedAt) === dateStr;
+        if (c.dueDate.toISOString().slice(0, 10) !== dateStr) return false;
+        return assignedUserId ? c.userId === assignedUserId : true;
       });
       const taskKeyNorm = normalizePlannerTaskKey(task.taskKey);
       const plannerHit =

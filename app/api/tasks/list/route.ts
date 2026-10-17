@@ -9,6 +9,7 @@ import {
   getSaturdayWeekYmdKeysForAnchor,
 } from '@/lib/tasks/taskListDates';
 import { tasksRunnableOnDate, assignTaskOnDate } from '@/lib/services/tasks';
+import { getTaskTrackingLaunchDate } from '@/lib/tasks/taskTrackingPolicy';
 export type TaskListRow = {
   taskId: string;
   title: string;
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
   const empId = scope.empId;
 
   const { dateStr } = getRiyadhTaskListToday();
+  const launchDate = await getTaskTrackingLaunchDate();
   const isManagerOrAdmin = scope.role === 'MANAGER' || scope.role === 'ADMIN' || scope.role === 'SUPER_ADMIN';
   /** Defaults match /tasks/monitor (this week) and manager view (all assignees). */
   const period = request.nextUrl.searchParams.get('period') ?? 'week';
@@ -49,6 +51,11 @@ export async function GET(request: NextRequest) {
     const week = getSaturdayWeekYmdKeysForAnchor(dateStr);
     const set = new Set<string>([...overdue, dateStr, ...week]);
     dateStrs = Array.from(set).sort();
+  }
+  dateStrs = dateStrs.filter((day) => day >= launchDate);
+
+  if (dateStrs.length === 0) {
+    return NextResponse.json({ tasks: [], dateStr, launchDate });
   }
 
   const tasks = await prisma.task.findMany({
@@ -72,11 +79,17 @@ export async function GET(request: NextRequest) {
           where: {
             taskId: { in: taskIds },
             ...(canSeeAll ? {} : { userId }),
+            dueDate: {
+              gte: new Date(`${dateStrs[0]}T00:00:00Z`),
+              lte: new Date(`${dateStrs[dateStrs.length - 1]}T00:00:00Z`),
+            },
           },
         })
       : [];
   const completedByTaskUser = new Set(
-    completions.filter((c) => c.undoneAt == null).map((c) => `${c.taskId}::${c.userId}`)
+    completions
+      .filter((c) => c.undoneAt == null)
+      .map((c) => `${c.taskId}::${c.userId}::${c.dueDate.toISOString().slice(0, 10)}`)
   );
 
   const empIdToUserId = new Map<string, string>();
@@ -106,7 +119,7 @@ export async function GET(request: NextRequest) {
         ? (canSeeAll ? empIdToUserId.get(assigneeEmpId) : (assigneeEmpId === empId ? userId : undefined))
         : undefined;
       const isCompleted = assigneeUserId
-        ? completedByTaskUser.has(`${task.id}::${assigneeUserId}`)
+        ? completedByTaskUser.has(`${task.id}::${assigneeUserId}::${dateStrItem}`)
         : false;
 
       if (statusFilter === 'open' && isCompleted) continue;
@@ -135,5 +148,5 @@ export async function GET(request: NextRequest) {
     return a.title.localeCompare(b.title);
   });
 
-  return NextResponse.json({ tasks: rows, dateStr });
+  return NextResponse.json({ tasks: rows, dateStr, launchDate });
 }

@@ -40,7 +40,7 @@ function safeSetCookie(
  * Updates lastSeenAt only if older than throttle (2 min) to avoid write storms.
  * Invalidates session and clears cookie if expired or idle.
  */
-export async function getSessionUser(): Promise<SessionUser | null> {
+export async function getBaseSessionUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(getSessionCookieName())?.value;
@@ -127,6 +127,13 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     console.error('[getSessionUser]', e);
     return null;
   }
+}
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const baseUser = await getBaseSessionUser();
+  if (!baseUser) return null;
+  const { applyRolePreview } = await import('@/lib/rolePreview');
+  return (await applyRolePreview(baseUser)).user;
 }
 
 export async function requireSession(): Promise<SessionUser> {

@@ -9,6 +9,7 @@
 import { prisma } from '@/lib/db';
 import type { MembershipPermission } from '@/lib/membershipPermissions';
 import type { Role } from '@prisma/client';
+import { getRolePreviewConfig } from '@/lib/rolePreview';
 
 export type BoutiqueAccessUser = {
   id: string;
@@ -58,6 +59,11 @@ export async function checkBoutiqueAccess(
   });
   if (!boutique?.isActive) return { allowed: false, reason: 'BOUTIQUE_INACTIVE' };
 
+  const preview = await getRolePreviewConfig();
+  if (preview?.targetUserId === user.id && preview.boutiqueIds.includes(boutiqueId)) {
+    return { allowed: true, source: 'SESSION_COMPAT' };
+  }
+
   if (user.isPlatformOwner) return { allowed: true, source: 'PLATFORM_OWNER' };
   if (user.role === 'SUPER_ADMIN') return { allowed: true, source: 'SUPER_ADMIN' };
   if (user.role === 'ADMIN') return { allowed: true, source: 'ADMIN' };
@@ -96,6 +102,9 @@ export async function checkBoutiquePermission(
 ): Promise<BoutiqueAccessResult> {
   const access = await checkBoutiqueAccess(user, boutiqueId);
   if (!access.allowed) return access;
+
+  const preview = await getRolePreviewConfig();
+  if (preview?.targetUserId === user.id && preview.boutiqueIds.includes(boutiqueId) && (user.role === 'MANAGER' || user.role === 'AREA_MANAGER')) return access;
 
   if (hasExplicitPlatformAccess(user)) return access;
   if (user.role !== 'MANAGER' && user.role !== 'AREA_MANAGER') {

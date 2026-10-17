@@ -115,9 +115,11 @@ export async function processInboundEvent(
         if (assigneeEmpId) {
           const user = await prisma.user.findUnique({ where: { empId: assigneeEmpId }, select: { id: true } });
           if (user) {
+            const dueDateKey = normalized.dueDate ?? new Date().toISOString().slice(0, 10);
+            const dueDate = new Date(`${dueDateKey}T00:00:00Z`);
             await prisma.taskCompletion.upsert({
-              where: { taskId_userId: { taskId: link.localTaskId, userId: user.id } },
-              create: { taskId: link.localTaskId, userId: user.id, completedAt: new Date() },
+              where: { taskId_userId_dueDate: { taskId: link.localTaskId, userId: user.id, dueDate } },
+              create: { taskId: link.localTaskId, userId: user.id, dueDate, completedAt: new Date() },
               update: { completedAt: new Date(), undoneAt: null },
             });
             await prisma.task.update({

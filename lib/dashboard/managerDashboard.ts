@@ -7,7 +7,6 @@
 
 import { prisma } from '@/lib/db';
 import {
-  addDays,
   formatMonthKey,
   getDaysInMonth,
   getMonthRange,
@@ -41,7 +40,6 @@ export async function getManagerDashboard(
   dateStr: string
 ): Promise<ManagerDashboardResult> {
   const dayStart = normalizeDateOnlyRiyadh(dateStr);
-  const dayEnd = addDays(dayStart, 1);
   const monthKey = dateStr.slice(0, 7);
   const dayOfWeek = dayStart.getUTCDay();
   const isFriday = dayOfWeek === FRIDAY_DAY_OF_WEEK;
@@ -62,7 +60,7 @@ export async function getManagerDashboard(
     prisma.taskCompletion.count({
       where: {
         undoneAt: null,
-        completedAt: { gte: dayStart, lt: dayEnd },
+        dueDate: dayStart,
         task: { boutiqueId },
       },
     }),

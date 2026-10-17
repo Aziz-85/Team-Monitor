@@ -21,6 +21,10 @@ export function getLocaleCookieName(): string {
   return `${getCookiePrefix()}locale`;
 }
 
+export function getRolePreviewCookieName(): string {
+  return `${getCookiePrefix()}role_preview_user`;
+}
+
 /** Client-safe prefix injected at build via NEXT_PUBLIC_COOKIE_PREFIX. */
 export function getPublicCookiePrefix(): string {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_COOKIE_PREFIX) {

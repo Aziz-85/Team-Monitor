@@ -12,7 +12,6 @@ import {
   KPIGrid,
   KPIStatCard,
   PageContainer,
-  RecommendationCard,
   SectionBlock,
 } from '@/components/ui/ExecutiveIntelligence';
 
@@ -39,7 +38,21 @@ export function EmployeeHomeClient() {
     remainingMonthTargetSar?: number;
     dailyAchievementPending?: boolean;
     monthlyTargetMet?: boolean;
+    invoiceCount?: number;
+    pieceCount?: number;
+    salesDays?: number;
+    boutiqueTarget?: number;
+    boutiqueMtdSales?: number;
+    boutiquePct?: number;
+    boutiqueRemaining?: number;
+    annualYear?: number;
+    annualTarget?: number;
+    annualSales?: number;
+    annualPct?: number;
+    annualRemaining?: number;
+    annualTargetMonths?: number;
   } | null>(null);
+  const [taskSnapshot, setTaskSnapshot] = useState<Array<{ id: string; title: string; isCompleted: boolean; kind: 'task' | 'inventory' }>>([]);
 
   const [salesEntryDate, setSalesEntryDate] = useState(() => getRiyadhDateKey());
   const [salesEntryAmount, setSalesEntryAmount] = useState<string>('');
@@ -81,7 +94,7 @@ export function EmployeeHomeClient() {
   const saveSalesEntry = async () => {
     const amount = Number(salesEntryAmount);
     if (!Number.isInteger(amount) || amount < 0) {
-      setSalesEntryError('Enter a whole number ≥ 0');
+      setSalesEntryError(t('home.employeeWholeNumberError'));
       return;
     }
     const invTrim = salesEntryInvoiceCount.trim();
@@ -89,14 +102,14 @@ export function EmployeeHomeClient() {
     if (invTrim !== '') {
       const v = Number(invTrim);
       if (!Number.isInteger(v) || v < 0) {
-        setSalesEntryError('Invoices must be a whole number ≥ 0');
+        setSalesEntryError(t('home.employeeInvoicesError'));
         return;
       }
     }
     if (pcTrim !== '') {
       const v = Number(pcTrim);
       if (!Number.isInteger(v) || v < 0) {
-        setSalesEntryError('Pieces must be a whole number ≥ 0');
+        setSalesEntryError(t('home.employeePiecesError'));
         return;
       }
     }
@@ -119,7 +132,7 @@ export function EmployeeHomeClient() {
       });
       const j = await res.json();
       if (!res.ok) {
-        setSalesEntryError(j.error ?? 'Save failed');
+        setSalesEntryError(j.error ?? t('home.employeeSaveFailed'));
         return;
       }
       setSalesEntryInfo(typeof j.metricsNote === 'string' && j.metricsNote ? j.metricsNote : null);
@@ -142,6 +155,19 @@ export function EmployeeHomeClient() {
             remainingMonthTargetSar?: number;
             dailyAchievementPending?: boolean;
             monthlyTargetMet?: boolean;
+            invoiceCount?: number;
+            pieceCount?: number;
+            salesDays?: number;
+            boutiqueTarget?: number;
+            boutiqueMtdSales?: number;
+            boutiquePct?: number;
+            boutiqueRemaining?: number;
+            annualYear?: number;
+            annualTarget?: number;
+            annualSales?: number;
+            annualPct?: number;
+            annualRemaining?: number;
+            annualTargetMonths?: number;
           }) => {
             if (d && typeof d.todayTarget === 'number') {
               setTargetsData({
@@ -156,6 +182,19 @@ export function EmployeeHomeClient() {
                 remainingMonthTargetSar: d.remainingMonthTargetSar,
                 dailyAchievementPending: d.dailyAchievementPending === true,
                 monthlyTargetMet: d.monthlyTargetMet === true,
+                invoiceCount: d.invoiceCount ?? 0,
+                pieceCount: d.pieceCount ?? 0,
+                salesDays: d.salesDays ?? 0,
+                boutiqueTarget: d.boutiqueTarget ?? 0,
+                boutiqueMtdSales: d.boutiqueMtdSales ?? 0,
+                boutiquePct: d.boutiquePct ?? 0,
+                boutiqueRemaining: d.boutiqueRemaining ?? 0,
+                annualYear: d.annualYear,
+                annualTarget: d.annualTarget ?? 0,
+                annualSales: d.annualSales ?? 0,
+                annualPct: d.annualPct ?? 0,
+                annualRemaining: d.annualRemaining ?? 0,
+                annualTargetMonths: d.annualTargetMonths ?? 0,
               });
             }
           }
@@ -182,6 +221,19 @@ export function EmployeeHomeClient() {
           remainingMonthTargetSar?: number;
           dailyAchievementPending?: boolean;
           monthlyTargetMet?: boolean;
+          invoiceCount?: number;
+          pieceCount?: number;
+          salesDays?: number;
+          boutiqueTarget?: number;
+          boutiqueMtdSales?: number;
+          boutiquePct?: number;
+          boutiqueRemaining?: number;
+          annualYear?: number;
+          annualTarget?: number;
+          annualSales?: number;
+          annualPct?: number;
+          annualRemaining?: number;
+          annualTargetMonths?: number;
         }) => {
         if (d && typeof d.todayTarget === 'number') {
           setTargetsData({
@@ -196,11 +248,31 @@ export function EmployeeHomeClient() {
             remainingMonthTargetSar: d.remainingMonthTargetSar,
             dailyAchievementPending: d.dailyAchievementPending === true,
             monthlyTargetMet: d.monthlyTargetMet === true,
+            invoiceCount: d.invoiceCount ?? 0,
+            pieceCount: d.pieceCount ?? 0,
+            salesDays: d.salesDays ?? 0,
+            boutiqueTarget: d.boutiqueTarget ?? 0,
+            boutiqueMtdSales: d.boutiqueMtdSales ?? 0,
+            boutiquePct: d.boutiquePct ?? 0,
+            boutiqueRemaining: d.boutiqueRemaining ?? 0,
+            annualYear: d.annualYear,
+            annualTarget: d.annualTarget ?? 0,
+            annualSales: d.annualSales ?? 0,
+            annualPct: d.annualPct ?? 0,
+            annualRemaining: d.annualRemaining ?? 0,
+            annualTargetMonths: d.annualTargetMonths ?? 0,
           });
         }
       }
       )
       .catch(() => setTargetsData(null));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/tasks/my-today', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { tasks: [] }))
+      .then((payload: { tasks?: Array<{ id: string; title: string; isCompleted: boolean; kind: 'task' | 'inventory' }> }) => setTaskSnapshot(payload.tasks ?? []))
+      .catch(() => setTaskSnapshot([]));
   }, []);
 
   useEffect(() => {
@@ -220,7 +292,7 @@ export function EmployeeHomeClient() {
   if (!data) {
     return (
       <div className="w-full min-w-0 max-w-full p-4">
-        <p className="text-muted">Loading…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       </div>
     );
   }
@@ -228,71 +300,72 @@ export function EmployeeHomeClient() {
   const monthlyRemaining = targetsData
     ? targetsData.remainingMonthTargetSar ?? Math.max(0, targetsData.monthlyTarget - targetsData.mtdSales)
     : 0;
-  const paceTone = targetsData?.monthlyTargetMet
-    ? 'success'
-    : (targetsData?.mtdPct ?? 0) >= 90
-      ? 'default'
-      : (targetsData?.mtdPct ?? 0) >= 70
-        ? 'warning'
-        : 'danger';
   const inputClass =
     'w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground shadow-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15';
+  const achievement = Math.max(0, Math.min(100, Math.round(targetsData?.mtdPct ?? 0)));
+  const completedTasks = taskSnapshot.filter((task) => task.isCompleted).length;
+  const taskPercent = taskSnapshot.length > 0 ? Math.round((completedTasks / taskSnapshot.length) * 100) : 0;
 
   return (
     <PageContainer className="overflow-x-hidden space-y-8 md:space-y-10">
-      <SectionBlock
-        title={t('nav.employeeHome')}
-        subtitle={t('home.targetsTodayOnlySubtitle')}
-        rightSlot={
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 shadow-sm">
-            <label htmlFor="employee-home-date" className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {t('common.date')}
-            </label>
-          <input
-            id="employee-home-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-transparent text-sm font-medium text-foreground outline-none"
-          />
+      <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(125deg,#0a2342_0%,#12466a_58%,#0d766e_125%)] p-5 text-white shadow-[0_28px_70px_-36px_rgba(5,25,55,.9)] md:p-7">
+        <div className="pointer-events-none absolute -end-20 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" />
+        <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-start">
+          <div><p className="text-xs font-bold uppercase tracking-[.22em] text-cyan-200">{t('home.employeePerformance')}</p><h1 className="mt-2 text-3xl font-bold">{t('home.employeeHeroTitle')}</h1><p className="mt-2 max-w-xl text-sm text-slate-200">{t('home.employeeHeroSubtitle')}</p></div>
+          <label className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold backdrop-blur"><span>{t('common.date')}</span><input id="employee-home-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-sm text-white outline-none [color-scheme:dark]" /></label>
+        </div>
+        <div className="relative mt-6 grid gap-4 lg:grid-cols-[220px_1fr]">
+          <div className="flex items-center justify-center rounded-3xl border border-white/10 bg-white/[.07] p-5">
+            <div className="relative grid h-36 w-36 place-items-center rounded-full" style={{ background: `conic-gradient(#5eead4 ${achievement * 3.6}deg, rgba(255,255,255,.12) 0deg)` }}><div className="grid h-28 w-28 place-items-center rounded-full bg-[#0d3152]"><div className="text-center"><p className="text-3xl font-black">{achievement}%</p><p className="text-[10px] uppercase tracking-widest text-slate-300">{t('home.target')}</p></div></div></div>
           </div>
-        }
-      >
-        <RecommendationCard
-          title={targetsData?.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : t('home.monthlyProgressCard')}
-          message={`${Math.round(targetsData?.mtdPct ?? 0)}% · ${t('targets.remainingMonthlyTarget')}: ${formatSarInt(monthlyRemaining)}`}
-          tone={paceTone}
-          className="border-2 p-5 md:p-6"
-        />
-      </SectionBlock>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              [t('home.employeeMonthSales'), formatSarInt(targetsData?.mtdSales ?? 0), t('home.employeeActualAchievement')],
+              [t('home.employeePersonalTarget'), formatSarInt(targetsData?.monthlyTarget ?? 0), `${formatSarInt(monthlyRemaining)} ${t('home.employeeRemaining')}`],
+              [t('home.salesInvoicesLabel'), String(targetsData?.invoiceCount ?? 0), `${targetsData?.salesDays ?? 0} ${t('home.employeeSellingDays')}`],
+              [t('home.employeePiecesSold'), String(targetsData?.pieceCount ?? 0), (targetsData?.invoiceCount ?? 0) > 0 ? `${((targetsData?.pieceCount ?? 0) / (targetsData?.invoiceCount ?? 1)).toFixed(1)} UPT` : 'UPT —'],
+            ].map(([label, value, hint]) => <article key={label} className="rounded-2xl border border-white/10 bg-white/[.08] p-4 backdrop-blur"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-slate-300">{label}</p><p className="mt-3 text-2xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-slate-300">{hint}</p></article>)}
+          </div>
+        </div>
+      </section>
 
-      {targetsData != null && (targetsData.monthlyTarget > 0 || targetsData.todaySales > 0 || targetsData.mtdSales > 0) && (
-        <SectionBlock title={t('home.monthlyProgressCard')} subtitle={t('home.targetsTodayOnlySubtitle')}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <KPIStatCard
-              title={t('home.monthlyProgressCard')}
-              value={`${Math.round(targetsData.mtdPct)}%`}
-              subtitle={`${formatSarInt(targetsData.mtdSales)} / ${formatSarInt(targetsData.monthlyTarget)}`}
-              tone={paceTone}
-              emphasis="strong"
-              trendLabel={targetsData.monthlyTargetMet ? t('home.monthlyTargetAchievedBadge') : undefined}
-            />
-            <KPIStatCard
-              title={t('targets.remainingMonthlyTarget')}
-              value={formatSarInt(monthlyRemaining)}
-              subtitle={t('targets.dailyRequiredPace')}
-              tone={monthlyRemaining > 0 ? 'warning' : 'success'}
-              emphasis="strong"
-            />
+      <section className="overflow-hidden rounded-3xl border border-sky-200/70 bg-[linear-gradient(110deg,rgba(14,116,144,.08),rgba(16,185,129,.08))] p-5 shadow-sm dark:border-sky-900/60 md:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-md">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-sky-700 dark:text-sky-300">{t('home.employeeBoutiqueProgress')}</p>
+            <h2 className="mt-1 text-xl font-bold text-foreground">{t('home.employeeBoutiqueGoalTitle')}</h2>
+            <p className="mt-1 text-sm text-muted">{t('home.employeeBoutiqueGoalSubtitle')}</p>
           </div>
-          <KPIGrid cols={4} className="mt-3">
-            <KPIStatCard title={t('home.sales')} value={formatSarInt(targetsData.todaySales)} subtitle={`${Math.round(targetsData.todayPct)}%`} tone={targetsData.todayPct >= 100 ? 'success' : 'default'} />
-            <KPIStatCard title={t('home.dailyTargetCard')} value={formatSarInt(targetsData.todayTarget)} subtitle={targetsData.dailyAchievementPending ? t('targets.dailyAchievementPending') : t('targets.dailyRequiredPace')} tone="default" />
-            <KPIStatCard title={t('targets.reportingDailyShort')} value={formatSarInt(targetsData.reportingDailyAllocationSar ?? 0)} tone="default" />
-            <KPIStatCard title="MTD Sales" value={formatSarInt(targetsData.mtdSales)} tone={paceTone} />
-          </KPIGrid>
-        </SectionBlock>
-      )}
+          <div className="grid flex-1 gap-3 sm:grid-cols-3 lg:max-w-3xl">
+            <div className="rounded-2xl border border-border/70 bg-surface/85 p-4"><p className="text-xs text-muted">{t('home.employeeBoutiqueTarget')}</p><p className="mt-1 text-xl font-bold tabular-nums text-foreground">{formatSarInt(targetsData?.boutiqueTarget ?? 0)}</p></div>
+            <div className="rounded-2xl border border-border/70 bg-surface/85 p-4"><p className="text-xs text-muted">{t('home.employeeBoutiqueSales')}</p><p className="mt-1 text-xl font-bold tabular-nums text-foreground">{formatSarInt(targetsData?.boutiqueMtdSales ?? 0)}</p></div>
+            <div className="rounded-2xl border border-border/70 bg-surface/85 p-4"><p className="text-xs text-muted">{t('home.employeeBoutiqueRemaining')}</p><p className="mt-1 text-xl font-bold tabular-nums text-foreground">{formatSarInt(targetsData?.boutiqueRemaining ?? 0)}</p></div>
+          </div>
+        </div>
+        <div className="mt-5 flex items-center gap-3"><div className="h-3 flex-1 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full bg-gradient-to-r from-sky-600 to-emerald-500 transition-all" style={{ width: `${Math.min(100, Math.max(0, targetsData?.boutiquePct ?? 0))}%` }} /></div><span className="min-w-[3.5rem] text-end text-sm font-black tabular-nums text-foreground">{(targetsData?.boutiquePct ?? 0).toFixed(1)}%</span></div>
+      </section>
+
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-surface p-5 shadow-sm md:p-6">
+        <div className="pointer-events-none absolute -end-20 -top-24 h-60 w-60 rounded-full bg-sky-500/[.06]" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center">
+          <div className="flex items-center gap-4 xl:w-[36%]">
+            <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#0ea5e9 ${Math.min(100, Math.max(0, targetsData?.annualPct ?? 0)) * 3.6}deg, var(--surface-subtle) 0deg)` }}>
+              <div className="grid h-[88px] w-[88px] place-items-center rounded-full bg-surface"><div className="text-center"><p className="text-2xl font-black text-foreground">{(targetsData?.annualPct ?? 0).toFixed(1)}%</p><p className="text-[10px] font-bold uppercase tracking-wider text-muted">{targetsData?.annualYear ?? new Date().getFullYear()}</p></div></div>
+            </div>
+            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-sky-700 dark:text-sky-300">{t('home.employeeAnnualPerformance')}</p><h2 className="mt-1 text-xl font-bold text-foreground">{t('home.employeeAnnualTargetTitle')}</h2><p className="mt-1 text-sm text-muted">{t('home.employeeAnnualMonthsDefined').replace('{count}', String(targetsData?.annualTargetMonths ?? 0))}</p></div>
+          </div>
+          <div className="grid flex-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-surface-subtle/55 p-4"><p className="text-xs text-muted">{t('home.employeeAnnualTarget')}</p><p className="mt-2 text-xl font-bold tabular-nums text-foreground">{formatSarInt(targetsData?.annualTarget ?? 0)}</p></div>
+            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20"><p className="text-xs text-emerald-700 dark:text-emerald-300">{t('home.employeeAnnualAchieved')}</p><p className="mt-2 text-xl font-bold tabular-nums text-emerald-900 dark:text-emerald-100">{formatSarInt(targetsData?.annualSales ?? 0)}</p></div>
+            <div className="rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/20"><p className="text-xs text-amber-700 dark:text-amber-300">{t('home.employeeAnnualRemaining')}</p><p className="mt-2 text-xl font-bold tabular-nums text-amber-950 dark:text-amber-100">{formatSarInt(targetsData?.annualRemaining ?? 0)}</p><p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{Math.max(0, 100 - (targetsData?.annualPct ?? 0)).toFixed(1)}% {t('home.employeeRemainingPct')}</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
+        <article className="rounded-3xl border border-border bg-surface p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">{t('home.employeeTodayMission')}</p><h2 className="mt-1 text-xl font-bold text-foreground">{t('home.employeeTasksExecution')}</h2></div><div className="text-end"><p className="text-2xl font-black text-foreground">{completedTasks}/{taskSnapshot.length}</p><p className="text-xs text-muted">{t('home.employeeCompleted')}</p></div></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-emerald-400 transition-all" style={{ width: `${taskPercent}%` }} /></div><div className="mt-4 grid gap-2 sm:grid-cols-2">{taskSnapshot.length === 0 ? <p className="text-sm text-muted">{t('home.employeeNoTasksToday')}</p> : taskSnapshot.map((task) => <div key={task.id} className={`flex items-center gap-3 rounded-xl border p-3 ${task.isCompleted ? 'border-emerald-200 bg-emerald-50/70' : 'border-border bg-surface-subtle/60'}`}><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${task.isCompleted ? 'bg-emerald-500 text-white' : 'bg-white text-muted shadow-sm'}`}>{task.isCompleted ? '✓' : '○'}</span><div><p className="text-sm font-semibold text-foreground">{task.title}</p><p className="text-xs text-muted">{task.kind === 'inventory' ? t('home.employeeDailyOperation') : t('home.employeeAssignedTask')}</p></div></div>)}</div></article>
+        <article className="rounded-3xl border border-border bg-surface p-5 shadow-sm"><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">{t('salesEntry.today')}</p><h2 className="mt-1 text-xl font-bold text-foreground">{t('home.employeeDailyPulse')}</h2><div className="mt-5 space-y-4"><div><div className="flex justify-between text-sm"><span className="text-muted">{t('home.sales')}</span><strong>{formatSarInt(targetsData?.todaySales ?? 0)}</strong></div><div className="mt-2 h-2 rounded-full bg-surface-subtle"><div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(100, targetsData?.todayPct ?? 0)}%` }} /></div></div><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl bg-surface-subtle p-3"><p className="text-xs text-muted">{t('home.employeeDailyTarget')}</p><p className="mt-1 font-bold">{formatSarInt(targetsData?.todayTarget ?? 0)}</p></div><div className="rounded-2xl bg-surface-subtle p-3"><p className="text-xs text-muted">{t('home.employeeTaskProgress')}</p><p className="mt-1 font-bold">{taskPercent}%</p></div></div></div></article>
+      </section>
 
       {selfAnalytics?.employees?.[0] && (
         <SectionBlock title={t('analytics.monthPaceTitle')} subtitle={t('analytics.projectionOnly')}>
@@ -321,11 +394,11 @@ export function EmployeeHomeClient() {
       )}
 
       <SectionBlock
-        title="My Sales"
-        subtitle="Enter today's sales and keep your monthly progress current. Zero is a valid entry."
+        title={t('home.employeeMySales')}
+        subtitle={t('home.employeeSalesEntrySubtitle')}
         rightSlot={
           <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-            Daily entry
+            {t('home.employeeDailyEntry')}
           </span>
         }
       >
@@ -333,7 +406,7 @@ export function EmployeeHomeClient() {
           <div className="rounded-2xl border border-border bg-surface-subtle/50 p-4 md:p-5">
             <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
-                Date
+                {t('common.date')}
                 <input
                   type="date"
                   value={salesEntryDate}
@@ -342,7 +415,7 @@ export function EmployeeHomeClient() {
                 />
               </label>
               <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-muted">
-                Amount (SAR)
+                {t('home.employeeAmountSar')}
                 <input
                   type="number"
                   min={0}
@@ -386,7 +459,7 @@ export function EmployeeHomeClient() {
               onClick={saveSalesEntry}
               className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              {salesEntrySaving ? 'Saving…' : 'Save sales entry'}
+              {salesEntrySaving ? t('home.employeeSaving') : t('home.employeeSaveSalesEntry')}
             </button>
             {salesEntryError && <p className="mt-3 text-sm font-medium text-rose-600">{salesEntryError}</p>}
             {salesEntryInfo && !salesEntryError && (
@@ -394,9 +467,9 @@ export function EmployeeHomeClient() {
             )}
           </div>
           <div className="rounded-2xl border border-border bg-surface p-4 md:p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Last 7 entries</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{t('home.employeeLastSevenEntries')}</p>
             {lastEntries.length === 0 ? (
-              <EmptyStateBlock title="No recent entries" description="Your saved sales will appear here." className="mt-3 border-0 bg-surface-subtle/60" />
+              <EmptyStateBlock title={t('home.employeeNoRecentEntries')} description={t('home.employeeSavedSalesHere')} className="mt-3 border-0 bg-surface-subtle/60" />
             ) : (
               <div className="mt-3 divide-y divide-border">
                 {lastEntries.map((entry) => (
@@ -420,25 +493,25 @@ export function EmployeeHomeClient() {
         </div>
       </SectionBlock>
 
-      <SectionBlock title="Today's operation" subtitle="Your shift status and assigned work in one view.">
+      <SectionBlock title={t('home.employeeTodayOperation')} subtitle={t('home.employeeOperationSubtitle')}>
         <KPIGrid cols={2}>
           <KPIStatCard
             title={t('schedule.morning')}
-            value={data.todaySchedule.am ? 'On shift' : 'Off'}
-            subtitle={data.todaySchedule.am ? 'Scheduled for the morning shift' : 'No morning shift assigned'}
+            value={data.todaySchedule.am ? t('home.employeeOnShift') : t('home.employeeOff')}
+            subtitle={data.todaySchedule.am ? t('home.employeeMorningScheduled') : t('home.employeeNoMorningShift')}
             tone={data.todaySchedule.am ? 'success' : 'default'}
           />
           <KPIStatCard
             title={t('schedule.evening')}
-            value={data.todaySchedule.pm ? 'On shift' : 'Off'}
-            subtitle={data.todaySchedule.pm ? 'Scheduled for the evening shift' : 'No evening shift assigned'}
+            value={data.todaySchedule.pm ? t('home.employeeOnShift') : t('home.employeeOff')}
+            subtitle={data.todaySchedule.pm ? t('home.employeeEveningScheduled') : t('home.employeeNoEveningShift')}
             tone={data.todaySchedule.pm ? 'info' : 'default'}
           />
         </KPIGrid>
         <div className="mt-4 rounded-2xl border border-border bg-surface-subtle/50 p-4 md:p-5">
           <h3 className="text-sm font-semibold text-foreground">{t('tasks.today')}</h3>
           {data.todayTasks.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">No tasks assigned for today.</p>
+            <p className="mt-2 text-sm text-muted">{t('home.employeeNoTasksToday')}</p>
           ) : (
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {data.todayTasks.map((task) => (
@@ -452,7 +525,7 @@ export function EmployeeHomeClient() {
         </div>
       </SectionBlock>
 
-      <SectionBlock title={t('schedule.week')} subtitle="The team roster for the selected week.">
+      <SectionBlock title={t('schedule.week')} subtitle={t('home.employeeWeekRosterSubtitle')}>
         <div className="grid gap-4 lg:grid-cols-2">
           {[
             { label: t('schedule.morning'), people: data.weekRoster.am, tone: 'border-amber-200/80 bg-amber-50/50 dark:border-amber-800/50 dark:bg-amber-950/10' },
@@ -467,7 +540,7 @@ export function EmployeeHomeClient() {
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {shift.people.length === 0 ? (
-                  <span className="text-sm text-muted">No employees assigned.</span>
+                  <span className="text-sm text-muted">{t('home.employeeNoEmployeesAssigned')}</span>
                 ) : (
                   shift.people.map((employee) => (
                     <span key={employee.empId} className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground shadow-sm">

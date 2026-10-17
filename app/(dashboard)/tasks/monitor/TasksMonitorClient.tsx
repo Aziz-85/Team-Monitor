@@ -68,7 +68,7 @@ type EmployeeStatRow = {
   pending: number;
   overdue: number;
   completionRate: number;
-  onTimeRate: number;
+  onTimeRate: number | null;
   avgDelayMinutes: number | null;
 };
 
@@ -85,6 +85,7 @@ type SuspiciousBurstRow = {
 
 type MonitorData = {
   dateStr: string;
+  launchDate: string;
   employees: { empId: string; name: string; nameAr?: string | null }[];
   summary: { completed: number; pending: number; overdue: number; suspicious: number };
   completedTasks: TaskMonitorRow[];
@@ -159,6 +160,11 @@ export function TasksMonitorClient() {
       return iso;
     }
   };
+
+  const completionRate = data && data.summary.completed + data.summary.pending > 0
+    ? Math.round((data.summary.completed / (data.summary.completed + data.summary.pending)) * 100)
+    : 0;
+  const isArabic = locale === 'ar';
 
   if (error) {
     return (
@@ -312,6 +318,22 @@ export function TasksMonitorClient() {
 
       {data && (
         <>
+          <section className="overflow-hidden rounded-[28px] border border-violet-200/70 bg-[linear-gradient(125deg,rgba(255,255,255,.98),rgba(245,243,255,.94),rgba(236,253,245,.72))] p-5 shadow-[0_20px_55px_-38px_rgba(79,70,229,.55)] md:p-6">
+            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+              <div>
+                <span className="inline-flex rounded-full border border-violet-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-violet-700">{isArabic ? 'نبض أداء الفريق' : 'Performance pulse'}</span>
+                <h2 className="mt-3 text-2xl font-bold text-foreground">{completionRate >= 80 ? (isArabic ? 'زخم ممتاز للفريق' : 'Excellent team momentum') : completionRate >= 50 ? (isArabic ? 'التقدم يتصاعد' : 'Progress is building') : (isArabic ? 'ركزوا على الإنجاز الواضح التالي' : 'Focus on the next clear win')}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{isArabic ? 'نحتفي بالمنجز، ونوضح المتأخر، ولا يدخل في تقييم الموظف إلا النشاط من تاريخ الإطلاق الرسمي.' : 'Completed work is celebrated, overdue work is visible, and only activity from the official launch date affects employee performance.'}</p>
+                <p className="mt-3 text-xs font-semibold text-violet-700">{isArabic ? `يبدأ التقييم العادل من ${data.launchDate} · المهام السابقة مستبعدة` : `Fair scoring starts ${data.launchDate} · Earlier tasks are excluded`}</p>
+              </div>
+              <div className="min-w-[190px] rounded-2xl border border-white/80 bg-white/85 p-4 shadow-sm">
+                <div className="flex items-end justify-between"><span className="text-xs font-semibold uppercase tracking-wider text-muted">{isArabic ? 'الإنجاز' : 'Completion'}</span><strong className="text-3xl text-emerald-700">{completionRate}%</strong></div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all" style={{ width: `${completionRate}%` }} /></div>
+                <p className="mt-2 text-xs text-muted">{isArabic ? `${data.summary.completed} منجزة من ${data.summary.completed + data.summary.pending}` : `${data.summary.completed} completed of ${data.summary.completed + data.summary.pending}`}</p>
+              </div>
+            </div>
+          </section>
+
           {/* Summary */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <OpsCard className="rounded-2xl border border-emerald-200 bg-emerald-50/50">
@@ -463,7 +485,7 @@ export function TasksMonitorClient() {
                       <LuxuryTd>{row.pending}</LuxuryTd>
                       <LuxuryTd>{row.overdue}</LuxuryTd>
                       <LuxuryTd>{row.completionRate}%</LuxuryTd>
-                      <LuxuryTd>{row.onTimeRate}%</LuxuryTd>
+                      <LuxuryTd>{row.onTimeRate == null ? '—' : `${row.onTimeRate}%`}</LuxuryTd>
                       <LuxuryTd>
                         {row.avgDelayMinutes != null && row.avgDelayMinutes !== 0
                           ? `${row.avgDelayMinutes}m`

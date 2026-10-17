@@ -3,6 +3,7 @@
 import type { ForecastMetrics } from '@/lib/analytics/performanceLayer';
 import { OpsCard } from '@/components/ui/OpsCard';
 import { formatSarInt } from '@/lib/utils/money';
+import { useT } from '@/lib/i18n/useT';
 
 type Props = {
   title: string;
@@ -21,6 +22,7 @@ export function ForecastCard({
   rollingTitle,
   className = '',
 }: Props) {
+  const { t } = useT();
   const d = linear.forecastDelta;
   const deltaStr =
     d === 0 ? formatSarInt(0) : d > 0 ? `+${formatSarInt(d)}` : formatSarInt(d);
@@ -34,18 +36,18 @@ export function ForecastCard({
       <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted">{disclaimer}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="text-xs text-muted">Projected total</p>
+          <p className="text-xs text-muted">{t('analytics.forecastProjectedTotal')}</p>
           <p className="mt-0.5 text-xl font-semibold tabular-nums text-foreground">
             {formatSarInt(linear.forecastedTotal)}
           </p>
           <p className="mt-1 text-xs text-muted">
-            Avg daily (actual pace): {formatSarInt(linear.avgDailyActual)}
+            {t('analytics.forecastAvgDaily')}: {formatSarInt(linear.avgDailyActual)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted">Vs target</p>
+          <p className="text-xs text-muted">{t('analytics.forecastVsTarget')}</p>
           <p className="mt-0.5 text-xl font-semibold tabular-nums text-foreground">{deltaStr}</p>
-          <p className="mt-1 text-xs text-muted">Ratio {ratioPct}</p>
+          <p className="mt-1 text-xs text-muted">{t('analytics.forecastRatio')} {ratioPct}</p>
         </div>
       </div>
       {rolling7 != null && (
@@ -55,7 +57,7 @@ export function ForecastCard({
             {formatSarInt(rolling7.forecastedTotal)}
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            Δ target:{' '}
+            {t('analytics.forecastDeltaTarget')}:{' '}
             {rolling7.forecastDelta === 0
               ? formatSarInt(0)
               : rolling7.forecastDelta > 0

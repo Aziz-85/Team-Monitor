@@ -101,9 +101,7 @@ export async function resolveScheduleExportBoutiques(
 
 export const SCHEDULE_EXPORT_ROLES: Role[] = [
   'MANAGER',
-  'ASSISTANT_MANAGER',
   'ADMIN',
-  'EMPLOYEE',
   'SUPER_ADMIN',
   'AREA_MANAGER',
 ];

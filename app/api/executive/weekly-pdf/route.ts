@@ -124,9 +124,9 @@ export async function GET(request: NextRequest) {
     prisma.taskCompletion.findMany({
       where: {
         undoneAt: null,
-        completedAt: { gte: rangeStart, lte: rangeEnd },
+        dueDate: { gte: rangeStart, lte: rangeEnd },
       },
-      select: { taskId: true, userId: true, completedAt: true },
+      select: { taskId: true, userId: true, dueDate: true, completedAt: true },
     }),
     zoneIds.length > 0
       ? prisma.inventoryWeeklyZoneRun.findMany({
@@ -173,7 +173,8 @@ export async function GET(request: NextRequest) {
       const comp = completionsInWeek.find(
         (c) =>
           c.taskId === task.id &&
-          (assignedUserId ? c.userId === assignedUserId : false)
+          (assignedUserId ? c.userId === assignedUserId : false) &&
+          c.dueDate.toISOString().slice(0, 10) === dateStr
       );
       if (comp) completed++;
       else if (isPast) overdue++;

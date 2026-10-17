@@ -12,7 +12,7 @@ describe('getPostLoginPath', () => {
     { role: 'DEMO_VIEWER', expected: '/dashboard' },
     { role: 'MANAGER', expected: '/' },
     { role: 'ADMIN', expected: '/' },
-    { role: 'AREA_MANAGER', expected: '/' },
+    { role: 'AREA_MANAGER', expected: '/area' },
     { role: 'SUPER_ADMIN', expected: '/' },
   ];
 

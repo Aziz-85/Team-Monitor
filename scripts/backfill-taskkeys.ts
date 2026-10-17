@@ -29,7 +29,7 @@ function taskRunsInWeek(
 
 async function main(): Promise<void> {
   const approvedWeeks = await prisma.scheduleWeekStatus.findMany({
-    select: { weekStart: true },
+    select: { weekStart: true, boutiqueId: true },
   });
 
   const tasksWithoutKey = await prisma.task.findMany({
@@ -37,20 +37,22 @@ async function main(): Promise<void> {
     include: { taskSchedules: true },
   });
 
-  const weekStartsWithMissingKeys: string[] = [];
-  for (const { weekStart } of approvedWeeks) {
-    const hasMissing = tasksWithoutKey.some((task) => taskRunsInWeek(task, weekStart));
-    if (hasMissing) weekStartsWithMissingKeys.push(weekStart);
+  const scopesWithMissingKeys: Array<{ weekStart: string; boutiqueId: string }> = [];
+  for (const { weekStart, boutiqueId } of approvedWeeks) {
+    const hasMissing = tasksWithoutKey.some(
+      (task) => task.boutiqueId === boutiqueId && taskRunsInWeek(task, weekStart)
+    );
+    if (hasMissing) scopesWithMissingKeys.push({ weekStart, boutiqueId });
   }
 
-  if (weekStartsWithMissingKeys.length === 0) {
+  if (scopesWithMissingKeys.length === 0) {
     console.log('No missing taskKeys.');
     return;
   }
 
-  for (const weekStart of weekStartsWithMissingKeys) {
-    const fixed = await ensureTaskKeysForApprovedWeek(weekStart);
-    console.log(`Week ${weekStart}: ${fixed} task(s) fixed.`);
+  for (const { weekStart, boutiqueId } of scopesWithMissingKeys) {
+    const fixed = await ensureTaskKeysForApprovedWeek(weekStart, boutiqueId);
+    console.log(`Boutique ${boutiqueId}, week ${weekStart}: ${fixed} task(s) fixed.`);
   }
 }
 

@@ -156,6 +156,17 @@ export async function emitEvent(type: NotifyEventType, options: EmitEventOptions
       throw e;
     }
 
+    // The web inbox is the durable source of truth. Push delivery is optional and
+    // may be unavailable when the user has no registered mobile device.
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        title,
+        body,
+        linkPath: isSchedule ? '/schedule/view' : '/tasks',
+      },
+    });
+
     const prefs = user.notificationPreference;
     if (isSchedule && !(prefs?.scheduleEnabled ?? true)) continue;
     if (isTask && !(prefs?.tasksEnabled ?? true)) continue;

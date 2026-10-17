@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import { getFirstName } from '@/lib/name';
@@ -23,7 +23,7 @@ function formatDDMM(dateStr: string): string {
 }
 
 export function TasksPageClient({ role }: { role: Role }) {
-  const { t } = useT();
+  const { t, locale } = useT();
 
   const canSeeAllAssigned = role === 'MANAGER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
 
@@ -84,18 +84,29 @@ export function TasksPageClient({ role }: { role: Role }) {
   const toggleCompletion = useCallback(
     (taskId: string, action: 'done' | 'undo', dueDate?: string, assigneeEmpId?: string | null) => {
       if (updatingId) return;
-      setUpdatingId(taskId);
+      const occurrenceId = `${taskId}:${dueDate ?? ''}:${assigneeEmpId ?? ''}`;
+      const nextCompleted = action === 'done';
+      const previousTasks = tasks;
+      setUpdatingId(occurrenceId);
+      setTasks((current) =>
+        current.map((task) =>
+          task.taskId === taskId && task.dueDate === dueDate && task.assigneeEmpId === assigneeEmpId
+            ? { ...task, isCompleted: nextCompleted }
+            : task
+        )
+      );
       fetch('/api/tasks/completion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, action, dueDate, assigneeEmpId: assigneeEmpId ?? undefined }),
       })
         .then((r) => {
-          if (r.ok) fetchList();
+          if (!r.ok) setTasks(previousTasks);
         })
+        .catch(() => setTasks(previousTasks))
         .finally(() => setUpdatingId(null));
     },
-    [updatingId, fetchList]
+    [updatingId, tasks]
   );
 
   const todayStr = (() => {
@@ -108,6 +119,22 @@ export function TasksPageClient({ role }: { role: Role }) {
   })();
 
   const isOverdue = (dueDate: string) => dueDate < todayStr;
+  const progress = useMemo(() => {
+    const completed = tasks.filter((task) => task.isCompleted).length;
+    const overdue = tasks.filter((task) => !task.isCompleted && task.dueDate < todayStr).length;
+    const active = Math.max(0, tasks.length - completed - overdue);
+    const rate = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    return { completed, overdue, active, total: tasks.length, rate };
+  }, [tasks, todayStr]);
+  const isArabic = locale === 'ar';
+  const motivation =
+    progress.total === 0
+      ? isArabic ? 'ابدأ أسبوعك بخطة واضحة؛ ستظهر إنجازاتك هنا.' : 'Start with a clear plan — your progress will appear here.'
+      : progress.rate >= 90
+        ? isArabic ? 'أداء استثنائي — استمر على هذا الإيقاع.' : 'Outstanding execution — keep the momentum.'
+        : progress.rate >= 60
+          ? isArabic ? 'تقدم قوي — خطوات قليلة تفصلك عن الإكمال.' : 'Strong progress — a few focused actions will close the gap.'
+          : isArabic ? 'كل مهمة منجزة ترفع تقدم الفريق. ابدأ بالأقرب موعدًا.' : 'Every completed task moves the team forward. Start with the nearest due item.';
 
   return (
     <div className="w-full min-w-0 max-w-full p-4 md:p-6">
@@ -133,6 +160,42 @@ export function TasksPageClient({ role }: { role: Role }) {
             </div>
           )}
         </div>
+
+        <section className="mb-5 overflow-hidden rounded-[28px] border border-violet-200/70 bg-[linear-gradient(135deg,rgba(255,255,255,.98),rgba(245,243,255,.96),rgba(236,253,245,.72))] p-5 shadow-[0_20px_55px_-38px_rgba(79,70,229,.55)] md:p-6">
+          <div className="grid items-center gap-5 md:grid-cols-[1fr_auto]">
+            <div>
+              <span className="inline-flex rounded-full border border-violet-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-violet-700">
+                {isArabic ? 'تقدمك اليوم' : 'Your progress today'}
+              </span>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground">
+                {isArabic ? 'أنجز مهامك وحافظ على تقدمك' : 'Complete your tasks and keep the momentum going'}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{motivation}</p>
+            </div>
+            <div
+              className="grid h-28 w-28 place-items-center rounded-full p-[9px] shadow-inner"
+              style={{ background: `conic-gradient(rgb(16 185 129) ${progress.rate}%, rgb(226 232 240) 0)` }}
+              aria-label={`${progress.rate}%`}
+            >
+              <div className="grid h-full w-full place-items-center rounded-full bg-white text-center">
+                <div><strong className="block text-2xl text-foreground">{progress.rate}%</strong><span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{isArabic ? 'منجز' : 'complete'}</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              [isArabic ? 'المنجزة' : 'Completed', progress.completed, 'text-emerald-700', 'bg-emerald-50 border-emerald-200'],
+              [isArabic ? 'قيد التنفيذ' : 'In progress', progress.active, 'text-amber-700', 'bg-amber-50 border-amber-200'],
+              [isArabic ? 'المتأخرة' : 'Overdue', progress.overdue, 'text-rose-700', 'bg-rose-50 border-rose-200'],
+              [isArabic ? 'الإجمالي' : 'Total', progress.total, 'text-violet-700', 'bg-violet-50 border-violet-200'],
+            ].map(([label, value, color, surface]) => (
+              <div key={String(label)} className={`rounded-2xl border p-3 ${surface}`}>
+                <p className="text-xs font-medium text-muted">{label}</p>
+                <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Search */}
         <div className="mb-3">
@@ -284,7 +347,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                           {canToggle && (
                             <button
                               type="button"
-                              disabled={!!updatingId}
+                              disabled={updatingId === `${row.taskId}:${row.dueDate}:${row.assigneeEmpId ?? ''}`}
                               onClick={() => toggleCompletion(row.taskId, row.isCompleted ? 'undo' : 'done', row.dueDate, row.assigneeEmpId)}
                               className={
                                 row.isCompleted
@@ -292,7 +355,7 @@ export function TasksPageClient({ role }: { role: Role }) {
                                   : 'rounded bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50'
                               }
                             >
-                              {updatingId === row.taskId ? '...' : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
+                              {updatingId === `${row.taskId}:${row.dueDate}:${row.assigneeEmpId ?? ''}` ? '...' : row.isCompleted ? t('tasks.undo') : t('tasks.markDone')}
                             </button>
                           )}
                           {canSeeAllAssigned && (

@@ -33,8 +33,9 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
     key: 'quick-access',
     labelKey: 'nav.sidebar.primary',
     items: [
-      { key: 'HOME', href: '/', labelKey: 'nav.home', tier: 'hub' },
-      { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard', tier: 'page' },
+      { key: 'AREA_OVERVIEW', href: '/area', labelKey: 'nav.area.overview', tier: 'hub', roles: ['AREA_MANAGER'] },
+      { key: 'HOME', href: '/', labelKey: 'nav.home', tier: 'hub', roles: ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
+      { key: 'DASHBOARD', href: '/dashboard', labelKey: 'nav.dashboard', tier: 'page', roles: ['EMPLOYEE', 'ASSISTANT_MANAGER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'] },
       { key: 'EMPLOYEE_HOME', href: '/employee', labelKey: 'nav.employeeHome' },
       { key: 'ENTRY_DAILY', href: '/sales/daily', labelKey: 'nav.sidebar.entryDailySales', tier: 'page' },
     ],
@@ -77,7 +78,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
           { key: 'EXECUTIVE', href: '/executive', labelKey: 'nav.analytics.executive' },
           { key: 'ADMIN_TARGETS', href: '/targets', labelKey: 'nav.reports.targetsManagement' },
           { key: 'MY_TARGET', href: '/me/target', labelKey: 'nav.myTarget' },
-          { key: 'EXPORT_CENTER', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter' },
+          { key: 'EXPORT_CENTER', href: '/reports/export-center', labelKey: 'nav.reports.exportCenter', roles: ['MANAGER', 'ADMIN', 'SUPER_ADMIN', 'AREA_MANAGER'] },
         ],
       },
       {
@@ -86,6 +87,7 @@ const SIDEBAR_GROUPS: SidebarShellGroupedSection[] = [
           { key: 'BOUTIQUE_CONFIGURATION', href: '/admin/boutique-configuration', labelKey: 'nav.admin.boutiqueConfiguration' },
           { key: 'ADMIN_USERS', href: '/admin/users', labelKey: 'nav.admin.users' },
           { key: 'ADMIN_IMPORT', href: '/admin/import', labelKey: 'nav.admin.importDashboard' },
+          { key: 'ROLE_PREVIEW', href: '/admin/role-preview', labelKey: 'nav.admin.rolePreview', roles: ['ADMIN', 'SUPER_ADMIN'] },
           { key: 'LOGIN_ACTIVITY', href: '/admin/audit/login', labelKey: 'nav.admin.loginAudit', roles: ['ADMIN', 'SUPER_ADMIN'] },
           { key: 'ARCHITECTURE_CONSOLE', href: '/architecture', labelKey: 'nav.architectureConsole', icon: 'architecture' },
           { key: 'SECURITY_SETTINGS', href: '/settings/security', labelKey: 'nav.securitySettings' },

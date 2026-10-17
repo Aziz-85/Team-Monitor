@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { FEATURES } from '@/lib/featureFlags';
-import { getSessionCookieName } from '@/lib/env/cookies';
+import { getRolePreviewCookieName, getSessionCookieName } from '@/lib/env/cookies';
 
 const publicPaths = ['/login'];
 const MUTATION_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -106,6 +106,20 @@ export async function middleware(request: NextRequest) {
   }
 
   const session = request.cookies.get(getSessionCookieName())?.value;
+  const rolePreview = process.env.ROLE_PREVIEW_ENABLED === 'true'
+    ? request.cookies.get(getRolePreviewCookieName())?.value
+    : undefined;
+
+  if (
+    rolePreview &&
+    pathname.startsWith('/api/') &&
+    MUTATION_METHODS.includes(request.method?.toUpperCase() ?? 'GET') &&
+    pathname !== '/api/admin/role-preview/session' &&
+    pathname !== '/api/locale' &&
+    pathname !== DEMO_LOGOUT_PATH
+  ) {
+    return NextResponse.json({ error: 'Role preview is read-only. Exit preview to make changes.' }, { status: 403 });
+  }
 
   // DEMO_VIEWER write-block + fail-closed role verification when a session cookie is present.
   // Runs before /api/auth bypass so POST /api/auth/change-password cannot mutate as demo.

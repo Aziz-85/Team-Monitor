@@ -83,14 +83,21 @@ export async function buildTasksReportExportWorkbook(
     const empIdToUserId = new Map(users.filter((u) => u.empId).map((u) => [u.empId!, u.id]));
 
     const completions = await prisma.taskCompletion.findMany({
-      where: { taskId: { in: taskIds }, undoneAt: null },
+      where: {
+        taskId: { in: taskIds },
+        undoneAt: null,
+        dueDate: {
+          gte: new Date(`${startDate}T00:00:00Z`),
+          lte: new Date(`${endDate}T00:00:00Z`),
+        },
+      },
       include: {
         user: { select: { id: true, empId: true, employee: { select: { name: true } } } },
       },
     });
     const completionByTaskUser = new Map(
       completions.map((c) => [
-        `${c.taskId}:${c.userId}`,
+        `${c.taskId}:${c.userId}:${c.dueDate.toISOString().slice(0, 10)}`,
         {
           completedAt: c.completedAt.toISOString(),
           completedBy: c.user.employee?.name ?? c.user.empId ?? '',
@@ -112,7 +119,7 @@ export async function buildTasksReportExportWorkbook(
           : undefined;
         const completion =
           assigneeUserId != null
-            ? completionByTaskUser.get(`${task.id}:${assigneeUserId}`)
+            ? completionByTaskUser.get(`${task.id}:${assigneeUserId}:${dateStr}`)
             : undefined;
         const isCompleted = !!completion;
         const isOverdue = !isCompleted && dateStr < todayStr;

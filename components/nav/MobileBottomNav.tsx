@@ -51,26 +51,28 @@ export function MobileBottomNav({
   };
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="flex min-h-[48px] items-stretch justify-around gap-0.5 px-0.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-surface/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_32px_-24px_rgba(15,23,42,.55)] backdrop-blur-xl md:hidden">
+      <div className="flex min-h-[62px] items-stretch justify-around gap-1 px-1.5 py-1.5">
         {primary.map((item) => (
           <Link
             key={`${item.href}:${item.key}`}
             href={item.href}
-            className={`flex min-w-0 flex-1 flex-col items-center justify-center px-1 py-1 text-[10px] font-medium leading-tight ${
-              isActive(item.href) ? 'text-accent' : 'text-muted-foreground'
+            className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-semibold leading-tight transition ${
+              isActive(item.href) ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-surface-subtle'
             }`}
           >
-            <span className="line-clamp-2 w-full text-center">{t(item.key)}</span>
+            <span className={`mb-1 h-1.5 w-1.5 rounded-full ${isActive(item.href) ? 'bg-accent' : 'bg-border'}`} />
+            <span className="line-clamp-2 w-full text-center">{item.label}</span>
           </Link>
         ))}
         {rest.length > 0 ? (
           <button
             type="button"
             aria-expanded={moreOpen}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 py-1 text-[10px] font-medium text-muted-foreground"
+            className={`flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[11px] font-semibold transition ${moreOpen ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-surface-subtle'}`}
             onClick={() => setMoreOpen((o) => !o)}
           >
+            <span className={`mb-1 h-1.5 w-1.5 rounded-full ${moreOpen ? 'bg-accent' : 'bg-border'}`} />
             <span className="line-clamp-2 w-full text-center">{t('nav.more')}</span>
           </button>
         ) : null}
@@ -85,7 +87,7 @@ export function MobileBottomNav({
                   className="block rounded-lg px-2 py-2 text-sm text-foreground hover:bg-muted/50"
                   onClick={() => setMoreOpen(false)}
                 >
-                  {t(item.key)}
+                  {item.label}
                 </Link>
               </li>
             ))}

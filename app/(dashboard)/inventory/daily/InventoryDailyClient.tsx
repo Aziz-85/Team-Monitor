@@ -231,22 +231,33 @@ export function InventoryDailyClient() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="mx-auto max-w-2xl px-4 md:px-6">
-        <div className="mb-4 flex flex-wrap items-center gap-3 overflow-x-auto pb-1">
+      <div className="mx-auto max-w-5xl space-y-5">
+        <section className="relative overflow-hidden rounded-[30px] bg-[linear-gradient(125deg,#0a2342_0%,#12466a_58%,#0d766e_125%)] p-5 text-white shadow-[0_28px_70px_-36px_rgba(5,25,55,.9)] md:p-7">
+          <div className="pointer-events-none absolute -end-16 -top-20 h-64 w-64 rounded-full border border-white/10 bg-white/5" />
+          <div className="relative flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div><p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-200">{t('inventory.heroEyebrow')}</p><h1 className="mt-2 text-3xl font-bold">{t('inventory.heroTitle')}</h1><p className="mt-2 max-w-xl text-sm text-slate-200">{t('inventory.heroSubtitle')}</p></div>
+            <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent md:h-10"
+            className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-sm text-white outline-none backdrop-blur [color-scheme:dark] focus:ring-2 focus:ring-cyan-300"
           />
-          <Link href="/inventory/zones" className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent md:h-10 inline-flex items-center">
+          <Link href="/inventory/zones" className="inline-flex h-10 items-center rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/15">
             {t('inventory.zones')}
           </Link>
           {run?.isManagerOrAdmin && (
-            <Link href="/inventory/daily/history" className="h-9 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-subtle focus:outline-none focus:ring-2 focus:ring-accent md:h-10 inline-flex items-center">
+            <Link href="/inventory/daily/history" className="inline-flex h-10 items-center rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/15">
               {t('inventory.history')}
             </Link>
           )}
+            </div>
+          </div>
+          {!loading && run ? <div className="relative mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.assignedTo')}</p><p className="mt-2 text-lg font-bold">{run.assigneeName ?? '—'}</p>{run.isMe ? <p className="mt-1 text-xs text-emerald-200">{t('inventory.yourTurnToday')}</p> : null}</div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.status')}</p><div className="mt-2 flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${effective === 'COMPLETED' ? 'bg-emerald-400' : effective === 'LATE' ? 'bg-rose-400' : 'bg-amber-300'}`} /><p className="text-lg font-bold">{statusLabel}</p></div></div><div className="rounded-2xl border border-white/10 bg-white/[.08] p-4"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">{t('inventory.assignment')}</p><p className="mt-2 text-lg font-bold">{run.assignmentSource === 'QUEUE' ? t('inventory.sourceQueue') : run.assignmentSource === 'ROTATION' ? t('inventory.sourceRotation') : run.assignmentSource === 'UNASSIGNED' ? t('inventory.sourceUnassigned') : '—'}</p></div></div> : null}
+        </section>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted">{formatBusinessDate(date)}</span>
         </div>
 
         {loading && <p className="text-muted">{t('common.loading')}</p>}

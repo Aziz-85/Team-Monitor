@@ -12,6 +12,7 @@ import { RouteGuard } from '@/components/RouteGuard';
 import { DashboardBreadcrumbBar } from '@/components/nav/DashboardBreadcrumbBar';
 import { IdleDetector } from '@/components/IdleDetector';
 import { VersionFooter } from '@/components/auth/VersionFooter';
+import { RolePreviewBanner } from '@/components/nav/RolePreviewBanner';
 import { getEffectiveAccessForBoutique } from '@/lib/rbac/effectiveAccess';
 import { getOperationalScope } from '@/lib/scope/operationalScope';
 
@@ -41,6 +42,12 @@ export default async function DashboardLayout({
       })
     : null;
   const navRole = auth.access.effectiveRole as import('@prisma/client').Role;
+  // During a role preview the selected role is authoritative. In particular,
+  // do not let the target account's real job position make an EMPLOYEE preview
+  // look like an Assistant Manager or Manager session in the shell.
+  const navPosition = auth.preview && navRole === 'EMPLOYEE'
+    ? null
+    : (user.employee?.position ?? undefined);
   const canEditSchedule =
     auth.access.globalScope
       ? true
@@ -61,11 +68,12 @@ export default async function DashboardLayout({
       <Sidebar
         role={navRole}
         name={user.employee?.name ?? undefined}
-        position={user.employee?.position ?? undefined}
+        position={navPosition}
         canEditSchedule={canEditSchedule}
         canApproveWeek={canApproveWeek}
       />
       <div className="flex flex-1 min-w-0 flex-col">
+        {auth.preview ? <RolePreviewBanner preview={auth.preview} /> : null}
         {isDemoMode && (
           <div className="shrink-0 bg-amber-100 border-b border-amber-300 px-3 py-2 text-center text-sm font-semibold text-amber-900">
             DEMO MODE — READ ONLY
@@ -75,14 +83,14 @@ export default async function DashboardLayout({
         <MobileTopBar
           role={navRole}
           name={user.employee?.name ?? undefined}
-          position={user.employee?.position ?? undefined}
+          position={navPosition}
           canEditSchedule={canEditSchedule}
           canApproveWeek={canApproveWeek}
         />
         <DesktopTopBar
           name={user.employee?.name ?? undefined}
           role={navRole as import('@prisma/client').Role}
-          position={user.employee?.position ?? undefined}
+          position={navPosition}
         />
         <main className="flex-1 min-w-0">
           <DashboardBreadcrumbBar />

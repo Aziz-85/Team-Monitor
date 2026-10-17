@@ -7,6 +7,7 @@
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 import type { ScopeKind, ScopeSelectionJson, ResolvedScope } from './types';
+import { getRolePreviewConfig } from '@/lib/rolePreview';
 
 const SCOPE_BOUTIQUE_ONLY: Role[] = ['ASSISTANT_MANAGER', 'EMPLOYEE'];
 const SCOPE_FULL: Role[] = ['ADMIN', 'MANAGER', 'AREA_MANAGER'];
@@ -27,6 +28,8 @@ async function getDefaultBoutiqueId(): Promise<string | null> {
 
 /** Returns boutique IDs the user is allowed to access (from UserBoutiqueMembership, canAccess + active boutique only). */
 export async function getUserAllowedBoutiqueIds(userId: string): Promise<string[]> {
+  const preview = await getRolePreviewConfig();
+  if (preview?.targetUserId === userId && preview.boutiqueIds.length > 0) return preview.boutiqueIds;
   const memberships = await prisma.userBoutiqueMembership.findMany({
     where: { userId, canAccess: true },
     include: { boutique: { select: { id: true, isActive: true } } },

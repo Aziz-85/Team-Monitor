@@ -81,8 +81,8 @@ export function ScheduleExcelViewClient({
   const headerCell = `${SCHEDULE_UI.headerCell} text-center`;
   const headerDate = `${headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.dateExcel}`;
   const headerDayEnd = `${headerCell} border-r-2 border-border ${SCHEDULE_COLS.dateExcel}`;
-  const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-blue-300`;
-  const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300`;
+  const headerMorningBlock = `${headerCell} border-l-2 border-r-2 border-sky-300 bg-sky-100/80 text-sky-950`;
+  const headerEveningBlock = `${headerCell} border-l-2 border-r-2 border-amber-300 bg-amber-100/80 text-amber-950`;
   const headerRashid = `${headerCell} ${SCHEDULE_UI.borderL2}`;
   const headerAm = `${SCHEDULE_UI.headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.countAm}`;
   const headerPm = `${SCHEDULE_UI.headerCell} ${SCHEDULE_UI.borderL2} ${SCHEDULE_COLS.countPm}`;
@@ -163,7 +163,7 @@ export function ScheduleExcelViewClient({
           {t('schedule.maxColumnsReachedWarning')}
         </p>
       )}
-      <div className="hidden md:block" dir="ltr">
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_16px_40px_-32px_rgba(15,23,42,.6)] md:block" dir="ltr">
       <table className={`${SCHEDULE_UI.table} ${visibleSlots > 4 ? 'table-fixed' : ''}`}>
         <colgroup>
           <col className={SCHEDULE_COLS.dateExcel} />
@@ -211,8 +211,8 @@ export function ScheduleExcelViewClient({
             const amCount = counts[dayIdx]?.amCount ?? 0;
             const pmCount = counts[dayIdx]?.pmCount ?? 0;
             return (
-              <tr key={day.date}>
-                <td className={`${cellDate} border-r-2 border-border`} title={formatDDMM(day.date)}>{formatDDMM(day.date)}</td>
+              <tr key={day.date} className="group transition-colors hover:bg-sky-50/35">
+                <td className={`${cellDate} border-r-2 border-border font-semibold tabular-nums transition-colors group-hover:bg-sky-50/70`} title={formatDDMM(day.date)}>{formatDDMM(day.date)}</td>
                 <td className={`${SCHEDULE_UI.dayCell} border-r-2 border-border whitespace-nowrap min-w-0 text-center`} dir="auto" title={getDayName(day.date)}>
                   {dayShort(day.date)}
                 </td>
@@ -221,7 +221,7 @@ export function ScheduleExcelViewClient({
                   const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
                   return (
                     <td key={i} className={`${i === 0 ? morningFirst : i === visibleSlots - 1 ? morningLast : morningCell} ${slotExtra} ${emptyMorningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
-                      <span className="block truncate text-start">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
+                      <span className="block truncate text-start font-medium">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
                     </td>
                   );
                 })}
@@ -230,7 +230,7 @@ export function ScheduleExcelViewClient({
                   const label = slot ? formatScheduleNameSlot(slot, displayNameMap) : null;
                   return (
                     <td key={i} className={`${i === 0 ? eveningFirst : i === visibleSlots - 1 ? eveningLast : eveningCell} ${slotExtra} ${emptyEveningSlots[i] ? 'w-[2rem] min-w-0 max-w-[2rem]' : ''}`} title={label?.title}>
-                      <span className="block truncate text-start">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
+                      <span className="block truncate text-start font-medium">{label ? <ScheduleSlotLabelSpan label={label} /> : null}</span>
                     </td>
                   );
                 })}

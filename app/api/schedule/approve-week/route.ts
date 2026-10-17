@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   let keyResult: { backfilled: number; totalInScope: number; remainingNull: number };
   try {
     keyResult = await prisma.$transaction(async (tx) => {
-      return ensureTaskKeysForApprovedWeekWithTx(tx, weekStart);
+      return ensureTaskKeysForApprovedWeekWithTx(tx, weekStart, scheduleScope.boutiqueId);
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
